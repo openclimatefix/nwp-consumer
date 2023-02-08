@@ -1,0 +1,186 @@
+import os
+
+import requests
+import pathlib
+
+import structlog.stdlib
+import datetime as dt
+import urllib.request
+import xarray as xr
+import iris_grib
+from multiprocessing import Pool
+import iris.cube
+import numpy as np
+
+from src.nwp_consumer import internal
+
+from ._models import MetOfficeFileInfo, MetOfficeResponse
+from .. import common
+
+log = structlog.stdlib.get_logger()
+
+
+class MetOfficeClient(internal.ClientInterface):
+    """Implements a client to fetch the data from the MetOffice API."""
+
+    # MetOffice API Order ID to pull data from
+    orderID: str
+
+    # Base https URL for MetOffice's data endpoint
+    baseurl: str
+
+    # Query string headers to pass to the MetOffice API
+    __headers: dict[str, str]
+
+    # Defines the mapping from MetOffice parameter names to OCF parameter names
+    parameterRenameMap: dict[str, str] = {
+        "temperature": internal.OCFShortName.TemperatureAGL,
+        "wind-speed-surface-adjusted": internal.OCFShortName.WindSpeedSurfaceAdjustedAGL,
+        "wind-direction-from-which-blowing-surface-adjusted":
+            internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL,
+        "high-cloud-cover": internal.OCFShortName.HighCloudCover,
+        "medium-cloud-cover": internal.OCFShortName.MediumCloudCover,
+        "low-cloud-cover": internal.OCFShortName.LowCloudCover,
+        "visibility": internal.OCFShortName.VisibilityAGL,
+        "relative-humidity": internal.OCFShortName.RelativeHumidityAGL,
+        "rain-precipitation-rate": internal.OCFShortName.RainPrecipitationRate,
+        "total-precipitation-rate": internal.OCFShortName.RainPrecipitationRate,
+        "snow-depth-water-equivalent": internal.OCFShortName.SnowDepthWaterEquivalent,
+        "downward-short-wave-radiation-flux": internal.OCFShortName.DownwardShortWaveRadiationFlux,
+        "downward-long-wave-radiation-flux": internal.OCFShortName.DownwardLongWaveRadiationFlux,
+    }
+
+    def __init__(self):
+        self.orderID: str = os.environ["METOFFICE_ORDER_ID"]
+        self.baseurl: str = f"https://api-metoffice.apiconnect.ibmcloud.com/1.0.0/orders/{self.orderID}/latest"
+        self.querystring: dict[str, str] = {"detail": "MINIMAL"}
+        self.__headers: dict[str, str] = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "X-IBM-Client-Id": os.environ["METOFFICE_CLIENT_ID"],
+            "X-IBM-Client-Secret": os.environ["METOFFICE_CLIENT_SECRET"],
+        }
+
+    def getDatasetForInitTime(self, initTime: dt.datetime) -> xr.Dataset:
+        """Fetches the dataset for the given initTime from the MetOffice API."""
+
+        # Fetch all the raw file infos for the given init time
+        fileInfosForInitTime: list[MetOfficeFileInfo] = self._getFileInfosForInitTime(initTime=initTime)
+
+        if fileInfosForInitTime is None or len(fileInfosForInitTime) == 0:
+            raise Exception(f"No files found for initTime {initTime}")
+
+        # Download the raw parameter files given by the file infos
+        with Pool(4) as p:
+            parameterFilePaths: list[pathlib.Path] = p.map(self._downloadRawGRIBFile, fileInfosForInitTime)
+
+        # Merge all the single-parameter GRIB files for the initTime into one dataset
+        allParameterDataset: xr.Dataset = common.combineSingleParamGRIBsAsOCFDataset(
+            client=self,
+            parameterFilePaths=parameterFilePaths,
+            initTime=initTime
+        )
+
+        # Delete the raw GRIB files
+        # for path in parameterFilePaths:
+        #    path.unlink()
+
+        return allParameterDataset
+
+    def loadSingleParameterGRIBAsOCFDataArray(self, path: pathlib.Path, initTime: dt.datetime) -> xr.DataArray:
+        """Loads a single-parameter GRIB file as an OCF-compliant DataArray."""
+
+        # Load the GRIB file as a cube and convert to a DataArray
+        cube: iris.cube.Cube = iris.cube.CubeList(iris_grib.load_cubes(path.as_posix())).merge_cube()
+        parameterDataArray: xr.DataArray = xr.DataArray.from_iris(cube)
+
+        # Make the DataArray OCF-compliant
+        parameterDataArray = parameterDataArray \
+            .rename(self.parameterRenameMap[_getParameterNameFromFileName(fileName=path.stem)]) \
+            .assign_coords({"init_time": np.datetime64(initTime.replace(tzinfo=None))}) \
+            .rename({"time": "step_time"}) \
+            .rename({"projection_x_coordinate": "x", "projection_y_coordinate": "y"}) \
+            .drop_vars(["height", "pressure"], errors="ignore") \
+            .chunk("auto")
+
+        return parameterDataArray
+
+    def _downloadRawGRIBFile(self, fileInfo: MetOfficeFileInfo) -> pathlib.Path:
+        """Downloads a GRIB file corresponding to the input FileInfo object."""
+
+        # TODO: inject path to downloaded files
+
+        download_path: pathlib.Path = pathlib.Path(__file__).parents[5].resolve() / "downloads" / fileInfo.fileId
+
+        if download_path.is_file():
+            log.debug(f"File already exists: {str(download_path)}", path=download_path.as_posix())
+
+        else:
+            log.debug(f"Requesting download of {fileInfo.fileId}", item=fileInfo.fileId)
+            url: str = f"{self.baseurl}/{fileInfo.fileId}/data"
+            try:
+                opener = urllib.request.build_opener()
+                opener.addheaders = list(dict(self.__headers, **{"Accept": "application/x-grib"}).items())
+                urllib.request.install_opener(opener)
+                urllib.request.urlretrieve(url=url, filename=download_path.as_posix())
+            except Exception as e:
+                raise ConnectionError(f"Error calling url {url} for {fileInfo.fileId}: {e}")
+
+            log.debug(f"Downloaded item: {fileInfo.fileId}", item=fileInfo.fileId, path=download_path)
+
+        return download_path
+
+    def _getFileInfosForInitTime(self, initTime: dt.datetime) -> list[MetOfficeFileInfo]:
+        """Get a list of FileInfo objects according to the input initTime."""
+
+        # Fetch info for all files available on the input date
+        response: requests.Response = requests.request(
+            method="GET",
+            url=f"{self.baseurl}",
+            headers=self.__headers,
+            params=self.querystring
+        )
+        if not response.ok:
+            raise AssertionError(f"response did not return with an ok status: {response.content}")
+
+        # Map the response to a MetOfficeResponse object
+        try:
+            responseObj: MetOfficeResponse = MetOfficeResponse.Schema().load(response.json())
+        except Exception as e:
+            raise TypeError(
+                f"Error marshalling json to MetOfficeResponse object: {e}, response: {response.json()}"
+            )
+
+        # Filter the file infos for the desired init time
+        wantedFileInfos: list[MetOfficeFileInfo] = [
+            fo for fo in responseObj.orderDetails.files if _isWantedFile(fileInfo=fo, desiredInitTime=initTime)
+        ]
+
+        return wantedFileInfos
+
+
+def _getParameterNameFromFileName(fileName: str) -> str:
+    """Gets the parameter name from the input file name.
+
+    MetOffice single parameter files are in the format:
+    <level>_<parameter>_<init_time>.grib
+
+    so the parameter is the second element in the file name when split by underscores.
+    """
+
+    return fileName.split("_")[1]
+
+
+def _isWantedFile(fileInfo: MetOfficeFileInfo, desiredInitTime: dt.datetime) -> bool:
+    """Checks if the input FileInfo corresponds to a wanted GRIB file."""
+
+    # False if item has an init_time not equal to desired init time
+    if fileInfo.initTime().replace(tzinfo=dt.timezone.utc) != desiredInitTime.replace(tzinfo=dt.timezone.utc):
+        return False
+    # False if item is one of the ones ending in +HH
+    if "+" in fileInfo.fileName():
+        return False
+
+    log.debug(f"Found wanted file from MetOffice", file=fileInfo.fileName())
+
+    return True
