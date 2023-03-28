@@ -1,12 +1,12 @@
 # --- PROJECT CONFIGURATION --- #
 [build-system]
-requires = ["setuptools>=67", "setuptools_scm>=3.4"]
+requires = ["setuptools>=67", "wheel", "setuptools_scm>=3.4", "setuptools-git-versioning<2"]
 build-backend = "setuptools.build_meta"
 
 # Metadata (see https://peps.python.org/pep-0621/)
 [project]
 name = "nwp-converter"
-version = "0.1.24"  # Autoincremented by bumpversion.cfg
+dynamic = ["version"] # Set automtically using git: https://setuptools-git-versioning.readthedocs.io/en/stable/
 description = "Tool for aggregating NWP .grib files into zarrs"
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.9.0"
@@ -31,7 +31,6 @@ dependencies = [
     "zarr == 2.13.6"
 ]
 
-# Links relevant to the project
 [project.urls]
 repository = "https://github.com/openclimatefix/nwp-consumer"
 
@@ -39,6 +38,9 @@ repository = "https://github.com/openclimatefix/nwp-consumer"
 where = ["src"]
 include = ["nwp_converter"]
 exclude = ["*.tests", "*.tests.*", "tests.*", "tests"]
+
+[tool.setuptools-git-versioning]
+enabled = true
 
 # --- LINTING AND TYPING CONFIGURATION --- #
 
