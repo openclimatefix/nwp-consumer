@@ -24,6 +24,19 @@ class ClientInterface(abc.ABC):
         pass
 
 
+class StorageInterface(abc.ABC):
+    """Generic interface for storing data, used for dependency injection."""
+
+    @abc.abstractmethod
+    def saveFile(self, dataset: xr.Dataset) -> None:
+        """Store the given dataset."""
+        pass
+
+    def loadFile(self, path: pathlib.Path) -> xr.Dataset:
+        """Load the given dataset."""
+        pass
+
+
 class OCFShortName(str, Enum):
     """Short names for the OCF parameters."""
     LowCloudCover = "lcc"

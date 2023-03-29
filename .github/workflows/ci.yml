@@ -1,0 +1,43 @@
+name: Python CI
+
+on: [push]
+
+jobs:
+  build-wheel:
+    runs-on: ubuntu-latest
+    container: continuumio/miniconda3:latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build wheel
+        run: |
+          conda install -y -c conda-forge nodejs eccodes cartopy cf-units cftime numcodecs
+          python -m pip install --upgrade pip
+          pip install .
+          python -m build --wheel
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Upload wheel
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheel
+          path: dist/*.whl
+
+  unittest:
+    runs-on: ubuntu-latest
+    container: continuumio/miniconda3:latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build wheel
+        run: |
+          conda install -y -c conda-forge nodejs eccodes cartopy cf-units cftime numcodecs
+          python -m pip install --upgrade pip
+          pip install .[dev]
+      - name: Test with unittest
+        run: |
+          unittest discover -s src/nwp-consumer -p "test_*.py"

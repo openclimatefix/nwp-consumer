@@ -8,6 +8,13 @@ Consumer for NWP data. Currently works with MetOffice and CEDA datasets.
 
 # :warning: This is still a work in progress! :warning:
 
+Still TODO:
+- Dependency-inject storage client for S3 and local
+- Complete the test suite
+- Create the use-cases and business logic for the live service and for backfilling
+- Create the entrypoint for the service
+- Ensure the dockerfile and the workflow are working correctly
+
 ## Installation
 
 
