@@ -28,7 +28,7 @@ dependencies = [
     "structlog == 22.1.0",
     "urllib3 == 1.26.15",
     "xarray == 2023.2.0",
-    "zarr == 2.13.6"
+    "zarr == 2.14.2"
 ]
 
 [project.optional-dependencies]

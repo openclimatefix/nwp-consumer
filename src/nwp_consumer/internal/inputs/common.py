@@ -10,7 +10,7 @@ log = structlog.stdlib.get_logger()
 
 
 def combineSingleParamGRIBsAsOCFDataset(
-        client: internal.ClientInterface, parameterFilePaths: list[pathlib.Path], initTime: dt.datetime) -> xr.Dataset:
+        client: internal.FetcherInterface, parameterFilePaths: list[pathlib.Path], initTime: dt.datetime) -> xr.Dataset:
     """Combines many single-parameter GRIB files as a single xarray dataset."""
 
     # Instantiate a list to hold the DataArrays for each parameter

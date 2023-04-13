@@ -5,7 +5,7 @@ import pathlib
 import xarray as xr
 import numpy as np
 
-class DummyClient(internal.ClientInterface):
+class DummyClient(internal.FetcherInterface):
     def getDatasetForInitTime(self, initTime: dt.datetime) -> xr.Dataset:
         return xr.Dataset(
             data_vars={

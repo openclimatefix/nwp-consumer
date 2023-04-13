@@ -9,6 +9,7 @@ import xarray as xr
 import iris_grib
 import iris.cube
 from multiprocessing import Pool
+from io import BytesIO
 import numpy as np
 
 import structlog
@@ -17,8 +18,7 @@ from eccodes import eccodes
 from src.nwp_consumer import internal
 
 from ._models import CEDAResponse, CEDAFileInfo
-from .. import common
-
+from src.nwp_consumer.internal.inputs import common
 
 log = structlog.stdlib.get_logger()
 
@@ -28,7 +28,7 @@ PARAMETER_IGNORE_LIST: typing.Sequence[str] = (
 )
 
 
-class CEDAClient(internal.ClientInterface):
+class CEDAClient(internal.FetcherInterface):
     """Implements a client to fetch data from CEDA."""
 
     # CEDA FTP Username
@@ -41,6 +41,10 @@ class CEDAClient(internal.ClientInterface):
     dataUrl: str = "badc/ukmo-nwp/data/ukv-grib"
     httpsBase: str = "https://data.ceda.ac.uk"
     __ftpBase: str
+
+    # Storage client
+    storageClient: internal.StorageInterface
+    # TODO: Would prefer it if the fetcher client was not coupled to the storage client
 
     # Defines the mapping from CEDA parameter names to OCF parameter names
     parameterRenameMap: dict[str, str] = {
@@ -58,10 +62,11 @@ class CEDAClient(internal.ClientInterface):
         "sde": internal.OCFShortName.SnowDepthWaterEquivalent,
     }
 
-    def __init__(self):
+    def __init__(self, storageClient: internal.StorageInterface):
         self.__username: str = urllib.parse.quote(os.environ["CEDA_FTP_USER"])
         self.__password: str = urllib.parse.quote(os.environ["CEDA_FTP_PASS"])
         self.__ftpBase: str = f'ftp://{self.__username}:{self.__password}@ftp.ceda.ac.uk'
+        self.storageClient: internal.StorageInterface = storageClient
 
     def getDatasetForInitTime(self, initTime: dt.datetime) -> xr.Dataset:
         """Download a dataset for the given init_time."""
@@ -79,7 +84,7 @@ class CEDAClient(internal.ClientInterface):
         # For each wholesale CEDA file, split the GRIB into individual per-parameter GRIB files
         parameterPathsForInitTime: list[pathlib.Path] = []
         for rawPath in wholesaleFilePaths:
-            parameterPaths: list[pathlib.Path] = _splitRawGribPerParameter(gribFilePath=rawPath)
+            parameterPaths: list[pathlib.Path] = self._splitRawGribPerParameter(gribFilePath=rawPath)
             parameterPathsForInitTime.extend(parameterPaths)
 
         # Delete the wholesale files
@@ -127,23 +132,28 @@ class CEDAClient(internal.ClientInterface):
 
         # TODO: inject path to downloaded files
 
-        download_path: pathlib.Path = pathlib.Path(__file__).parents[5].resolve() / "downloads" / fileInfo.name
+        fileName: pathlib.Path = pathlib.Path(fileInfo.name)
 
-        if download_path.is_file():
-            log.debug(f"File already exists: {str(download_path)}", path=download_path.as_posix())
+        if self.storageClient.exists(filepath=fileName):
+            log.debug(f"File already exists: {str(fileName)}", path=fileName.as_posix())
 
         else:
             ftpPath = f'{self.dataUrl}/{fileInfo.initTime().strftime("%Y/%m/%d")}/{fileInfo.name}'
             log.debug(f"Requesting download of {fileInfo.name}", item=fileInfo.name, path=ftpPath)
             url: str = f'{self.__ftpBase}/{ftpPath}'
             try:
-                urllib.request.urlretrieve(url=url, filename=download_path.as_posix())
+                # Fetch the file from CEDA
+                response = urllib.request.urlopen(url=url)
+                if not response.status == 200:
+                    raise ConnectionError(f"Error response code {response.status} for url {url}: {response.read()}")
+                with self.storageClient.open(path=fileName) as f:
+                    f.write(response.read())
             except Exception as e:
                 raise ConnectionError(f"Error calling url {url} for {fileInfo.name}: {e}")
 
-            log.debug(f"Downloaded item: {fileInfo.name}", item=fileInfo.name, path=download_path)
+            log.debug(f"Downloaded item: {fileInfo.name}", item=fileInfo.name, path=fileName)
 
-        return download_path
+        return fileName
 
     def _getFileInfosForInitTime(self, initTime: dt.datetime) -> list[CEDAFileInfo]:
         """Get a list of FileInfo objects according to the input initTime."""
@@ -175,84 +185,81 @@ class CEDAClient(internal.ClientInterface):
 
         return wantedFileInfos
 
+    def _splitRawGribPerParameter(self, gribFilePath: pathlib.Path) -> list[pathlib.Path]:
+        """Splits a multi-parameter GRIB file into several single-parameter GRIB files."""
 
-def _splitRawGribPerParameter(gribFilePath: pathlib.Path) -> list[pathlib.Path]:
-    """Splits a multi-parameter GRIB file into several single-parameter GRIB files."""
+        # Create a GRIB index based on the 'shortName' and 'step' keys
+        indexID = eccodes.codes_index_new_from_file(
+            filename=gribFilePath.as_posix(),
+            keys=["shortName", "step"]
+        )
+        parameters = list(eccodes.codes_index_get(indexid=indexID, key="shortName"))
+        steps = list(eccodes.codes_index_get(indexid=indexID, key="step"))
+        log.debug(
+            f"Wholesale file contains {len(parameters)} parameter(s) and {len(steps)} step(s)",
+            file=gribFilePath.as_posix(), parameters=parameters
+        )
 
-    # Create a GRIB index based on the 'shortName' and 'step' keys
-    indexID = eccodes.codes_index_new_from_file(
-        filename=gribFilePath.as_posix(),
-        keys=["shortName", "step"]
-    )
-    parameters = list(eccodes.codes_index_get(indexid=indexID, key="shortName"))
-    steps = list(eccodes.codes_index_get(indexid=indexID, key="step"))
-    log.debug(
-        f"Wholesale file contains {len(parameters)} parameter(s) and {len(steps)} step(s)",
-        file=gribFilePath.as_posix(), parameters=parameters
-    )
+        fileDirectory: pathlib.Path = gribFilePath.with_suffix("")
 
-    fileDirectory: pathlib.Path = gribFilePath.with_suffix("")
-    fileDirectory.mkdir(parents=True, exist_ok=True)
+        parameterFilePaths: list[pathlib.Path] = []
 
-    parameterFilePaths: list[pathlib.Path] = []
+        for parameter in parameters:
+            # Ignore parameters that are not currently available form MetOffice or are unknown
+            if parameter in PARAMETER_IGNORE_LIST:
+                continue
 
-    for parameter in parameters:
-        # Ignore parameters that are not currently available form MetOffice or are unknown
-        if parameter in PARAMETER_IGNORE_LIST:
-            continue
+            # Create a new grib file for the current parameter in the wholesale file
+            filePath: pathlib.Path = (fileDirectory / parameter).with_suffix(".grib")
+            parameterFile = self.storageClient.open(path=filePath)
+            multiGribID = eccodes.codes_grib_multi_new()
+            log.debug(f"Creating individual file for parameter: {parameter}", path=filePath.as_posix(),
+                      steps=len(steps))
 
-        # Create a new grib file for the current parameter in the wholesale file
-        filePath: pathlib.Path = (fileDirectory / parameter).with_suffix(".grib")
-        parameterFile = filePath.open('wb')
-        multiGribID = eccodes.codes_grib_multi_new()
-        log.debug(f"Creating individual file for parameter: {parameter}", path=filePath.as_posix(),
-                  steps=len(steps))
+            # Select the message subset for the current parameter's shortname on the wholesale GRIB's index
+            eccodes.codes_index_select(indexID, "shortName", parameter)
 
-        # Select the message subset for the current parameter's shortname on the wholesale GRIB's index
-        eccodes.codes_index_select(indexID, "shortName", parameter)
+            # Add each step for this parameter to the single-parameter file
+            for step in steps:
+                # Select the message subset for the current step on the index
+                eccodes.codes_index_select(indexID, "step", step)
+                # Create an in-memory GRIB file from the selected subset
+                gribID = eccodes.codes_new_from_index(indexID)
 
-        # Add each step for this parameter to the single-parameter file
-        for step in steps:
-            # Select the message subset for the current step on the index
-            eccodes.codes_index_select(indexID, "step", step)
-            # Create an in-memory GRIB file from the selected subset
-            gribID = eccodes.codes_new_from_index(indexID)
+                # Modify the incorrectly-valued 'sourceOfGridDefinition' and 'scanningMode' keys
+                # scanningMode should specify negative y, positive x: see
+                # https://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_doc/grib2_table3-4.shtml
+                eccodes.codes_set_key_vals(gribID, f"sourceOfGridDefinition=0,scanningMode={0b00000000}")
+                assert (eccodes.codes_get(gribID, 'sourceOfGridDefinition', int) == 0)
+                assert (eccodes.codes_get(gribID, 'scanningMode', int) == 0)
+                # Add in the missing 'scaleFactor' key, based on the value of the axis scale factors
+                majorAxisScaleFactor: int = eccodes.codes_get(gribID, 'scaleFactorOfEarthMajorAxis', int)
+                minorAxisScaleFactor: int = eccodes.codes_get(gribID, 'scaleFactorOfEarthMajorAxis', int)
+                assert (majorAxisScaleFactor == minorAxisScaleFactor)
+                eccodes.codes_set_key_vals(gribID, f"scaleFactorAtReferencePoint={majorAxisScaleFactor}")
+                assert (eccodes.codes_get(gribID, 'scaleFactorAtReferencePoint', int) == minorAxisScaleFactor)
 
-            # Modify the incorrectly-valued 'sourceOfGridDefinition' and 'scanningMode' keys
-            # scanningMode should specify negative y, positive x: see
-            # https://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_doc/grib2_table3-4.shtml
-            eccodes.codes_set_key_vals(gribID, f"sourceOfGridDefinition=0,scanningMode={0b00000000}")
-            assert (eccodes.codes_get(gribID, 'sourceOfGridDefinition', int) == 0)
-            assert (eccodes.codes_get(gribID, 'scanningMode', int) == 0)
-            # Add in the missing 'scaleFactor' key, based on the value of the axis scale factors
-            majorAxisScaleFactor: int = eccodes.codes_get(gribID, 'scaleFactorOfEarthMajorAxis', int)
-            minorAxisScaleFactor: int = eccodes.codes_get(gribID, 'scaleFactorOfEarthMajorAxis', int)
-            assert (majorAxisScaleFactor == minorAxisScaleFactor)
-            eccodes.codes_set_key_vals(gribID, f"scaleFactorAtReferencePoint={majorAxisScaleFactor}")
-            assert (eccodes.codes_get(gribID, 'scaleFactorAtReferencePoint', int) == minorAxisScaleFactor)
+                # Append the in-memory GRIB file to the single-parameter GRIB file
+                eccodes.codes_grib_multi_append(ingribid=gribID, startsection=3, multigribid=multiGribID)
+                # Release the in-memory GRIB file
+                eccodes.codes_release(gribID)
 
-            # Append the in-memory GRIB file to the single-parameter GRIB file
-            eccodes.codes_grib_multi_append(ingribid=gribID, startsection=3, multigribid=multiGribID)
-            # Release the in-memory GRIB file
-            eccodes.codes_release(gribID)
+            # Write the multiGrib file to the parameterFile buffer
+            eccodes.codes_grib_multi_write(multiGribID, parameterFile)
+            eccodes.codes_grib_multi_release(multiGribID)
+            parameterFile.close()
 
-        # Write the multiGrib file to the parameterFile file buffer
-        eccodes.codes_grib_multi_write(multiGribID, parameterFile)
-        eccodes.codes_grib_multi_release(multiGribID)
-        parameterFile.close()
+            log.debug(f"Saved individual file for parameter: {parameter}", path=filePath.as_posix(), steps=len(steps))
 
-        log.debug(f"Saved individual file for parameter: {parameter}", path=filePath.as_posix(), steps=len(steps))
+            parameterFilePaths.append(filePath)
 
-        parameterFilePaths.append(filePath)
-
-    return parameterFilePaths
+        return parameterFilePaths
 
 
 def _isWantedFile(fileInfo: CEDAFileInfo, desiredInitTime: dt.datetime) -> bool:
     """Checks if the input FileInfo corresponds to a wanted GRIB file."""
 
-    # False if item has an init_time not at 00, 06, 12, 18 hours past midnight # TODO: ensure
-    if fileInfo.initTime() != desiredInitTime:
+    if fileInfo.initTime().date() != desiredInitTime.date() or fileInfo.initTime().time() != desiredInitTime.time():
         return False
     # False if item doesn't correspond to Wholesale1 or Wholesale2 files
     if not any([setname in fileInfo.name for setname in ["Wholesale1.grib", "Wholesale2.grib"]]):
@@ -261,5 +268,3 @@ def _isWantedFile(fileInfo: CEDAFileInfo, desiredInitTime: dt.datetime) -> bool:
     log.debug(f"Found wanted file from CEDA", file=fileInfo.name)
 
     return True
-
-

@@ -11,16 +11,17 @@ import iris_grib
 from multiprocessing import Pool
 import iris.cube
 import numpy as np
+from io import BytesIO
 
 from src.nwp_consumer import internal
 
 from ._models import MetOfficeFileInfo, MetOfficeResponse
-from .. import common
+from src.nwp_consumer.internal.inputs import common
 
 log = structlog.stdlib.get_logger()
 
 
-class MetOfficeClient(internal.ClientInterface):
+class MetOfficeClient(internal.FetcherInterface):
     """Implements a client to fetch the data from the MetOffice API."""
 
     # MetOffice API Order ID to pull data from
@@ -31,6 +32,9 @@ class MetOfficeClient(internal.ClientInterface):
 
     # Query string headers to pass to the MetOffice API
     __headers: dict[str, str]
+
+    # Storage client
+    storageClient: internal.StorageInterface
 
     # Defines the mapping from MetOffice parameter names to OCF parameter names
     parameterRenameMap: dict[str, str] = {
@@ -50,7 +54,7 @@ class MetOfficeClient(internal.ClientInterface):
         "downward-long-wave-radiation-flux": internal.OCFShortName.DownwardLongWaveRadiationFlux,
     }
 
-    def __init__(self):
+    def __init__(self, storageClient: internal.StorageInterface):
         self.orderID: str = os.environ["METOFFICE_ORDER_ID"]
         self.baseurl: str = f"https://api-metoffice.apiconnect.ibmcloud.com/1.0.0/orders/{self.orderID}/latest"
         self.querystring: dict[str, str] = {"detail": "MINIMAL"}
@@ -60,6 +64,7 @@ class MetOfficeClient(internal.ClientInterface):
             "X-IBM-Client-Id": os.environ["METOFFICE_CLIENT_ID"],
             "X-IBM-Client-Secret": os.environ["METOFFICE_CLIENT_SECRET"],
         }
+        self.storageClient = storageClient
 
     def getDatasetForInitTime(self, initTime: dt.datetime) -> xr.Dataset:
         """Fetches the dataset for the given initTime from the MetOffice API."""
@@ -87,6 +92,7 @@ class MetOfficeClient(internal.ClientInterface):
 
         return allParameterDataset
 
+
     def loadSingleParameterGRIBAsOCFDataArray(self, path: pathlib.Path, initTime: dt.datetime) -> xr.DataArray:
         """Loads a single-parameter GRIB file as an OCF-compliant DataArray."""
 
@@ -112,7 +118,7 @@ class MetOfficeClient(internal.ClientInterface):
 
         download_path: pathlib.Path = pathlib.Path(__file__).parents[5].resolve() / "downloads" / fileInfo.fileId
 
-        if download_path.is_file():
+        if self.storageClient.exists(filepath=download_path):
             log.debug(f"File already exists: {str(download_path)}", path=download_path.as_posix())
 
         else:
@@ -122,7 +128,11 @@ class MetOfficeClient(internal.ClientInterface):
                 opener = urllib.request.build_opener()
                 opener.addheaders = list(dict(self.__headers, **{"Accept": "application/x-grib"}).items())
                 urllib.request.install_opener(opener)
-                urllib.request.urlretrieve(url=url, filename=download_path.as_posix())
+                response = urllib.request.urlopen(url=url)
+                if not response.status == 200:
+                    raise ConnectionError(f"Error response code {response.status} for url {url}: {response.read()}")
+                with self.storageClient.open(path=download_path) as f:
+                    f.write(response.read())
             except Exception as e:
                 raise ConnectionError(f"Error calling url {url} for {fileInfo.fileId}: {e}")
 

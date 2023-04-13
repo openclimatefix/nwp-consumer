@@ -1,6 +1,7 @@
-__all__ = ["OCFShortName", "ClientInterface"]
+__all__ = ["OCFShortName", "FetcherInterface", "StorageInterface"]
 
 from .models import (
-    ClientInterface,
+    FetcherInterface,
+    StorageInterface,
     OCFShortName,
 )

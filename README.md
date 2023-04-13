@@ -77,7 +77,7 @@ nwp-consumer:
             - client.py # Functions for fetching MetOffice data and mapping test_integration to the service model
           - common.py # Common functions for the input sources
         service: # Holds the business logic and use-cases of the application
-          - specificInitTime.py
+          - monthlyZarrDataset.py
       - main.py # The entrypoint for the application
     test_integration: # Contains the integration tests that test calls to external services
   - pyproject.toml # Describes the project and its dependencies

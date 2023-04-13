@@ -1,10 +1,11 @@
 import unittest
 
 from src.nwp_consumer.internal.inputs import ceda, metoffice
+from src.nwp_consumer.internal.outputs import localfs
 import datetime as dt
 
-from src.nwp_consumer.internal.service.specificInitTime import (
-    updateMonthlyZarrForInitTime
+from src.nwp_consumer.internal.service.monthlyZarrDataset import (
+    createMonthlyZarrDataset
 )
 
 cedaInitTime: dt.datetime = dt.datetime(year=2022, month=1, day=1, hour=0, minute=0, tzinfo=dt.timezone.utc)
@@ -14,5 +15,9 @@ metOfficeInitTime: dt.datetime = dt.datetime.now().replace(hour=0, minute=0, sec
 class TestUpdateMonthlyZarrForInitTime(unittest.TestCase):
 
     def test_createsZarrFromCEDAData(self):
-        client = ceda.CEDAClient()
-        updateMonthlyZarrForInitTime(client=client, initTime=cedaInitTime)
+        createMonthlyZarrDataset(
+            fetcher=ceda.CEDAClient(storageClient=localfs.LocalFSClient()),
+            storer=localfs.LocalFSClient(),
+            startDate=cedaInitTime.date(),
+            endDate=(cedaInitTime + dt.timedelta(days=62)).date(),
+        )
