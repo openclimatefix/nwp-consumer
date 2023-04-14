@@ -1,5 +1,4 @@
 import datetime as dt
-import os
 import pathlib
 import urllib.parse
 import urllib.request
@@ -9,7 +8,6 @@ import xarray as xr
 import iris_grib
 import iris.cube
 from multiprocessing import Pool
-from io import BytesIO
 import numpy as np
 
 import structlog
@@ -26,6 +24,22 @@ log = structlog.stdlib.get_logger()
 PARAMETER_IGNORE_LIST: typing.Sequence[str] = (
     "unknown", "h", "hcct", "cdcb", "dpt", "prmsl",
 )
+
+# Defines the mapping from CEDA parameter names to OCF parameter names
+PARAMETER_RENAME_MAP: dict[str, str] = {
+    "10wdir": internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL,
+    "10si": internal.OCFShortName.WindSpeedSurfaceAdjustedAGL,
+    "prate": internal.OCFShortName.RainPrecipitationRate,
+    "r": internal.OCFShortName.RelativeHumidityAGL,
+    "t": internal.OCFShortName.TemperatureAGL,
+    "vis": internal.OCFShortName.VisibilityAGL,
+    "dswrf": internal.OCFShortName.DownwardShortWaveRadiationFlux,
+    "dlwrf": internal.OCFShortName.DownwardLongWaveRadiationFlux,
+    "hcc": internal.OCFShortName.HighCloudCover,
+    "mcc": internal.OCFShortName.MediumCloudCover,
+    "lcc": internal.OCFShortName.LowCloudCover,
+    "sde": internal.OCFShortName.SnowDepthWaterEquivalent,
+}
 
 
 class CEDAClient(internal.FetcherInterface):
@@ -46,27 +60,11 @@ class CEDAClient(internal.FetcherInterface):
     storageClient: internal.StorageInterface
     # TODO: Would prefer it if the fetcher client was not coupled to the storage client
 
-    # Defines the mapping from CEDA parameter names to OCF parameter names
-    parameterRenameMap: dict[str, str] = {
-        "10wdir": internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL,
-        "10si": internal.OCFShortName.WindSpeedSurfaceAdjustedAGL,
-        "prate": internal.OCFShortName.RainPrecipitationRate,
-        "r": internal.OCFShortName.RelativeHumidityAGL,
-        "t": internal.OCFShortName.TemperatureAGL,
-        "vis": internal.OCFShortName.VisibilityAGL,
-        "dswrf": internal.OCFShortName.DownwardShortWaveRadiationFlux,
-        "dlwrf": internal.OCFShortName.DownwardLongWaveRadiationFlux,
-        "hcc": internal.OCFShortName.HighCloudCover,
-        "mcc": internal.OCFShortName.MediumCloudCover,
-        "lcc": internal.OCFShortName.LowCloudCover,
-        "sde": internal.OCFShortName.SnowDepthWaterEquivalent,
-    }
-
-    def __init__(self, storageClient: internal.StorageInterface):
-        self.__username: str = urllib.parse.quote(os.environ["CEDA_FTP_USER"])
-        self.__password: str = urllib.parse.quote(os.environ["CEDA_FTP_PASS"])
+    def __init__(self, ftpUsername: str, ftpPassword: str, storer: internal.StorageInterface):
+        self.__username: str = urllib.parse.quote(ftpUsername)
+        self.__password: str = urllib.parse.quote(ftpPassword)
         self.__ftpBase: str = f'ftp://{self.__username}:{self.__password}@ftp.ceda.ac.uk'
-        self.storageClient: internal.StorageInterface = storageClient
+        self.storageClient: internal.StorageInterface = storer
 
     def getDatasetForInitTime(self, initTime: dt.datetime) -> xr.Dataset:
         """Download a dataset for the given init_time."""
@@ -113,7 +111,7 @@ class CEDAClient(internal.FetcherInterface):
         parameterDataArray: xr.DataArray = xr.DataArray.from_iris(cube)
         # Make the DataArray OCF-compliant
         parameterDataArray = parameterDataArray \
-            .rename(self.parameterRenameMap[path.stem]) \
+            .rename(PARAMETER_RENAME_MAP[path.stem]) \
             .assign_coords({"init_time": np.datetime64(initTime.replace(tzinfo=None))}) \
             .rename({"time": "step_time"}) \
             .rename({"projection_x_coordinate": "x", "projection_y_coordinate": "y"}) \

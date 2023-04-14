@@ -1,5 +1,3 @@
-import os
-
 import requests
 import pathlib
 
@@ -11,7 +9,6 @@ import iris_grib
 from multiprocessing import Pool
 import iris.cube
 import numpy as np
-from io import BytesIO
 
 from src.nwp_consumer import internal
 
@@ -19,6 +16,24 @@ from ._models import MetOfficeFileInfo, MetOfficeResponse
 from src.nwp_consumer.internal.inputs import common
 
 log = structlog.stdlib.get_logger()
+
+# Defines the mapping from MetOffice parameter names to OCF parameter names
+PARAMETER_RENAME_MAP: dict[str, str] = {
+    "temperature": internal.OCFShortName.TemperatureAGL,
+    "wind-speed-surface-adjusted": internal.OCFShortName.WindSpeedSurfaceAdjustedAGL,
+    "wind-direction-from-which-blowing-surface-adjusted":
+        internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL,
+    "high-cloud-cover": internal.OCFShortName.HighCloudCover,
+    "medium-cloud-cover": internal.OCFShortName.MediumCloudCover,
+    "low-cloud-cover": internal.OCFShortName.LowCloudCover,
+    "visibility": internal.OCFShortName.VisibilityAGL,
+    "relative-humidity": internal.OCFShortName.RelativeHumidityAGL,
+    "rain-precipitation-rate": internal.OCFShortName.RainPrecipitationRate,
+    "total-precipitation-rate": internal.OCFShortName.RainPrecipitationRate,
+    "snow-depth-water-equivalent": internal.OCFShortName.SnowDepthWaterEquivalent,
+    "downward-short-wave-radiation-flux": internal.OCFShortName.DownwardShortWaveRadiationFlux,
+    "downward-long-wave-radiation-flux": internal.OCFShortName.DownwardLongWaveRadiationFlux,
+}
 
 
 class MetOfficeClient(internal.FetcherInterface):
@@ -36,35 +51,17 @@ class MetOfficeClient(internal.FetcherInterface):
     # Storage client
     storageClient: internal.StorageInterface
 
-    # Defines the mapping from MetOffice parameter names to OCF parameter names
-    parameterRenameMap: dict[str, str] = {
-        "temperature": internal.OCFShortName.TemperatureAGL,
-        "wind-speed-surface-adjusted": internal.OCFShortName.WindSpeedSurfaceAdjustedAGL,
-        "wind-direction-from-which-blowing-surface-adjusted":
-            internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL,
-        "high-cloud-cover": internal.OCFShortName.HighCloudCover,
-        "medium-cloud-cover": internal.OCFShortName.MediumCloudCover,
-        "low-cloud-cover": internal.OCFShortName.LowCloudCover,
-        "visibility": internal.OCFShortName.VisibilityAGL,
-        "relative-humidity": internal.OCFShortName.RelativeHumidityAGL,
-        "rain-precipitation-rate": internal.OCFShortName.RainPrecipitationRate,
-        "total-precipitation-rate": internal.OCFShortName.RainPrecipitationRate,
-        "snow-depth-water-equivalent": internal.OCFShortName.SnowDepthWaterEquivalent,
-        "downward-short-wave-radiation-flux": internal.OCFShortName.DownwardShortWaveRadiationFlux,
-        "downward-long-wave-radiation-flux": internal.OCFShortName.DownwardLongWaveRadiationFlux,
-    }
-
-    def __init__(self, storageClient: internal.StorageInterface):
-        self.orderID: str = os.environ["METOFFICE_ORDER_ID"]
+    def __init__(self, orderID: str, clientID: str, clientSecret: str, storer: internal.StorageInterface):
+        self.orderID: str = orderID
         self.baseurl: str = f"https://api-metoffice.apiconnect.ibmcloud.com/1.0.0/orders/{self.orderID}/latest"
         self.querystring: dict[str, str] = {"detail": "MINIMAL"}
         self.__headers: dict[str, str] = {
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "X-IBM-Client-Id": os.environ["METOFFICE_CLIENT_ID"],
-            "X-IBM-Client-Secret": os.environ["METOFFICE_CLIENT_SECRET"],
+            "X-IBM-Client-Id": clientID,
+            "X-IBM-Client-Secret": clientSecret,
         }
-        self.storageClient = storageClient
+        self.storageClient = storer
 
     def getDatasetForInitTime(self, initTime: dt.datetime) -> xr.Dataset:
         """Fetches the dataset for the given initTime from the MetOffice API."""
@@ -86,12 +83,7 @@ class MetOfficeClient(internal.FetcherInterface):
             initTime=initTime
         )
 
-        # Delete the raw GRIB files
-        # for path in parameterFilePaths:
-        #    path.unlink()
-
         return allParameterDataset
-
 
     def loadSingleParameterGRIBAsOCFDataArray(self, path: pathlib.Path, initTime: dt.datetime) -> xr.DataArray:
         """Loads a single-parameter GRIB file as an OCF-compliant DataArray."""
@@ -102,7 +94,7 @@ class MetOfficeClient(internal.FetcherInterface):
 
         # Make the DataArray OCF-compliant
         parameterDataArray = parameterDataArray \
-            .rename(self.parameterRenameMap[_getParameterNameFromFileName(fileName=path.stem)]) \
+            .rename(PARAMETER_RENAME_MAP[_getParameterNameFromFileName(fileName=path.stem)]) \
             .assign_coords({"init_time": np.datetime64(initTime.replace(tzinfo=None))}) \
             .rename({"time": "step_time"}) \
             .rename({"projection_x_coordinate": "x", "projection_y_coordinate": "y"}) \
