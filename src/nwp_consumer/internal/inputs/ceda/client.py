@@ -1,22 +1,22 @@
 import datetime as dt
 import pathlib
+import typing
 import urllib.parse
 import urllib.request
-import requests
-import typing
-import xarray as xr
-import iris_grib
-import iris.cube
 from multiprocessing import Pool
-import numpy as np
 
+import iris.cube
+import iris_grib
+import numpy as np
+import requests
 import structlog
+import xarray as xr
 from eccodes import eccodes
 
 from src.nwp_consumer import internal
-
-from ._models import CEDAResponse, CEDAFileInfo
 from src.nwp_consumer.internal.inputs import common
+
+from ._models import CEDAFileInfo, CEDAResponse
 
 log = structlog.stdlib.get_logger()
 
@@ -57,18 +57,16 @@ class CEDAClient(internal.FetcherInterface):
     __ftpBase: str
 
     # Storage client
-    storageClient: internal.StorageInterface
-    # TODO: Would prefer it if the fetcher client was not coupled to the storage client
+    storer: internal.StorageInterface
 
     def __init__(self, ftpUsername: str, ftpPassword: str, storer: internal.StorageInterface):
         self.__username: str = urllib.parse.quote(ftpUsername)
         self.__password: str = urllib.parse.quote(ftpPassword)
         self.__ftpBase: str = f'ftp://{self.__username}:{self.__password}@ftp.ceda.ac.uk'
-        self.storageClient: internal.StorageInterface = storer
+        self.storer: internal.StorageInterface = storer
 
     def getDatasetForInitTime(self, initTime: dt.datetime) -> xr.Dataset:
         """Download a dataset for the given init_time."""
-
         # Fetch all the raw file infos for the given init time
         fileInfosForInitTime: list[CEDAFileInfo] = self._getFileInfosForInitTime(initTime=initTime)
 
@@ -87,7 +85,7 @@ class CEDAClient(internal.FetcherInterface):
 
         # Delete the wholesale files
         for path in wholesaleFilePaths:
-            path.unlink()
+            self.storer.removeFromRawDir(relativePath=path)
 
         # Merge all the single-parameter GRIB files for the initTime into one dataset
         allParameterDataset: xr.Dataset = common.combineSingleParamGRIBsAsOCFDataset(
@@ -98,13 +96,12 @@ class CEDAClient(internal.FetcherInterface):
 
         # Delete the single parameter files
         for path in parameterPathsForInitTime:
-            path.unlink()
+            self.storer.removeFromRawDir(relativePath=path)
 
         return allParameterDataset
 
     def loadSingleParameterGRIBAsOCFDataArray(self, path: pathlib.Path, initTime: dt.datetime) -> xr.DataArray:
         """Loads a single-parameter GRIB file as an OCF-compliant DataArray."""
-
         # Load the GRIB file as a cube
         cube: iris.cube.Cube = iris.cube.CubeList(iris_grib.load_cubes(path.as_posix())).merge_cube()
         # Convert the cube to a DataArray
@@ -128,12 +125,10 @@ class CEDAClient(internal.FetcherInterface):
     def _downloadRawGRIBFile(self, fileInfo: CEDAFileInfo) -> pathlib.Path:
         """Download a GRIB file corresponding to the input FileInfo object."""
 
-        # TODO: inject path to downloaded files
-
         fileName: pathlib.Path = pathlib.Path(fileInfo.name)
 
-        if self.storageClient.exists(filepath=fileName):
-            log.debug(f"File already exists: {str(fileName)}", path=fileName.as_posix())
+        if self.storer.existsInRawDir(relativePath=fileName):
+            log.debug(f"File already exists: {fileInfo.name}")
 
         else:
             ftpPath = f'{self.dataUrl}/{fileInfo.initTime().strftime("%Y/%m/%d")}/{fileInfo.name}'
@@ -144,7 +139,7 @@ class CEDAClient(internal.FetcherInterface):
                 response = urllib.request.urlopen(url=url)
                 if not response.status == 200:
                     raise ConnectionError(f"Error response code {response.status} for url {url}: {response.read()}")
-                with self.storageClient.open(path=fileName) as f:
+                with self.storer.openFromRawDir(relativePath=fileName) as f:
                     f.write(response.read())
             except Exception as e:
                 raise ConnectionError(f"Error calling url {url} for {fileInfo.name}: {e}")
@@ -155,7 +150,6 @@ class CEDAClient(internal.FetcherInterface):
 
     def _getFileInfosForInitTime(self, initTime: dt.datetime) -> list[CEDAFileInfo]:
         """Get a list of FileInfo objects according to the input initTime."""
-
         initDate = initTime.date()
 
         # Fetch info for all files available on the input date
@@ -185,7 +179,6 @@ class CEDAClient(internal.FetcherInterface):
 
     def _splitRawGribPerParameter(self, gribFilePath: pathlib.Path) -> list[pathlib.Path]:
         """Splits a multi-parameter GRIB file into several single-parameter GRIB files."""
-
         # Create a GRIB index based on the 'shortName' and 'step' keys
         indexID = eccodes.codes_index_new_from_file(
             filename=gribFilePath.as_posix(),
@@ -209,7 +202,7 @@ class CEDAClient(internal.FetcherInterface):
 
             # Create a new grib file for the current parameter in the wholesale file
             filePath: pathlib.Path = (fileDirectory / parameter).with_suffix(".grib")
-            parameterFile = self.storageClient.open(path=filePath)
+            parameterFile = self.storer.open(path=filePath)
             multiGribID = eccodes.codes_grib_multi_new()
             log.debug(f"Creating individual file for parameter: {parameter}", path=filePath.as_posix(),
                       steps=len(steps))
@@ -256,13 +249,12 @@ class CEDAClient(internal.FetcherInterface):
 
 def _isWantedFile(fileInfo: CEDAFileInfo, desiredInitTime: dt.datetime) -> bool:
     """Checks if the input FileInfo corresponds to a wanted GRIB file."""
-
     if fileInfo.initTime().date() != desiredInitTime.date() or fileInfo.initTime().time() != desiredInitTime.time():
         return False
     # False if item doesn't correspond to Wholesale1 or Wholesale2 files
     if not any([setname in fileInfo.name for setname in ["Wholesale1.grib", "Wholesale2.grib"]]):
         return False
 
-    log.debug(f"Found wanted file from CEDA", file=fileInfo.name)
+    log.debug("Found wanted file from CEDA", file=fileInfo.name)
 
     return True

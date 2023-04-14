@@ -1,12 +1,11 @@
+import datetime as dt
 import pathlib
 import unittest.mock
 
-import datetime as dt
-
-from .client import _isWantedFile, PARAMETER_IGNORE_LIST, CEDAClient
-from ._models import CEDAFileInfo
 from src.nwp_consumer.internal.outputs import localfs
-from src.nwp_consumer import internal
+
+from ._models import CEDAFileInfo
+from .client import PARAMETER_IGNORE_LIST, CEDAClient, _isWantedFile
 
 CEDA_ENV_VARS_DICT = {
     "CEDA_FTP_USER": "test_user",

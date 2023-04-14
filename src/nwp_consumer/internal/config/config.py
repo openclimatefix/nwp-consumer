@@ -3,6 +3,7 @@
 import os
 from distutils.util import strtobool
 from typing import get_type_hints
+import pathlib
 
 
 class _EnvParseMixin:
@@ -33,15 +34,24 @@ class _EnvParseMixin:
 
 class _CEDAConfig(_EnvParseMixin):
     """Config for CEDA FTP server."""
+
     CEDA_FTP_USER: str = "unset"
     CEDA_FTP_PASS: str = "unset"
 
 
 class _MetOfficeConfig(_EnvParseMixin):
     """Config for Met Office API."""
+
     METOFFICE_ORDER_ID: str = "unset"
     METOFFICE_CLIENT_ID: str = "unset"
     METOFFICE_CLIENT_SECRET: str = "unset"
+
+
+class _LocalFSConfig(_EnvParseMixin):
+    """Config for local filesystem."""
+
+    RAW_DIR: str = (pathlib.Path(__file__).parents[4].resolve() / "downloads").as_posix()
+    ZARR_DIR: str = (pathlib.Path(__file__).parents[4].resolve() / "downloads").as_posix()
 
 
 class AppConfig:

@@ -1,7 +1,7 @@
 """Integration tests for the `inputs` module."""
 
-import unittest
 import datetime as dt
+import unittest
 
 from src.nwp_consumer.internal.inputs import ceda, metoffice
 from src.nwp_consumer.internal.inputs.ceda._models import CEDAFileInfo

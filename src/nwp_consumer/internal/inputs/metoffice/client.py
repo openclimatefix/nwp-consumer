@@ -1,19 +1,19 @@
-import requests
-import pathlib
-
-import structlog.stdlib
 import datetime as dt
+import pathlib
 import urllib.request
-import xarray as xr
-import iris_grib
 from multiprocessing import Pool
+
 import iris.cube
+import iris_grib
 import numpy as np
+import requests
+import structlog.stdlib
+import xarray as xr
 
 from src.nwp_consumer import internal
+from src.nwp_consumer.internal.inputs import common
 
 from ._models import MetOfficeFileInfo, MetOfficeResponse
-from src.nwp_consumer.internal.inputs import common
 
 log = structlog.stdlib.get_logger()
 
@@ -49,9 +49,11 @@ class MetOfficeClient(internal.FetcherInterface):
     __headers: dict[str, str]
 
     # Storage client
-    storageClient: internal.StorageInterface
+    storer: internal.StorageInterface
 
     def __init__(self, orderID: str, clientID: str, clientSecret: str, storer: internal.StorageInterface):
+        if any([value in [None, "", "unset"] for value in [clientID, clientSecret, orderID]]):
+            raise KeyError("Must provide clientID, clientSecret, and orderID")
         self.orderID: str = orderID
         self.baseurl: str = f"https://api-metoffice.apiconnect.ibmcloud.com/1.0.0/orders/{self.orderID}/latest"
         self.querystring: dict[str, str] = {"detail": "MINIMAL"}
@@ -61,11 +63,10 @@ class MetOfficeClient(internal.FetcherInterface):
             "X-IBM-Client-Id": clientID,
             "X-IBM-Client-Secret": clientSecret,
         }
-        self.storageClient = storer
+        self.storer = storer
 
     def getDatasetForInitTime(self, initTime: dt.datetime) -> xr.Dataset:
         """Fetches the dataset for the given initTime from the MetOffice API."""
-
         # Fetch all the raw file infos for the given init time
         fileInfosForInitTime: list[MetOfficeFileInfo] = self._getFileInfosForInitTime(initTime=initTime)
 
@@ -87,7 +88,6 @@ class MetOfficeClient(internal.FetcherInterface):
 
     def loadSingleParameterGRIBAsOCFDataArray(self, path: pathlib.Path, initTime: dt.datetime) -> xr.DataArray:
         """Loads a single-parameter GRIB file as an OCF-compliant DataArray."""
-
         # Load the GRIB file as a cube and convert to a DataArray
         cube: iris.cube.Cube = iris.cube.CubeList(iris_grib.load_cubes(path.as_posix())).merge_cube()
         parameterDataArray: xr.DataArray = xr.DataArray.from_iris(cube)
@@ -106,12 +106,10 @@ class MetOfficeClient(internal.FetcherInterface):
     def _downloadRawGRIBFile(self, fileInfo: MetOfficeFileInfo) -> pathlib.Path:
         """Downloads a GRIB file corresponding to the input FileInfo object."""
 
-        # TODO: inject path to downloaded files
+        fileName: pathlib.Path = pathlib.Path(fileInfo.fileId)
 
-        download_path: pathlib.Path = pathlib.Path(__file__).parents[5].resolve() / "downloads" / fileInfo.fileId
-
-        if self.storageClient.exists(filepath=download_path):
-            log.debug(f"File already exists: {str(download_path)}", path=download_path.as_posix())
+        if self.storer.existsInRawDir(relativePath=fileName):
+            log.debug(f"File already exists: {fileInfo.fileId}")
 
         else:
             log.debug(f"Requesting download of {fileInfo.fileId}", item=fileInfo.fileId)
@@ -123,18 +121,17 @@ class MetOfficeClient(internal.FetcherInterface):
                 response = urllib.request.urlopen(url=url)
                 if not response.status == 200:
                     raise ConnectionError(f"Error response code {response.status} for url {url}: {response.read()}")
-                with self.storageClient.open(path=download_path) as f:
+                with self.storer.openFromRawDir(relativePath=fileName) as f:
                     f.write(response.read())
             except Exception as e:
                 raise ConnectionError(f"Error calling url {url} for {fileInfo.fileId}: {e}")
 
-            log.debug(f"Downloaded item: {fileInfo.fileId}", item=fileInfo.fileId, path=download_path)
+            log.debug(f"Downloaded item: {fileInfo.fileId}", item=fileInfo.fileId)
 
-        return download_path
+        return fileName
 
     def _getFileInfosForInitTime(self, initTime: dt.datetime) -> list[MetOfficeFileInfo]:
         """Get a list of FileInfo objects according to the input initTime."""
-
         # Fetch info for all files available on the input date
         response: requests.Response = requests.request(
             method="GET",
@@ -169,13 +166,11 @@ def _getParameterNameFromFileName(fileName: str) -> str:
 
     so the parameter is the second element in the file name when split by underscores.
     """
-
     return fileName.split("_")[1]
 
 
 def _isWantedFile(fileInfo: MetOfficeFileInfo, desiredInitTime: dt.datetime) -> bool:
     """Checks if the input FileInfo corresponds to a wanted GRIB file."""
-
     # False if item has an init_time not equal to desired init time
     if fileInfo.initTime().replace(tzinfo=dt.timezone.utc) != desiredInitTime.replace(tzinfo=dt.timezone.utc):
         return False
@@ -183,6 +178,6 @@ def _isWantedFile(fileInfo: MetOfficeFileInfo, desiredInitTime: dt.datetime) -> 
     if "+" in fileInfo.fileName():
         return False
 
-    log.debug(f"Found wanted file from MetOffice", file=fileInfo.fileName())
+    log.debug("Found wanted file from MetOffice", file=fileInfo.fileName())
 
     return True

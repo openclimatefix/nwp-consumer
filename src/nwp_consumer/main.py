@@ -1,9 +1,7 @@
-import pathlib
 
 import structlog
-import xarray as xr
 
-from src.nwp_consumer.internal.inputs import ceda, metoffice
+from src.nwp_consumer.internal.inputs import ceda
 
 log = structlog.stdlib.get_logger()
 

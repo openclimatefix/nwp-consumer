@@ -1,8 +1,8 @@
-import pathlib
-import xarray as xr
 import datetime as dt
+import pathlib
+
 import structlog
-import numpy as np
+import xarray as xr
 
 from src.nwp_consumer import internal
 
@@ -12,7 +12,6 @@ log = structlog.stdlib.get_logger()
 def combineSingleParamGRIBsAsOCFDataset(
         client: internal.FetcherInterface, parameterFilePaths: list[pathlib.Path], initTime: dt.datetime) -> xr.Dataset:
     """Combines many single-parameter GRIB files as a single xarray dataset."""
-
     # Instantiate a list to hold the DataArrays for each parameter
     parameterDataArrays: list[xr.DataArray] = []
     datasetName: str = initTime.strftime("%Y%m%dT%H%M")
@@ -24,7 +23,7 @@ def combineSingleParamGRIBsAsOCFDataset(
     )
 
     # For each parameter file, load test_integration as a DataArray and add test_integration to the list
-    for i, filePath in enumerate(parameterFilePaths):
+    for filePath in parameterFilePaths:
         try:
             parameterDataArray = client.loadSingleParameterGRIBAsOCFDataArray(path=filePath, initTime=initTime)
             parameterDataArrays.append(parameterDataArray)

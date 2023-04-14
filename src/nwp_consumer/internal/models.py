@@ -1,15 +1,12 @@
 """Contains both ports and domain models for the nwp_consumer package."""
 
+import abc
 import datetime as dt
 import io
-
 import pathlib
-import xarray as xr
-from io import BytesIO
-
 from enum import Enum
 
-import abc
+import xarray as xr
 
 
 # ------- Interfaces ------- #
@@ -29,41 +26,37 @@ class FetcherInterface(abc.ABC):
         pass
 
 
-# TODO: The internal zarr/grib logic in the implementations of these abstract methods may be
-# TODO: better suited to exposure as top level StorageInterface functions, but I'm not sure yet.
 class StorageInterface(abc.ABC):
     """Generic interface for storing data, used for dependency injection."""
 
     @abc.abstractmethod
-    def exists(self, filepath: pathlib.Path) -> bool:
-        """Check if the given path exists.
-
-        This should check for files with the .grib extension in the directory given by the
-        RAW_GRIB_DIR_PATH environment variable, and files with the .zarr extension in the
-        directory given by the ZARR_DIR_PATH environment variable."""
+    def existsInRawDir(self, relativePath: pathlib.Path) -> bool:
+        """Check if a file exists in the raw directory."""
         pass
 
     @abc.abstractmethod
-    def open(self, path: pathlib.Path) -> io.BufferedWriter:
-        """Open a file, returning a file-like object.
-
-        This should open files with the .grib extension in the directory given by the
-        RAW_GRIB_DIR_PATH environment variable, and files with the .zarr extension in
-        the directory given by the ZARR_DIR_PATH environment variable."""
+    def existsInZarrDir(self, relativePath: pathlib.Path) -> bool:
+        """Check if a file exists in the zarr directory."""
         pass
 
     @abc.abstractmethod
-    def saveDataset(self, dataset: xr.Dataset, filepath: pathlib.Path) -> None:
-        """Store the given dataset as a Zarr file.
-
-        This should save the zarr file in the directory given by the ZARR_DIR_PATH environment variable."""
+    def openFromRawDir(self, relativePath: pathlib.Path) -> io.BufferedWriter:
+        """Open a file from the raw dir, returning a file-like object."""
         pass
 
     @abc.abstractmethod
-    def appendDataset(self, dataset: xr.Dataset, filepath: pathlib.Path) -> None:
-        """Append the given dataset to the existing dataset at the given path.
+    def removeFromRawDir(self, relativePath: pathlib.Path) -> None:
+        """Remove a file from the raw dir."""
+        pass
 
-        This should append to a file in the directory given by the ZARR_DIR_PATH environment variable."""
+    @abc.abstractmethod
+    def saveDataset(self, dataset: xr.Dataset, relativePath: pathlib.Path) -> None:
+        """Store the given dataset as a Zarr file."""
+        pass
+
+    @abc.abstractmethod
+    def appendDataset(self, dataset: xr.Dataset, relativePath: pathlib.Path) -> None:
+        """Append the given dataset to the existing dataset at the given path."""
         pass
 
 
@@ -71,6 +64,7 @@ class StorageInterface(abc.ABC):
 
 class OCFShortName(str, Enum):
     """Short names for the OCF parameters."""
+
     LowCloudCover = "lcc"
     MediumCloudCover = "mcc"
     HighCloudCover = "hcc"

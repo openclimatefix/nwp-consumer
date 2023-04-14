@@ -1,40 +1,39 @@
-import unittest.mock
 import datetime as dt
 import pathlib
+import unittest.mock
+
 import numpy as np
 
-from .client import _isWantedFile, _getParameterNameFromFileName, MetOfficeClient
-from ._models import MetOfficeFileInfo
-
-from src.nwp_consumer.internal.outputs import localfs
 from src.nwp_consumer import internal
+from src.nwp_consumer.internal.outputs import localfs
 
-METOFFICE_ENV_VARS_DICT = {
-    "METOFFICE_ORDER_ID": "test_order_id",
-    "METOFFICE_CLIENT_ID": "test_client_id",
-    "METOFFICE_CLIENT_SECRET": "test_client_secret",
-}
+from ._models import MetOfficeFileInfo
+from .client import MetOfficeClient, _getParameterNameFromFileName, _isWantedFile
 
 
 # --------- Client methods --------- #
 
 class TestClient_Init(unittest.TestCase):
-    @unittest.mock.patch.dict("os.environ", {}, clear=True)
     def test_errorsWhenVariablesAreNotSet(self):
         with self.assertRaises(KeyError):
-            _ = MetOfficeClient(storageClient=localfs.LocalFSClient())
+            _ = MetOfficeClient(
+                orderID="unset",
+                clientID="",
+                clientSecret="test_client_secret",
+                storer=localfs.LocalFSClient())
 
-    @unittest.mock.patch.dict("os.environ", METOFFICE_ENV_VARS_DICT)
-    def test_errorsWhenStorageClientIsNotSet(self):
-        with self.assertRaises(TypeError):
-            _ = MetOfficeClient()
 
-
-@unittest.mock.patch.dict("os.environ", METOFFICE_ENV_VARS_DICT, clear=True)
 class TestClient_loadSingleParameterGRIBAsOCFDataArray(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.client = MetOfficeClient(storageClient=localfs.LocalFSClient())
+        self.client = MetOfficeClient(
+            orderID="test_order_id",
+            clientID="test_client_id",
+            clientSecret="test_client_secret",
+            storer=localfs.LocalFSClient(
+                rawDir=pathlib.Path(__file__).parent.as_posix(),
+                zarrDir=pathlib.Path(__file__).parent.as_posix(),
+            ))
 
     def test_loadsCorrectly(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_downward-short-wave-radiation-flux.grib"
@@ -44,6 +43,8 @@ class TestClient_loadSingleParameterGRIBAsOCFDataArray(unittest.TestCase):
             path=testFilePath,
             initTime=testInitTime,
         )
+
+        print(ocfDataArray)
 
         self.assertEqual(internal.OCFShortName.DownwardShortWaveRadiationFlux, ocfDataArray.name)
         self.assertEqual(np.datetime64(testInitTime), ocfDataArray["init_time"])
