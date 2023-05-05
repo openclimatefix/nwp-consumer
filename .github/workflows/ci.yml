@@ -2,11 +2,9 @@ name: Python CI
 
 on:
   push:
-    paths:
-      - 'src/**'
-      - 'pyproject.toml'
-      - 'Containerfile'
-      - '.github/workflows/ci.yml'
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
     tags:
       - 'v*'
   pull_request:
