@@ -10,7 +10,6 @@ from src.nwp_consumer.internal.outputs import localfs
 from ._models import MetOfficeFileInfo
 from .client import MetOfficeClient, _getParameterNameFromFileName, _isWantedFile
 
-
 # --------- Client methods --------- #
 
 class TestClient_Init(unittest.TestCase):

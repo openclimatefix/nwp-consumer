@@ -1,7 +1,11 @@
 <h1 align="center">nwp-consumer</h1>
 <p align="center">
     <a href="https://github.com/openclimatefix/nwp-consumer/graphs/contributors" alt="Contributors">
-        <img src="https://img.shields.io/github/contributors/openclimatefix/nwp-consumer" /></a>
+        <img src="https://img.shields.io/github/contributors/openclimatefix/nwp-consumer?style=for-the-badge" /></a>
+    <a href="">
+        <img src="https://img.shields.io/github/actions/workflow/status/openclimatefix/nwp-consumer/ci.yml?branch=main&label=CI&style=for-the-badge"></a>
+    <a href="https://github.com/openclimatefix/nwp-consumer/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc">
+        <img src="https://img.shields.io/github/issues/openclimatefix/nwp-consumer?style=for-the-badge"></a>
 </p>
 
 Consumer for NWP data. Currently works with MetOffice and CEDA datasets.
@@ -9,14 +13,38 @@ Consumer for NWP data. Currently works with MetOffice and CEDA datasets.
 # :warning: This is still a work in progress! :warning:
 
 Still TODO:
-- Dependency-inject storage client for S3 and local
-- Complete the test suite
-- Create the use-cases and business logic for the live service and for backfilling
-- Create the entrypoint for the service
+- Complete the test suite for S3
+- Create the use-cases and business logic for the live service
+- Complete the entrypoint for the service
 - Ensure the dockerfile and the workflow are working correctly
 
-## Installation
+## Repository structure
 
+```yml
+nwp-consumer:
+  
+  src: # Top-level folder for the source code
+    nwp_consumer: # The main library package
+      internal: # Packages internal to the service. Like the 'lib' folder
+        inputs: # Holds subpackages for each data source
+          ceda:
+            - _models.py # Contains the data models specific to the CEDA API
+            - client.py # Functions for fetching CEDA data and mapping test_integration to the service model
+          metoffice:
+            - _models.py # Contains the data models for the MetOffice API
+            - client.py # Functions for fetching MetOffice data and mapping test_integration to the service model
+          - common.py # Common functions for the input sources
+        service: # Holds the business logic and use-cases of the application
+          - monthlyZarrDataset.py
+      - main.py # The entrypoint for the application
+    test_integration: # Contains the integration tests that test calls to external services
+  - pyproject.toml # Describes the project and its dependencies
+  - Containerfile # Contains the Dockerfile for the project
+```
+
+## Local development
+
+Clone the repository and create and activate a new python virtualenv for it. `cd` to the repository root.
 
 ### System dependencies
 
@@ -47,9 +75,7 @@ Found: ecCodes v2.27.0.
 Your system is ready.
 ```
 
-### Local development
-
-Clone the repository and create and activate a new python virtualenv for it. `cd` to the repository root.
+### Python requirements
 
 Install the required python dependencies with
 
@@ -57,32 +83,18 @@ Install the required python dependencies with
 $ pip install -e . 
 ```
 
-### PyPi
+This looks for requirements specified in the `pyproject.toml` file.
 
-TODO
+<details>
+    <summary>Where is the requirements.txt file?</summary>
 
-## Repository structure
-
-```yaml
-nwp-consumer:
-  src: # Top-level folder for the source code
-    nwp_consumer: # The main library package
-      internal: # Packages internal to the service. Like the 'lib' folder
-        inputs: # Holds subpackages for each data source
-          ceda:
-            - _models.py # Contains the data models specific to the CEDA API
-            - client.py # Functions for fetching CEDA data and mapping test_integration to the service model
-          metoffice:
-            - _models.py # Contains the data models for the MetOffice API
-            - client.py # Functions for fetching MetOffice data and mapping test_integration to the service model
-          - common.py # Common functions for the input sources
-        service: # Holds the business logic and use-cases of the application
-          - monthlyZarrDataset.py
-      - main.py # The entrypoint for the application
-    test_integration: # Contains the integration tests that test calls to external services
-  - pyproject.toml # Describes the project and its dependencies
-  - Containerfile # Contains the Dockerfile for the project
-```
+There is no `requirements.txt` file. Instead, the project uses setuptool's pyproject.toml integration to specify 
+dependencies. This is a new feature of setuptools and pip, and is the 
+[recommended way](https://packaging.python.org/en/latest/tutorials/packaging-projects/) to specify dependencies.
+See [the setuptools guide](https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html) and
+[the PEP621 specification](https://packaging.python.org/en/latest/specifications/declaring-project-metadata/#declaring-project-metadata)
+for more information.
+</details>
 
 ## Further reading
 

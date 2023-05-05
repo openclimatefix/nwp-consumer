@@ -1,7 +1,8 @@
 import datetime as dt
 import pathlib
-import unittest
 import shutil
+import unittest
+
 import numpy as np
 import xarray as xr
 

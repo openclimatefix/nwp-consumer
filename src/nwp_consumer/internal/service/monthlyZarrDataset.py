@@ -13,7 +13,7 @@ from src.nwp_consumer import internal
 log = structlog.stdlib.get_logger()
 
 
-def createMonthlyZarrDataset(
+def CreateMonthlyZarrDataset(
         fetcher: internal.FetcherInterface,
         storer: internal.StorageInterface,
         startDate: dt.date,

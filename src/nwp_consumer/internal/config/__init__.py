@@ -1,3 +1,3 @@
-__all__ = ["AppConfig"]
+__all__ = ["CEDAConfig", "LocalFSConfig", "MetOfficeConfig"]
 
-from .config import AppConfig
+from .config import CEDAConfig, LocalFSConfig, MetOfficeConfig

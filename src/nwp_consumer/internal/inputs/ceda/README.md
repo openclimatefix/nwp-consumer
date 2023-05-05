@@ -1,14 +1,5 @@
 # CEDA
 
-## Client Usage
-
-The usage of the CEDA client requires the following environment variables:
-
-```yaml
-CEDA_FTP_USER: <username>
-CEDA_FTP_PASS: <password>
-```
-
 ---
 
 ## Data
@@ -55,7 +46,7 @@ Full domain, 35 time steps and the following surface level parameters.
 | 3059    | prate     | kg m**-2 s**-1 | Precipitation rate      |
 |         | unknown   | unknown        | unknown                 |
 
-View via pasting the ouput of the following to this 
+View via pasting the output of the following to this 
 [online table converter](https://tableconvert.com/json-to-markdown):
 
 ```shell
