@@ -1,9 +1,9 @@
 """Config struct for application running."""
 
 import os
+import pathlib
 from distutils.util import strtobool
 from typing import get_type_hints
-import pathlib
 
 
 class _EnvParseMixin:
@@ -32,29 +32,25 @@ class _EnvParseMixin:
                     f'Unable to cast value of "{os.environ[field]}" to type "{fieldType}" for "{field}" field')
 
 
-class _CEDAConfig(_EnvParseMixin):
+class CEDAConfig(_EnvParseMixin):
     """Config for CEDA FTP server."""
 
-    CEDA_FTP_USER: str = "unset"
-    CEDA_FTP_PASS: str = "unset"
+    CEDA_FTP_USER: str
+    CEDA_FTP_PASS: str
 
 
-class _MetOfficeConfig(_EnvParseMixin):
+class MetOfficeConfig(_EnvParseMixin):
     """Config for Met Office API."""
 
-    METOFFICE_ORDER_ID: str = "unset"
-    METOFFICE_CLIENT_ID: str = "unset"
-    METOFFICE_CLIENT_SECRET: str = "unset"
+    METOFFICE_ORDER_ID: str
+    METOFFICE_CLIENT_ID: str
+    METOFFICE_CLIENT_SECRET: str
 
 
-class _LocalFSConfig(_EnvParseMixin):
+class LocalFSConfig(_EnvParseMixin):
     """Config for local filesystem."""
 
-    RAW_DIR: str = (pathlib.Path(__file__).parents[4].resolve() / "downloads").as_posix()
-    ZARR_DIR: str = (pathlib.Path(__file__).parents[4].resolve() / "downloads").as_posix()
+    RAW_DIR: str
+    ZARR_DIR: str
 
-
-class AppConfig:
-    ceda: _CEDAConfig
-    mo: _MetOfficeConfig
 

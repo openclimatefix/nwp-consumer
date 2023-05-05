@@ -1,7 +1,7 @@
 import datetime as dt
 import pathlib
 import urllib.request
-from multiprocessing import Pool
+from concurrent.futures import ProcessPoolExecutor
 
 import iris.cube
 import iris_grib
@@ -74,13 +74,13 @@ class MetOfficeClient(internal.FetcherInterface):
             raise Exception(f"No files found for initTime {initTime}")
 
         # Download the raw parameter files given by the file infos
-        with Pool(4) as p:
-            parameterFilePaths: list[pathlib.Path] = p.map(self._downloadRawGRIBFile, fileInfosForInitTime)
+        with ProcessPoolExecutor(4) as p:
+            rawRelPaths: list[pathlib.Path] = [x for x in p.map(self._downloadRawGRIBFile, fileInfosForInitTime)]
 
         # Merge all the single-parameter GRIB files for the initTime into one dataset
         allParameterDataset: xr.Dataset = common.combineSingleParamGRIBsAsOCFDataset(
             client=self,
-            parameterFilePaths=parameterFilePaths,
+            parameterFilePaths=rawRelPaths,
             initTime=initTime
         )
 
@@ -99,13 +99,13 @@ class MetOfficeClient(internal.FetcherInterface):
             .rename({"time": "step_time"}) \
             .rename({"projection_x_coordinate": "x", "projection_y_coordinate": "y"}) \
             .drop_vars(["height", "pressure"], errors="ignore") \
+            .expand_dims("init_time") \
             .chunk("auto")
 
         return parameterDataArray
 
     def _downloadRawGRIBFile(self, fileInfo: MetOfficeFileInfo) -> pathlib.Path:
         """Downloads a GRIB file corresponding to the input FileInfo object."""
-
         fileName: pathlib.Path = pathlib.Path(fileInfo.fileId)
 
         if self.storer.existsInRawDir(relativePath=fileName):
@@ -121,12 +121,14 @@ class MetOfficeClient(internal.FetcherInterface):
                 response = urllib.request.urlopen(url=url)
                 if not response.status == 200:
                     raise ConnectionError(f"Error response code {response.status} for url {url}: {response.read()}")
-                with self.storer.openFromRawDir(relativePath=fileName) as f:
-                    f.write(response.read())
             except Exception as e:
                 raise ConnectionError(f"Error calling url {url} for {fileInfo.fileId}: {e}")
+            try:
+                savedPath = self.storer.writeBytesToRawDir(relativePath=fileName, data=response.read())
+            except Exception as e:
+                raise IOError(f"Error saving file {fileInfo.fileId} to {fileName}: {e}")
 
-            log.debug(f"Downloaded item: {fileInfo.fileId}", item=fileInfo.fileId)
+            log.debug(f"Downloaded item: {fileInfo.fileId}", item=fileInfo.fileId, path=savedPath.as_posix())
 
         return fileName
 
@@ -135,7 +137,7 @@ class MetOfficeClient(internal.FetcherInterface):
         # Fetch info for all files available on the input date
         response: requests.Response = requests.request(
             method="GET",
-            url=f"{self.baseurl}",
+            url=self.baseurl,
             headers=self.__headers,
             params=self.querystring
         )

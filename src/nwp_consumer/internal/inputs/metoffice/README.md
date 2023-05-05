@@ -1,15 +1,5 @@
 # MetOffice API
 
-## Client Usage
-
-The usage of the MetOffice client requires the following environment variables:
-
-```yaml
-METOFFICE_CLIENT_ID: <client_id>
-METOFFICE_CLIENT_SECRET: <client_secret>
-METOFFICE_ORDER_ID: <order_id>
-```
-
 ---
 
 

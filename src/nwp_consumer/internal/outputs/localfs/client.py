@@ -1,5 +1,4 @@
 import io
-import os
 import pathlib
 
 import numpy as np
@@ -20,7 +19,6 @@ class LocalFSClient(internal.StorageInterface):
 
     def __init__(self, rawDir: str, zarrDir: str, createDirs: bool = False):
         """Create a new LocalFSClient."""
-
         rawPath: pathlib.Path = pathlib.Path(rawDir)
         zarrPath: pathlib.Path = pathlib.Path(zarrDir)
 
@@ -42,14 +40,24 @@ class LocalFSClient(internal.StorageInterface):
         path = self.__zarrDir / relativePath
         return path.exists()
 
-    def openFromRawDir(self, relativePath: pathlib.Path) -> io.BufferedWriter:
-        """Open a file from the raw dir, returning a file-like object."""
+    def readBytesFromRawDir(self, relativePath: pathlib.Path) -> bytes:
+        """Read a file from the raw dir as bytes."""
+        path = self.__rawDir / relativePath
+
+        if self.existsInRawDir(relativePath=relativePath):
+            return path.read_bytes()
+        else:
+            raise FileNotFoundError(f"File not found in raw dir: {path}")
+
+    def writeBytesToRawDir(self, relativePath: pathlib.Path, data: bytes) -> pathlib.Path:
+        """Write the given bytes to the raw directory."""
         path = self.__rawDir / relativePath
 
         # Create the path to the file if the folders do not exist
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        return path.open("wb")
+        path.write_bytes(data)
+        return path
 
     def removeFromRawDir(self, relativePath: pathlib.Path) -> None:
         """Remove a file from the raw dir."""

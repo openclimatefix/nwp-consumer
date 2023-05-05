@@ -22,7 +22,24 @@ class TestClient_Exists(unittest.TestCase):
         self.assertFalse(self.client.existsInRawDir(relativePath=pathlib.Path("test_doesnotexist.grib")))
 
 
-class TestClient_Open(unittest.TestCase):
+class TestClient_ReadBytesFromRawDir(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.client = LocalFSClient(
+            rawDir=pathlib.Path(__file__).parent.as_posix(),
+            zarrDir=pathlib.Path(__file__).parent.as_posix(),
+        )
+
+    def test_RaisesErrorWhenFileDoesNotExist(self):
+        with self.assertRaises(FileNotFoundError):
+            self.client.readBytesFromRawDir(relativePath="doesnotexist.grib")
+
+    def test_ReadsBytesCorrectly(self):
+        bytes = self.client.readBytesFromRawDir(relativePath="test_fakefile.grib")
+        self.assertEqual(3, len(bytes))
+
+
+class TestClient_WriteBytesToRawDir(unittest.TestCase):
 
     def setUp(self) -> None:
         self.client = LocalFSClient(
@@ -32,17 +49,14 @@ class TestClient_Open(unittest.TestCase):
         self.testNonExistingRelativePath = pathlib.Path("doesnotexist.grib")
         self.testNonExistingRelativeDir = pathlib.Path("testdir") / "doesnotexist.grib"
 
-    def test_opensFile(self):
-        with self.client.openFromRawDir(relativePath=pathlib.Path("test_fakefile.grib")) as f:
-            self.assertIsNotNone(f)
+    def test_WritesBytesCorrectly(self):
+        self.client.writeBytesToRawDir(relativePath=self.testNonExistingRelativePath, data=b"test")
+        self.assertTrue((pathlib.Path(__file__).parent / self.testNonExistingRelativePath).exists())
 
-    def test_doesNotRaisesErrorWhenFileDoesNotExist(self):
-        with self.client.openFromRawDir(relativePath=self.testNonExistingRelativePath) as f:
-            self.assertIsNotNone(f)
-
-    def test_createsParentDirectories(self):
-        with self.client.openFromRawDir(relativePath=self.testNonExistingRelativeDir) as f:
-            self.assertIsNotNone(f)
+    def test_createsDirWhenItDoesNotExist(self):
+        self.client.writeBytesToRawDir(relativePath=self.testNonExistingRelativeDir, data=b"test")
+        self.assertTrue((pathlib.Path(__file__).parent / self.testNonExistingRelativeDir).exists())
+        self.assertTrue((pathlib.Path(__file__).parent / self.testNonExistingRelativeDir.parent).exists())
 
     def tearDown(self) -> None:
         (pathlib.Path(__file__).parent / self.testNonExistingRelativePath).unlink(missing_ok=True)

@@ -39,7 +39,7 @@ def combineSingleParamGRIBsAsOCFDataset(
     dataset = xr.merge(
         parameterDataArrays,
         compat='identical', combine_attrs='drop_conflicts'
-    ).expand_dims("init_time")
+    )
 
     del parameterDataArrays
 

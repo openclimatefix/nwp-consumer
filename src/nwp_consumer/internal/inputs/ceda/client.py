@@ -1,9 +1,11 @@
 import datetime as dt
+import io
 import pathlib
+import tempfile
 import typing
 import urllib.parse
 import urllib.request
-from multiprocessing import Pool
+from concurrent.futures import ProcessPoolExecutor
 
 import iris.cube
 import iris_grib
@@ -74,17 +76,17 @@ class CEDAClient(internal.FetcherInterface):
             raise Exception(f"No files found for initTime {initTime}")
 
         # Download the wholesale files given by the file infos
-        with Pool(4) as p:
-            wholesaleFilePaths: list[pathlib.Path] = p.map(self._downloadRawGRIBFile, fileInfosForInitTime)
+        with ProcessPoolExecutor(2) as p:
+            rawRelPaths: list[pathlib.Path] = [x for x in p.map(self._downloadRawGRIBFile, fileInfosForInitTime)]
 
         # For each wholesale CEDA file, split the GRIB into individual per-parameter GRIB files
         parameterPathsForInitTime: list[pathlib.Path] = []
-        for rawPath in wholesaleFilePaths:
+        for rawPath in rawRelPaths:
             parameterPaths: list[pathlib.Path] = self._splitRawGribPerParameter(gribFilePath=rawPath)
             parameterPathsForInitTime.extend(parameterPaths)
 
         # Delete the wholesale files
-        for path in wholesaleFilePaths:
+        for path in rawRelPaths:
             self.storer.removeFromRawDir(relativePath=path)
 
         # Merge all the single-parameter GRIB files for the initTime into one dataset
@@ -102,8 +104,19 @@ class CEDAClient(internal.FetcherInterface):
 
     def loadSingleParameterGRIBAsOCFDataArray(self, path: pathlib.Path, initTime: dt.datetime) -> xr.DataArray:
         """Loads a single-parameter GRIB file as an OCF-compliant DataArray."""
-        # Load the GRIB file as a cube
-        cube: iris.cube.Cube = iris.cube.CubeList(iris_grib.load_cubes(path.as_posix())).merge_cube()
+
+        # Iris-grib also can't take a file-like object as input, so we have to download the file to a tempfile again
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempParameterFile:
+            # Copy the raw file to a local temp file
+            tempParameterFile.write(self.storer.readBytesFromRawDir(relativePath=path))
+            tempParameterFile.seek(0)
+
+            # Load the GRIB file as a cube
+            try:
+                cube: iris.cube.Cube = iris.cube.CubeList(iris_grib.load_cubes(tempParameterFile.name)).merge_cube()
+            except Exception as e:
+                raise ValueError(f"Failed to load GRIB file from {path} as a cube: {e}")
+
         # Convert the cube to a DataArray
         parameterDataArray: xr.DataArray = xr.DataArray.from_iris(cube)
         # Make the DataArray OCF-compliant
@@ -113,6 +126,7 @@ class CEDAClient(internal.FetcherInterface):
             .rename({"time": "step_time"}) \
             .rename({"projection_x_coordinate": "x", "projection_y_coordinate": "y"}) \
             .drop_vars(["height", "pressure"], errors="ignore") \
+            .expand_dims("init_time") \
             .chunk("auto")
 
         # Snow depth is in `m` from CEDA, but OCF expects `kg m-2`. A scaling factor of 1000 converts between the two.
@@ -124,7 +138,6 @@ class CEDAClient(internal.FetcherInterface):
 
     def _downloadRawGRIBFile(self, fileInfo: CEDAFileInfo) -> pathlib.Path:
         """Download a GRIB file corresponding to the input FileInfo object."""
-
         fileName: pathlib.Path = pathlib.Path(fileInfo.name)
 
         if self.storer.existsInRawDir(relativePath=fileName):
@@ -137,14 +150,14 @@ class CEDAClient(internal.FetcherInterface):
             try:
                 # Fetch the file from CEDA
                 response = urllib.request.urlopen(url=url)
-                if not response.status == 200:
-                    raise ConnectionError(f"Error response code {response.status} for url {url}: {response.read()}")
-                with self.storer.openFromRawDir(relativePath=fileName) as f:
-                    f.write(response.read())
             except Exception as e:
                 raise ConnectionError(f"Error calling url {url} for {fileInfo.name}: {e}")
+            try:
+                savedPath = self.storer.writeBytesToRawDir(relativePath=fileName, data=response.read())
+            except Exception as e:
+                raise IOError(f"Error saving file {fileInfo.name} to {fileName}: {e}")
 
-            log.debug(f"Downloaded item: {fileInfo.name}", item=fileInfo.name, path=fileName)
+            log.debug(f"Downloaded item: {fileInfo.name}", item=fileInfo.name, path=savedPath.as_posix())
 
         return fileName
 
@@ -162,7 +175,7 @@ class CEDAClient(internal.FetcherInterface):
         if not response.ok:
             raise AssertionError(f"Non-okay status for {response.url}: {response.status_code}")
 
-        # Map the response to a CedaResponse object
+        # Map the response to a CEDAResponse object
         try:
             responseObj: CEDAResponse = CEDAResponse.Schema().load(response.json())
         except Exception as e:
@@ -179,70 +192,92 @@ class CEDAClient(internal.FetcherInterface):
 
     def _splitRawGribPerParameter(self, gribFilePath: pathlib.Path) -> list[pathlib.Path]:
         """Splits a multi-parameter GRIB file into several single-parameter GRIB files."""
-        # Create a GRIB index based on the 'shortName' and 'step' keys
-        indexID = eccodes.codes_index_new_from_file(
-            filename=gribFilePath.as_posix(),
-            keys=["shortName", "step"]
-        )
-        parameters = list(eccodes.codes_index_get(indexid=indexID, key="shortName"))
-        steps = list(eccodes.codes_index_get(indexid=indexID, key="step"))
-        log.debug(
-            f"Wholesale file contains {len(parameters)} parameter(s) and {len(steps)} step(s)",
-            file=gribFilePath.as_posix(), parameters=parameters
-        )
 
-        fileDirectory: pathlib.Path = gribFilePath.with_suffix("")
+        # Here we have to work with the difficult to use eccodes library, in order to fix issues with the CEDA dataset.
+        # The eccodes library cannot open files from a fil-like object; only from filenames. As such we have to save
+        # the file to disk, then open it with eccodes, then delete it afterwards.
 
-        parameterFilePaths: list[pathlib.Path] = []
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempWholesaleFile:
+            # Copy the raw file to a local temp file
+            tempWholesaleFile.write(self.storer.readBytesFromRawDir(relativePath=gribFilePath))
+            tempWholesaleFile.seek(0)
 
-        for parameter in parameters:
-            # Ignore parameters that are not currently available form MetOffice or are unknown
-            if parameter in PARAMETER_IGNORE_LIST:
-                continue
+            # Create a GRIB index based on the 'shortName' and 'step' keys
+            try:
+                indexID = eccodes.codes_index_new_from_file(
+                    filename=tempWholesaleFile.name,
+                    keys=["shortName", "step"]
+                )
+            except Exception as e:
+                raise IOError(f"Error creating index for {gribFilePath}: {e}")
 
-            # Create a new grib file for the current parameter in the wholesale file
-            filePath: pathlib.Path = (fileDirectory / parameter).with_suffix(".grib")
-            parameterFile = self.storer.open(path=filePath)
-            multiGribID = eccodes.codes_grib_multi_new()
-            log.debug(f"Creating individual file for parameter: {parameter}", path=filePath.as_posix(),
-                      steps=len(steps))
+            # Get a list of unique parameters and steps contained in the index
+            parameters = list(eccodes.codes_index_get(indexid=indexID, key="shortName"))
+            steps = list(eccodes.codes_index_get(indexid=indexID, key="step"))
+            log.debug(
+                f"Wholesale file contains {len(parameters)} parameter(s) and {len(steps)} step(s)",
+                file=gribFilePath.as_posix(), parameters=parameters
+            )
 
-            # Select the message subset for the current parameter's shortname on the wholesale GRIB's index
-            eccodes.codes_index_select(indexID, "shortName", parameter)
+            # Create a directory for the individual parameter files
+            fileDirectory: pathlib.Path = gribFilePath.with_suffix("")
+            parameterFilePaths: list[pathlib.Path] = []
 
-            # Add each step for this parameter to the single-parameter file
-            for step in steps:
-                # Select the message subset for the current step on the index
-                eccodes.codes_index_select(indexID, "step", step)
-                # Create an in-memory GRIB file from the selected subset
-                gribID = eccodes.codes_new_from_index(indexID)
+            for parameter in parameters:
+                # Ignore parameters that are not currently available form MetOffice or are unknown
+                if parameter in PARAMETER_IGNORE_LIST:
+                    continue
 
-                # Modify the incorrectly-valued 'sourceOfGridDefinition' and 'scanningMode' keys
-                # scanningMode should specify negative y, positive x: see
-                # https://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_doc/grib2_table3-4.shtml
-                eccodes.codes_set_key_vals(gribID, f"sourceOfGridDefinition=0,scanningMode={0b00000000}")
-                assert (eccodes.codes_get(gribID, 'sourceOfGridDefinition', int) == 0)
-                assert (eccodes.codes_get(gribID, 'scanningMode', int) == 0)
-                # Add in the missing 'scaleFactor' key, based on the value of the axis scale factors
-                majorAxisScaleFactor: int = eccodes.codes_get(gribID, 'scaleFactorOfEarthMajorAxis', int)
-                minorAxisScaleFactor: int = eccodes.codes_get(gribID, 'scaleFactorOfEarthMajorAxis', int)
-                assert (majorAxisScaleFactor == minorAxisScaleFactor)
-                eccodes.codes_set_key_vals(gribID, f"scaleFactorAtReferencePoint={majorAxisScaleFactor}")
-                assert (eccodes.codes_get(gribID, 'scaleFactorAtReferencePoint', int) == minorAxisScaleFactor)
+                # Create a new grib file for the current parameter in the wholesale file
+                parameterFilePath: pathlib.Path = (fileDirectory / parameter).with_suffix(".grib")
+                multiGribID = eccodes.codes_grib_multi_new()
+                log.debug(f"Creating individual file for parameter: {parameter}", path=parameterFilePath.as_posix(),
+                          steps=len(steps))
 
-                # Append the in-memory GRIB file to the single-parameter GRIB file
-                eccodes.codes_grib_multi_append(ingribid=gribID, startsection=3, multigribid=multiGribID)
-                # Release the in-memory GRIB file
-                eccodes.codes_release(gribID)
+                # Select the message subset for the current parameter's shortname on the wholesale GRIB's index
+                eccodes.codes_index_select(indexID, "shortName", parameter)
+                # Add each step for this parameter to the single-parameter file
+                for step in steps:
+                    # Select the message subset for the current step on the index
+                    eccodes.codes_index_select(indexID, "step", step)
+                    # Create an in-memory GRIB file from the selected subset
+                    gribID = eccodes.codes_new_from_index(indexID)
 
-            # Write the multiGrib file to the parameterFile buffer
-            eccodes.codes_grib_multi_write(multiGribID, parameterFile)
-            eccodes.codes_grib_multi_release(multiGribID)
-            parameterFile.close()
+                    # Modify the incorrectly-valued 'sourceOfGridDefinition' and 'scanningMode' keys
+                    # scanningMode should specify negative y, positive x: see
+                    # https://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_doc/grib2_table3-4.shtml
+                    eccodes.codes_set_key_vals(gribID, f"sourceOfGridDefinition=0,scanningMode={0b00000000}")
+                    assert (eccodes.codes_get(gribID, 'sourceOfGridDefinition', int) == 0)
+                    assert (eccodes.codes_get(gribID, 'scanningMode', int) == 0)
+                    # Add in the missing 'scaleFactor' key, based on the value of the axis scale factors
+                    majorAxisScaleFactor: int = eccodes.codes_get(gribID, 'scaleFactorOfEarthMajorAxis', int)
+                    minorAxisScaleFactor: int = eccodes.codes_get(gribID, 'scaleFactorOfEarthMajorAxis', int)
+                    assert (majorAxisScaleFactor == minorAxisScaleFactor)
+                    eccodes.codes_set_key_vals(gribID, f"scaleFactorAtReferencePoint={majorAxisScaleFactor}")
+                    assert (eccodes.codes_get(gribID, 'scaleFactorAtReferencePoint', int) == minorAxisScaleFactor)
 
-            log.debug(f"Saved individual file for parameter: {parameter}", path=filePath.as_posix(), steps=len(steps))
+                    # Append the in-memory GRIB file to the single-parameter GRIB file
+                    eccodes.codes_grib_multi_append(ingribid=gribID, startsection=3, multigribid=multiGribID)
+                    # Release the in-memory GRIB file
+                    eccodes.codes_release(gribID)
 
-            parameterFilePaths.append(filePath)
+                # Write the multiGrib file to the parameterFile buffer
+                # Again, eccodes cannot write to a file-like object, so we have to use a Temporary File
+                with tempfile.NamedTemporaryFile(mode="r+b", suffix=".grib2") as tempParameterFile:
+                    with open(tempParameterFile.name, mode="wb") as f:
+                        eccodes.codes_grib_multi_write(multiGribID, f)
+                        eccodes.codes_grib_multi_release(multiGribID)
+
+                    # Write the tempFile contents to storage
+                    tempParameterFile.seek(0)
+                    savedParameterFilePath = self.storer.writeBytesToRawDir(
+                        relativePath=parameterFilePath, data=tempParameterFile.read())
+
+                log.debug(
+                    f"Saved individual file for parameter: {parameter}",
+                    path=savedParameterFilePath.as_posix(), steps=len(steps))
+
+                parameterFilePaths.append(parameterFilePath)
 
         return parameterFilePaths
 

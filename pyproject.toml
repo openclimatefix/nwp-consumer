@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 # Metadata (see https://peps.python.org/pep-0621/)
 [project]
-name = "nwp-converter"
+name = "nwp-consumer"
 dynamic = ["version"] # Set automtically using git: https://setuptools-git-versioning.readthedocs.io/en/stable/
 description = "Tool for aggregating NWP .grib files into zarrs"
 readme = {file = "README.md", content-type = "text/markdown"}
@@ -16,6 +16,8 @@ authors = [
 ]
 classifiers = ["Programming Language :: Python :: 3"]
 dependencies = [
+    "boto3 == 1.26.124",
+    "docopt==0.6.2",
     "eccodes == 1.5.1",
     "iris-grib @ git+https://github.com/SciTools/iris-grib.git@a017a12bb44f6ad20698eaf0bda7e92d71f71c8b",
     "marshmallow == 3.19.0",
@@ -32,14 +34,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["ruff == 0.0.259"]
+dev = [
+    "ruff == 0.0.259",
+    "unittest-xml-reporting == 3.2.0"
+]
 
 [project.urls]
 repository = "https://github.com/openclimatefix/nwp-consumer"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["nwp_converter"]
+include = ["nwp_consumer"]
 exclude = ["*.tests", "*.tests.*", "tests.*", "tests"]
 
 [tool.setuptools-git-versioning]

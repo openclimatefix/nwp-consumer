@@ -19,3 +19,4 @@ structlog.configure(
         structlog.processors.JSONRenderer(sort_keys=True),
     ],
 )
+

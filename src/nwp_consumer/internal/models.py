@@ -40,8 +40,13 @@ class StorageInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def openFromRawDir(self, relativePath: pathlib.Path) -> io.BufferedWriter:
-        """Open a file from the raw dir, returning a file-like object."""
+    def writeBytesToRawDir(self, relativePath: pathlib.Path, data: bytes) -> pathlib.Path:
+        """Write the given bytes to the raw directory."""
+        pass
+
+    @abc.abstractmethod
+    def readBytesFromRawDir(self, relativePath: pathlib.Path) -> bytes:
+        """Read the given bytes from the raw directory."""
         pass
 
     @abc.abstractmethod

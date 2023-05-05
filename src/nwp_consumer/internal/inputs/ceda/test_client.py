@@ -2,7 +2,7 @@ import datetime as dt
 import pathlib
 import unittest.mock
 
-from src.nwp_consumer.internal.outputs import localfs
+from src.nwp_consumer.internal import outputs
 
 from ._models import CEDAFileInfo
 from .client import PARAMETER_IGNORE_LIST, CEDAClient, _isWantedFile
@@ -12,14 +12,19 @@ CEDA_ENV_VARS_DICT = {
     "CEDA_FTP_PASSWORD": "test_password",
 }
 
+storer = outputs.localfs.LocalFSClient(
+    rawDir=(pathlib.Path(__file__).parent / "test").as_posix(),
+    zarrDir=(pathlib.Path(__file__).parent / "test").as_posix(),
+)
+
 
 # --------- Client methods --------- #
 
 class TestClient_Init(unittest.TestCase):
     @unittest.mock.patch.dict("os.environ", {}, clear=True)
     def test_errorsWhenVariablesAreNotSet(self):
-        with self.assertRaises(KeyError):
-            _ = CEDAClient(storageClient=localfs.LocalFSClient())
+        with self.assertRaises(TypeError):
+            _ = CEDAClient(storer=storer)
 
     @unittest.mock.patch.dict("os.environ", CEDA_ENV_VARS_DICT)
     def test_errorsWhenStorageClientIsNotSet(self):
@@ -31,21 +36,18 @@ class TestClient_Init(unittest.TestCase):
 class TestClient_loadSingleParameterGRIBAsOCFDataArray(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.client = CEDAClient(storageClient=localfs.LocalFSClient())
+        self.client = CEDAClient(storer=storer, ftpUsername="", ftpPassword="")
 
     def test_loadsCorrectly(self):
         # TODO
         pass
 
 
-
 @unittest.mock.patch.dict("os.environ", CEDA_ENV_VARS_DICT)
 class TestClient_SplitRawGribPerParameter(unittest.TestCase):
 
     def test_splitsWholesale1Correctly(self):
-        client = CEDAClient(
-            storageClient=localfs.LocalFSClient()
-        )
+        client = CEDAClient(storer=storer, ftpPassword="", ftpUsername="")
 
         wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_truncated_Wholesale1.grib"
 
@@ -59,9 +61,7 @@ class TestClient_SplitRawGribPerParameter(unittest.TestCase):
 
     def test_splitsWholesale2Correctly(self):
 
-        client = CEDAClient(
-            storageClient=localfs.LocalFSClient()
-        )
+        client = CEDAClient(storer=storer, ftpUsername="", ftpPassword="")
 
         wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_truncated_Wholesale2.grib"
 
@@ -77,7 +77,7 @@ class TestClient_SplitRawGribPerParameter(unittest.TestCase):
 
     def tearDown(self) -> None:
         # Remove created files
-        for folder in pathlib.Path(__file__).parent.glob("*test*"):
+        for folder in pathlib.Path(__file__).parent.glob("test*"):
             if folder.is_dir():
                 for path in folder.glob("*"):
                     path.unlink()

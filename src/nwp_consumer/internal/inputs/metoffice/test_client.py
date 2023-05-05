@@ -10,8 +10,8 @@ from src.nwp_consumer.internal.outputs import localfs
 from ._models import MetOfficeFileInfo
 from .client import MetOfficeClient, _getParameterNameFromFileName, _isWantedFile
 
-
 # --------- Client methods --------- #
+
 
 class TestClient_Init(unittest.TestCase):
     def test_errorsWhenVariablesAreNotSet(self):
@@ -20,7 +20,7 @@ class TestClient_Init(unittest.TestCase):
                 orderID="unset",
                 clientID="",
                 clientSecret="test_client_secret",
-                storer=localfs.LocalFSClient())
+                storer=localfs.LocalFSClient(rawDir="", zarrDir=""))
 
 
 class TestClient_loadSingleParameterGRIBAsOCFDataArray(unittest.TestCase):
@@ -48,7 +48,7 @@ class TestClient_loadSingleParameterGRIBAsOCFDataArray(unittest.TestCase):
 
         self.assertEqual(internal.OCFShortName.DownwardShortWaveRadiationFlux, ocfDataArray.name)
         self.assertEqual(np.datetime64(testInitTime), ocfDataArray["init_time"])
-        self.assertEqual((13, 639, 455), ocfDataArray.data.shape)
+        self.assertEqual((1, 13, 639, 455), ocfDataArray.data.shape)
 
 
 # --------- Static methods --------- #
