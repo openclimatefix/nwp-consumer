@@ -20,4 +20,4 @@ FROM gcr.io/distroless/python3-debian11
 COPY --from=build-venv /venv /venv
 COPY src/nwp_consumer /app
 WORKDIR /app
-ENTRYPOINT ["/venv/bin/python3", "main.py"]
+ENTRYPOINT ["/venv/bin/python3", "cmd/nwp_consumer.py"]

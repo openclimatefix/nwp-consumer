@@ -39,6 +39,9 @@ dev = [
     "unittest-xml-reporting == 3.2.0"
 ]
 
+[project.scripts]
+nwp-consumer = "nwp_consumer.cmd.nwp_consumer:main"
+
 [project.urls]
 repository = "https://github.com/openclimatefix/nwp-consumer"
 
