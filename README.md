@@ -1,8 +1,9 @@
 <h2 align="center">
-    🌐 nwp-consumer 🌐
-    <br>
-    <br>
-    Microservice for consuming NWP data.
+🌐 nwp-consumer 🌐
+
+<br>
+
+Microservice for consuming NWP data.
 </h2>
 
 <div align="center">
@@ -17,6 +18,8 @@
     <img alt="GitHub tag (latest SemVer pre-release)" src="https://img.shields.io/github/v/tag/openclimatefix/nwp-consumer?include_prereleases&sort=semver&style=for-the-badge"></a>
 
 </div>
+
+<br>
 
 A microservice for consuming NWP data from various sources and storing it in a common format. Built with inspiration 
 from the [Hexagonal Architecture](https://alistair.cockburn.us/hexagonal-architecture) pattern, the nwp-consumer is 
