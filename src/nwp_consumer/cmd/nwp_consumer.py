@@ -10,8 +10,6 @@ Options:
   --version     Show version.
   --start-date  Start date in YYYY-MM-DD format
   --end-date    End date in YYYY-MM-DD format
-  --raw-dir     Directory to store raw grib files
-  --zarr-dir    Directory to store zarr files
 """
 
 import datetime as dt
