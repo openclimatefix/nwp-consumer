@@ -1,5 +1,7 @@
-<h1 align="center">nwp-consumer</h1>
-<h1 align="center">:globe_with_meridians: :arrow_down:</h1>
+<h1 align="center">
+    :globe_with_meridians: :arrow_down: </br>
+    nwp-consumer
+</h1>
 <p align="center">
     <a href="https://github.com/openclimatefix/nwp-consumer/graphs/contributors" alt="Contributors">
         <img src="https://img.shields.io/github/contributors/openclimatefix/nwp-consumer?style=for-the-badge" /></a>

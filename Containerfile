@@ -18,6 +18,6 @@ RUN /venv/bin/pip install .
 # * These are small images that only contain the runtime dependencies
 FROM gcr.io/distroless/python3-debian11
 COPY --from=build-venv /venv /venv
-COPY src/nwp_consumer /app/nwp_consumer
+COPY --from=build-venv src/nwp_consumer /app/nwp_consumer
 WORKDIR /app
 ENTRYPOINT ["/venv/bin/nwp-consumer"]
