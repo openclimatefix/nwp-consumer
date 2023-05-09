@@ -1,8 +1,7 @@
 <h2 align="center">
 🌐 nwp-consumer 🌐
-
 <br>
-
+<br>
 Microservice for consuming NWP data.
 </h2>
 
