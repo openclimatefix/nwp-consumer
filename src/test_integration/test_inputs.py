@@ -3,10 +3,10 @@
 import datetime as dt
 import unittest
 
+from nwp_consumer.internal import config
 from nwp_consumer.internal.inputs import ceda, metoffice
 from nwp_consumer.internal.inputs.ceda._models import CEDAFileInfo
 from nwp_consumer.internal.inputs.metoffice._models import MetOfficeFileInfo
-from nwp_consumer.internal import config
 from nwp_consumer.internal.outputs import localfs
 
 cedaInitTime: dt.datetime = dt.datetime(year=2022, month=1, day=1, hour=0, minute=0, tzinfo=dt.timezone.utc)
@@ -36,16 +36,13 @@ class TestGetDatasetForInitTime(unittest.TestCase):
 
     def testGetsDatasetSuccessfullyFromCEDA(self):
         dataset = cedaClient.getDatasetForInitTime(initTime=cedaInitTime)
-        print(dataset)
 
         self.assertTrue({"x", "y", "init_time", "step_time"}.issubset(set(dataset.coords)))
         self.assertTrue(dataset.sizes["step_time"] == 37)
         self.assertTrue(len(dataset.data_vars) > 0)
-        print(dataset["sde"].mean())
 
     def testGetsDatasetSuccessfullyFromMetOffice(self):
         dataset = metOfficeClient.getDatasetForInitTime(initTime=metOfficeInitTime)
-        print(dataset)
 
         self.assertTrue({"x", "y", "init_time", "step_time"}.issubset(set(dataset.coords)))
         self.assertTrue(dataset.sizes["step_time"] > 1)

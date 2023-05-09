@@ -1,5 +1,6 @@
 import datetime as dt
 import pathlib
+import tempfile
 import urllib.request
 from concurrent.futures import ProcessPoolExecutor
 
@@ -88,8 +89,19 @@ class MetOfficeClient(internal.FetcherInterface):
 
     def loadSingleParameterGRIBAsOCFDataArray(self, path: pathlib.Path, initTime: dt.datetime) -> xr.DataArray:
         """Loads a single-parameter GRIB file as an OCF-compliant DataArray."""
-        # Load the GRIB file as a cube and convert to a DataArray
-        cube: iris.cube.Cube = iris.cube.CubeList(iris_grib.load_cubes(path.as_posix())).merge_cube()
+        # Iris-grib can't take a file-like object as input, so we have to download the file to a tempfile again
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempParameterFile:
+            # Copy the raw file to a local temp file
+            tempParameterFile.write(self.storer.readBytesFromRawDir(relativePath=path))
+            tempParameterFile.seek(0)
+
+            # Load the GRIB file as a cube
+            try:
+                cube: iris.cube.Cube = iris.cube.CubeList(iris_grib.load_cubes(tempParameterFile.name)).merge_cube()
+            except Exception as e:
+                raise ValueError(f"Failed to load GRIB file from {path} as a cube: {e}")
+
+        # Convert the cube to a DataArray
         parameterDataArray: xr.DataArray = xr.DataArray.from_iris(cube)
 
         # Make the DataArray OCF-compliant

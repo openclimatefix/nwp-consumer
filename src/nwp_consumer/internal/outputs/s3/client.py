@@ -1,8 +1,6 @@
 import pathlib
-import tempfile
 
 import boto3
-import io
 import xarray as xr
 
 from nwp_consumer import internal

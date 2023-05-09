@@ -1,7 +1,6 @@
 """Config struct for application running."""
 
 import os
-import pathlib
 from distutils.util import strtobool
 from typing import get_type_hints
 
@@ -27,9 +26,10 @@ class _EnvParseMixin:
                     value = fieldType(os.environ.get(field, default_value))
 
                 self.__setattr__(field, value)
-            except ValueError:
+            except ValueError as e:
                 raise EnvironmentError(
-                    f'Unable to cast value of "{os.environ[field]}" to type "{fieldType}" for "{field}" field')
+                    f'Unable to cast value of "{os.environ[field]}" to type '
+                    f'"{fieldType}" for "{field}" field') from e
 
 
 class CEDAConfig(_EnvParseMixin):

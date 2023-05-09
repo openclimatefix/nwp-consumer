@@ -2,12 +2,10 @@
 
 import abc
 import datetime as dt
-import io
 import pathlib
 from enum import Enum
 
 import xarray as xr
-
 
 # ------- Interfaces ------- #
 # Represent ports in the hexagonal architecture pattern

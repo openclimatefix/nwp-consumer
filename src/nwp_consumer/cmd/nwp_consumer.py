@@ -1,4 +1,4 @@
-"""nwp-consumer
+"""nwp-consumer.
 
 Usage:
   nwp_consumer create-monthly-zarr-dataset --start-date <startDate> --end-date <endDate>
@@ -15,11 +15,10 @@ Options:
 """
 
 import datetime as dt
+import importlib.metadata
 
 import structlog
-
 from docopt import docopt
-import importlib.metadata
 
 from nwp_consumer.internal import config
 from nwp_consumer.internal.inputs import ceda

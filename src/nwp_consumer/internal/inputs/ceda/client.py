@@ -1,5 +1,4 @@
 import datetime as dt
-import io
 import pathlib
 import tempfile
 import typing
@@ -104,7 +103,6 @@ class CEDAClient(internal.FetcherInterface):
 
     def loadSingleParameterGRIBAsOCFDataArray(self, path: pathlib.Path, initTime: dt.datetime) -> xr.DataArray:
         """Loads a single-parameter GRIB file as an OCF-compliant DataArray."""
-
         # Iris-grib also can't take a file-like object as input, so we have to download the file to a tempfile again
         with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempParameterFile:
             # Copy the raw file to a local temp file
@@ -192,7 +190,6 @@ class CEDAClient(internal.FetcherInterface):
 
     def _splitRawGribPerParameter(self, gribFilePath: pathlib.Path) -> list[pathlib.Path]:
         """Splits a multi-parameter GRIB file into several single-parameter GRIB files."""
-
         # Here we have to work with the difficult to use eccodes library, in order to fix issues with the CEDA dataset.
         # The eccodes library cannot open files from a fil-like object; only from filenames. As such we have to save
         # the file to disk, then open it with eccodes, then delete it afterwards.
