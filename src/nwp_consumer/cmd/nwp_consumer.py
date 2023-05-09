@@ -1,9 +1,9 @@
 """nwp-consumer.
 
 Usage:
-  nwp_consumer create-monthly-zarr-dataset --start-date <startDate> --end-date <endDate>
-  nwp_consumer (-h | --help)
-  nwp_consumer --version
+  nwp-consumer create-monthly-zarr-dataset --start-date <startDate> --end-date <endDate>
+  nwp-consumer (-h | --help)
+  nwp-consumer --version
 
 Options:
   -h --help     Show this screen.
