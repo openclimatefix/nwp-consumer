@@ -2,10 +2,12 @@
 <p align="center">
     <a href="https://github.com/openclimatefix/nwp-consumer/graphs/contributors" alt="Contributors">
         <img src="https://img.shields.io/github/contributors/openclimatefix/nwp-consumer?style=for-the-badge" /></a>
-    <a href="">
-        <img src="https://img.shields.io/github/actions/workflow/status/openclimatefix/nwp-consumer/ci.yml?branch=main&label=CI&style=for-the-badge"></a>
+    <a href="https://github.com/openclimatefix/nwp-consumer/actions/workflows/ci.yml">
+        <img alt="GitHub Workflow Status (with branch)" src="https://img.shields.io/github/actions/workflow/status/openclimatefix/nwp-consumer/ci.yml?branch=main&style=for-the-badge"></a>
     <a href="https://github.com/openclimatefix/nwp-consumer/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc">
         <img src="https://img.shields.io/github/issues/openclimatefix/nwp-consumer?style=for-the-badge"></a>
+    <a href="https://github.com/openclimatefix/nwp-consumer/tags">
+        <img alt="GitHub tag (latest SemVer pre-release)" src="https://img.shields.io/github/v/tag/openclimatefix/nwp-consumer?include_prereleases&sort=semver&style=for-the-badge">
 </p>
 
 Consumer for NWP data. Currently works with MetOffice and CEDA datasets.

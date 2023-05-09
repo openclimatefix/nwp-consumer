@@ -58,17 +58,17 @@ jobs:
           paths: |
             ut-report.xml
             it-report.xml
+          show: "fail, skip"
         if: always()
-        show: "fail, skip"
           
   build-docker:
-    # Only build Docker image on main branch commits and if unittests pass
+    # Only build Docker image on branch commits and if unittests pass
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request'
 
     steps:
       - name: Checkout repository

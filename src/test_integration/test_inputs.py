@@ -58,7 +58,7 @@ class Test_DownloadRawGribFile(unittest.TestCase):
         fileInfo = CEDAFileInfo(name="202201010000_u1096_ng_umqv_Wholesale1.grib")
         outPath = cedaClient._downloadRawGRIBFile(fileInfo=fileInfo)
         self.assertTrue(cedaClient.storer.existsInRawDir(outPath))
-        outPath.unlink()
+        cedaClient.storer.removeFromRawDir(outPath)
 
     def test_downloadsRawGribFileFromMetOffice(self):
         fileInfo = MetOfficeFileInfo(
@@ -67,7 +67,7 @@ class Test_DownloadRawGribFile(unittest.TestCase):
         )
         outPath = metOfficeClient._downloadRawGRIBFile(fileInfo=fileInfo)
         self.assertTrue(metOfficeClient.storer.existsInRawDir(outPath))
-        outPath.unlink()
+        metOfficeClient.storer.removeFromRawDir(outPath)
 
 
 class Test_GetFileInfosForInitTime(unittest.TestCase):
