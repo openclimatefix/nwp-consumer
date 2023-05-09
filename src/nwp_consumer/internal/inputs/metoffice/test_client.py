@@ -4,8 +4,8 @@ import unittest.mock
 
 import numpy as np
 
-from src.nwp_consumer import internal
-from src.nwp_consumer.internal.outputs import localfs
+from nwp_consumer import internal
+from nwp_consumer.internal.outputs import localfs
 
 from ._models import MetOfficeFileInfo
 from .client import MetOfficeClient, _getParameterNameFromFileName, _isWantedFile

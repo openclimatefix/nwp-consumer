@@ -12,7 +12,7 @@
 
 Consumer for NWP data. Currently works with MetOffice and CEDA datasets.
 
-# :warning: This is still a work in progress! :warning:
+# :warning: This is still a work in progress!
 
 Still TODO:
 - Complete the test suite for S3
@@ -21,20 +21,52 @@ Still TODO:
 
 ## Running the service
 
+### Using Docker (recommended)
+
 This service is designed to be run as a Docker container. The `Containerfile` is the Dockerfile for the service.
 It is recommended to run it this way due to the present dependency on various external binaries, which at the moment
 cannot be easily distributed in a PyPi package. To run, pull the latest version from `ghcr.io` via:
 
 ```shell
-$ docker run ghcr.io/openclimatefix/nwp-consumer:latest
+$ docker run ghcr.io/openclimatefix/nwp-consumer:latest \
+  -v /path/to/datadir:/data \
+  -e ZARR_DIR=/data/zarr \
+  -e RAW_DIR=/data/raw \
+  -e <other required env vars...>  
+```
+
+### Using the Python Package (not recommended)
+
+Ensure the [external dependencies](#external-dependencies) are installed. Then, either:
+
+1. Download the latest wheel from the artifacts of the desired
+    [CI run](https://github.com/openclimatefix/nwp-consumer/actions/workflows/ci.yml) and install it via
+    ```shell
+    $ pip install nwp-consumer-<version>.whl
+    ```
+
+2. Clone the repository and install the package via
+    ```shell
+    $ pip install .
+    ```
+
+Then run the service via
+
+```shell
+$ ZARR_DIR="~/zarr" RAW_DIR="~/raw" <other required env vars...> nwp-consumer 
 ```
 
 ## Repository structure
 
+Produced using [exa](https://github.com/ogham/exa):
+```shell
+$ exa --tree --git-ignore -F -I "*init*|test*.*"
+```
+
 ```yml
 ./
 ├── Containerfile # The Dockerfile for the service
-├── pyproject.toml
+├── pyproject.toml # The build configuration for the service
 ├── README.md
 └── src/
    ├── nwp_consumer/ # The main library package
@@ -64,18 +96,19 @@ $ docker run ghcr.io/openclimatefix/nwp-consumer:latest
    └── test_integration/
 ```
 
-It is structured following the hexagonal architecture pattern.
-
-Produced using [exa](https://github.com/ogham/exa) :
-```shell
-$ exa --tree --git-ignore -F -I "*init*|test*.*"
-```
+`nwp-consumer` is structured following the hexagonal architecture pattern. In brief, this means a clear separation
+between the application's business logic - it's **Core** - and the **Actors** that are external to it. In this package,
+the core of the service is in `internal/service/` and the actors are in `internal/inputs/` and `internal/outputs/`.
+The service logic has no knowledge of the external actors, instead defining interfaces that the actors must implement.
+These are found in `internal/models.py`. The actors are then responsible for implementing these interfaces, and are
+*dependency-injected* in at runtime. This allows the service to be easily tested and extended. See
+[further reading](#further-reading) for more information.
 
 ## Local development
 
 Clone the repository and create and activate a new python virtualenv for it. `cd` to the repository root.
 
-### System dependencies
+### External dependencies
 
 The `eccodes` python library depends on the ECMWF *ecCodes* library
 that must be installed on the system and accessible as a shared library.
@@ -133,3 +166,5 @@ On packaging a python project using setuptools and pyproject.toml:
 - The pyproject.toml metadata specification: https://packaging.python.org/en/latest/specifications/declaring-project-metadata
 
 On hexagonal architecture:
+- Overview 1: https://medium.com/ssense-tech/hexagonal-architecture-there-are-always-two-sides-to-every-story-bc0780ed7d9c
+- Overview 2: https://medium.com/@matiasvarela/hexagonal-architecture-in-go-cfd4e436faa3

@@ -6,8 +6,8 @@ import unittest
 import numpy as np
 import xarray as xr
 
-from src.nwp_consumer import internal
-from src.nwp_consumer.internal.outputs import localfs
+from nwp_consumer import internal
+from nwp_consumer.internal.outputs import localfs
 
 from .monthlyZarrDataset import CreateMonthlyZarrDataset
 

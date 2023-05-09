@@ -11,6 +11,8 @@ on:
     branches:
       - 'main'
 
+# Specify concurrency such that only one workflow can run at a time
+# * Different workflow files are not affected
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -21,8 +23,9 @@ env:
 
 jobs:
 
+  # Define a "test" job that runs on all branches and PRs
+  # * Incorporates unittests and integration tests
   test:
-    # Run unittests on all branches and PRs
     runs-on: ubuntu-latest
     container: continuumio/miniconda3:latest
 
@@ -34,13 +37,17 @@ jobs:
         run: |
           conda install -y -c conda-forge nodejs eccodes cartopy cf-units cftime numcodecs
           python -m pip install --upgrade pip
-          pip install .[dev]
+          pip install -e .[dev]
 
+      # Run unittests on all branches and PRs
+      # * Produce JUnit XML report
       - name: Run unit tests
         run: python -m xmlrunner discover -s src/nwp_consumer -p "test_*.py" --output-file ut-report.xml
 
+      # Run integration tests on main and PRs to it
+      # * Requires secrets to be set in the repository settings
+      # * Produce JUnit XML report
       - name: Run integration tests
-        # Run integration tests on main and PRs to it
         env:
           RAW_DIR: "/tmp/raw"
           ZARR_DIR: "/tmp/zarr"
@@ -52,6 +59,8 @@ jobs:
         if:  github.ref == 'refs/heads/main' && github.event_name != 'tag'
         run: python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
 
+      # Create test summary to be visualised on the job summary screen on GitHub
+      # * Runs even if previous steps fail
       - name: Create test summary
         uses: test-summary/action@v2
         with:
@@ -60,9 +69,11 @@ jobs:
             it-report.xml
           show: "fail, skip"
         if: always()
-          
+
+  # Define a "build-docker" job that runs on branch commits only
+  # * Builds and pushes a Docker image to the registry defined in the environment variables
+  # * Only runs if test job passes
   build-docker:
-    # Only build Docker image on branch commits and if unittests pass
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -84,6 +95,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Tag the built image according to the event type
+      # * If the event is a tag, use the tag name
+      # * If the event is a branch commit, use the commit sha
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
@@ -93,18 +107,21 @@ jobs:
             type=sha,event=branch
             type=semver,pattern={{version}}
 
+      # Build and push the Docker image to the registry
+      # * Creates a multiplatform-aware image
+      # * Semantic versioning is handled via the meta action
       - name: Build and push Docker image
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
           context: .
           file: Containerfile
-          push: ${{ github.event_name }} != 'pull_request'
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
-          
+
+  # Define a "build-wheel" job that runs on main branch commits only
+  # * Only runs if test job passes
   build-wheel:
-    # Only build wheel on main branch commits and if unittests pass
     runs-on: ubuntu-latest
     container: continuumio/miniconda3:latest
     needs: test
@@ -114,12 +131,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # Building the wheel dynamically assigns the version according to git
+      # * The setuptools_git_versioning package reads the git tags and assigns the version
+      # * The version is then used in the wheel filename and made available in the package
+      # * setuptools_git_versioning is configured in pyproject.toml
       - name: Build wheel
         run: |
           conda install -y -c conda-forge nodejs eccodes cartopy cf-units cftime numcodecs
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip wheel
           pip install .
-          python -m build --wheel
+          pip wheel . --no-deps --wheel-dir dist
 
       - name: Cache dependencies
         uses: actions/cache@v3

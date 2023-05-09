@@ -3,11 +3,11 @@
 import datetime as dt
 import unittest
 
-from src.nwp_consumer.internal.inputs import ceda, metoffice
-from src.nwp_consumer.internal.inputs.ceda._models import CEDAFileInfo
-from src.nwp_consumer.internal.inputs.metoffice._models import MetOfficeFileInfo
-from src.nwp_consumer.internal import config
-from src.nwp_consumer.internal.outputs import localfs
+from nwp_consumer.internal.inputs import ceda, metoffice
+from nwp_consumer.internal.inputs.ceda._models import CEDAFileInfo
+from nwp_consumer.internal.inputs.metoffice._models import MetOfficeFileInfo
+from nwp_consumer.internal import config
+from nwp_consumer.internal.outputs import localfs
 
 cedaInitTime: dt.datetime = dt.datetime(year=2022, month=1, day=1, hour=0, minute=0, tzinfo=dt.timezone.utc)
 metOfficeInitTime: dt.datetime = dt.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)

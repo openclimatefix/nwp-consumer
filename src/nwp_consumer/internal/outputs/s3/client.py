@@ -5,7 +5,7 @@ import boto3
 import io
 import xarray as xr
 
-from src.nwp_consumer import internal
+from nwp_consumer import internal
 
 
 class S3Client(internal.StorageInterface):

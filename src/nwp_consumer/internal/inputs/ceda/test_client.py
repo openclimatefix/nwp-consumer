@@ -2,7 +2,7 @@ import datetime as dt
 import pathlib
 import unittest.mock
 
-from src.nwp_consumer.internal import outputs
+from nwp_consumer.internal import outputs
 
 from ._models import CEDAFileInfo
 from .client import PARAMETER_IGNORE_LIST, CEDAClient, _isWantedFile

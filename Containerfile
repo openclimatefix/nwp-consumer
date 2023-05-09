@@ -9,6 +9,8 @@ RUN /venv/bin/pip install --upgrade pip
 
 # Install packages into the virtualenv as a separate step
 # * Only re-execute this step when the source changes
+# * This also builds the package into the virtualenv
+# * The package is versioned via setuptools_git_versioning
 FROM build AS build-venv
 COPY pyproject.toml /pyproject.toml
 COPY src /src
@@ -18,6 +20,5 @@ RUN /venv/bin/pip install .
 # * These are small images that only contain the runtime dependencies
 FROM gcr.io/distroless/python3-debian11
 COPY --from=build-venv /venv /venv
-COPY src/nwp_consumer /app
 WORKDIR /app
-ENTRYPOINT ["/venv/bin/python3", "cmd/nwp_consumer.py"]
+ENTRYPOINT ["/venv/bin/python3", "nwp_consumer"]

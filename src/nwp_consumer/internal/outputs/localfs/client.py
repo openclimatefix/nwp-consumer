@@ -5,7 +5,7 @@ import numpy as np
 import xarray as xr
 from ocf_blosc2 import Blosc2
 
-from src.nwp_consumer import internal
+from nwp_consumer import internal
 
 
 class LocalFSClient(internal.StorageInterface):

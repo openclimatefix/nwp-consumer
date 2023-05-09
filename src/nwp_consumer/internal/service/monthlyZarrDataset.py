@@ -8,7 +8,7 @@ import numpy.typing as npt
 import structlog
 import xarray as xr
 
-from src.nwp_consumer import internal
+from nwp_consumer import internal
 
 log = structlog.stdlib.get_logger()
 

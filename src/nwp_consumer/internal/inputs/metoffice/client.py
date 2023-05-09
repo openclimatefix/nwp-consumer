@@ -10,8 +10,8 @@ import requests
 import structlog.stdlib
 import xarray as xr
 
-from src.nwp_consumer import internal
-from src.nwp_consumer.internal.inputs import common
+from nwp_consumer import internal
+from nwp_consumer.internal.inputs import common
 
 from ._models import MetOfficeFileInfo, MetOfficeResponse
 
