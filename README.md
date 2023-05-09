@@ -1,21 +1,30 @@
-<h1 align="center">
-    :globe_with_meridians: :arrow_down: </br>
-    nwp-consumer
-</h1>
-<p align="center">
-    <a href="https://github.com/openclimatefix/nwp-consumer/graphs/contributors" alt="Contributors">
-        <img src="https://img.shields.io/github/contributors/openclimatefix/nwp-consumer?style=for-the-badge" /></a>
-    <a href="https://github.com/openclimatefix/nwp-consumer/actions/workflows/ci.yml">
-        <img alt="GitHub Workflow Status (with branch)" src="https://img.shields.io/github/actions/workflow/status/openclimatefix/nwp-consumer/ci.yml?branch=main&style=for-the-badge"></a>
-    <a href="https://github.com/openclimatefix/nwp-consumer/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc">
-        <img src="https://img.shields.io/github/issues/openclimatefix/nwp-consumer?style=for-the-badge"></a>
-    <a href="https://github.com/openclimatefix/nwp-consumer/tags">
-        <img alt="GitHub tag (latest SemVer pre-release)" src="https://img.shields.io/github/v/tag/openclimatefix/nwp-consumer?include_prereleases&sort=semver&style=for-the-badge"></a>
-</p>
+<h2 align="center">
+    🌐 nwp-consumer 🌐
+    <br>
+    <br>
+    Microservice for consuming NWP data.
+</h2>
 
-Consumer for NWP data. Currently works with MetOffice and CEDA datasets.
+<div align="center">
 
-# :warning: This is still a work in progress!
+<a href="https://github.com/openclimatefix/nwp-consumer/graphs/contributors" alt="Contributors">
+    <img src="https://img.shields.io/github/contributors/openclimatefix/nwp-consumer?style=for-the-badge" /></a>
+<a href="https://github.com/openclimatefix/nwp-consumer/actions/workflows/ci.yml">
+    <img alt="GitHub Workflow Status (with branch)" src="https://img.shields.io/github/actions/workflow/status/openclimatefix/nwp-consumer/ci.yml?branch=main&style=for-the-badge"></a>
+<a href="https://github.com/openclimatefix/nwp-consumer/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc">
+    <img src="https://img.shields.io/github/issues/openclimatefix/nwp-consumer?style=for-the-badge"></a>
+<a href="https://github.com/openclimatefix/nwp-consumer/tags">
+    <img alt="GitHub tag (latest SemVer pre-release)" src="https://img.shields.io/github/v/tag/openclimatefix/nwp-consumer?include_prereleases&sort=semver&style=for-the-badge"></a>
+
+</div>
+
+A microservice for consuming NWP data from various sources and storing it in a common format. Built with inspiration 
+from the [Hexagonal Architecture](https://alistair.cockburn.us/hexagonal-architecture) pattern, the nwp-consumer is 
+currently packaged with adapters for pulling and converting `.grib` data from the 
+[MetOffice](https://gridded-data-ui.cda.api.metoffice.gov.uk) and from [CEDA](https://catalogue.ceda.ac.uk). Its modular
+nature enables straightforward extension to alternate future sources.
+
+## :warning: This is still a work in progress!
 
 Still TODO:
 - Complete the test suite for S3
@@ -99,12 +108,12 @@ $ exa --tree --git-ignore -F -I "*init*|test*.*"
    └── test_integration/
 ```
 
-`nwp-consumer` is structured following the hexagonal architecture pattern. In brief, this means a clear separation
-between the application's business logic - it's **Core** - and the **Actors** that are external to it. In this package,
-the core of the service is in `internal/service/` and the actors are in `internal/inputs/` and `internal/outputs/`.
-The service logic has no knowledge of the external actors, instead defining interfaces that the actors must implement.
-These are found in `internal/models.py`. The actors are then responsible for implementing these interfaces, and are
-*dependency-injected* in at runtime. This allows the service to be easily tested and extended. See
+`nwp-consumer` is structured following principles from the hexagonal architecture pattern. In brief, this means a clear 
+separation between the application's business logic - it's **Core** - and the **Actors** that are external to it. In 
+this package, the core of the service is in `internal/service/` and the actors are in `internal/inputs/` and 
+`internal/outputs/`. The service logic has no knowledge of the external actors, instead defining interfaces that the 
+actors must implement. These are found in `internal/models.py`. The actors are then responsible for implementing these 
+interfaces, and are *dependency-injected* in at runtime. This allows the service to be easily tested and extended. See
 [further reading](#further-reading) for more information.
 
 ## Local development
@@ -171,3 +180,10 @@ On packaging a python project using setuptools and pyproject.toml:
 On hexagonal architecture:
 - Overview 1: https://medium.com/ssense-tech/hexagonal-architecture-there-are-always-two-sides-to-every-story-bc0780ed7d9c
 - Overview 2: https://medium.com/@matiasvarela/hexagonal-architecture-in-go-cfd4e436faa3
+
+## Contributing and community
+
+- See the [OCF Organisation Repo](https://github.com/openclimatefix) for details on contributing.
+- Find out more about OCF in the [Meta Repo](https://github.com/openclimatefix/ocf-meta-repo).
+- Follow OCF on [Twitter](https://twitter.com/OpenClimateFix).
+- Check out the OCF blog at https://openclimatefix.org/blog for updates.
