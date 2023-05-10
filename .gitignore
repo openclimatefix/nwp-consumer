@@ -166,6 +166,8 @@ cython_debug/
 downloads
 raw
 zarr
+/testing
 
 # MacOS
 .DS_Store
+

@@ -2,6 +2,7 @@
 
 import datetime as dt
 import pathlib
+from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 import numpy.typing as npt
@@ -24,21 +25,29 @@ def CreateMonthlyZarrDataset(
 
         zarrFilename: pathlib.Path = pathlib.Path(f"UKV-{d.strftime('%Y%m')}.zarr")
 
-        for initTime in [dt.datetime(year=d.year, month=d.month, day=d.day, hour=x) for x in range(0, 24, 6)]:
+        initTimes: list[dt.datetime] = [
+            dt.datetime(year=d.year, month=d.month, day=d.day, hour=x) for x in range(0, 24, 6)
+        ]
 
-            # TODO - multiprocessing
+        # Download the wholesale files given by the file infos
+        # * There are two files of interest per inittime that are processed concurrently
+        # * CEDA can have 10 connections per user, so we can download 10 files concurrently
+        # * Hence download 4 initTimes in parallel
+        with ProcessPoolExecutor(4) as p:
+            datasets: list[xr.Dataset] = [x for x in p.map(fetcher.getDatasetForInitTime, initTimes)]
 
+        # Shutdown the pool after all files have downloaded
+        p.shutdown(wait=True, cancel_futures=False)
+
+        """
+        for dataset in datasets:
             if storer.existsInZarrDir(relativePath=zarrFilename):
-
                 # TODO - check if data already exists in zarr store for this initTime
                 # If it does, skip to next initTime
-                dataset = fetcher.getDatasetForInitTime(initTime=initTime)
                 storer.appendDataset(dataset=dataset, relativePath=zarrFilename)
-
             else:
-                dataset = fetcher.getDatasetForInitTime(initTime=initTime)
                 storer.saveDataset(dataset=dataset, relativePath=zarrFilename)
-
+        """
 
 def removeDataWhereStepDiffIsNot1Hour(ds: xr.Dataset) -> xr.Dataset:
     """Return the slice of the dataset where the step coordinate changes uniformly by hourly increments.

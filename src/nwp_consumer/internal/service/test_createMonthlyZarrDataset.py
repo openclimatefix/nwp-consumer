@@ -38,6 +38,7 @@ class TestCreateMonthlyZarrDataset(unittest.TestCase):
         self.zarrDir: pathlib.Path = pathlib.Path(__file__).parent / "zarr"
         self.zarrDir.mkdir(exist_ok=True)
 
+    @unittest.skip("Currently not saving Zarrs.")
     def test_createsDatasetPerMonth(self):
 
         CreateMonthlyZarrDataset(

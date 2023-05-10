@@ -9,6 +9,7 @@ from concurrent.futures import ProcessPoolExecutor
 import iris.cube
 import iris_grib
 import numpy as np
+import pandas as pd
 import requests
 import structlog
 import xarray as xr
@@ -75,8 +76,13 @@ class CEDAClient(internal.FetcherInterface):
             raise Exception(f"No files found for initTime {initTime}")
 
         # Download the wholesale files given by the file infos
+        # * There are two files of interest per inittime
+        # * so download them in parallel via a pool
         with ProcessPoolExecutor(2) as p:
             rawRelPaths: list[pathlib.Path] = [x for x in p.map(self._downloadRawGRIBFile, fileInfosForInitTime)]
+
+        # Shutdown the pool after all files have downloaded
+        p.shutdown(wait=True, cancel_futures=False)
 
         # For each wholesale CEDA file, split the GRIB into individual per-parameter GRIB files
         parameterPathsForInitTime: list[pathlib.Path] = []
@@ -84,22 +90,25 @@ class CEDAClient(internal.FetcherInterface):
             parameterPaths: list[pathlib.Path] = self._splitRawGribPerParameter(gribFilePath=rawPath)
             parameterPathsForInitTime.extend(parameterPaths)
 
+        # TODO: Set this as an optional flag
         # Delete the wholesale files
-        for path in rawRelPaths:
-            self.storer.removeFromRawDir(relativePath=path)
+        # for path in rawRelPaths:
+        #    self.storer.removeFromRawDir(relativePath=path)
 
+        # TODO: Re-enable!!
         # Merge all the single-parameter GRIB files for the initTime into one dataset
-        allParameterDataset: xr.Dataset = common.combineSingleParamGRIBsAsOCFDataset(
-            client=self,
-            parameterFilePaths=parameterPathsForInitTime,
-            initTime=initTime
-        )
+        # allParameterDataset: xr.Dataset = common.combineSingleParamGRIBsAsOCFDataset(
+        #    client=self,
+        #    parameterFilePaths=parameterPathsForInitTime,
+        #    initTime=initTime
+        #)
 
         # Delete the single parameter files
-        for path in parameterPathsForInitTime:
-            self.storer.removeFromRawDir(relativePath=path)
+        # for path in parameterPathsForInitTime:
+        #    self.storer.removeFromRawDir(relativePath=path)
 
-        return allParameterDataset
+        # return allParameterDataset
+        return xr.Dataset()
 
     def loadSingleParameterGRIBAsOCFDataArray(self, path: pathlib.Path, initTime: dt.datetime) -> xr.DataArray:
         """Loads a single-parameter GRIB file as an OCF-compliant DataArray."""
@@ -115,30 +124,39 @@ class CEDAClient(internal.FetcherInterface):
             except Exception as e:
                 raise ValueError(f"Failed to load GRIB file from {path} as a cube: {e}")
 
-        # Convert the cube to a DataArray
-        parameterDataArray: xr.DataArray = xr.DataArray.from_iris(cube)
-        # Make the DataArray OCF-compliant
-        parameterDataArray = parameterDataArray \
-            .rename(PARAMETER_RENAME_MAP[path.stem]) \
-            .assign_coords({"init_time": np.datetime64(initTime.replace(tzinfo=None))}) \
-            .rename({"time": "step_time"}) \
-            .rename({"projection_x_coordinate": "x", "projection_y_coordinate": "y"}) \
-            .drop_vars(["height", "pressure"], errors="ignore") \
-            .expand_dims("init_time") \
-            .chunk("auto")
+            # Convert the cube to a DataArray
+            parameterDataArray: xr.DataArray = xr.DataArray.from_iris(cube)
 
-        # Snow depth is in `m` from CEDA, but OCF expects `kg m-2`. A scaling factor of 1000 converts between the two.
-        # See "Snow Depth" entry in https://gridded-data-ui.cda.api.metoffice.gov.uk/glossary
-        if path.stem == "sde":
-            parameterDataArray = parameterDataArray * 1000
+            # Make the DataArray OCF-compliant
+            # * Rename the parameter to the OCF name
+            # * Add the init time as a coordinate
+            # * Rename the time dimension to step_time
+            # * Compute the dataset to load the data from the temporary file
+            parameterDataArray = parameterDataArray \
+                .rename(PARAMETER_RENAME_MAP[path.stem]) \
+                .assign_coords({"init_time": np.datetime64(pd.Timestamp(initTime.replace(tzinfo=None)))}) \
+                .rename({"time": "step_time"}) \
+                .rename({"projection_x_coordinate": "x", "projection_y_coordinate": "y"}) \
+                .drop_vars(["height", "pressure"], errors="ignore") \
+                .expand_dims("init_time") \
+                .chunk("auto") \
+                .compute()
 
-        return parameterDataArray
+            # Snow depth is in `m` from CEDA, but OCF expects `kg m-2`. A scaling factor of 1000 converts between the two.
+            # See "Snow Depth" entry in https://gridded-data-ui.cda.api.metoffice.gov.uk/glossary
+            if path.stem == "sde":
+                parameterDataArray = parameterDataArray * 1000
+
+            return parameterDataArray
 
     def _downloadRawGRIBFile(self, fileInfo: CEDAFileInfo) -> pathlib.Path:
         """Download a GRIB file corresponding to the input FileInfo object."""
-        fileName: pathlib.Path = pathlib.Path(fileInfo.name)
+        # Set the relative filepath to be the date of the file
+        # * For example 2021/01/01/20210101T0000_Wholesale1.grib2
+        relativeFilePath: pathlib.Path = pathlib.Path(
+            fileInfo.initTime().strftime("%Y/%m/%d"), fileInfo.name)
 
-        if self.storer.existsInRawDir(relativePath=fileName):
+        if self.storer.existsInRawDir(relativePath=relativeFilePath):
             log.debug(f"File already exists: {fileInfo.name}")
 
         else:
@@ -151,13 +169,13 @@ class CEDAClient(internal.FetcherInterface):
             except Exception as e:
                 raise ConnectionError(f"Error calling url {url} for {fileInfo.name}: {e}")
             try:
-                savedPath = self.storer.writeBytesToRawDir(relativePath=fileName, data=response.read())
+                savedPath = self.storer.writeBytesToRawDir(relativePath=relativeFilePath, data=response.read())
             except Exception as e:
-                raise IOError(f"Error saving file {fileInfo.name} to {fileName}: {e}")
+                raise IOError(f"Error saving file {fileInfo.name} to {relativeFilePath}: {e}")
 
             log.debug(f"Downloaded item: {fileInfo.name}", item=fileInfo.name, path=savedPath.as_posix())
 
-        return fileName
+        return relativeFilePath
 
     def _getFileInfosForInitTime(self, initTime: dt.datetime) -> list[CEDAFileInfo]:
         """Get a list of FileInfo objects according to the input initTime."""

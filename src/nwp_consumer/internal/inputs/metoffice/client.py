@@ -7,6 +7,7 @@ from concurrent.futures import ProcessPoolExecutor
 import iris.cube
 import iris_grib
 import numpy as np
+import pandas as pd
 import requests
 import structlog.stdlib
 import xarray as xr
@@ -101,26 +102,34 @@ class MetOfficeClient(internal.FetcherInterface):
             except Exception as e:
                 raise ValueError(f"Failed to load GRIB file from {path} as a cube: {e}")
 
-        # Convert the cube to a DataArray
-        parameterDataArray: xr.DataArray = xr.DataArray.from_iris(cube)
+            # Convert the cube to a DataArray
+            parameterDataArray: xr.DataArray = xr.DataArray.from_iris(cube)
 
-        # Make the DataArray OCF-compliant
-        parameterDataArray = parameterDataArray \
-            .rename(PARAMETER_RENAME_MAP[_getParameterNameFromFileName(fileName=path.stem)]) \
-            .assign_coords({"init_time": np.datetime64(initTime.replace(tzinfo=None))}) \
-            .rename({"time": "step_time"}) \
-            .rename({"projection_x_coordinate": "x", "projection_y_coordinate": "y"}) \
-            .drop_vars(["height", "pressure"], errors="ignore") \
-            .expand_dims("init_time") \
-            .chunk("auto")
+            # Make the DataArray OCF-compliant
+            # * Rename the parameter to the OCF name
+            # * Add the init time as a coordinate
+            # * Rename the time dimension to step_time
+            # * Compute the dataset to load the data from the temporary file
+            parameterDataArray = parameterDataArray \
+                .rename(PARAMETER_RENAME_MAP[_getParameterNameFromFileName(fileName=path.stem)]) \
+                .assign_coords({"init_time": np.datetime64(pd.Timestamp(initTime.replace(tzinfo=None)))}) \
+                .rename({"time": "step_time"}) \
+                .rename({"projection_x_coordinate": "x", "projection_y_coordinate": "y"}) \
+                .drop_vars(["height", "pressure"], errors="ignore") \
+                .expand_dims("init_time") \
+                .chunk("auto") \
+                .compute()
 
-        return parameterDataArray
+            return parameterDataArray
 
     def _downloadRawGRIBFile(self, fileInfo: MetOfficeFileInfo) -> pathlib.Path:
         """Downloads a GRIB file corresponding to the input FileInfo object."""
-        fileName: pathlib.Path = pathlib.Path(fileInfo.fileId)
+        # Set the relative filepath to be the date of the file
+        # * For example 2021/01/01/20210101T0000_Wholesale1.grib2
+        relativeFilePath: pathlib.Path = pathlib.Path(
+            fileInfo.initTime().strftime("%Y/%m/%d"), fileInfo.fileId)
 
-        if self.storer.existsInRawDir(relativePath=fileName):
+        if self.storer.existsInRawDir(relativePath=relativeFilePath):
             log.debug(f"File already exists: {fileInfo.fileId}")
 
         else:
@@ -136,13 +145,13 @@ class MetOfficeClient(internal.FetcherInterface):
             except Exception as e:
                 raise ConnectionError(f"Error calling url {url} for {fileInfo.fileId}: {e}")
             try:
-                savedPath = self.storer.writeBytesToRawDir(relativePath=fileName, data=response.read())
+                savedPath = self.storer.writeBytesToRawDir(relativePath=relativeFilePath, data=response.read())
             except Exception as e:
-                raise IOError(f"Error saving file {fileInfo.fileId} to {fileName}: {e}")
+                raise IOError(f"Error saving file {fileInfo.fileId} to {relativeFilePath}: {e}")
 
             log.debug(f"Downloaded item: {fileInfo.fileId}", item=fileInfo.fileId, path=savedPath.as_posix())
 
-        return fileName
+        return relativeFilePath
 
     def _getFileInfosForInitTime(self, initTime: dt.datetime) -> list[MetOfficeFileInfo]:
         """Get a list of FileInfo objects according to the input initTime."""
