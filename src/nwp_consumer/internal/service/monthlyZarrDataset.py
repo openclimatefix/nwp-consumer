@@ -39,7 +39,6 @@ def CreateMonthlyZarrDataset(
         # Shutdown the pool after all files have downloaded
         p.shutdown(wait=True, cancel_futures=False)
 
-        """
         for dataset in datasets:
             if storer.existsInZarrDir(relativePath=zarrFilename):
                 # TODO - check if data already exists in zarr store for this initTime
@@ -47,7 +46,7 @@ def CreateMonthlyZarrDataset(
                 storer.appendDataset(dataset=dataset, relativePath=zarrFilename)
             else:
                 storer.saveDataset(dataset=dataset, relativePath=zarrFilename)
-        """
+
 
 def removeDataWhereStepDiffIsNot1Hour(ds: xr.Dataset) -> xr.Dataset:
     """Return the slice of the dataset where the step coordinate changes uniformly by hourly increments.

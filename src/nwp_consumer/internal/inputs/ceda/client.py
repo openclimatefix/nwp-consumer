@@ -95,20 +95,19 @@ class CEDAClient(internal.FetcherInterface):
         # for path in rawRelPaths:
         #    self.storer.removeFromRawDir(relativePath=path)
 
-        # TODO: Re-enable!!
+
         # Merge all the single-parameter GRIB files for the initTime into one dataset
-        # allParameterDataset: xr.Dataset = common.combineSingleParamGRIBsAsOCFDataset(
-        #    client=self,
-        #    parameterFilePaths=parameterPathsForInitTime,
-        #    initTime=initTime
-        #)
+        allParameterDataset: xr.Dataset = common.combineSingleParamGRIBsAsOCFDataset(
+            client=self,
+            parameterFilePaths=parameterPathsForInitTime,
+            initTime=initTime
+        )
 
         # Delete the single parameter files
         # for path in parameterPathsForInitTime:
         #    self.storer.removeFromRawDir(relativePath=path)
 
-        # return allParameterDataset
-        return xr.Dataset()
+        return allParameterDataset
 
     def loadSingleParameterGRIBAsOCFDataArray(self, path: pathlib.Path, initTime: dt.datetime) -> xr.DataArray:
         """Loads a single-parameter GRIB file as an OCF-compliant DataArray."""
