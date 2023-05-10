@@ -64,9 +64,7 @@ jobs:
       - name: Create test summary
         uses: test-summary/action@v2
         with:
-          paths: |
-            ut-report.xml
-            it-report.xml
+          paths: "*t-report.xml"
           show: "fail, skip"
         if: always()
 
