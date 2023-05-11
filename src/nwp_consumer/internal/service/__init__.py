@@ -1,3 +1,3 @@
-__all__ = ['CreateMonthlyZarrDataset']
+__all__ = ['NWPConsumerService']
 
-from .monthlyZarrDataset import CreateMonthlyZarrDataset
+from .service import NWPConsumerService

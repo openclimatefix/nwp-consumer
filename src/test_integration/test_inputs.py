@@ -12,41 +12,27 @@ from nwp_consumer.internal.outputs import localfs
 cedaInitTime: dt.datetime = dt.datetime(year=2022, month=1, day=1, hour=0, minute=0, tzinfo=dt.timezone.utc)
 metOfficeInitTime: dt.datetime = dt.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
+cc = config.CEDAConfig()
+lc = config.LocalFSConfig()
+mc = config.MetOfficeConfig()
 cedaClient = ceda.CEDAClient(
-    ftpUsername=config.CEDAConfig().CEDA_FTP_USER,
-    ftpPassword=config.CEDAConfig().CEDA_FTP_PASS,
+    ftpUsername=cc.CEDA_FTP_USER,
+    ftpPassword=cc.CEDA_FTP_PASS,
     storer=localfs.LocalFSClient(
-        rawDir=config.LocalFSConfig().RAW_DIR,
-        zarrDir=config.LocalFSConfig().ZARR_DIR,
+        rawDir=lc.RAW_DIR,
+        zarrDir=lc.ZARR_DIR,
     )
 )
 
 metOfficeClient = metoffice.MetOfficeClient(
-    orderID=config.MetOfficeConfig().METOFFICE_ORDER_ID,
-    clientID=config.MetOfficeConfig().METOFFICE_CLIENT_ID,
-    clientSecret=config.MetOfficeConfig().METOFFICE_CLIENT_SECRET,
+    orderID=mc.METOFFICE_ORDER_ID,
+    clientID=mc.METOFFICE_CLIENT_ID,
+    clientSecret=mc.METOFFICE_CLIENT_SECRET,
     storer=localfs.LocalFSClient(
-        rawDir=config.LocalFSConfig().RAW_DIR,
-        zarrDir=config.LocalFSConfig().ZARR_DIR,
+        rawDir=lc.RAW_DIR,
+        zarrDir=lc.ZARR_DIR,
     )
 )
-
-
-class TestGetDatasetForInitTime(unittest.TestCase):
-
-    def testGetsDatasetSuccessfullyFromCEDA(self):
-        dataset = cedaClient.getDatasetForInitTime(initTime=cedaInitTime)
-
-        self.assertTrue({"x", "y", "init_time", "step_time"}.issubset(set(dataset.coords)))
-        self.assertTrue(dataset.sizes["step_time"] == 37)
-        self.assertTrue(len(dataset.data_vars) > 0)
-
-    def testGetsDatasetSuccessfullyFromMetOffice(self):
-        dataset = metOfficeClient.getDatasetForInitTime(initTime=metOfficeInitTime)
-
-        self.assertTrue({"x", "y", "init_time", "step_time"}.issubset(set(dataset.coords)))
-        self.assertTrue(dataset.sizes["step_time"] > 1)
-        self.assertTrue(len(dataset.data_vars) > 0)
 
 
 class Test_DownloadRawGribFile(unittest.TestCase):

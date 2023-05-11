@@ -6,17 +6,14 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ProcessPoolExecutor
 
-import iris.cube
-import iris_grib
+import cfgrib
 import numpy as np
 import pandas as pd
 import requests
 import structlog
 import xarray as xr
-from eccodes import eccodes
 
 from nwp_consumer import internal
-from nwp_consumer.internal.inputs import common
 
 from ._models import CEDAFileInfo, CEDAResponse
 
@@ -25,6 +22,10 @@ log = structlog.stdlib.get_logger()
 # Defines parameters in CEDA that are not available from MetOffice
 PARAMETER_IGNORE_LIST: typing.Sequence[str] = (
     "unknown", "h", "hcct", "cdcb", "dpt", "prmsl",
+)
+
+COORDINATE_IGNORE_LIST: typing.Sequence[str] = (
+    "height", "pressure", "meanSea", "level", "atmosphere", "cloudBase", "heightAboveGround", "heightAboveGroundLayer",
 )
 
 # Defines the mapping from CEDA parameter names to OCF parameter names
@@ -67,8 +68,8 @@ class CEDAClient(internal.FetcherInterface):
         self.__ftpBase: str = f'ftp://{self.__username}:{self.__password}@ftp.ceda.ac.uk'
         self.storer: internal.StorageInterface = storer
 
-    def getDatasetForInitTime(self, initTime: dt.datetime) -> xr.Dataset:
-        """Download a dataset for the given init_time."""
+    def downloadRawDataForInitTime(self, initTime: dt.datetime) -> list[pathlib.Path]:
+        """Download raw data for the given init time."""
         # Fetch all the raw file infos for the given init time
         fileInfosForInitTime: list[CEDAFileInfo] = self._getFileInfosForInitTime(initTime=initTime)
 
@@ -84,69 +85,88 @@ class CEDAClient(internal.FetcherInterface):
         # Shutdown the pool after all files have downloaded
         p.shutdown(wait=True, cancel_futures=False)
 
-        # For each wholesale CEDA file, split the GRIB into individual per-parameter GRIB files
-        parameterPathsForInitTime: list[pathlib.Path] = []
-        for rawPath in rawRelPaths:
-            parameterPaths: list[pathlib.Path] = self._splitRawGribPerParameter(gribFilePath=rawPath)
-            parameterPathsForInitTime.extend(parameterPaths)
+        return rawRelPaths
 
-        # TODO: Set this as an optional flag
-        # Delete the wholesale files
-        # for path in rawRelPaths:
-        #    self.storer.removeFromRawDir(relativePath=path)
+    def loadRawInitTimeDataAsOCFDataset(self, rawRelativePaths: list[pathlib.Path],
+                                        initTime: dt.datetime) -> xr.Dataset:
+        """Create an xarray dataset from the given raw files."""
+        # Load the wholesale files as OCF datasets
+        wholesaleDatasets: list[xr.Dataset] = [self._loadWholesaleFileAsDataset(path=path, initTime=initTime) for path
+                                               in rawRelativePaths]
 
+        # Merge the wholesale datasets into one
+        wholesaleDataset: xr.Dataset = xr.merge(wholesaleDatasets, compat='identical', combine_attrs='drop_conflicts')
 
-        # Merge all the single-parameter GRIB files for the initTime into one dataset
-        allParameterDataset: xr.Dataset = common.combineSingleParamGRIBsAsOCFDataset(
-            client=self,
-            parameterFilePaths=parameterPathsForInitTime,
-            initTime=initTime
-        )
+        # Load the new dataaset into memory
+        # * Enables deletion of the old datasets
+        wholesaleDataset.load()
+        del wholesaleDatasets
 
-        # Delete the single parameter files
-        # for path in parameterPathsForInitTime:
-        #    self.storer.removeFromRawDir(relativePath=path)
+        # Add in x and y coordinates
+        wholesaleDataset = _reshapeTo2DGrid(dataset=wholesaleDataset)
 
-        return allParameterDataset
+        # Add the init time as a coordinate
+        wholesaleDataset = wholesaleDataset \
+            .assign_coords({"init_time": np.datetime64(pd.Timestamp(initTime.replace(tzinfo=None)))}) \
+            .expand_dims("init_time") \
+            .chunk("auto") \
+            .load()
 
-    def loadSingleParameterGRIBAsOCFDataArray(self, path: pathlib.Path, initTime: dt.datetime) -> xr.DataArray:
-        """Loads a single-parameter GRIB file as an OCF-compliant DataArray."""
-        # Iris-grib also can't take a file-like object as input, so we have to download the file to a tempfile again
+        return wholesaleDataset
+
+    def _loadWholesaleFileAsDataset(self, path: pathlib.Path, initTime: dt.datetime) -> xr.Dataset:
+        """Loads a multi-parameter GRIB file as an OCF-compliant Dataset."""
+        # Cfgrib is built upon eccodes which needs an in-memory file to read from
         with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempParameterFile:
             # Copy the raw file to a local temp file
             tempParameterFile.write(self.storer.readBytesFromRawDir(relativePath=path))
             tempParameterFile.seek(0)
 
-            # Load the GRIB file as a cube
+            # Load the wholesale file as a dataset
             try:
-                cube: iris.cube.Cube = iris.cube.CubeList(iris_grib.load_cubes(tempParameterFile.name)).merge_cube()
+                datasets: list[xr.Dataset] = cfgrib.open_datasets(tempParameterFile.name)
             except Exception as e:
-                raise ValueError(f"Failed to load GRIB file from {path} as a cube: {e}")
+                raise Exception(f"Error loading wholesale file {path} as dataset: {e}")
 
-            # Convert the cube to a DataArray
-            parameterDataArray: xr.DataArray = xr.DataArray.from_iris(cube)
+            for i in range(len(datasets)):
+                ds = datasets[i]
 
-            # Make the DataArray OCF-compliant
-            # * Rename the parameter to the OCF name
-            # * Add the init time as a coordinate
-            # * Rename the time dimension to step_time
-            # * Compute the dataset to load the data from the temporary file
-            parameterDataArray = parameterDataArray \
-                .rename(PARAMETER_RENAME_MAP[path.stem]) \
-                .assign_coords({"init_time": np.datetime64(pd.Timestamp(initTime.replace(tzinfo=None)))}) \
-                .rename({"time": "step_time"}) \
-                .rename({"projection_x_coordinate": "x", "projection_y_coordinate": "y"}) \
-                .drop_vars(["height", "pressure"], errors="ignore") \
-                .expand_dims("init_time") \
-                .chunk("auto") \
-                .compute()
+                # Rename the parameters to the OCF names
+                # * Only do so if they exist in the dataset
+                for oldParamName, newParamName in PARAMETER_RENAME_MAP.items():
+                    if oldParamName in ds:
+                        ds = ds.rename({oldParamName: newParamName})
 
-            # Snow depth is in `m` from CEDA, but OCF expects `kg m-2`. A scaling factor of 1000 converts between the two.
-            # See "Snow Depth" entry in https://gridded-data-ui.cda.api.metoffice.gov.uk/glossary
-            if path.stem == "sde":
-                parameterDataArray = parameterDataArray * 1000
+                # We want the temperature at 1 meter above ground, not at 0 meters above ground.
+                # * In the early NWPs (definitely in the 2016-03-22 NWPs), `heightAboveGround` only has
+                # * 1 entry ("1" meter above ground) and `heightAboveGround` isn't set as a dimension for `t`.
+                # * In later NWPs, 'heightAboveGround' has 2 values (0, 1) is a dimension for `t`.
+                if "t" in ds and "heightAboveGround" in ds["t"].dims:
+                    ds = ds.sel(heightAboveGround=1)
 
-            return parameterDataArray
+                # Snow depth is in `m` from CEDA, but OCF expects `kg m-2`. A scaling factor of 1000 converts between
+                # the two. See "Snow Depth" entry in https://gridded-data-ui.cda.api.metoffice.gov.uk/glossary
+                if "sde" in ds:
+                    ds = ds.assign(sde=ds["sde"] * 1000)
+
+                # Delete unnecessary data variables
+                for var_name in PARAMETER_IGNORE_LIST:
+                    if var_name in ds:
+                        del ds[var_name]
+
+                # Delete unwanted coordinates
+                ds = ds.drop_vars(COORDINATE_IGNORE_LIST, errors="ignore")
+
+                # Replace the dataset in the list with the modified one
+                # * Delete the modified dataset to free up memory
+                datasets[i] = ds
+                del ds
+
+            wholesaleDataset = xr.merge(datasets, compat='override', combine_attrs='drop_conflicts')
+            wholesaleDataset.load()
+            del datasets
+
+        return wholesaleDataset
 
     def _downloadRawGRIBFile(self, fileInfo: CEDAFileInfo) -> pathlib.Path:
         """Download a GRIB file corresponding to the input FileInfo object."""
@@ -155,6 +175,9 @@ class CEDAClient(internal.FetcherInterface):
         relativeFilePath: pathlib.Path = pathlib.Path(
             fileInfo.initTime().strftime("%Y/%m/%d"), fileInfo.name)
 
+        # Check if the file already exists
+        # * If it does, don't download it again
+        # * If it doesn't, fetch it from CEDA
         if self.storer.existsInRawDir(relativePath=relativeFilePath):
             log.debug(f"File already exists: {fileInfo.name}")
 
@@ -163,7 +186,6 @@ class CEDAClient(internal.FetcherInterface):
             log.debug(f"Requesting download of {fileInfo.name}", item=fileInfo.name, path=ftpPath)
             url: str = f'{self.__ftpBase}/{ftpPath}'
             try:
-                # Fetch the file from CEDA
                 response = urllib.request.urlopen(url=url)
             except Exception as e:
                 raise ConnectionError(f"Error calling url {url} for {fileInfo.name}: {e}")
@@ -205,96 +227,6 @@ class CEDAClient(internal.FetcherInterface):
 
         return wantedFileInfos
 
-    def _splitRawGribPerParameter(self, gribFilePath: pathlib.Path) -> list[pathlib.Path]:
-        """Splits a multi-parameter GRIB file into several single-parameter GRIB files."""
-        # Here we have to work with the difficult to use eccodes library, in order to fix issues with the CEDA dataset.
-        # The eccodes library cannot open files from a fil-like object; only from filenames. As such we have to save
-        # the file to disk, then open it with eccodes, then delete it afterwards.
-
-        with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempWholesaleFile:
-            # Copy the raw file to a local temp file
-            tempWholesaleFile.write(self.storer.readBytesFromRawDir(relativePath=gribFilePath))
-            tempWholesaleFile.seek(0)
-
-            # Create a GRIB index based on the 'shortName' and 'step' keys
-            try:
-                indexID = eccodes.codes_index_new_from_file(
-                    filename=tempWholesaleFile.name,
-                    keys=["shortName", "step"]
-                )
-            except Exception as e:
-                raise IOError(f"Error creating index for {gribFilePath}: {e}")
-
-            # Get a list of unique parameters and steps contained in the index
-            parameters = list(eccodes.codes_index_get(indexid=indexID, key="shortName"))
-            steps = list(eccodes.codes_index_get(indexid=indexID, key="step"))
-            log.debug(
-                f"Wholesale file contains {len(parameters)} parameter(s) and {len(steps)} step(s)",
-                file=gribFilePath.as_posix(), parameters=parameters
-            )
-
-            # Create a directory for the individual parameter files
-            fileDirectory: pathlib.Path = gribFilePath.with_suffix("")
-            parameterFilePaths: list[pathlib.Path] = []
-
-            for parameter in parameters:
-                # Ignore parameters that are not currently available form MetOffice or are unknown
-                if parameter in PARAMETER_IGNORE_LIST:
-                    continue
-
-                # Create a new grib file for the current parameter in the wholesale file
-                parameterFilePath: pathlib.Path = (fileDirectory / parameter).with_suffix(".grib")
-                multiGribID = eccodes.codes_grib_multi_new()
-                log.debug(f"Creating individual file for parameter: {parameter}", path=parameterFilePath.as_posix(),
-                          steps=len(steps))
-
-                # Select the message subset for the current parameter's shortname on the wholesale GRIB's index
-                eccodes.codes_index_select(indexID, "shortName", parameter)
-                # Add each step for this parameter to the single-parameter file
-                for step in steps:
-                    # Select the message subset for the current step on the index
-                    eccodes.codes_index_select(indexID, "step", step)
-                    # Create an in-memory GRIB file from the selected subset
-                    gribID = eccodes.codes_new_from_index(indexID)
-
-                    # Modify the incorrectly-valued 'sourceOfGridDefinition' and 'scanningMode' keys
-                    # scanningMode should specify negative y, positive x: see
-                    # https://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_doc/grib2_table3-4.shtml
-                    eccodes.codes_set_key_vals(gribID, f"sourceOfGridDefinition=0,scanningMode={0b00000000}")
-                    assert (eccodes.codes_get(gribID, 'sourceOfGridDefinition', int) == 0)
-                    assert (eccodes.codes_get(gribID, 'scanningMode', int) == 0)
-                    # Add in the missing 'scaleFactor' key, based on the value of the axis scale factors
-                    majorAxisScaleFactor: int = eccodes.codes_get(gribID, 'scaleFactorOfEarthMajorAxis', int)
-                    minorAxisScaleFactor: int = eccodes.codes_get(gribID, 'scaleFactorOfEarthMajorAxis', int)
-                    assert (majorAxisScaleFactor == minorAxisScaleFactor)
-                    eccodes.codes_set_key_vals(gribID, f"scaleFactorAtReferencePoint={majorAxisScaleFactor}")
-                    assert (eccodes.codes_get(gribID, 'scaleFactorAtReferencePoint', int) == minorAxisScaleFactor)
-
-                    # Append the in-memory GRIB file to the single-parameter GRIB file
-                    eccodes.codes_grib_multi_append(ingribid=gribID, startsection=3, multigribid=multiGribID)
-                    # Release the in-memory GRIB file
-                    eccodes.codes_release(gribID)
-
-                # Write the multiGrib file to the parameterFile buffer
-                # Again, eccodes cannot write to a file-like object, so we have to use a Temporary File
-                with tempfile.NamedTemporaryFile(mode="r+b", suffix=".grib2") as tempParameterFile:
-                    with open(tempParameterFile.name, mode="wb") as f:
-                        eccodes.codes_grib_multi_write(multiGribID, f)
-                        eccodes.codes_grib_multi_release(multiGribID)
-
-                    # Write the tempFile contents to storage
-                    tempParameterFile.seek(0)
-                    savedParameterFilePath = self.storer.writeBytesToRawDir(
-                        relativePath=parameterFilePath, data=tempParameterFile.read())
-
-                log.debug(
-                    f"Saved individual file for parameter: {parameter}",
-                    path=savedParameterFilePath.as_posix(), steps=len(steps))
-
-                parameterFilePaths.append(parameterFilePath)
-
-        return parameterFilePaths
-
 
 def _isWantedFile(fileInfo: CEDAFileInfo, desiredInitTime: dt.datetime) -> bool:
     """Checks if the input FileInfo corresponds to a wanted GRIB file."""
@@ -307,3 +239,47 @@ def _isWantedFile(fileInfo: CEDAFileInfo, desiredInitTime: dt.datetime) -> bool:
     log.debug("Found wanted file from CEDA", file=fileInfo.name)
 
     return True
+
+
+def _reshapeTo2DGrid(dataset: xr.Dataset) -> xr.Dataset:
+    """Convert 1D into 2D array.
+
+    In the grib files, the pixel values are in a flat 1D array (indexed by the `values` dimension).
+    The ordering of the pixels in the grib are left to right, bottom to top.
+
+    This function replaces the `values` dimension with an `x` and `y` dimension,
+    and, for each step, reshapes the images to be 2D.
+    """
+    # Adapted from https://stackoverflow.com/a/62667154 and
+    # https://github.com/SciTools/iris-grib/issues/140#issuecomment-1398634288
+
+    # Define geographical domain for UKV. Taken from page 4 of https://zenodo.org/record/7357056
+    dx = dy = 2000
+    maxY = 1223000
+    minY = -185000
+    minX = -239000
+    maxX = 857000
+    # * Note that the UKV NWPs y is top-to-bottom, hence step is negative.
+    northing = np.arange(start=maxY, stop=minY, step=-dy, dtype=np.int32)
+    easting = np.arange(start=minX, stop=maxX, step=dx, dtype=np.int32)
+
+    if dataset.dims['values'] != len(northing) * len(easting):
+        raise ValueError(
+            f"Dataset has {dataset.dims['values']} values, but expected {len(northing) * len(easting)}"
+        )
+
+    # Create new coordinates,
+    # which give the `x` and `y` position for each position in the `values` dimension:
+    dataset = dataset.assign_coords(
+        {
+            "x": ("values", np.tile(easting, reps=len(northing))),
+            "y": ("values", np.repeat(northing, repeats=len(easting))),
+        }
+    )
+
+    # Now set `values` to be a MultiIndex, indexed by `y` and `x`:
+    dataset = dataset.set_index(values=("y", "x"))
+
+    # Now unstack. This gets rid of the `values` dimension and indexes
+    # the data variables using `y` and `x`.
+    return dataset.unstack("values")

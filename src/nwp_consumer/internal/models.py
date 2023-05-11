@@ -10,17 +10,18 @@ import xarray as xr
 # ------- Interfaces ------- #
 # Represent ports in the hexagonal architecture pattern
 
+
 class FetcherInterface(abc.ABC):
     """Generic interface for fetching and converting API data, used for dependency injection."""
 
     @abc.abstractmethod
-    def getDatasetForInitTime(self, initTime: dt.datetime) -> xr.Dataset:
-        """Download a dataset for the given init_time."""
+    def downloadRawDataForInitTime(self, initTime: dt.datetime) -> list[pathlib.Path]:
+        """Download all raw data for the given init_time."""
         pass
 
     @abc.abstractmethod
-    def loadSingleParameterGRIBAsOCFDataArray(self, path: pathlib.Path, initTime: dt.datetime) -> xr.DataArray:
-        """Combine many single-parameter GRIB files as a single xarray dataset."""
+    def loadRawInitTimeDataAsOCFDataset(self, rawRelativePaths: list[pathlib.Path], initTime: dt.datetime) -> xr.Dataset:
+        """Create an xarray dataset from the given RAW files."""
         pass
 
 

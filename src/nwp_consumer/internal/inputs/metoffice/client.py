@@ -1,11 +1,12 @@
+"""Implements a client to fetch the data from the MetOffice API."""
+
 import datetime as dt
 import pathlib
 import tempfile
 import urllib.request
 from concurrent.futures import ProcessPoolExecutor
 
-import iris.cube
-import iris_grib
+import cfgrib
 import numpy as np
 import pandas as pd
 import requests
@@ -13,7 +14,6 @@ import structlog.stdlib
 import xarray as xr
 
 from nwp_consumer import internal
-from nwp_consumer.internal.inputs import common
 
 from ._models import MetOfficeFileInfo, MetOfficeResponse
 
@@ -67,8 +67,8 @@ class MetOfficeClient(internal.FetcherInterface):
         }
         self.storer = storer
 
-    def getDatasetForInitTime(self, initTime: dt.datetime) -> xr.Dataset:
-        """Fetches the dataset for the given initTime from the MetOffice API."""
+    def downloadRawDataForInitTime(self, initTime: dt.datetime) -> list[pathlib.Path]:
+        """Downloads the raw data for the given init time."""
         # Fetch all the raw file infos for the given init time
         fileInfosForInitTime: list[MetOfficeFileInfo] = self._getFileInfosForInitTime(initTime=initTime)
 
@@ -79,18 +79,57 @@ class MetOfficeClient(internal.FetcherInterface):
         with ProcessPoolExecutor(4) as p:
             rawRelPaths: list[pathlib.Path] = [x for x in p.map(self._downloadRawGRIBFile, fileInfosForInitTime)]
 
-        # Merge all the single-parameter GRIB files for the initTime into one dataset
-        allParameterDataset: xr.Dataset = common.combineSingleParamGRIBsAsOCFDataset(
-            client=self,
-            parameterFilePaths=rawRelPaths,
-            initTime=initTime
+        # Shutdown the pool after all files have downloaded
+        p.shutdown(wait=True, cancel_futures=False)
+
+        return rawRelPaths
+
+    def loadRawInitTimeDataAsOCFDataset(self, rawRelativePaths: list[pathlib.Path],
+                                        initTime: dt.datetime) -> xr.Dataset:
+
+        datasetName: str = initTime.strftime("%Y%m%dT%H%M")
+
+        log.debug(
+            f"Creating Dataset {datasetName} from {len(rawRelativePaths)} files",
+            dataset=datasetName,
+            files=[path.as_posix() for path in rawRelativePaths]
         )
 
-        return allParameterDataset
+        # Instantiate a list to hold the DataArrays for each parameter
+        parameterDataArrays: list[xr.DataArray] = []
 
-    def loadSingleParameterGRIBAsOCFDataArray(self, path: pathlib.Path, initTime: dt.datetime) -> xr.DataArray:
+        # For each parameter file, load test_integration as a DataArray and add test_integration to the list
+        for filePath in rawRelativePaths:
+            try:
+                parameterDataArray = self._loadSingleParameterGRIBAsOCFDataArray(path=filePath, initTime=initTime)
+                parameterDataArrays.append(parameterDataArray)
+            except Exception as e:
+                raise Exception(f"Error loading file {filePath.as_posix()} as DataArray: {e}")
+
+            log.debug(
+                f"Merging DataArray from parameter {filePath.stem} into dataset {datasetName}",
+                parameterFile=filePath.as_posix(), dataset=datasetName
+            )
+
+        # Merge the DataArrays into a single Dataset
+        dataset = xr.merge(
+            parameterDataArrays,
+            compat='identical', combine_attrs='drop_conflicts'
+        ).load()
+
+        del parameterDataArrays
+
+        dataset = dataset \
+            .assign_coords({"init_time": np.datetime64(pd.Timestamp(initTime.replace(tzinfo=None)))}) \
+            .expand_dims("init_time") \
+            .chunk("auto") \
+            .load()
+
+        return dataset
+
+    def _loadSingleParameterGRIBAsOCFDataArray(self, path: pathlib.Path, initTime: dt.datetime) -> xr.DataArray:
         """Loads a single-parameter GRIB file as an OCF-compliant DataArray."""
-        # Iris-grib can't take a file-like object as input, so we have to download the file to a tempfile again
+        # cfgrib can't take a file-like object as input, so we have to download the file to a tempfile again
         with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempParameterFile:
             # Copy the raw file to a local temp file
             tempParameterFile.write(self.storer.readBytesFromRawDir(relativePath=path))
@@ -98,29 +137,23 @@ class MetOfficeClient(internal.FetcherInterface):
 
             # Load the GRIB file as a cube
             try:
-                cube: iris.cube.Cube = iris.cube.CubeList(iris_grib.load_cubes(tempParameterFile.name)).merge_cube()
+                parameterDataArray: xr.DataArray = cfgrib.open_dataset(tempParameterFile.name).to_array()
             except Exception as e:
                 raise ValueError(f"Failed to load GRIB file from {path} as a cube: {e}")
 
-            # Convert the cube to a DataArray
-            parameterDataArray: xr.DataArray = xr.DataArray.from_iris(cube)
+            parameterDataArray.load()
 
-            # Make the DataArray OCF-compliant
-            # * Rename the parameter to the OCF name
-            # * Add the init time as a coordinate
-            # * Rename the time dimension to step_time
-            # * Compute the dataset to load the data from the temporary file
-            parameterDataArray = parameterDataArray \
-                .rename(PARAMETER_RENAME_MAP[_getParameterNameFromFileName(fileName=path.stem)]) \
-                .assign_coords({"init_time": np.datetime64(pd.Timestamp(initTime.replace(tzinfo=None)))}) \
-                .rename({"time": "step_time"}) \
-                .rename({"projection_x_coordinate": "x", "projection_y_coordinate": "y"}) \
-                .drop_vars(["height", "pressure"], errors="ignore") \
-                .expand_dims("init_time") \
-                .chunk("auto") \
-                .compute()
+        # Make the DataArray OCF-compliant
+        # * Rename the parameter to the OCF name
+        # * Add the init time as a coordinate
+        # * Rename the time dimension to step_time
+        # * Compute the dataset to load the data from the temporary file
+        parameterDataArray = parameterDataArray \
+            .rename(PARAMETER_RENAME_MAP[_getParameterNameFromFileName(fileName=path.stem)]) \
+            .drop_vars(["height", "pressure", "valid_time", "time"], errors="ignore") \
+            .compute()
 
-            return parameterDataArray
+        return parameterDataArray
 
     def _downloadRawGRIBFile(self, fileInfo: MetOfficeFileInfo) -> pathlib.Path:
         """Downloads a GRIB file corresponding to the input FileInfo object."""

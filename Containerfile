@@ -3,7 +3,7 @@
 # * Update pip setuputils and wheel to support building new packages
 FROM continuumio/miniconda3:latest AS build
 RUN conda create -p /venv python=3.9
-RUN conda install -p /venv -c conda-forge -y eccodes cartopy cf-units cftime numcodecs
+RUN conda install -p /venv -c conda-forge -y cfgrib
 RUN /venv/bin/pip install --upgrade pip
 
 # Install packages into the virtualenv as a separate step

@@ -94,7 +94,6 @@ $ exa --tree --git-ignore -F -I "*init*|test*.*"
    │     │  │  ├── _models.py
    │     │  │  ├── client.py # Contains the client and functions to map CEDA data to the service model
    │     │  │  └── README.md # Info about the CEDA data source
-   │     │  ├── common.py # Common functions for the input sources
    │     │  └── metoffice/
    │     │     ├── _models.py
    │     │     ├── client.py # # Contains the client and functions to map MetOffice data to the service model
@@ -106,7 +105,7 @@ $ exa --tree --git-ignore -F -I "*init*|test*.*"
    │     │  └── s3/
    │     │     └── client.py # Contains the client for storing data on S3
    │     └── service/ # Contains the business logic and use-cases of the application
-   │        └── monthlyZarrDataset.py # Use case of creating a monthly Zarr dataset
+   │        └── service.py # Defines the service class for the application, whose methods are the use-cases
    └── test_integration/
 ```
 
@@ -122,10 +121,12 @@ interfaces, and are *dependency-injected* in at runtime. This allows the service
 
 Clone the repository and create and activate a new python virtualenv for it. `cd` to the repository root.
 
+Install the [External](#external-dependencies) and [Python](#python-requirements) dependencies.
+
 ### External dependencies
 
-The `eccodes` python library depends on the ECMWF *ecCodes* library
-that must be installed on the system and accessible as a shared library.
+The `cfgrib` python library depends on the ECMWF *cfgrib* binary, which is a wrapper around the ECMWF *ecCodes* library.
+One of these must be installed on the system and accessible as a shared library.
 
 On a MacOS with HomeBrew use
 
@@ -136,7 +137,7 @@ $ brew install eccodes
 Or if you manage binary packages with *Conda* use
 
 ```shell
-$ conda install -c conda-forge eccodes
+$ conda install -c conda-forge cfgrib
 ```
 
 As an alternative you may install the official source distribution
@@ -146,7 +147,7 @@ https://confluence.ecmwf.int/display/ECC/ecCodes+installation
 You may run a simple selfcheck command to ensure that your system is set up correctly:
 
 ```shell
-$ python -m eccodes selfcheck
+$ python -m <eccodes OR cfgrib> selfcheck
 Found: ecCodes v2.27.0.
 Your system is ready.
 ```
@@ -172,16 +173,52 @@ See [the setuptools guide](https://setuptools.pypa.io/en/latest/userguide/pyproj
 for more information, as well as [Further Reading](#further-reading).
 </details>
 
+### Running tests
+
+Due to the `src` directory structure, the module must be installed into your site-packages before running tests.
+
+```shell
+$ pip install .
+```
+
+Run the unit tests with
+
+```shell
+$ python -m unittest discover -s src/nwp_consumer -p "test_*.py"
+```
+
+and the integration tests with
+
+```shell
+$ python -m unittest discover -s test_integration -p "test_*.py"
+```
+
+See [further reading](#further-reading) for more information on the `src` directory structure.
+
+---
+
 ## Further reading
 
 On packaging a python project using setuptools and pyproject.toml:
-- The PyPA packaging guide: https://packaging.python.org/en/latest/tutorials/packaging-projects/
-- An accessible tutorial: https://godatadriven.com/blog/a-practical-guide-to-setuptools-and-pyproject-toml/
-- The pyproject.toml metadata specification: https://packaging.python.org/en/latest/specifications/declaring-project-metadata
+- The official [PyPA packaging guide](https://packaging.python.org/en/latest/tutorials/packaging-projects/).
+- A [step-by-step practical guide](https://godatadriven.com/blog/a-practical-guide-to-setuptools-and-pyproject-toml/)
+on the *godatadriven* blog.
+- The pyproject.toml
+[metadata specification](https://packaging.python.org/en/latest/specifications/declaring-project-metadata).
 
 On hexagonal architecture:
-- Overview 1: https://medium.com/ssense-tech/hexagonal-architecture-there-are-always-two-sides-to-every-story-bc0780ed7d9c
-- Overview 2: https://medium.com/@matiasvarela/hexagonal-architecture-in-go-cfd4e436faa3
+- A [concrete example](https://medium.com/towards-data-engineering/a-concrete-example-of-the-hexagonal-architecture-in-python-d821213c6fb9)
+using Python.
+- An [overview of the fundamentals](https://medium.com/ssense-tech/hexagonal-architecture-there-are-always-two-sides-to-every-story-bc0780ed7d9c) 
+incorporating Typescript 
+- Another [example](https://medium.com/@matiasvarela/hexagonal-architecture-in-go-cfd4e436faa3) using Go.
+
+On the directory structure:
+- The official [PyPA discussion](https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/) on 
+src and flat layouts.
+
+
+---
 
 ## Contributing and community
 

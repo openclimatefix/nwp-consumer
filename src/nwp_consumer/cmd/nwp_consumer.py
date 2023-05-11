@@ -1,7 +1,7 @@
 """nwp-consumer.
 
 Usage:
-  nwp-consumer create-monthly-zarr-dataset --start-date <startDate> --end-date <endDate>
+  nwp-consumer download-raw-dataset --start-date <startDate> --end-date <endDate>
   nwp-consumer (-h | --help)
   nwp-consumer --version
 
@@ -21,7 +21,7 @@ from docopt import docopt
 from nwp_consumer.internal import config
 from nwp_consumer.internal.inputs import ceda
 from nwp_consumer.internal.outputs import localfs
-from nwp_consumer.internal.service import CreateMonthlyZarrDataset
+from nwp_consumer.internal.service import NWPConsumerService
 
 __version__ = "local"
 
@@ -40,23 +40,29 @@ def main():
 
     log.info("Starting nwp-consumer", version=__version__, arguments=arguments)
 
-    if arguments['create-monthly-zarr-dataset']:
-        sc = config.LocalFSConfig()
-        storer = localfs.LocalFSClient(
-            rawDir=sc.RAW_DIR,
-            zarrDir=sc.ZARR_DIR, createDirs=True
-        )
+    sc = config.LocalFSConfig()
+    storer = localfs.LocalFSClient(
+        rawDir=sc.RAW_DIR,
+        zarrDir=sc.ZARR_DIR,
+        createDirs=True
+    )
 
-        cc = config.CEDAConfig()
-        CreateMonthlyZarrDataset(
-            fetcher=ceda.CEDAClient(
-                ftpUsername=cc.CEDA_FTP_USER,
-                ftpPassword=cc.CEDA_FTP_PASS,
-                storer=storer
-            ),
-            startDate=dt.datetime.strptime(arguments['<startDate>'], "%Y-%m-%d").date(),
-            endDate=dt.datetime.strptime(arguments['<endDate>'], "%Y-%m-%d").date(),
-            storer=storer
+    cc = config.CEDAConfig()
+    fetcher = ceda.CEDAClient(
+        ftpUsername=cc.CEDA_FTP_USER,
+        ftpPassword=cc.CEDA_FTP_PASS,
+        storer=storer
+    )
+
+    service = NWPConsumerService(
+        fetcher=fetcher,
+        storer=storer
+    )
+
+    if arguments['download-raw-dataset']:
+        service.download_raw_dataset(
+            start_date=dt.datetime.strptime(arguments['<startDate>'], "%Y-%m-%d"),
+            end_date=dt.datetime.strptime(arguments['<endDate>'], "%Y-%m-%d")
         )
 
 
