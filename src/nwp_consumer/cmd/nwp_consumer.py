@@ -2,6 +2,7 @@
 
 Usage:
   nwp-consumer download-raw-dataset --start-date <startDate> --end-date <endDate>
+  nwp-consumer convert-raw-dataset --start-date <startDate> --end-date <endDate>
   nwp-consumer (-h | --help)
   nwp-consumer --version
 
@@ -60,9 +61,15 @@ def main():
     )
 
     if arguments['download-raw-dataset']:
-        service.download_raw_dataset(
-            start_date=dt.datetime.strptime(arguments['<startDate>'], "%Y-%m-%d"),
-            end_date=dt.datetime.strptime(arguments['<endDate>'], "%Y-%m-%d")
+        service.DownloadRawDataset(
+            startDate=dt.datetime.strptime(arguments['<startDate>'], "%Y-%m-%d"),
+            endDate=dt.datetime.strptime(arguments['<endDate>'], "%Y-%m-%d")
+        )
+
+    if arguments['convert-raw-dataset']:
+        service.ConvertRawDatasetToZarr(
+            startDate=dt.datetime.strptime(arguments['<startDate>'], "%Y-%m-%d"),
+            endDate=dt.datetime.strptime(arguments['<endDate>'], "%Y-%m-%d")
         )
 
 

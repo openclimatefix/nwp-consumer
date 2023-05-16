@@ -74,7 +74,8 @@ class CEDAClient(internal.FetcherInterface):
         fileInfosForInitTime: list[CEDAFileInfo] = self._getFileInfosForInitTime(initTime=initTime)
 
         if fileInfosForInitTime is None or len(fileInfosForInitTime) == 0:
-            raise Exception(f"No files found for initTime {initTime}")
+            log.warn(f"No files found for initTime {initTime}")
+            return []
 
         # Download the wholesale files given by the file infos
         # * There are two files of interest per inittime

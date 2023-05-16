@@ -16,8 +16,8 @@ from .client import (
 )
 
 testStorer = outputs.localfs.LocalFSClient(
-    rawDir=(pathlib.Path(__file__).parent / "test").as_posix(),
-    zarrDir=(pathlib.Path(__file__).parent / "test").as_posix(),
+    rawDir=pathlib.Path(__file__).parent.as_posix(),
+    zarrDir=pathlib.Path(__file__).parent.as_posix(),
 )
 
 testClient = CEDAClient(storer=testStorer, ftpPassword="", ftpUsername="")

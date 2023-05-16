@@ -66,6 +66,14 @@ class StorageInterface(abc.ABC):
 
 # ------- Domain models ------- #
 
+
+class ByteFile:
+    """Represents a raw byte file."""
+
+    relativePath: str
+    data: bytes
+
+
 class OCFShortName(str, Enum):
     """Short names for the OCF parameters."""
 
