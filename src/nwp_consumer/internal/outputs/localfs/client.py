@@ -126,7 +126,7 @@ def _createChunkedDaskDataset(ds: xr.Dataset) -> xr.Dataset:
         da.to_dataset().chunk(
             {
                 "init_time": 1,
-                "step_time": 1,
+                "step": 1,
                 "variable": -1,
             })
     )
