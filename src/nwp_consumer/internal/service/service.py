@@ -55,7 +55,7 @@ class NWPConsumerService:
                 # Convert the data for the given init time into a dataset
                 initTimeDataset: xr.Dataset = self.fetcher.loadRawInitTimeDataAsOCFDataset(rawRelativePaths=initTimePaths, initTime=initTime)
                 # Save the dataset to the store
-                zarrPath: pathlib.Path = pathlib.Path(f"{initTime:%Y%m}.zarr")
+                zarrPath: pathlib.Path = pathlib.Path(f"{initTime:%Y/%m/UKV_%Y%m}.zarr")
                 if not self.storer.existsInZarrDir(relativePath=zarrPath):
                     self.storer.saveDataset(dataset=initTimeDataset, relativePath=zarrPath)
                     savedPaths.append(zarrPath)
