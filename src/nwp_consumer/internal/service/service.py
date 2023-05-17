@@ -60,8 +60,8 @@ class NWPConsumerService:
                     self.storer.saveDataset(dataset=initTimeDataset, relativePath=datasetRelativePath)
                     savedPaths.append(datasetRelativePath)
                 else:
-                    self.storer.appendDataset(dataset=initTimeDataset, relativePath=datasetRelativePath)
+                    self.storer.saveDataset(dataset=initTimeDataset, relativePath=datasetRelativePath)
 
-                del dataset
+                del initTimeDataset
 
         return savedPaths
