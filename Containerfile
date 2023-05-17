@@ -3,7 +3,7 @@
 # * Update pip setuputils and wheel to support building new packages
 FROM quay.io/condaforge/miniforge3:latest AS build
 RUN conda create -p /venv python=3.9
-RUN conda install -p /venv -y cfgrib cartopy
+RUN conda install -p /venv -y cfgrib cartopy cf-units cftime numcodecs
 RUN /venv/bin/pip install --upgrade pip
 
 # Install packages into the virtualenv as a separate step

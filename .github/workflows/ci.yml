@@ -35,7 +35,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          conda install -y eccodes cartopy
+          conda install -y cfgrib cartopy cf-units cftime numcodecs
           python -m pip install --upgrade pip
           pip install -e .[dev]
 
