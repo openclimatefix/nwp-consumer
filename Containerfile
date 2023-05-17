@@ -1,9 +1,9 @@
 # Build a virtualenv using miniconda
 # * Install required non-python binaries
 # * Update pip setuputils and wheel to support building new packages
-FROM continuumio/miniconda3:latest AS build
+FROM quay.io/condaforge/miniforge3:latest AS build
 RUN conda create -p /venv python=3.9
-RUN conda install -p /venv -c conda-forge -y cfgrib cartopy
+RUN conda install -p /venv -y cfgrib cartopy
 RUN /venv/bin/pip install --upgrade pip
 
 # Install packages into the virtualenv as a separate step

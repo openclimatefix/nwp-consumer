@@ -27,7 +27,7 @@ jobs:
   # * Incorporates unittests and integration tests
   test:
     runs-on: ubuntu-latest
-    container: continuumio/miniconda3:latest
+    container: quay.io/condaforge/miniforge3:latest
 
     steps:
       - name: Checkout repository
@@ -35,7 +35,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          conda install -y -c conda-forge nodejs eccodes cartopy cf-units cftime numcodecs
+          conda install -y eccodes cartopy
           python -m pip install --upgrade pip
           pip install -e .[dev]
 
