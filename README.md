@@ -85,7 +85,7 @@ $ exa --tree --git-ignore -F -I "*init*|test*.*"
 └── src/
    ├── nwp_consumer/ # The main library package
    │  ├── cmd/
-   │  │  └── nwp_consumer.py # The entrypoint to the service
+   │  │  └── main.py # The entrypoint to the service
    │  └── internal/ # Packages internal to the service. Like the 'lib' folder
    │     ├── config/ 
    │     │  └── config.py # Contains the configuration specification for running the service

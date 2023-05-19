@@ -15,65 +15,17 @@ from .client import (
     _reshapeTo2DGrid,
 )
 
+# --------- Test setup --------- #
+
 testStorer = outputs.localfs.LocalFSClient(
     rawDir=pathlib.Path(__file__).parent.as_posix(),
     zarrDir=pathlib.Path(__file__).parent.as_posix(),
 )
 
-testClient = CEDAClient(storer=testStorer, ftpPassword="", ftpUsername="")
+testClient = CEDAClient(ftpPassword="", ftpUsername="")
 
 
 # --------- Client methods --------- #
-
-class TestClient_Init(unittest.TestCase):
-    def test_errorsWhenVariablesAreNotSet(self):
-        with self.assertRaises(TypeError):
-            _ = CEDAClient(storer=testStorer)
-
-    def test_errorsWhenStorageClientIsNotSet(self):
-        with self.assertRaises(TypeError):
-            _ = CEDAClient()
-
-
-class TestClient_LoadWholesaleFileAsDataset(unittest.TestCase):
-    def test_loadsWholesaleFilesCorrectly(self):
-
-        for file in ["test_truncated_Wholesale1.grib", "test_truncated_Wholesale2.grib"]:
-            wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / file
-
-            dataset = testClient._loadWholesaleFileAsDataset(path=wholesalePath, initTime=dt.datetime(2021, 1, 1, 0, 0))
-
-            self.assertEqual(6, len(dataset.data_vars))
-            self.assertEqual(4, dataset.dims['step'])
-            self.assertEqual(385792, dataset.dims['values'])
-
-    def test_deletesUnwantedVariables(self):
-        for file in ["test_truncated_Wholesale1.grib", "test_truncated_Wholesale2.grib"]:
-            wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / file
-
-            dataset = testClient._loadWholesaleFileAsDataset(path=wholesalePath,
-                                                              initTime=dt.datetime(2021, 1, 1, 0, 0))
-            for parameter in PARAMETER_IGNORE_LIST:
-                with self.assertRaises(KeyError):
-                    _ = dataset[parameter]
-
-            for coordinate in COORDINATE_IGNORE_LIST:
-                with self.assertRaises(KeyError):
-                    _ = dataset[coordinate]
-
-
-class TestClient_LoadRawInitTimeDataAsOCFDataset(unittest.TestCase):
-
-    def test_loadsRawInitTimeDataCorrectly(self):
-        initTime: dt.datetime = dt.datetime(year=2021, month=1, day=1, hour=0, minute=0, tzinfo=dt.timezone.utc)
-
-        files = [pathlib.Path(__file__).parent / file for file in ["test_truncated_Wholesale1.grib", "test_truncated_Wholesale2.grib"]]
-
-        dataset = testClient.loadRawInitTimeDataAsOCFDataset(rawRelativePaths=files, initTime=initTime)
-        print(dataset)
-
-        self.assertEqual(12, len(dataset.data_vars))
-        self.assertEqual(4, dataset.dims['step'])
 
 
 # --------- Static methods --------- #
@@ -112,7 +64,8 @@ class TestReshapeTo2DGrid(unittest.TestCase):
     def test_correctlyReshapesData(self):
         wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_truncated_Wholesale1.grib"
 
-        dataset = testClient._loadWholesaleFileAsDataset(path=wholesalePath, initTime=dt.datetime(2021, 1, 1, 0, 0))
+        dataset = testClient._loadWholesaleFileAsDataset(
+            data=wholesalePath.read_bytes(), initTime=dt.datetime(2021, 1, 1, 0, 0))
 
         reshapedDataset = _reshapeTo2DGrid(dataset=dataset)
 

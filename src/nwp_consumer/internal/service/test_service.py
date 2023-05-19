@@ -1,23 +1,22 @@
 import datetime as dt
-import pathlib
 import unittest
+from unittest.mock import patch
 
-import xarray as xr
-
+from . import NWPConsumerService
 from nwp_consumer import internal
-
-
-class DummyFetcher(internal.FetcherInterface):
-
-    def downloadRawDataForInitTime(self, initTime: dt.datetime) -> list[pathlib.Path]:
-        return [pathlib.Path(initTime.strftime("%Y%m%d%H%M"))]
-
-    def loadRawInitTimeDataAsOCFDataset(self, rawRelativePaths: list[pathlib.Path], initTime: dt.datetime) -> xr.Dataset:
-        return xr.Dataset()
 
 
 class TestNWPConsumerService_DownloadRawDataset(unittest.TestCase):
 
+    @patch.multiple(internal.FetcherInterface, __abstractmethods__=set())
+    @patch.multiple(internal.StorageInterface, __abstractmethods__=set())
     def TestDownloadsExpectedFiles(self):
-        # TODO: Implement
-        pass
+        testStorer = internal.StorageInterface()
+        testFetcher = internal.FetcherInterface()
+
+        service = NWPConsumerService(fetcher=testFetcher, storer=testStorer)
+
+        startDate = dt.date(2021, 1, 1)
+        endDate = dt.date(2021, 2, 1)
+
+        paths = service.DownloadRawDataset(startDate=startDate, endDate=endDate)

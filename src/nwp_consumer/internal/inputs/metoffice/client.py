@@ -50,10 +50,7 @@ class MetOfficeClient(internal.FetcherInterface):
     # Query string headers to pass to the MetOffice API
     __headers: dict[str, str]
 
-    # Storage client
-    storer: internal.StorageInterface
-
-    def __init__(self, orderID: str, clientID: str, clientSecret: str, storer: internal.StorageInterface):
+    def __init__(self, orderID: str, clientID: str, clientSecret: str):
         if any([value in [None, "", "unset"] for value in [clientID, clientSecret, orderID]]):
             raise KeyError("Must provide clientID, clientSecret, and orderID")
         self.orderID: str = orderID
@@ -65,24 +62,54 @@ class MetOfficeClient(internal.FetcherInterface):
             "X-IBM-Client-Id": clientID,
             "X-IBM-Client-Secret": clientSecret,
         }
-        self.storer = storer
 
-    def downloadRawDataForInitTime(self, initTime: dt.datetime) -> list[pathlib.Path]:
-        """Downloads the raw data for the given init time."""
-        # Fetch all the raw file infos for the given init time
-        fileInfosForInitTime: list[MetOfficeFileInfo] = self._getFileInfosForInitTime(initTime=initTime)
+    def fetchRawFileBytes(self, fileInfo: MetOfficeFileInfo) -> tuple[internal.FileInfoModel, bytes]:
+        """Downloads a GRIB file corresponding to the input FileInfo object."""
+        # Set the relative filepath to be the date of the file
+        # * For example 2021/01/01/20210101T0000_Wholesale1.grib2
 
-        if fileInfosForInitTime is None or len(fileInfosForInitTime) == 0:
-            raise Exception(f"No files found for initTime {initTime}")
+        log.debug(f"Requesting download of {fileInfo.fileId}", item=fileInfo.fileId)
+        url: str = f"{self.baseurl}/{fileInfo.fileId}/data"
+        try:
+            opener = urllib.request.build_opener()
+            opener.addheaders = list(dict(self.__headers, **{"Accept": "application/x-grib"}).items())
+            urllib.request.install_opener(opener)
+            response = urllib.request.urlopen(url=url)
+            if not response.status == 200:
+                raise ConnectionError(f"Error response code {response.status} for url {url}: {response.read()}")
+        except Exception as e:
+            raise ConnectionError(f"Error calling url {url} for {fileInfo.fileId}: {e}")
 
-        # Download the raw parameter files given by the file infos
-        with ProcessPoolExecutor(4) as p:
-            rawRelPaths: list[pathlib.Path] = [x for x in p.map(self._downloadRawGRIBFile, fileInfosForInitTime)]
+        log.debug(f"Fetched all data from {fileInfo.fileId}", path=url)
 
-        # Shutdown the pool after all files have downloaded
-        p.shutdown(wait=True, cancel_futures=False)
+        return fileInfo, response.read()
 
-        return rawRelPaths
+    def listRawFilesForInitTime(self, initTime: dt.datetime) -> list[internal.FileInfoModel]:
+        """Get a list of FileInfo objects according to the input initTime."""
+        # Fetch info for all files available on the input date
+        response: requests.Response = requests.request(
+            method="GET",
+            url=self.baseurl,
+            headers=self.__headers,
+            params=self.querystring
+        )
+        if not response.ok:
+            raise AssertionError(f"Response did not return with an ok status: {response.content}")
+
+        # Map the response to a MetOfficeResponse object
+        try:
+            responseObj: MetOfficeResponse = MetOfficeResponse.Schema().load(response.json())
+        except Exception as e:
+            raise TypeError(
+                f"Error marshalling json to MetOfficeResponse object: {e}, response: {response.json()}"
+            )
+
+        # Filter the file infos for the desired init time
+        wantedFileInfos: list[MetOfficeFileInfo] = [
+            fo for fo in responseObj.orderDetails.files if _isWantedFile(fileInfo=fo, desiredInitTime=initTime)
+        ]
+
+        return wantedFileInfos
 
     def loadRawInitTimeDataAsOCFDataset(self, rawRelativePaths: list[pathlib.Path],
                                         initTime: dt.datetime) -> xr.Dataset:
@@ -155,64 +182,6 @@ class MetOfficeClient(internal.FetcherInterface):
 
         return parameterDataArray
 
-    def _downloadRawGRIBFile(self, fileInfo: MetOfficeFileInfo) -> pathlib.Path:
-        """Downloads a GRIB file corresponding to the input FileInfo object."""
-        # Set the relative filepath to be the date of the file
-        # * For example 2021/01/01/20210101T0000_Wholesale1.grib2
-        relativeFilePath: pathlib.Path = pathlib.Path(
-            fileInfo.initTime().strftime("%Y/%m/%d"), fileInfo.fileId)
-
-        if self.storer.existsInRawDir(relativePath=relativeFilePath):
-            log.debug(f"File already exists: {fileInfo.fileId}")
-
-        else:
-            log.debug(f"Requesting download of {fileInfo.fileId}", item=fileInfo.fileId)
-            url: str = f"{self.baseurl}/{fileInfo.fileId}/data"
-            try:
-                opener = urllib.request.build_opener()
-                opener.addheaders = list(dict(self.__headers, **{"Accept": "application/x-grib"}).items())
-                urllib.request.install_opener(opener)
-                response = urllib.request.urlopen(url=url)
-                if not response.status == 200:
-                    raise ConnectionError(f"Error response code {response.status} for url {url}: {response.read()}")
-            except Exception as e:
-                raise ConnectionError(f"Error calling url {url} for {fileInfo.fileId}: {e}")
-            try:
-                savedPath = self.storer.writeBytesToRawDir(relativePath=relativeFilePath, data=response.read())
-            except Exception as e:
-                raise IOError(f"Error saving file {fileInfo.fileId} to {relativeFilePath}: {e}")
-
-            log.debug(f"Downloaded item: {fileInfo.fileId}", item=fileInfo.fileId, path=savedPath.as_posix())
-
-        return relativeFilePath
-
-    def _getFileInfosForInitTime(self, initTime: dt.datetime) -> list[MetOfficeFileInfo]:
-        """Get a list of FileInfo objects according to the input initTime."""
-        # Fetch info for all files available on the input date
-        response: requests.Response = requests.request(
-            method="GET",
-            url=self.baseurl,
-            headers=self.__headers,
-            params=self.querystring
-        )
-        if not response.ok:
-            raise AssertionError(f"response did not return with an ok status: {response.content}")
-
-        # Map the response to a MetOfficeResponse object
-        try:
-            responseObj: MetOfficeResponse = MetOfficeResponse.Schema().load(response.json())
-        except Exception as e:
-            raise TypeError(
-                f"Error marshalling json to MetOfficeResponse object: {e}, response: {response.json()}"
-            )
-
-        # Filter the file infos for the desired init time
-        wantedFileInfos: list[MetOfficeFileInfo] = [
-            fo for fo in responseObj.orderDetails.files if _isWantedFile(fileInfo=fo, desiredInitTime=initTime)
-        ]
-
-        return wantedFileInfos
-
 
 def _getParameterNameFromFileName(fileName: str) -> str:
     """Gets the parameter name from the input file name.
@@ -231,9 +200,9 @@ def _isWantedFile(fileInfo: MetOfficeFileInfo, desiredInitTime: dt.datetime) -> 
     if fileInfo.initTime().replace(tzinfo=dt.timezone.utc) != desiredInitTime.replace(tzinfo=dt.timezone.utc):
         return False
     # False if item is one of the ones ending in +HH
-    if "+" in fileInfo.fileName():
+    if "+" in fileInfo.fname():
         return False
 
-    log.debug("Found wanted file from MetOffice", file=fileInfo.fileName())
+    log.debug("Found wanted file from MetOffice", file=fileInfo.fname())
 
     return True

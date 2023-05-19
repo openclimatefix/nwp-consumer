@@ -4,7 +4,6 @@ import tempfile
 import typing
 import urllib.parse
 import urllib.request
-from concurrent.futures import ProcessPoolExecutor
 
 import cfgrib
 import numpy as np
@@ -59,41 +58,60 @@ class CEDAClient(internal.FetcherInterface):
     httpsBase: str = "https://data.ceda.ac.uk"
     __ftpBase: str
 
-    # Storage client
-    storer: internal.StorageInterface
-
-    def __init__(self, ftpUsername: str, ftpPassword: str, storer: internal.StorageInterface):
+    def __init__(self, ftpUsername: str, ftpPassword: str):
         self.__username: str = urllib.parse.quote(ftpUsername)
         self.__password: str = urllib.parse.quote(ftpPassword)
         self.__ftpBase: str = f'ftp://{self.__username}:{self.__password}@ftp.ceda.ac.uk'
-        self.storer: internal.StorageInterface = storer
 
-    def downloadRawDataForInitTime(self, initTime: dt.datetime) -> list[pathlib.Path]:
-        """Download raw data for the given init time."""
-        # Fetch all the raw file infos for the given init time
-        fileInfosForInitTime: list[CEDAFileInfo] = self._getFileInfosForInitTime(initTime=initTime)
+    def fetchRawFileBytes(self, fileInfo: internal.FileInfoModel) -> tuple[internal.FileInfoModel, bytes]:
+        """Download a GRIB file corresponding to the input relative path."""
 
-        if fileInfosForInitTime is None or len(fileInfosForInitTime) == 0:
-            log.warn(f"No files found for initTime {initTime}")
-            return []
+        anonUrl: str = f"{self.dataUrl}/{fileInfo.initTime():%Y/%m/%d}/{fileInfo.fname()}"
+        log.debug(f"Requesting download of {fileInfo.fname}", path=anonUrl)
+        url: str = f'{self.__ftpBase}/{anonUrl}'
+        try:
+            response = urllib.request.urlopen(url=url)
+        except Exception as e:
+            raise ConnectionError(f"Error calling url {url} for {fileInfo.fname()}: {e}")
 
-        # Download the wholesale files given by the file infos
-        # * There are two files of interest per inittime
-        # * so download them in parallel via a pool
-        with ProcessPoolExecutor(2) as p:
-            rawRelPaths: list[pathlib.Path] = [x for x in p.map(self._downloadRawGRIBFile, fileInfosForInitTime)]
+        log.debug(f"Fetched all data from: {fileInfo.fname}", path=anonUrl)
 
-        # Shutdown the pool after all files have downloaded
-        p.shutdown(wait=True, cancel_futures=False)
+        return fileInfo, response.read()
 
-        return rawRelPaths
+    def listRawFilesForInitTime(self, initTime: dt.datetime) -> list[internal.FileInfoModel]:
+        """Get a list of FileInfo objects according to the input initTime."""
 
-    def loadRawInitTimeDataAsOCFDataset(self, rawRelativePaths: list[pathlib.Path],
-                                        initTime: dt.datetime) -> xr.Dataset:
+        # Fetch info for all files available on the input date
+        # * CEDA has a HTTPS JSON API for this purpose
+        response: requests.Response = requests.request(
+            method="GET",
+            url=f"{self.httpsBase}/{self.dataUrl}/{initTime:%Y/%m/%d}?json"
+        )
+        if not response.ok:
+            raise AssertionError(f"Non-okay status for {response.url}: {response.status_code}")
+
+        # Map the response to a CEDAResponse object to ensure it looks as expected
+        try:
+            responseObj: CEDAResponse = CEDAResponse.Schema().load(response.json())
+        except Exception as e:
+            raise TypeError(
+                f"Error marshalling json to CedaResponse object: {e}, response: {response.json()}"
+            )
+
+        # Filter the files for the desired init time
+        wantedFiles: list[CEDAFileInfo] = [
+            fileInfo for fileInfo in responseObj.items
+            if _isWantedFile(fileInfo=fileInfo, desiredInitTime=initTime)
+        ]
+
+        return wantedFiles
+
+    def loadRawInitTimeDataAsOCFDataset(self, fileBytesList: list[bytes], initTime: dt.datetime) -> xr.Dataset:
         """Create an xarray dataset from the given raw files."""
         # Load the wholesale files as OCF datasets
-        wholesaleDatasets: list[xr.Dataset] = [self._loadWholesaleFileAsDataset(path=path, initTime=initTime) for path
-                                               in rawRelativePaths]
+        wholesaleDatasets: list[xr.Dataset] = [
+            self._loadWholesaleFileAsDataset(data=bd, initTime=initTime) for bd in fileBytesList
+        ]
 
         # Merge the wholesale datasets into one
         wholesaleDataset: xr.Dataset = xr.merge(wholesaleDatasets, compat='identical', combine_attrs='drop_conflicts')
@@ -115,19 +133,19 @@ class CEDAClient(internal.FetcherInterface):
 
         return wholesaleDataset
 
-    def _loadWholesaleFileAsDataset(self, path: pathlib.Path, initTime: dt.datetime) -> xr.Dataset:
+    def _loadWholesaleFileAsDataset(self, data: bytes, initTime: dt.datetime) -> xr.Dataset:
         """Loads a multi-parameter GRIB file as an OCF-compliant Dataset."""
         # Cfgrib is built upon eccodes which needs an in-memory file to read from
         with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempParameterFile:
             # Copy the raw file to a local temp file
-            tempParameterFile.write(self.storer.readBytesFromRawDir(relativePath=path))
+            tempParameterFile.write(data)
             tempParameterFile.seek(0)
 
             # Load the wholesale file as a dataset
             try:
                 datasets: list[xr.Dataset] = cfgrib.open_datasets(tempParameterFile.name)
             except Exception as e:
-                raise Exception(f"Error loading wholesale file {path} as dataset: {e}")
+                raise Exception(f"Error loading wholesale file as dataset: {e}")
 
             for i in range(len(datasets)):
                 ds = datasets[i]
@@ -168,65 +186,6 @@ class CEDAClient(internal.FetcherInterface):
             del datasets
 
         return wholesaleDataset
-
-    def _downloadRawGRIBFile(self, fileInfo: CEDAFileInfo) -> pathlib.Path:
-        """Download a GRIB file corresponding to the input FileInfo object."""
-        # Set the relative filepath to be the date of the file
-        # * For example 2021/01/01/20210101T0000_Wholesale1.grib2
-        relativeFilePath: pathlib.Path = pathlib.Path(
-            fileInfo.initTime().strftime("%Y/%m/%d"), fileInfo.name)
-
-        # Check if the file already exists
-        # * If it does, don't download it again
-        # * If it doesn't, fetch it from CEDA
-        if self.storer.existsInRawDir(relativePath=relativeFilePath):
-            log.debug(f"File already exists: {fileInfo.name}")
-
-        else:
-            ftpPath = f'{self.dataUrl}/{fileInfo.initTime().strftime("%Y/%m/%d")}/{fileInfo.name}'
-            log.debug(f"Requesting download of {fileInfo.name}", item=fileInfo.name, path=ftpPath)
-            url: str = f'{self.__ftpBase}/{ftpPath}'
-            try:
-                response = urllib.request.urlopen(url=url)
-            except Exception as e:
-                raise ConnectionError(f"Error calling url {url} for {fileInfo.name}: {e}")
-            try:
-                savedPath = self.storer.writeBytesToRawDir(relativePath=relativeFilePath, data=response.read())
-            except Exception as e:
-                raise IOError(f"Error saving file {fileInfo.name} to {relativeFilePath}: {e}")
-
-            log.debug(f"Downloaded item: {fileInfo.name}", item=fileInfo.name, path=savedPath.as_posix())
-
-        return relativeFilePath
-
-    def _getFileInfosForInitTime(self, initTime: dt.datetime) -> list[CEDAFileInfo]:
-        """Get a list of FileInfo objects according to the input initTime."""
-        initDate = initTime.date()
-
-        # Fetch info for all files available on the input date
-        response: requests.Response = requests.request(
-            method="GET",
-            url=f"{self.httpsBase}/{self.dataUrl}/{initDate.strftime('%Y')}/"
-                f"{initDate.strftime('%m')}/{initDate.strftime('%d')}"
-                f"?json"
-        )
-        if not response.ok:
-            raise AssertionError(f"Non-okay status for {response.url}: {response.status_code}")
-
-        # Map the response to a CEDAResponse object
-        try:
-            responseObj: CEDAResponse = CEDAResponse.Schema().load(response.json())
-        except Exception as e:
-            raise TypeError(
-                f"Error marshalling json to CedaResponse object: {e}, response: {response.json()}"
-            )
-
-        # Filter the file infos for the desired init time
-        wantedFileInfos: list[CEDAFileInfo] = [
-            fo for fo in responseObj.items if _isWantedFile(fileInfo=fo, desiredInitTime=initTime)
-        ]
-
-        return wantedFileInfos
 
 
 def _isWantedFile(fileInfo: CEDAFileInfo, desiredInitTime: dt.datetime) -> bool:

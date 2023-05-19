@@ -17,9 +17,11 @@ class MetOfficeFileInfo:
     Schema: ClassVar[Type[Schema]] = Schema  # To prevent confusing type checkers
 
     def initTime(self) -> dt.datetime:
+        """Returns the init time of the file."""
         return self.runDateTime.replace(tzinfo=dt.timezone.utc)
 
-    def fileName(self) -> str:
+    def fname(self) -> str:
+        """Returns the file name."""
         return self.fileId
 
 

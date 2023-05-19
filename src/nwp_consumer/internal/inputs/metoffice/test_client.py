@@ -7,12 +7,15 @@ from nwp_consumer.internal import outputs
 from ._models import MetOfficeFileInfo
 from .client import MetOfficeClient, _getParameterNameFromFileName, _isWantedFile
 
+
+# --------- Test setup --------- #
+
 testStorer = outputs.localfs.LocalFSClient(
     rawDir=(pathlib.Path(__file__).parent / "test").as_posix(),
     zarrDir=(pathlib.Path(__file__).parent / "test").as_posix(),
 )
 
-testClient = MetOfficeClient(orderID="tmp", clientID="tmp", clientSecret="tmp", storer=testStorer)
+testClient = MetOfficeClient(orderID="tmp", clientID="tmp", clientSecret="tmp")
 
 
 # --------- Client methods --------- #
@@ -24,8 +27,7 @@ class TestClient_Init(unittest.TestCase):
             _ = MetOfficeClient(
                 orderID="unset",
                 clientID="",
-                clientSecret="test_client_secret",
-                storer=testStorer)
+                clientSecret="test_client_secret")
 
 
 class TestClient_loadSingleParameterGRIBAsOCFDataArray(unittest.TestCase):
