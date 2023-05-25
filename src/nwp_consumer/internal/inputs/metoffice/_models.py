@@ -1,12 +1,14 @@
 import datetime as dt
 from typing import ClassVar, Type
 
+from nwp_consumer import internal
+
 from marshmallow import EXCLUDE, Schema, fields
 from marshmallow_dataclass import dataclass
 
 
 @dataclass
-class MetOfficeFileInfo:
+class MetOfficeFileInfo(internal.FileInfoModel):
 
     class Meta:
         unknown = EXCLUDE

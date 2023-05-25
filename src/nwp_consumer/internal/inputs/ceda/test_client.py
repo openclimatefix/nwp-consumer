@@ -68,6 +68,7 @@ class TestReshapeTo2DGrid(unittest.TestCase):
             data=wholesalePath.read_bytes(), initTime=dt.datetime(2021, 1, 1, 0, 0))
 
         reshapedDataset = _reshapeTo2DGrid(dataset=dataset)
+        print(reshapedDataset)
 
         self.assertEqual(548, reshapedDataset.dims['x'])
         self.assertEqual(704, reshapedDataset.dims['y'])

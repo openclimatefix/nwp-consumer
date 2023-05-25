@@ -1,9 +1,12 @@
 """Contains both ports and domain models for the nwp_consumer package."""
 
 import abc
+import dataclasses
 import datetime as dt
 import pathlib
 from enum import Enum
+
+import numpy.typing as npt
 
 import xarray as xr
 

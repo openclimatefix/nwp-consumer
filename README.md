@@ -26,12 +26,11 @@ currently packaged with adapters for pulling and converting `.grib` data from th
 [MetOffice](https://gridded-data-ui.cda.api.metoffice.gov.uk) and from [CEDA](https://catalogue.ceda.ac.uk). Its modular
 nature enables straightforward extension to alternate future sources.
 
-## :warning: This is still a work in progress!
+### :warning: This is still a work in progress!
 
 Still TODO:
 - Complete the test suite for S3
-- Create the use-cases and business logic for the live service
-- Complete the entrypoint for the service
+- Create the conversion script for NWP
 
 ## Running the service
 

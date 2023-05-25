@@ -30,7 +30,7 @@ dependencies = [
     "structlog == 22.1.0",
     "urllib3 == 1.26.15",
     "xarray == 2023.2.0",
-    "zarr == 2.14.2"
+    "tensorstore == 0.1.36"
 ]
 
 [project.optional-dependencies]

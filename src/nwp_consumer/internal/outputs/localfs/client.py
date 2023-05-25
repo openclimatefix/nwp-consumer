@@ -17,6 +17,9 @@ class LocalFSClient(internal.StorageInterface):
     # Location to save Zarr files
     __zarrDir: pathlib.Path
 
+    # InitTime folder structure format string
+    folderFormatStr: str
+
     def __init__(self, rawDir: str, zarrDir: str, createDirs: bool = False):
         """Create a new LocalFSClient."""
         rawPath: pathlib.Path = pathlib.Path(rawDir)
@@ -29,6 +32,7 @@ class LocalFSClient(internal.StorageInterface):
 
         self.__rawDir = rawPath
         self.__zarrDir = zarrPath
+        self.folderFormatStr = "%Y/%m/%d"
 
     def listFilesInRawDir(self) -> list[pathlib.Path]:
         """List all files in the raw directory."""
@@ -36,7 +40,7 @@ class LocalFSClient(internal.StorageInterface):
 
     def existsInRawDir(self, fileName: str, initTime: dt.datetime) -> bool:
         """Check if a file exists in the raw directory."""
-        path = pathlib.Path(f"{self.__rawDir}/{initTime.strftime('%Y/%m/%d')}/{fileName}")
+        path = pathlib.Path(f"{self.__rawDir}/{initTime.strftime(self.folderFormatStr)}/{fileName}")
         return path.exists()
 
     def existsInZarrDir(self, relativePath: pathlib.Path) -> bool:
@@ -46,7 +50,7 @@ class LocalFSClient(internal.StorageInterface):
 
     def readBytesFromRawDir(self, fileName: str, initTime: dt.datetime) -> bytes:
         """Read a file from the raw dir as bytes."""
-        path = pathlib.Path(f"{self.__rawDir}/{initTime.strftime('%Y/%m/%d')}/{fileName}")
+        path = pathlib.Path(f"{self.__rawDir}/{initTime.strftime(self.folderFormatStr)}/{fileName}")
 
         if self.existsInRawDir(fileName=fileName, initTime=initTime):
             return path.read_bytes()
@@ -55,7 +59,7 @@ class LocalFSClient(internal.StorageInterface):
 
     def writeBytesToRawDir(self, fileName: str, initTime: dt.datetime, data: bytes) -> pathlib.Path:
         """Write the given bytes to the raw directory."""
-        path = pathlib.Path(f"{self.__rawDir}/{initTime.strftime('%Y/%m/%d')}/{fileName}")
+        path = pathlib.Path(f"{self.__rawDir}/{initTime.strftime(self.folderFormatStr)}/{fileName}")
 
         # Create the path to the file if the folders do not exist
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -65,7 +69,7 @@ class LocalFSClient(internal.StorageInterface):
 
     def removeFromRawDir(self, fileName: str, initTime: dt.datetime) -> None:
         """Remove a file from the raw dir."""
-        path = pathlib.Path(f"{self.__rawDir}/{initTime.strftime('%Y/%m/%d')}/{fileName}")
+        path = pathlib.Path(f"{self.__rawDir}/{initTime.strftime(self.folderFormatStr)}/{fileName}")
         path.unlink()
 
     def saveDataset(self, dataset: xr.Dataset, relativePath: pathlib.Path) -> None:

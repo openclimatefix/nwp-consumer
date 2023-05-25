@@ -4,7 +4,6 @@ import datetime as dt
 import pathlib
 import tempfile
 import urllib.request
-from concurrent.futures import ProcessPoolExecutor
 
 import cfgrib
 import numpy as np
@@ -65,8 +64,6 @@ class MetOfficeClient(internal.FetcherInterface):
 
     def fetchRawFileBytes(self, fileInfo: MetOfficeFileInfo) -> tuple[internal.FileInfoModel, bytes]:
         """Downloads a GRIB file corresponding to the input FileInfo object."""
-        # Set the relative filepath to be the date of the file
-        # * For example 2021/01/01/20210101T0000_Wholesale1.grib2
 
         log.debug(f"Requesting download of {fileInfo.fileId}", item=fileInfo.fileId)
         url: str = f"{self.baseurl}/{fileInfo.fileId}/data"
@@ -86,6 +83,11 @@ class MetOfficeClient(internal.FetcherInterface):
 
     def listRawFilesForInitTime(self, initTime: dt.datetime) -> list[internal.FileInfoModel]:
         """Get a list of FileInfo objects according to the input initTime."""
+
+        if initTime.date() != dt.datetime.utcnow().date():
+            log.warn("MetOffice API only supports fetching data for the current day")
+            return []
+
         # Fetch info for all files available on the input date
         response: requests.Response = requests.request(
             method="GET",
@@ -111,41 +113,26 @@ class MetOfficeClient(internal.FetcherInterface):
 
         return wantedFileInfos
 
-    def loadRawInitTimeDataAsOCFDataset(self, rawRelativePaths: list[pathlib.Path],
-                                        initTime: dt.datetime) -> xr.Dataset:
+    def loadRawInitTimeDataAsOCFDataset(self, fileBytesList: list[bytes], initTime: dt.datetime) -> xr.Dataset:
+        """Converts a list of raw file bytes into an OCF XArray Dataset."""
 
-        datasetName: str = initTime.strftime("%Y%m%dT%H%M")
-
-        log.debug(
-            f"Creating Dataset {datasetName} from {len(rawRelativePaths)} files",
-            dataset=datasetName,
-            files=[path.as_posix() for path in rawRelativePaths]
-        )
-
-        # Instantiate a list to hold the DataArrays for each parameter
-        parameterDataArrays: list[xr.DataArray] = []
-
-        # For each parameter file, load test_integration as a DataArray and add test_integration to the list
-        for filePath in rawRelativePaths:
-            try:
-                parameterDataArray = self._loadSingleParameterGRIBAsOCFDataArray(path=filePath, initTime=initTime)
-                parameterDataArrays.append(parameterDataArray)
-            except Exception as e:
-                raise Exception(f"Error loading file {filePath.as_posix()} as DataArray: {e}")
-
-            log.debug(
-                f"Merging DataArray from parameter {filePath.stem} into dataset {datasetName}",
-                parameterFile=filePath.as_posix(), dataset=datasetName
-            )
+        # Load the single parameter files as OCF DataArrays
+        parameterDataArrays: list[xr.Dataset] = [
+            self._loadSingleParameterGRIBAsOCFDataset(data=bd, initTime=initTime) for bd in fileBytesList
+        ]
 
         # Merge the DataArrays into a single Dataset
         dataset = xr.merge(
             parameterDataArrays,
             compat='identical', combine_attrs='drop_conflicts'
-        ).load()
+        )
 
+        # Load the whole dataset into memory
+        # * Enables the deletion of the old DataArrays
+        dataset.load()
         del parameterDataArrays
 
+        # Add the init time as a coordinate
         dataset = dataset \
             .assign_coords({"init_time": np.datetime64(pd.Timestamp(initTime.replace(tzinfo=None)))}) \
             .expand_dims("init_time") \
@@ -154,44 +141,38 @@ class MetOfficeClient(internal.FetcherInterface):
 
         return dataset
 
-    def _loadSingleParameterGRIBAsOCFDataArray(self, path: pathlib.Path, initTime: dt.datetime) -> xr.DataArray:
+    def _loadSingleParameterGRIBAsOCFDataset(self, data: bytes, initTime: dt.datetime) -> xr.Dataset:
         """Loads a single-parameter GRIB file as an OCF-compliant DataArray."""
-        # cfgrib can't take a file-like object as input, so we have to download the file to a tempfile again
+        # Cfgrib is built upon eccodes which needs an in-memory file to read from
         with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempParameterFile:
             # Copy the raw file to a local temp file
-            tempParameterFile.write(self.storer.readBytesFromRawDir(relativePath=path))
+            tempParameterFile.write(data)
             tempParameterFile.seek(0)
 
             # Load the GRIB file as a cube
             try:
-                parameterDataArray: xr.DataArray = cfgrib.open_dataset(tempParameterFile.name).to_array()
+                parameterDataset: xr.Dataset = xr.open_dataset(
+                    tempParameterFile.name, engine='cfgrib',
+                    backend_kwargs={'read_keys': ['name', 'parameterName']}
+                )
             except Exception as e:
-                raise ValueError(f"Failed to load GRIB file from {path} as a cube: {e}")
+                raise ValueError(f"Failed to load GRIB file as a cube: {e}")
 
-            parameterDataArray.load()
+            parameterDataset.load()
 
         # Make the DataArray OCF-compliant
         # * Rename the parameter to the OCF name
         # * Add the init time as a coordinate
         # * Rename the time dimension to step_time
         # * Compute the dataset to load the data from the temporary file
-        parameterDataArray = parameterDataArray \
-            .rename(PARAMETER_RENAME_MAP[_getParameterNameFromFileName(fileName=path.stem)]) \
+        for oldName, newName in PARAMETER_RENAME_MAP.items():
+            if oldName in [parameterDataset.data_vars]:
+                parameterDataset = parameterDataset.rename({oldName: newName})
+        parameterDataset = parameterDataset \
             .drop_vars(["height", "pressure", "valid_time", "time"], errors="ignore") \
             .compute()
 
-        return parameterDataArray
-
-
-def _getParameterNameFromFileName(fileName: str) -> str:
-    """Gets the parameter name from the input file name.
-
-    MetOffice single parameter files are in the format:
-    <level>_<parameter>_<init_time>.grib
-
-    so the parameter is the second element in the file name when split by underscores.
-    """
-    return fileName.split("_")[1]
+        return parameterDataset
 
 
 def _isWantedFile(fileInfo: MetOfficeFileInfo, desiredInitTime: dt.datetime) -> bool:

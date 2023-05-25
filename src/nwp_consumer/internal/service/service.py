@@ -4,8 +4,10 @@ from concurrent.futures import ProcessPoolExecutor as PoolExecutor
 import concurrent.futures
 import xarray as xr
 import pandas as pd
+import numpy as np
 import structlog
 import itertools
+import tensorstore as ts
 
 from nwp_consumer import internal
 
@@ -60,30 +62,7 @@ class NWPConsumerService:
 
     def ConvertRawDatasetToZarr(self, startDate: dt.date, endDate: dt.date) -> list[pathlib.Path]:
         """Fetches a dataset for each initTime in the given time range and saves it as Zarr to the given store."""
-        savedPaths: list[pathlib.Path] = []
+        # TODO
+        raise NotImplementedError()
 
-        # Get a list of all the files present in the raw directory
-
-
-        # Get model init times for each day in the given time range
-        for d in (startDate + dt.timedelta(days=n) for n in range((endDate - startDate).days + 1)):
-            initTimes: list[dt.datetime] = [
-                dt.datetime(year=d.year, month=d.month, day=d.day, hour=x) for x in range(0, 24, 3)
-            ]
-
-            for initTime in initTimes:
-                # Download the raw data if it is not already present
-                initTimePaths: list[pathlib.Path] = self.fetcher.downloadRawDataForInitTime(initTime=initTime)
-                # Convert the data for the given init time into a dataset
-                initTimeDataset: xr.Dataset = self.fetcher.loadRawInitTimeDataAsOCFDataset(rawRelativePaths=initTimePaths, initTime=initTime)
-                # Save the dataset to the store
-                zarrPath: pathlib.Path = pathlib.Path(f"{initTime:%Y/%m/UKV_%Y%m}.zarr")
-                if not self.storer.existsInZarrDir(relativePath=zarrPath):
-                    self.storer.saveDataset(dataset=initTimeDataset, relativePath=zarrPath)
-                    savedPaths.append(zarrPath)
-                else:
-                    self.storer.appendDataset(dataset=initTimeDataset, relativePath=zarrPath)
-
-                del initTimeDataset
-
-        return savedPaths
+        return []
