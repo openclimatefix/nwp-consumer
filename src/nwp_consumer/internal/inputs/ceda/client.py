@@ -106,11 +106,11 @@ class CEDAClient(internal.FetcherInterface):
 
         return wantedFiles
 
-    def loadRawInitTimeDataAsOCFDataset(self, fileBytesList: list[bytes], initTime: dt.datetime) -> xr.Dataset:
+    def loadRawInitTimeDataAsOCFDataset(self, fileBytesList: list[bytes]) -> xr.Dataset:
         """Create an xarray dataset from the given raw files."""
         # Load the wholesale files as OCF datasets
         wholesaleDatasets: list[xr.Dataset] = [
-            self._loadWholesaleFileAsDataset(data=bd, initTime=initTime) for bd in fileBytesList
+            self._loadWholesaleFileAsDataset(data=bd) for bd in fileBytesList
         ]
 
         # Merge the wholesale datasets into one
@@ -126,14 +126,14 @@ class CEDAClient(internal.FetcherInterface):
 
         # Add the init time as a coordinate
         wholesaleDataset = wholesaleDataset \
-            .assign_coords({"init_time": np.datetime64(pd.Timestamp(initTime.replace(tzinfo=None)))}) \
+            .rename({"time": "init_time"}) \
             .expand_dims("init_time") \
             .chunk("auto") \
             .load()
 
         return wholesaleDataset
 
-    def _loadWholesaleFileAsDataset(self, data: bytes, initTime: dt.datetime) -> xr.Dataset:
+    def _loadWholesaleFileAsDataset(self, data: bytes) -> xr.Dataset:
         """Loads a multi-parameter GRIB file as an OCF-compliant Dataset."""
         # Cfgrib is built upon eccodes which needs an in-memory file to read from
         with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempParameterFile:

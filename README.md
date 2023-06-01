@@ -29,8 +29,7 @@ nature enables straightforward extension to alternate future sources.
 ### :warning: This is still a work in progress!
 
 Still TODO:
-- Complete the test suite for S3
-- Create the conversion script for NWP
+- Complete the module for storage in S3
 
 ## Running the service
 

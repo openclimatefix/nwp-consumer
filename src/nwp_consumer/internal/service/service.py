@@ -2,12 +2,9 @@ import datetime as dt
 import pathlib
 from concurrent.futures import ProcessPoolExecutor as PoolExecutor
 import concurrent.futures
-import xarray as xr
 import pandas as pd
-import numpy as np
 import structlog
 import itertools
-import tensorstore as ts
 
 from nwp_consumer import internal
 
@@ -62,7 +59,34 @@ class NWPConsumerService:
 
     def ConvertRawDatasetToZarr(self, startDate: dt.date, endDate: dt.date) -> list[pathlib.Path]:
         """Fetches a dataset for each initTime in the given time range and saves it as Zarr to the given store."""
-        # TODO
-        raise NotImplementedError()
 
-        return []
+        savedPaths: list[pathlib.Path] = []
+
+        # Get a list of all the init times that are stored locally between the start and end dates
+        allInitTimes: list[dt.datetime] = self.storer.listInitTimesInRawDir()
+        desiredInitTimes: list[dt.datetime] = [
+            it for it in allInitTimes if
+            ((startDate <= it <= endDate) and
+             not self.storer.existsInZarrDir(fileName=it.strftime('%Y%m%d%H%M'), initTime=it))
+        ]
+
+        # For each init time, load the files from the storer and convert them to a dataset
+        with PoolExecutor(max_workers=10) as pe:
+            futures: list[concurrent.futures.Future[list[bytes]]] = [
+                pe.submit(self.storer.readBytesForInitTime, initTime=it) for it in desiredInitTimes
+            ]
+            # Convert the files once they are read in
+            for future in concurrent.futures.as_completed(futures):
+                fileBytesList = future.result()
+                dataset = self.fetcher.loadRawInitTimeDataAsOCFDataset(fileBytesList=fileBytesList)
+
+                # Save the dataset to a zarr file
+                initTime = pd.Timestamp(dataset.coords["init_time"].values[0])
+                savedZarrPath = self.storer.writeDatasetToZarrDir(
+                    fileName=initTime.strftime('%Y%m%d%H%M'),
+                    initTime=initTime,
+                    data=dataset
+                )
+                savedPaths.append(savedZarrPath)
+
+        return savedPaths

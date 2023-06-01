@@ -17,9 +17,6 @@ class LocalFSClient(internal.StorageInterface):
     # Location to save Zarr files
     __zarrDir: pathlib.Path
 
-    # InitTime folder structure format string
-    folderFormatStr: str
-
     def __init__(self, rawDir: str, zarrDir: str, createDirs: bool = False):
         """Create a new LocalFSClient."""
         rawPath: pathlib.Path = pathlib.Path(rawDir)
@@ -32,34 +29,16 @@ class LocalFSClient(internal.StorageInterface):
 
         self.__rawDir = rawPath
         self.__zarrDir = zarrPath
-        self.folderFormatStr = "%Y/%m/%d"
-
-    def listFilesInRawDir(self) -> list[pathlib.Path]:
-        """List all files in the raw directory."""
-        return list(self.__rawDir.glob("**/*"))
 
     def existsInRawDir(self, fileName: str, initTime: dt.datetime) -> bool:
         """Check if a file exists in the raw directory."""
-        path = pathlib.Path(f"{self.__rawDir}/{initTime.strftime(self.folderFormatStr)}/{fileName}")
+        path = pathlib.Path(
+            f"{self.__rawDir}/{initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{fileName}")
         return path.exists()
-
-    def existsInZarrDir(self, relativePath: pathlib.Path) -> bool:
-        """Check if a file exists in the zarr directory."""
-        path = self.__zarrDir / relativePath
-        return path.exists()
-
-    def readBytesFromRawDir(self, fileName: str, initTime: dt.datetime) -> bytes:
-        """Read a file from the raw dir as bytes."""
-        path = pathlib.Path(f"{self.__rawDir}/{initTime.strftime(self.folderFormatStr)}/{fileName}")
-
-        if self.existsInRawDir(fileName=fileName, initTime=initTime):
-            return path.read_bytes()
-        else:
-            raise FileNotFoundError(f"File not found in raw dir: {path}")
 
     def writeBytesToRawDir(self, fileName: str, initTime: dt.datetime, data: bytes) -> pathlib.Path:
         """Write the given bytes to the raw directory."""
-        path = pathlib.Path(f"{self.__rawDir}/{initTime.strftime(self.folderFormatStr)}/{fileName}")
+        path = pathlib.Path(f"{self.__rawDir}/{initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{fileName}")
 
         # Create the path to the file if the folders do not exist
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -67,21 +46,65 @@ class LocalFSClient(internal.StorageInterface):
         path.write_bytes(data)
         return path
 
-    def removeFromRawDir(self, fileName: str, initTime: dt.datetime) -> None:
-        """Remove a file from the raw dir."""
-        path = pathlib.Path(f"{self.__rawDir}/{initTime.strftime(self.folderFormatStr)}/{fileName}")
-        path.unlink()
+    def listInitTimesInRawDir(self) -> list[dt.datetime]:
+        """List all initTimes in the raw directory."""
 
-    def saveDataset(self, dataset: xr.Dataset, relativePath: pathlib.Path) -> None:
-        """Store the given dataset as zarr."""
-        path = self.__zarrDir / relativePath
+        # List all the YYYY/MM/DD/INITTIME folders in the raw directory
+        files = [f.relative_to(self.__rawDir) for f in self.__rawDir.glob('*/*/*/*') if f.is_dir()]
 
-        chunkedDataset = _createChunkedDaskDataset(dataset)
-        del dataset
+        # Get the set of initTimes from the file paths
+        initTimes = set([
+            dt.datetime.strptime(f.as_posix(), internal.RAW_FOLDER_PATTERN_FMT_STRING) for f in files
+        ])
+
+        return sorted(initTimes)
+
+    def readBytesForInitTime(self, initTime: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
+        """Read all files from the raw dir as bytes for the given init time."""
+
+        initTimeDirPath = pathlib.Path(f"{self.__rawDir}/{initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}")
+
+        if not initTimeDirPath.exists():
+            raise FileNotFoundError(f"Folder does not exist for init time {initTime} at {initTimeDirPath.as_posix()}")
+
+        paths: list[pathlib.Path] = list(initTimeDirPath.iterdir())
+
+        # TODO: Filter unwanted filenames
+
+        # Read all files as bytes
+        fileByteList: list[bytes] = [path.read_bytes() for path in paths]
+        return initTime, fileByteList
+
+    def existsInZarrDir(self, fileName: str, initTime: dt.datetime) -> bool:
+        """Check if a file exists in the zarr directory."""
+        path = pathlib.Path(f"{self.__zarrDir}/{fileName}")
+        return path.exists()
+
+    def writeDatasetToZarrDir(self, fileName: str, initTime: dt.datetime, data: xr.Dataset) -> pathlib.Path:
+        """Write the given Dataset to the zarr directory."""
+        path = pathlib.Path(f"{self.__zarrDir}/{fileName}")
 
         # Ensure the zarr path doesn't already exist
-        if self.existsInZarrDir(relativePath=relativePath):
-            raise ValueError(f"Zarr path already exists: {path}")
+        if self.existsInZarrDir(fileName=fileName, initTime=initTime):
+            raise FileExistsError(f"Zarr path already exists: {path}")
+
+        # Create a chunked Dask Dataset from the input multi-variate Dataset.
+        # *  Converts the input multivariate DataSet (with different DataArrays for
+        #     each NWP variable) to a single DataArray with a `variable` dimension.
+        # * This allows each Zarr chunk to hold multiple variables (useful for loading
+        #     many/all variables at once from disk).
+
+        # Create single-variate dataarray from dataset, with new "variable" dimension
+        da = data.to_array(dim="variable", name="UKV").compute()
+        del data
+
+        # Convert back to dataset and chunk
+        chunkedDataset = da.to_dataset().chunk({
+            "init_time": 1,
+            "step": 1,
+            "variable": -1,
+        }).compute()
+        del da
 
         # Create new Zarr store.
         to_zarr_kwargs = dict(
@@ -96,46 +119,4 @@ class LocalFSClient(internal.StorageInterface):
         chunkedDataset["UKV"] = chunkedDataset.astype(np.float16)["UKV"]
         chunkedDataset.to_zarr(path, **to_zarr_kwargs)
         del chunkedDataset
-
-    def appendDataset(self, dataset: xr.Dataset, relativePath: pathlib.Path) -> None:
-        """Append the given dataset to the existing Zarr store."""
-        path = self.__zarrDir / relativePath
-
-        # Ensure the zarr path already exists
-        if not self.existsInZarrDir(relativePath=relativePath):
-            raise ValueError(f"Error appending dataset to path {path}: path does not exist")
-
-        # Append to existing Zarr store.
-        to_zarr_kwargs = dict(
-            append_dim="init_time",
-        )
-
-        chunkedDataset = _createChunkedDaskDataset(dataset)
-        del dataset
-
-        chunkedDataset["UKV"] = chunkedDataset.astype(np.float16)["UKV"]
-        chunkedDataset.to_zarr(path, **to_zarr_kwargs)
-
-        del chunkedDataset
-
-
-def _createChunkedDaskDataset(ds: xr.Dataset) -> xr.Dataset:
-    """Create a chunked Dask Dataset from the input multi-variate Dataset.
-
-    Converts the input multivariate DataSet (with different DataArrays for
-    each NWP variable) to a single DataArray with a `variable` dimension.
-    This allows each Zarr chunk to hold multiple variables (useful for loading
-    many/all variables at once from disk).
-    """
-    # Create single-variate dataarray from dataset, with new "variable" dimension
-    da = ds.to_array(dim="variable", name="UKV")
-    del ds
-
-    return (
-        da.to_dataset().chunk(
-            {
-                "init_time": 1,
-                "step": 1,
-                "variable": -1,
-            })
-    )
+        return path

@@ -18,7 +18,7 @@ classifiers = ["Programming Language :: Python :: 3"]
 dependencies = [
     "boto3 == 1.26.124",
     "cfgrib == 0.9.10.3",
-    "docopt==0.6.2",
+    "docopt == 0.6.2",
     "eccodes == 1.5.1",
     "marshmallow == 3.19.0",
     "marshmallow-dataclass == 8.5.12",
@@ -30,7 +30,7 @@ dependencies = [
     "structlog == 22.1.0",
     "urllib3 == 1.26.15",
     "xarray == 2023.2.0",
-    "tensorstore == 0.1.36"
+    "zarr == 2.14.2"
 ]
 
 [project.optional-dependencies]

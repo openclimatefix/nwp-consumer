@@ -1,6 +1,6 @@
 import datetime as dt
 import unittest
-from unittest.mock import patch
+from unittest import mock
 
 from . import NWPConsumerService
 from nwp_consumer import internal
@@ -8,29 +8,31 @@ from nwp_consumer import internal
 
 class TestNWPConsumerService_DownloadRawDataset(unittest.TestCase):
 
-    @patch.multiple(internal.FetcherInterface, __abstractmethods__=set())
-    @patch.multiple(internal.StorageInterface, __abstractmethods__=set())
-    def test_DownloadsExpectedFiles(self):
-        testStorer = internal.StorageInterface()
-        testFetcher = internal.FetcherInterface()
+    def setUp(self) -> None:
+        self.testStorer = mock.create_autospec(spec=internal.StorageInterface)
+        self.testFetcher = mock.create_autospec(spec=internal.FetcherInterface)
 
-        service = NWPConsumerService(fetcher=testFetcher, storer=testStorer)
+    def test_DownloadsExpectedFiles(self):
+        service = NWPConsumerService(fetcher=self.testFetcher, storer=self.testStorer)
 
         startDate = dt.date(2021, 1, 1)
         endDate = dt.date(2021, 2, 1)
 
         paths = service.DownloadRawDataset(startDate=startDate, endDate=endDate)
 
+        self.assertEqual(24*31 + 1, self.testFetcher.listRawFilesForInitTime.call_count)
+
 
 class TestNWPConsumerService_ConvertRawDataset(unittest.TestCase):
 
-    @patch.multiple(internal.FetcherInterface, __abstractmethods__=set())
-    @patch.multiple(internal.StorageInterface, __abstractmethods__=set())
-    def test_ConvertsFiles(self):
-        testStorer = internal.StorageInterface()
-        testFetcher = internal.FetcherInterface()
+    # TODO: Add tests for the following
 
-        service = NWPConsumerService(fetcher=testFetcher, storer=testStorer)
+    def setUp(self) -> None:
+        self.testStorer = mock.create_autospec(spec=internal.StorageInterface)
+        self.testFetcher = mock.create_autospec(spec=internal.FetcherInterface)
+
+    def test_ConvertsFiles(self):
+        service = NWPConsumerService(fetcher=self.testFetcher, storer=self.testStorer)
 
         startDate = dt.date(2021, 1, 1)
         endDate = dt.date(2021, 2, 1)

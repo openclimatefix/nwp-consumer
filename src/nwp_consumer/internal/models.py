@@ -1,14 +1,16 @@
 """Contains both ports and domain models for the nwp_consumer package."""
 
 import abc
-import dataclasses
 import datetime as dt
 import pathlib
 from enum import Enum
 
-import numpy.typing as npt
-
 import xarray as xr
+
+# ------- Global constants ------- #
+
+# The folder pattern format string for the raw data's init time
+RAW_FOLDER_PATTERN_FMT_STRING = "%Y/%m/%d/%H%M"
 
 
 # ------- Domain models ------- #
@@ -53,6 +55,8 @@ class FetcherInterface(abc.ABC):
      Used for dependency injection. NWP data from any source shares common properties:
         - It is presented in one or many files for a given init_time
         - These files can be read as raw bytes
+        - There is an expected number of files per init_time which correspond to an equivalent
+            number of variables and steps in the dataset
 
     The following functions define generic transforms based around these principals.
      """
@@ -68,7 +72,7 @@ class FetcherInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def loadRawInitTimeDataAsOCFDataset(self, fileBytesList: list[bytes], initTime: dt.datetime) -> xr.Dataset:
+    def loadRawInitTimeDataAsOCFDataset(self, fileBytesList: list[bytes]) -> xr.Dataset:
         """Create an xarray dataset from the given RAW file bytedata."""
         pass
 
@@ -82,36 +86,28 @@ class StorageInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def existsInZarrDir(self, relativePath: pathlib.Path) -> bool:
-        """Check if a file exists in the zarr directory."""
-        pass
-
-    @abc.abstractmethod
-    def listFilesInRawDir(self) -> list[pathlib.Path]:
-        """List all files in the raw directory."""
-        pass
-
-    @abc.abstractmethod
     def writeBytesToRawDir(self, fileName: str, initTime: dt.datetime, data: bytes) -> pathlib.Path:
         """Write the given bytes to the raw directory."""
         pass
 
     @abc.abstractmethod
-    def readBytesFromRawDir(self, fileName: str, initTIme: dt.datetime) -> bytes:
-        """Read the given bytes from the raw directory."""
+    def listInitTimesInRawDir(self) -> list[dt.datetime]:
+        """List all initTime folders in the raw directory."""
         pass
 
     @abc.abstractmethod
-    def removeFromRawDir(self, fileName: str, initTime: dt.datetime) -> None:
-        """Remove a file from the raw dir."""
+    def existsInZarrDir(self, fileName: str, initTime: dt.datetime) -> bool:
+        """Check if a file exists in the zarr directory."""
         pass
 
     @abc.abstractmethod
-    def saveDataset(self, dataset: xr.Dataset, relativePath: pathlib.Path) -> None:
-        """Store the given dataset as a Zarr file."""
+    def readBytesForInitTime(self, initTime: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
+        """Read bytes for all files for the given initTime."""
         pass
 
     @abc.abstractmethod
-    def appendDataset(self, dataset: xr.Dataset, relativePath: pathlib.Path) -> None:
-        """Append the given dataset to the existing dataset at the given path."""
+    def writeDatasetToZarrDir(self, fileName: str, initTime: dt.datetime, data: xr.Dataset) -> pathlib.Path:
+        """Write the given dataset to the zarr directory."""
         pass
+
+

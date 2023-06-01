@@ -1,13 +1,9 @@
 """Implements a client to fetch the data from the MetOffice API."""
 
 import datetime as dt
-import pathlib
 import tempfile
 import urllib.request
 
-import cfgrib
-import numpy as np
-import pandas as pd
 import requests
 import structlog.stdlib
 import xarray as xr
@@ -113,12 +109,12 @@ class MetOfficeClient(internal.FetcherInterface):
 
         return wantedFileInfos
 
-    def loadRawInitTimeDataAsOCFDataset(self, fileBytesList: list[bytes], initTime: dt.datetime) -> xr.Dataset:
+    def loadRawInitTimeDataAsOCFDataset(self, fileBytesList: list[bytes]) -> xr.Dataset:
         """Converts a list of raw file bytes into an OCF XArray Dataset."""
 
         # Load the single parameter files as OCF DataArrays
         parameterDataArrays: list[xr.Dataset] = [
-            self._loadSingleParameterGRIBAsOCFDataset(data=bd, initTime=initTime) for bd in fileBytesList
+            self._loadSingleParameterGRIBAsOCFDataset(data=bd) for bd in fileBytesList
         ]
 
         # Merge the DataArrays into a single Dataset
@@ -134,15 +130,17 @@ class MetOfficeClient(internal.FetcherInterface):
 
         # Add the init time as a coordinate
         dataset = dataset \
-            .assign_coords({"init_time": np.datetime64(pd.Timestamp(initTime.replace(tzinfo=None)))}) \
+            .rename({"time": "init_time"}) \
             .expand_dims("init_time") \
             .chunk("auto") \
             .load()
 
         return dataset
 
-    def _loadSingleParameterGRIBAsOCFDataset(self, data: bytes, initTime: dt.datetime) -> xr.Dataset:
+    def _loadSingleParameterGRIBAsOCFDataset(self, data: bytes) -> xr.Dataset:
         """Loads a single-parameter GRIB file as an OCF-compliant DataArray."""
+        parameterDataset: xr.Dataset = xr.Dataset()
+
         # Cfgrib is built upon eccodes which needs an in-memory file to read from
         with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempParameterFile:
             # Copy the raw file to a local temp file
@@ -160,6 +158,7 @@ class MetOfficeClient(internal.FetcherInterface):
 
             parameterDataset.load()
 
+        # TODO: Handle unknowns
         # Make the DataArray OCF-compliant
         # * Rename the parameter to the OCF name
         # * Add the init time as a coordinate
@@ -167,9 +166,9 @@ class MetOfficeClient(internal.FetcherInterface):
         # * Compute the dataset to load the data from the temporary file
         for oldName, newName in PARAMETER_RENAME_MAP.items():
             if oldName in [parameterDataset.data_vars]:
-                parameterDataset = parameterDataset.rename({oldName: newName})
+                parameterDataset = parameterDataset.rename({oldName: str(newName)})
         parameterDataset = parameterDataset \
-            .drop_vars(["height", "pressure", "valid_time", "time"], errors="ignore") \
+            .drop_vars(["height", "pressure", "valid_time", "surface"], errors="ignore") \
             .compute()
 
         return parameterDataset

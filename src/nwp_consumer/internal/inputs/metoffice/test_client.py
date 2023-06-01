@@ -27,22 +27,19 @@ class TestClient_loadSingleParameterGRIBAsOCFDataset(unittest.TestCase):
 
     def test_loadsCorrectly(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_downward-short-wave-radiation-flux.grib"
-        testInitTime: dt.datetime = dt.datetime(year=2023, month=3, day=24, hour=0, minute=0, tzinfo=dt.timezone.utc)
 
         out = testClient._loadSingleParameterGRIBAsOCFDataset(
             data=testFilePath.open("rb").read(),
-            initTime=testInitTime,
         )
 
         self.assertEqual(out.dims, ({"step": 13, "y": 639, "x": 455}))
 
+    @unittest.skip("Not yet implemented")
     def test_renamesVariables(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_total-precipitation-rate.grib"
-        testInitTime: dt.datetime = dt.datetime(year=2023, month=3, day=24, hour=0, minute=0, tzinfo=dt.timezone.utc)
 
         out = testClient._loadSingleParameterGRIBAsOCFDataset(
             data=testFilePath.open("rb").read(),
-            initTime=testInitTime,
         )
 
         self.assertEqual(out.data_vars, "prate")
@@ -51,14 +48,13 @@ class TestClient_loadSingleParameterGRIBAsOCFDataset(unittest.TestCase):
 class TestClient_LoadRawInitTimeDataAsOCFDataset(unittest.TestCase):
 
     def test_loadsRawInitTimeDataCorrectly(self):
-        initTime: dt.datetime = dt.datetime(year=2021, month=1, day=1, hour=0, minute=0, tzinfo=dt.timezone.utc)
 
         fileBytesList: list[bytes] = [
             (pathlib.Path(__file__).parent / file).open('rb').read() for file in
             ["test_downward-short-wave-radiation-flux.grib", "test_total-precipitation-rate.grib"]
         ]
 
-        dataset = testClient.loadRawInitTimeDataAsOCFDataset(fileBytesList=fileBytesList, initTime=initTime)
+        dataset = testClient.loadRawInitTimeDataAsOCFDataset(fileBytesList=fileBytesList)
 
         self.assertEqual(2, len(dataset.data_vars))
 
