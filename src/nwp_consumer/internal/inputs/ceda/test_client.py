@@ -4,8 +4,6 @@ import unittest.mock
 
 import xarray as xr
 
-from nwp_consumer.internal import outputs
-
 from ._models import CEDAFileInfo
 from .client import (
     COORDINATE_IGNORE_LIST,
@@ -16,11 +14,6 @@ from .client import (
 )
 
 # --------- Test setup --------- #
-
-testStorer = outputs.localfs.LocalFSClient(
-    rawDir=pathlib.Path(__file__).parent.as_posix(),
-    zarrDir=pathlib.Path(__file__).parent.as_posix(),
-)
 
 testClient = CEDAClient(ftpPassword="", ftpUsername="")
 
