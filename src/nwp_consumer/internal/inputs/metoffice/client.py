@@ -114,7 +114,7 @@ class MetOfficeClient(internal.FetcherInterface):
 
         # Load the single parameter files as OCF DataArrays
         parameterDataArrays: list[xr.Dataset] = [
-            self._loadSingleParameterGRIBAsOCFDataset(data=bd) for bd in fileBytesList
+            _loadSingleParameterGRIBAsOCFDataset(data=bd) for bd in fileBytesList
         ]
 
         # Merge the DataArrays into a single Dataset
@@ -137,41 +137,42 @@ class MetOfficeClient(internal.FetcherInterface):
 
         return dataset
 
-    def _loadSingleParameterGRIBAsOCFDataset(self, data: bytes) -> xr.Dataset:
-        """Loads a single-parameter GRIB file as an OCF-compliant DataArray."""
-        parameterDataset: xr.Dataset = xr.Dataset()
 
-        # Cfgrib is built upon eccodes which needs an in-memory file to read from
-        with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempParameterFile:
-            # Copy the raw file to a local temp file
-            tempParameterFile.write(data)
-            tempParameterFile.seek(0)
+def _loadSingleParameterGRIBAsOCFDataset(data: bytes) -> xr.Dataset:
+    """Loads a MetOffice single-parameter GRIB file as an OCF-compliant DataArray."""
+    parameterDataset: xr.Dataset = xr.Dataset()
 
-            # Load the GRIB file as a cube
-            try:
-                parameterDataset: xr.Dataset = xr.open_dataset(
-                    tempParameterFile.name, engine='cfgrib',
-                    backend_kwargs={'read_keys': ['name', 'parameterName']}
-                )
-            except Exception as e:
-                raise ValueError(f"Failed to load GRIB file as a cube: {e}")
+    # Cfgrib is built upon eccodes which needs an in-memory file to read from
+    with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempParameterFile:
+        # Copy the raw file to a local temp file
+        tempParameterFile.write(data)
+        tempParameterFile.seek(0)
 
-            parameterDataset.load()
+        # Load the GRIB file as a cube
+        try:
+            parameterDataset: xr.Dataset = xr.open_dataset(
+                tempParameterFile.name, engine='cfgrib',
+                backend_kwargs={'read_keys': ['name', 'parameterName']}
+            )
+        except Exception as e:
+            raise ValueError(f"Failed to load GRIB file as a cube: {e}")
 
-        # TODO: Handle unknowns
-        # Make the DataArray OCF-compliant
-        # * Rename the parameter to the OCF name
-        # * Add the init time as a coordinate
-        # * Rename the time dimension to step_time
-        # * Compute the dataset to load the data from the temporary file
-        for oldName, newName in PARAMETER_RENAME_MAP.items():
-            if oldName in [parameterDataset.data_vars]:
-                parameterDataset = parameterDataset.rename({oldName: str(newName)})
-        parameterDataset = parameterDataset \
-            .drop_vars(["height", "pressure", "valid_time", "surface"], errors="ignore") \
-            .compute()
+        parameterDataset.load()
 
-        return parameterDataset
+    # TODO: Handle unknowns
+    # Make the DataArray OCF-compliant
+    # * Rename the parameter to the OCF name
+    # * Add the init time as a coordinate
+    # * Rename the time dimension to step_time
+    # * Compute the dataset to load the data from the temporary file
+    for oldName, newName in PARAMETER_RENAME_MAP.items():
+        if oldName in [parameterDataset.data_vars]:
+            parameterDataset = parameterDataset.rename({oldName: str(newName)})
+    parameterDataset = parameterDataset \
+        .drop_vars(["height", "pressure", "valid_time", "surface"], errors="ignore") \
+        .compute()
+
+    return parameterDataset
 
 
 def _isWantedFile(fileInfo: MetOfficeFileInfo, desiredInitTime: dt.datetime) -> bool:

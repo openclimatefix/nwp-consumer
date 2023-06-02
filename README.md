@@ -49,15 +49,15 @@ $ docker run ghcr.io/openclimatefix/nwp-consumer:latest \
 
 ### Using the Python Package (not recommended)
 
-Ensure the [external dependencies](#external-dependencies) are installed. Then, either:
+Ensure the [external dependencies](#external-dependencies) are installed. Then, do one of the following:
 
-1. Download the latest wheel from the artifacts of the desired
+- Download the latest wheel from the artifacts of the desired
     [CI run](https://github.com/openclimatefix/nwp-consumer/actions/workflows/ci.yml) and install it via
     ```shell
     $ pip install nwp-consumer-<version>.whl
     ```
 
-2. Clone the repository and install the package via
+- Clone the repository and install the package via
     ```shell
     $ pip install .
     ```
@@ -65,7 +65,7 @@ Ensure the [external dependencies](#external-dependencies) are installed. Then, 
 Then run the service via
 
 ```shell
-$ ZARR_DIR="~/zarr" RAW_DIR="~/raw" <other required env vars...> nwp-consumer 
+$ ZARR_DIR="~/zarr" RAW_DIR="~/raw" <other required env vars...> nwp-consumer <command...> 
 ```
 
 ## Repository structure
@@ -119,7 +119,8 @@ interfaces, and are *dependency-injected* in at runtime. This allows the service
 
 Clone the repository and create and activate a new python virtualenv for it. `cd` to the repository root.
 
-Install the [External](#external-dependencies) and [Python](#python-requirements) dependencies.
+Install the [External](#external-dependencies) and [Python](#python-requirements) dependencies as shown in the sections
+below.
 
 ### External dependencies
 
@@ -152,7 +153,7 @@ Your system is ready.
 
 ### Python requirements
 
-Install the required python dependencies with
+Install the required python dependencies and make it editable with
 
 ```shell
 $ pip install -e . 
@@ -173,11 +174,8 @@ for more information, as well as [Further Reading](#further-reading).
 
 ### Running tests
 
-Due to the `src` directory structure, the module must be installed into your site-packages before running tests.
-
-```shell
-$ pip install .
-```
+Ensure you have installed the [Python requirements](#python-requirements) and the 
+[External dependencies](#external-dependencies).
 
 Run the unit tests with
 

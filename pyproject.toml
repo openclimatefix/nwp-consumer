@@ -1,4 +1,5 @@
 # --- PROJECT CONFIGURATION --- #
+
 [build-system]
 requires = ["setuptools>=67", "wheel", "setuptools_scm>=3.4", "setuptools-git-versioning>=1.13.3"]
 build-backend = "setuptools.build_meta"
@@ -40,7 +41,7 @@ dev = [
 ]
 
 [project.scripts]
-nwp-consumer = "nwp_consumer.cmd.nwp_consumer:main" # Set the entrypoint for the CLI
+nwp-consumer = "nwp_consumer.cmd.main:run" # Set the entrypoint for the CLI
 
 [project.urls]
 repository = "https://github.com/openclimatefix/nwp-consumer"

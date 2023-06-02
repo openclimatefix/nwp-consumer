@@ -3,7 +3,7 @@ import pathlib
 import unittest.mock
 
 from ._models import MetOfficeFileInfo
-from .client import MetOfficeClient, _isWantedFile
+from .client import MetOfficeClient, _isWantedFile, _loadSingleParameterGRIBAsOCFDataset
 
 
 # --------- Test setup --------- #
@@ -23,12 +23,15 @@ class TestClient_Init(unittest.TestCase):
                 clientSecret="test_client_secret")
 
 
+# --------- Static methods --------- #
+
+
 class TestClient_loadSingleParameterGRIBAsOCFDataset(unittest.TestCase):
 
     def test_loadsCorrectly(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_downward-short-wave-radiation-flux.grib"
 
-        out = testClient._loadSingleParameterGRIBAsOCFDataset(
+        out = _loadSingleParameterGRIBAsOCFDataset(
             data=testFilePath.open("rb").read(),
         )
 
@@ -38,11 +41,20 @@ class TestClient_loadSingleParameterGRIBAsOCFDataset(unittest.TestCase):
     def test_renamesVariables(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_total-precipitation-rate.grib"
 
-        out = testClient._loadSingleParameterGRIBAsOCFDataset(
+        out = _loadSingleParameterGRIBAsOCFDataset(
             data=testFilePath.open("rb").read(),
         )
 
         self.assertEqual(out.data_vars, "prate")
+
+    def test_handlesUnknownsInMetOfficeData(self):
+        testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknown.grib"
+
+        out = _loadSingleParameterGRIBAsOCFDataset(
+            data=testFilePath.open("rb").read(),
+        )
+
+        self.assertEqual(out.dims, ({"step": 13, "y": 639, "x": 455}))
 
 
 class TestClient_LoadRawInitTimeDataAsOCFDataset(unittest.TestCase):
@@ -58,8 +70,6 @@ class TestClient_LoadRawInitTimeDataAsOCFDataset(unittest.TestCase):
 
         self.assertEqual(2, len(dataset.data_vars))
 
-
-# --------- Static methods --------- #
 
 class Test_IsWantedFile(unittest.TestCase):
 

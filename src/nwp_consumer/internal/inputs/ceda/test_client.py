@@ -57,7 +57,7 @@ class TestReshapeTo2DGrid(unittest.TestCase):
     def test_correctlyReshapesData(self):
         wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_truncated_Wholesale1.grib"
 
-        dataset = testClient._loadWholesaleFileAsDataset(
+        dataset = _loadWholesaleFileAsDataset(
             data=wholesalePath.read_bytes())
 
         reshapedDataset = _reshapeTo2DGrid(dataset=dataset)

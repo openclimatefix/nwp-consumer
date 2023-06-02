@@ -1,5 +1,4 @@
 import datetime as dt
-import pathlib
 import tempfile
 import typing
 import urllib.parse
@@ -7,7 +6,6 @@ import urllib.request
 
 import cfgrib
 import numpy as np
-import pandas as pd
 import requests
 import structlog
 import xarray as xr
@@ -110,7 +108,7 @@ class CEDAClient(internal.FetcherInterface):
         """Create an xarray dataset from the given raw files."""
         # Load the wholesale files as OCF datasets
         wholesaleDatasets: list[xr.Dataset] = [
-            self._loadWholesaleFileAsDataset(data=bd) for bd in fileBytesList
+            _loadWholesaleFileAsDataset(data=bd) for bd in fileBytesList
         ]
 
         # Merge the wholesale datasets into one
@@ -133,59 +131,60 @@ class CEDAClient(internal.FetcherInterface):
 
         return wholesaleDataset
 
-    def _loadWholesaleFileAsDataset(self, data: bytes) -> xr.Dataset:
-        """Loads a multi-parameter GRIB file as an OCF-compliant Dataset."""
-        # Cfgrib is built upon eccodes which needs an in-memory file to read from
-        with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempParameterFile:
-            # Copy the raw file to a local temp file
-            tempParameterFile.write(data)
-            tempParameterFile.seek(0)
 
-            # Load the wholesale file as a dataset
-            try:
-                datasets: list[xr.Dataset] = cfgrib.open_datasets(tempParameterFile.name)
-            except Exception as e:
-                raise Exception(f"Error loading wholesale file as dataset: {e}")
+def _loadWholesaleFileAsDataset(data: bytes) -> xr.Dataset:
+    """Loads a multi-parameter GRIB file as an OCF-compliant Dataset."""
+    # Cfgrib is built upon eccodes which needs an in-memory file to read from
+    with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempParameterFile:
+        # Copy the raw file to a local temp file
+        tempParameterFile.write(data)
+        tempParameterFile.seek(0)
 
-            for i in range(len(datasets)):
-                ds = datasets[i]
+        # Load the wholesale file as a dataset
+        try:
+            datasets: list[xr.Dataset] = cfgrib.open_datasets(tempParameterFile.name)
+        except Exception as e:
+            raise Exception(f"Error loading wholesale file as dataset: {e}")
 
-                # Rename the parameters to the OCF names
-                # * Only do so if they exist in the dataset
-                for oldParamName, newParamName in PARAMETER_RENAME_MAP.items():
-                    if oldParamName in ds:
-                        ds = ds.rename({oldParamName: newParamName})
+        for i in range(len(datasets)):
+            ds = datasets[i]
 
-                # We want the temperature at 1 meter above ground, not at 0 meters above ground.
-                # * In the early NWPs (definitely in the 2016-03-22 NWPs), `heightAboveGround` only has
-                # * 1 entry ("1" meter above ground) and `heightAboveGround` isn't set as a dimension for `t`.
-                # * In later NWPs, 'heightAboveGround' has 2 values (0, 1) is a dimension for `t`.
-                if "t" in ds and "heightAboveGround" in ds["t"].dims:
-                    ds = ds.sel(heightAboveGround=1)
+            # Rename the parameters to the OCF names
+            # * Only do so if they exist in the dataset
+            for oldParamName, newParamName in PARAMETER_RENAME_MAP.items():
+                if oldParamName in ds:
+                    ds = ds.rename({oldParamName: newParamName})
 
-                # Snow depth is in `m` from CEDA, but OCF expects `kg m-2`. A scaling factor of 1000 converts between
-                # the two. See "Snow Depth" entry in https://gridded-data-ui.cda.api.metoffice.gov.uk/glossary
-                if "sde" in ds:
-                    ds = ds.assign(sde=ds["sde"] * 1000)
+            # We want the temperature at 1 meter above ground, not at 0 meters above ground.
+            # * In the early NWPs (definitely in the 2016-03-22 NWPs), `heightAboveGround` only has
+            # * 1 entry ("1" meter above ground) and `heightAboveGround` isn't set as a dimension for `t`.
+            # * In later NWPs, 'heightAboveGround' has 2 values (0, 1) is a dimension for `t`.
+            if "t" in ds and "heightAboveGround" in ds["t"].dims:
+                ds = ds.sel(heightAboveGround=1)
 
-                # Delete unnecessary data variables
-                for var_name in PARAMETER_IGNORE_LIST:
-                    if var_name in ds:
-                        del ds[var_name]
+            # Snow depth is in `m` from CEDA, but OCF expects `kg m-2`. A scaling factor of 1000 converts between
+            # the two. See "Snow Depth" entry in https://gridded-data-ui.cda.api.metoffice.gov.uk/glossary
+            if "sde" in ds:
+                ds = ds.assign(sde=ds["sde"] * 1000)
 
-                # Delete unwanted coordinates
-                ds = ds.drop_vars(COORDINATE_IGNORE_LIST, errors="ignore")
+            # Delete unnecessary data variables
+            for var_name in PARAMETER_IGNORE_LIST:
+                if var_name in ds:
+                    del ds[var_name]
 
-                # Replace the dataset in the list with the modified one
-                # * Delete the modified dataset to free up memory
-                datasets[i] = ds
-                del ds
+            # Delete unwanted coordinates
+            ds = ds.drop_vars(COORDINATE_IGNORE_LIST, errors="ignore")
 
-            wholesaleDataset = xr.merge(datasets, compat='override', combine_attrs='drop_conflicts')
-            wholesaleDataset.load()
-            del datasets
+            # Replace the dataset in the list with the modified one
+            # * Delete the modified dataset to free up memory
+            datasets[i] = ds
+            del ds
 
-        return wholesaleDataset
+        wholesaleDataset = xr.merge(datasets, compat='override', combine_attrs='drop_conflicts')
+        wholesaleDataset.load()
+        del datasets
+
+    return wholesaleDataset
 
 
 def _isWantedFile(fileInfo: CEDAFileInfo, desiredInitTime: dt.datetime) -> bool:
