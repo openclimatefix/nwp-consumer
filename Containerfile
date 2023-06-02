@@ -17,15 +17,10 @@ COPY src src
 COPY pyproject.toml pyproject.toml
 COPY .git .git
 RUN /venv/bin/pip install .
-RUN ls /venv/lib/python3.10/site-packages/nwp_consumer
-RUN ls /venv/lib/python3.10/site-packages/nwp_consumer/cmd
-RUN ls /venv/lib/python3.10/site-packages/nwp_consumer/internal
-RUN /venv/bin/python -m nwp_consumer
 
 # Copy the virtualenv into a distroless image
 # * These are small images that only contain the runtime dependencies
 FROM gcr.io/distroless/python3-debian11
 WORKDIR /app
 COPY --from=build-venv /venv /venv
-COPY --from=build-venv /app/build/lib/nwp_consumer nwp_consumer
 ENTRYPOINT ["/venv/bin/nwp-consumer"]

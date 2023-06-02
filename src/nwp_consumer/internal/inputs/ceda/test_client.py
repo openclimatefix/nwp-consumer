@@ -11,6 +11,7 @@ from .client import (
     CEDAClient,
     _isWantedFile,
     _reshapeTo2DGrid,
+    _loadWholesaleFileAsDataset,
 )
 
 # --------- Test setup --------- #
@@ -55,7 +56,7 @@ class TestIsWantedFile(unittest.TestCase):
 class TestReshapeTo2DGrid(unittest.TestCase):
 
     def test_correctlyReshapesData(self):
-        wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_truncated_Wholesale1.grib"
+        wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wholesale1.grib"
 
         dataset = _loadWholesaleFileAsDataset(
             data=wholesalePath.read_bytes())

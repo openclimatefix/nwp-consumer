@@ -16,20 +16,20 @@ log = structlog.stdlib.get_logger()
 
 # Defines the mapping from MetOffice parameter names to OCF parameter names
 PARAMETER_RENAME_MAP: dict[str, str] = {
-    "temperature": internal.OCFShortName.TemperatureAGL,
-    "wind-speed-surface-adjusted": internal.OCFShortName.WindSpeedSurfaceAdjustedAGL,
-    "wind-direction-from-which-blowing-surface-adjusted":
-        internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL,
-    "high-cloud-cover": internal.OCFShortName.HighCloudCover,
-    "medium-cloud-cover": internal.OCFShortName.MediumCloudCover,
-    "low-cloud-cover": internal.OCFShortName.LowCloudCover,
-    "visibility": internal.OCFShortName.VisibilityAGL,
-    "relative-humidity": internal.OCFShortName.RelativeHumidityAGL,
-    "rain-precipitation-rate": internal.OCFShortName.RainPrecipitationRate,
-    "total-precipitation-rate": internal.OCFShortName.RainPrecipitationRate,
-    "snow-depth-water-equivalent": internal.OCFShortName.SnowDepthWaterEquivalent,
-    "downward-short-wave-radiation-flux": internal.OCFShortName.DownwardShortWaveRadiationFlux,
-    "downward-long-wave-radiation-flux": internal.OCFShortName.DownwardLongWaveRadiationFlux,
+    "t2m": internal.OCFShortName.TemperatureAGL.value,
+    "si10": internal.OCFShortName.WindSpeedSurfaceAdjustedAGL.value,
+    "wdir10":
+        internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL.value,
+    "hcc": internal.OCFShortName.HighCloudCover.value,
+    "mcc": internal.OCFShortName.MediumCloudCover.value,
+    "lcc": internal.OCFShortName.LowCloudCover.value,
+    "vis": internal.OCFShortName.VisibilityAGL.value,
+    "r2": internal.OCFShortName.RelativeHumidityAGL.value,
+    "rprate": internal.OCFShortName.RainPrecipitationRate.value,
+    "tprate": internal.OCFShortName.RainPrecipitationRate.value,
+    "sd": internal.OCFShortName.SnowDepthWaterEquivalent.value,
+    "dswrf": internal.OCFShortName.DownwardShortWaveRadiationFlux.value,
+    "dlwrf": internal.OCFShortName.DownwardLongWaveRadiationFlux.value,
 }
 
 
@@ -139,11 +139,11 @@ class MetOfficeClient(internal.FetcherInterface):
 
 
 def _loadSingleParameterGRIBAsOCFDataset(data: bytes) -> xr.Dataset:
-    """Loads a MetOffice single-parameter GRIB file as an OCF-compliant DataArray."""
+    """Loads a MetOffice single-parameter GRIB file as an OCF-compliant Dataset."""
     parameterDataset: xr.Dataset = xr.Dataset()
 
     # Cfgrib is built upon eccodes which needs an in-memory file to read from
-    with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempParameterFile:
+    with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib") as tempParameterFile:
         # Copy the raw file to a local temp file
         tempParameterFile.write(data)
         tempParameterFile.seek(0)
@@ -152,22 +152,40 @@ def _loadSingleParameterGRIBAsOCFDataset(data: bytes) -> xr.Dataset:
         try:
             parameterDataset: xr.Dataset = xr.open_dataset(
                 tempParameterFile.name, engine='cfgrib',
-                backend_kwargs={'read_keys': ['name', 'parameterName']}
+                backend_kwargs={'read_keys': ['name', 'parameterNumber'], 'indexpath': ''}
             )
         except Exception as e:
             raise ValueError(f"Failed to load GRIB file as a cube: {e}")
 
         parameterDataset.load()
 
-    # TODO: Handle unknowns
     # Make the DataArray OCF-compliant
     # * Rename the parameter to the OCF name
     # * Add the init time as a coordinate
     # * Rename the time dimension to step_time
     # * Compute the dataset to load the data from the temporary file
-    for oldName, newName in PARAMETER_RENAME_MAP.items():
-        if oldName in [parameterDataset.data_vars]:
-            parameterDataset = parameterDataset.rename({oldName: str(newName)})
+    currentName = list(parameterDataset.data_vars)[0]
+    parameterNumber = parameterDataset[currentName].attrs["GRIB_parameterNumber"]
+
+    # The two wind dirs are the only parameters read in as "unknown"
+    # * Tell them apart via the parameterNumber attribute
+    #   which lines up with the last number in the GRIB2 code specified below
+    #   https://gridded-data-ui.cda.api.metoffice.gov.uk/glossary?groups=Wind&sortOrder=GRIB2_CODE
+    match currentName, parameterNumber:
+        case "unknown", 194:
+            parameterDataset = parameterDataset.rename({
+                currentName: internal.OCFShortName.WindSpeedSurfaceAdjustedAGL.value})
+        case "unknown", 195:
+            parameterDataset = parameterDataset.rename({
+                currentName: internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL.value})
+        case x, int() if x in PARAMETER_RENAME_MAP.keys():
+            parameterDataset = parameterDataset.rename({
+                x: PARAMETER_RENAME_MAP[x]})
+        case _, _:
+            log.warn(f"Encountered unknown parameter {currentName}, ignoring file",
+                     parameterName=currentName, parameterNumber=parameterNumber)
+            return xr.Dataset()
+
     parameterDataset = parameterDataset \
         .drop_vars(["height", "pressure", "valid_time", "surface"], errors="ignore") \
         .compute()
@@ -183,7 +201,5 @@ def _isWantedFile(fileInfo: MetOfficeFileInfo, desiredInitTime: dt.datetime) -> 
     # False if item is one of the ones ending in +HH
     if "+" in fileInfo.fname():
         return False
-
-    log.debug("Found wanted file from MetOffice", file=fileInfo.fname())
 
     return True

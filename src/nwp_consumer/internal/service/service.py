@@ -77,7 +77,7 @@ class NWPConsumerService:
             ]
             # Convert the files once they are read in
             for future in concurrent.futures.as_completed(futures):
-                fileBytesList = future.result()
+                initTime, fileBytesList = future.result()
                 dataset = self.fetcher.loadRawInitTimeDataAsOCFDataset(fileBytesList=fileBytesList)
 
                 # Save the dataset to a zarr file

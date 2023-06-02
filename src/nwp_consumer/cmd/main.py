@@ -1,7 +1,7 @@
 """nwp-consumer.
 
 Usage:
-  nwp-consumer download-raw-historic-dataset --start-date <startDate> --end-date <endDate> (--ceda | --metoffice)
+  nwp-consumer download-raw-dataset --start-date <startDate> --end-date <endDate> (--ceda | --metoffice)
   nwp-consumer convert-raw-dataset --start-date <startDate> --end-date <endDate> (--ceda | --metoffice)
   nwp-consumer (-h | --help)
   nwp-consumer --version

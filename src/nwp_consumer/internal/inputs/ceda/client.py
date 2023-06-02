@@ -27,18 +27,18 @@ COORDINATE_IGNORE_LIST: typing.Sequence[str] = (
 
 # Defines the mapping from CEDA parameter names to OCF parameter names
 PARAMETER_RENAME_MAP: dict[str, str] = {
-    "10wdir": internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL,
-    "10si": internal.OCFShortName.WindSpeedSurfaceAdjustedAGL,
-    "prate": internal.OCFShortName.RainPrecipitationRate,
-    "r": internal.OCFShortName.RelativeHumidityAGL,
-    "t": internal.OCFShortName.TemperatureAGL,
-    "vis": internal.OCFShortName.VisibilityAGL,
-    "dswrf": internal.OCFShortName.DownwardShortWaveRadiationFlux,
-    "dlwrf": internal.OCFShortName.DownwardLongWaveRadiationFlux,
-    "hcc": internal.OCFShortName.HighCloudCover,
-    "mcc": internal.OCFShortName.MediumCloudCover,
-    "lcc": internal.OCFShortName.LowCloudCover,
-    "sde": internal.OCFShortName.SnowDepthWaterEquivalent,
+    "10wdir": internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL.value,
+    "10si": internal.OCFShortName.WindSpeedSurfaceAdjustedAGL.value,
+    "prate": internal.OCFShortName.RainPrecipitationRate.value,
+    "r": internal.OCFShortName.RelativeHumidityAGL.value,
+    "t": internal.OCFShortName.TemperatureAGL.value,
+    "vis": internal.OCFShortName.VisibilityAGL.value,
+    "dswrf": internal.OCFShortName.DownwardShortWaveRadiationFlux.value,
+    "dlwrf": internal.OCFShortName.DownwardLongWaveRadiationFlux.value,
+    "hcc": internal.OCFShortName.HighCloudCover.value,
+    "mcc": internal.OCFShortName.MediumCloudCover.value,
+    "lcc": internal.OCFShortName.LowCloudCover.value,
+    "sde": internal.OCFShortName.SnowDepthWaterEquivalent.value,
 }
 
 
@@ -112,9 +112,10 @@ class CEDAClient(internal.FetcherInterface):
         ]
 
         # Merge the wholesale datasets into one
+        # TODO: Enable concatenation of datasets for different step sets
         wholesaleDataset: xr.Dataset = xr.merge(wholesaleDatasets, compat='identical', combine_attrs='drop_conflicts')
 
-        # Load the new dataaset into memory
+        # Load the new dataset into memory
         # * Enables deletion of the old datasets
         wholesaleDataset.load()
         del wholesaleDatasets
@@ -142,7 +143,8 @@ def _loadWholesaleFileAsDataset(data: bytes) -> xr.Dataset:
 
         # Load the wholesale file as a dataset
         try:
-            datasets: list[xr.Dataset] = cfgrib.open_datasets(tempParameterFile.name)
+            datasets: list[xr.Dataset] = cfgrib.open_datasets(
+                tempParameterFile.name, backend_kwargs={"indexpath": ""})
         except Exception as e:
             raise Exception(f"Error loading wholesale file as dataset: {e}")
 
@@ -194,8 +196,6 @@ def _isWantedFile(fileInfo: CEDAFileInfo, desiredInitTime: dt.datetime) -> bool:
     # False if item doesn't correspond to Wholesale1 or Wholesale2 files
     if not any([setname in fileInfo.name for setname in ["Wholesale1.grib", "Wholesale2.grib"]]):
         return False
-
-    log.debug("Found wanted file from CEDA", file=fileInfo.name)
 
     return True
 

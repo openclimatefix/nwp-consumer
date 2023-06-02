@@ -10,7 +10,7 @@ name = "nwp-consumer"
 dynamic = ["version"] # Set automtically using git: https://setuptools-git-versioning.readthedocs.io/en/stable/
 description = "Tool for aggregating NWP .grib files into .zarrs"
 readme = {file = "README.md", content-type = "text/markdown"}
-requires-python = ">=3.9.0"
+requires-python = ">=3.10.0"
 license = {text = "MIT License"}
 authors = [
     { name = "Sol Cotton", email = "sol@openclimatefix.org"}
