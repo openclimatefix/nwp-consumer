@@ -1,7 +1,6 @@
 import datetime as dt
 import pathlib
 import unittest.mock
-
 import xarray as xr
 
 from ._models import CEDAFileInfo
@@ -23,6 +22,28 @@ testClient = CEDAClient(ftpPassword="", ftpUsername="")
 
 
 # --------- Static methods --------- #
+
+class TestLoadWholesaleFileAsDataset(unittest.TestCase):
+
+    def test_loadsAWholesale1FileCorrectly(self):
+        wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wholesale1.grib"
+
+        out = _loadWholesaleFileAsDataset(
+            data=wholesalePath.read_bytes(),
+        )
+
+        self.assertEqual(({"step": 4, "values": 385792}), out.dims)
+        self.assertEqual(['t', 'r', 'vis', 'si10', 'wdir10', 'prate'], list(out.data_vars))
+
+    def test_loadsWholesale2FileCorrectly(self):
+        wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wholesale2.grib"
+
+        out = _loadWholesaleFileAsDataset(
+            data=wholesalePath.read_bytes(),
+        )
+
+        self.assertEqual(({"step": 4, "values": 385792}), out.dims)
+        self.assertEqual(['lcc', 'mcc', 'hcc', 'sde', 'dswrf', 'dlwrf'], list(out.data_vars))
 
 
 class TestIsWantedFile(unittest.TestCase):
@@ -82,4 +103,3 @@ class TestReshapeTo2DGrid(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             _ = _reshapeTo2DGrid(dataset=ds1)
-

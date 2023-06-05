@@ -16,20 +16,18 @@ class TestExistsInRawDir(unittest.TestCase):
         self.fileName = "test_file"
         self.initTime = dt.datetime(2023, 1, 1)
 
-    def test_file_exists(self) -> None:
         # Create a temporary file to simulate an existing file in the raw directory
-        file_path = Path(f"test_raw_dir/{self.initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{self.fileName}")
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.touch()
+        self.file_path = Path(
+            f"test_raw_dir/{self.initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{self.fileName}")
+        self.file_path.parent.mkdir(parents=True, exist_ok=True)
+        self.file_path.touch()
 
+    def test_file_exists(self) -> None:
         # Check if the file exists using the function
         exists = self.client.existsInRawDir(self.fileName, self.initTime)
 
         # Assert that the file exists
         self.assertTrue(exists)
-
-        # Clean up the temporary file
-        file_path.unlink()
 
     def test_file_does_not_exist(self) -> None:
         # Check if the file exists using the function

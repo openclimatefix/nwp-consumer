@@ -41,6 +41,12 @@ class NWPConsumerService:
             p for p in allWantedFileInfos if not self.storer.existsInRawDir(fileName=p.fname(), initTime=p.initTime())
         ]
 
+        if not allWantedFileInfos:
+            log.info("No new files to download, exiting.",
+                     startDate=startDate.strftime("%Y-%m-%d %H:%M"),
+                     endDate=endDate.strftime("%Y-%m-%d %H:%M"))
+            return downloadedPaths
+
         # Download the files in parallel
         # * CEDA can only handle 10 concurrent connections so limit the number of workers to 10
         with PoolExecutor(max_workers=10) as pe:
@@ -67,8 +73,14 @@ class NWPConsumerService:
         desiredInitTimes: list[dt.datetime] = [
             it for it in allInitTimes if
             ((startDate <= it <= endDate) and
-             not self.storer.existsInZarrDir(fileName=it.strftime('%Y%m%d%H%M'), initTime=it))
+             not self.storer.existsInZarrDir(fileName=it.strftime('%Y%m%d%H%M.zarr'), initTime=it))
         ]
+
+        if not desiredInitTimes:
+            log.info("No new files to convert to Zarr, exiting.",
+                     startDate=startDate.strftime("%Y-%m-%d %H:%M"),
+                     endDate=endDate.strftime("%Y-%m-%d %H:%M"))
+            return savedPaths
 
         # For each init time, load the files from the storer and convert them to a dataset
         with PoolExecutor(max_workers=10) as pe:
@@ -78,12 +90,16 @@ class NWPConsumerService:
             # Convert the files once they are read in
             for future in concurrent.futures.as_completed(futures):
                 initTime, fileBytesList = future.result()
+                log.info(
+                    f"Creating Zarr for initTime {initTime.strftime('%Y-%m-%d %H:%M')}",
+                    initTime=initTime.strftime("%Y-%m-%d %H:%M")
+                )
                 dataset = self.fetcher.loadRawInitTimeDataAsOCFDataset(fileBytesList=fileBytesList)
 
                 # Save the dataset to a zarr file
                 initTime = pd.Timestamp(dataset.coords["init_time"].values[0])
                 savedZarrPath = self.storer.writeDatasetToZarrDir(
-                    fileName=initTime.strftime('%Y%m%d%H%M'),
+                    fileName=initTime.strftime('%Y%m%d%H%M.zarr'),
                     initTime=initTime,
                     data=dataset
                 )

@@ -1,4 +1,9 @@
 import structlog
+import logging
+
+# Ignore modules' emitted logs
+for _ in ("boto", "elasticsearch", "urllib3", "cfgrib"):
+    logging.getLogger(_).setLevel(logging.CRITICAL)
 
 # Add required processors and formatters to structlog
 structlog.configure(

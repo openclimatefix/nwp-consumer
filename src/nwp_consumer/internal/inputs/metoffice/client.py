@@ -61,8 +61,8 @@ class MetOfficeClient(internal.FetcherInterface):
     def fetchRawFileBytes(self, fileInfo: MetOfficeFileInfo) -> tuple[internal.FileInfoModel, bytes]:
         """Downloads a GRIB file corresponding to the input FileInfo object."""
 
-        log.debug(f"Requesting download of {fileInfo.fileId}", item=fileInfo.fileId)
-        url: str = f"{self.baseurl}/{fileInfo.fileId}/data"
+        log.debug(f"Requesting download of {fileInfo.fname()}", item=fileInfo.fname())
+        url: str = f"{self.baseurl}/{fileInfo.fname()}/data"
         try:
             opener = urllib.request.build_opener()
             opener.addheaders = list(dict(self.__headers, **{"Accept": "application/x-grib"}).items())
@@ -71,11 +71,12 @@ class MetOfficeClient(internal.FetcherInterface):
             if not response.status == 200:
                 raise ConnectionError(f"Error response code {response.status} for url {url}: {response.read()}")
         except Exception as e:
-            raise ConnectionError(f"Error calling url {url} for {fileInfo.fileId}: {e}")
+            raise ConnectionError(f"Error calling url {url} for {fileInfo.fname()}: {e}")
 
-        log.debug(f"Fetched all data from {fileInfo.fileId}", path=url)
+        filedata = response.read()
+        log.debug(f"Fetched all data from {fileInfo.fname()}", path=url)
 
-        return fileInfo, response.read()
+        return fileInfo, filedata
 
     def listRawFilesForInitTime(self, initTime: dt.datetime) -> list[internal.FileInfoModel]:
         """Get a list of FileInfo objects according to the input initTime."""

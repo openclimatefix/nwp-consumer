@@ -65,16 +65,17 @@ class CEDAClient(internal.FetcherInterface):
         """Download a GRIB file corresponding to the input relative path."""
 
         anonUrl: str = f"{self.dataUrl}/{fileInfo.initTime():%Y/%m/%d}/{fileInfo.fname()}"
-        log.debug(f"Requesting download of {fileInfo.fname}", path=anonUrl)
+        log.debug(f"Requesting download of {fileInfo.fname()}", path=anonUrl)
         url: str = f'{self.__ftpBase}/{anonUrl}'
         try:
             response = urllib.request.urlopen(url=url)
         except Exception as e:
             raise ConnectionError(f"Error calling url {url} for {fileInfo.fname()}: {e}")
 
-        log.debug(f"Fetched all data from: {fileInfo.fname}", path=anonUrl)
+        filedata = response.read()
+        log.debug(f"Fetched all data from: {fileInfo.fname()}", path=anonUrl)
 
-        return fileInfo, response.read()
+        return fileInfo, filedata
 
     def listRawFilesForInitTime(self, initTime: dt.datetime) -> list[internal.FileInfoModel]:
         """Get a list of FileInfo objects according to the input initTime."""

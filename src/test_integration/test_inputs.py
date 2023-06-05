@@ -1,4 +1,8 @@
-"""Integration tests for the `inputs` module."""
+"""Integration tests for the `inputs` module.
+
+WARNING: Requires environment variables to be set for the MetOffice and CEDA APIs.
+Will download up to a GB of data. Costs may apply for usage of the APIs.
+"""
 
 import datetime as dt
 import unittest
@@ -29,7 +33,7 @@ storageClient = outputs.localfs.LocalFSClient(
 )
 
 
-class TestFetchRawFileBytes(unittest.TestCase):
+class TestClient_FetchRawFileBytes(unittest.TestCase):
 
     def test_downloadsRawGribFileFromCEDA(self):
         fileInfo = CEDAFileInfo(name="202201010000_u1096_ng_umqv_Wholesale1.grib")

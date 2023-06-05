@@ -49,12 +49,14 @@ class LocalFSClient(internal.StorageInterface):
     def listInitTimesInRawDir(self) -> list[dt.datetime]:
         """List all initTimes in the raw directory."""
 
+        dirs = list(self.__rawDir.glob('*/*/*/*'))
+
         # List all the YYYY/MM/DD/INITTIME folders in the raw directory
         files = [f.relative_to(self.__rawDir) for f in self.__rawDir.glob('*/*/*/*') if f.is_dir()]
 
         # Get the set of initTimes from the file paths
         initTimes = set([
-            dt.datetime.strptime(f.as_posix(), internal.RAW_FOLDER_PATTERN_FMT_STRING) for f in files
+            dt.datetime.strptime(f.as_posix(), internal.RAW_FOLDER_PATTERN_FMT_STRING).replace(tzinfo=dt.timezone.utc) for f in files
         ])
 
         return sorted(initTimes)
@@ -98,12 +100,16 @@ class LocalFSClient(internal.StorageInterface):
         da = data.to_array(dim="variable", name="UKV").compute()
         del data
 
-        # Convert back to dataset and chunk
-        chunkedDataset = da.to_dataset().chunk({
-            "init_time": 1,
-            "step": 1,
-            "variable": -1,
-        }).compute()
+        # Convert back to dataset, order dimensions, and chunk
+        chunkedDataset = da.to_dataset()[
+            ["init_time", "variable", "step", "y", "x", "UKV"]
+            ].chunk({
+                "init_time": 1,
+                "step": 1,
+                "variable": -1,
+                "y": len(da.y) // 2,
+                "x": len(da.x) // 2,
+            }).compute()
         del da
 
         # Create new Zarr store.

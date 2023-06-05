@@ -26,7 +26,7 @@ class TestClient_Init(unittest.TestCase):
 # --------- Static methods --------- #
 
 
-class TestClient_loadSingleParameterGRIBAsOCFDataset(unittest.TestCase):
+class Test_LoadSingleParameterGRIBAsOCFDataset(unittest.TestCase):
 
     def test_loadsCorrectly(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_knownparam.grib"
@@ -35,7 +35,8 @@ class TestClient_loadSingleParameterGRIBAsOCFDataset(unittest.TestCase):
             data=testFilePath.read_bytes(),
         )
 
-        self.assertEqual(out.dims, ({"step": 13, "y": 639, "x": 455}))
+        actual = out.dims
+        self.assertEqual(({"step": 13, "y": 639, "x": 455}), actual)
 
     def test_renamesVariables(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wrongnameparam.grib"
@@ -44,7 +45,8 @@ class TestClient_loadSingleParameterGRIBAsOCFDataset(unittest.TestCase):
             data=testFilePath.read_bytes(),
         )
 
-        self.assertEqual(list(out.data_vars)[0], "prate")
+        actual = list(out.data_vars)
+        self.assertEqual(["prate"], actual)
 
     def test_handlesUnknownsInMetOfficeData(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknownparam1.grib"
@@ -53,10 +55,10 @@ class TestClient_loadSingleParameterGRIBAsOCFDataset(unittest.TestCase):
             data=testFilePath.read_bytes(),
         )
 
-        actual = list(out.data_vars)[0]
+        actual = list(out.data_vars)
 
-        self.assertNotEqual("unknown", actual)
-        self.assertEqual("si10", actual)
+        self.assertNotEqual(["unknown"], actual)
+        self.assertEqual(["si10"], actual)
 
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknownparam2.grib"
 
@@ -64,10 +66,10 @@ class TestClient_loadSingleParameterGRIBAsOCFDataset(unittest.TestCase):
             data=testFilePath.read_bytes(),
         )
 
-        actual = list(out.data_vars)[0]
+        actual = list(out.data_vars)
 
-        self.assertNotEqual("unknown", actual)
-        self.assertEqual("wdir10", actual)
+        self.assertNotEqual(["unknown"], actual)
+        self.assertEqual(["wdir10"], actual)
 
 
 class TestClient_LoadRawInitTimeDataAsOCFDataset(unittest.TestCase):
@@ -81,7 +83,8 @@ class TestClient_LoadRawInitTimeDataAsOCFDataset(unittest.TestCase):
 
         dataset = testClient.loadRawInitTimeDataAsOCFDataset(fileBytesList=fileBytesList)
 
-        self.assertEqual(2, len(dataset.data_vars))
+        actual = len(dataset.data_vars)
+        self.assertEqual(2, actual)
 
 
 class Test_IsWantedFile(unittest.TestCase):
