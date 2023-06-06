@@ -46,7 +46,7 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
             ds = xr.open_zarr(path)
             print(ds)
             self.assertEqual(["UKV"], list(ds.data_vars))
-            self.assertEqual({"init_time": 1, "step": 13, "variable": 3, "y": 639, "x": 455}, ds.dims)
+            self.assertEqual(({"init_time": 1, "step": 13, "variable": 3, "y": 639, "x": 455}), ds.dims)
             self.assertEqual(np.datetime64(initTime.replace(tzinfo=None)), ds.coords["init_time"].values[0])
 
     def tearDown(self) -> None:
@@ -74,7 +74,6 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
                 storer=storageClient
             )
 
-        @unittest.skip("Not yet got dimension ordering working - not sure why")
         def test_downloadAndConvertDataset(self):
             initTime: dt.datetime = dt.datetime(year=2022, month=1, day=1, hour=0, minute=0, tzinfo=dt.timezone.utc)
 
@@ -84,8 +83,9 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
 
             for path in paths:
                 ds = xr.open_zarr(path)
+                print(ds)
                 self.assertEqual(["UKV"], list(ds.data_vars))
-                self.assertEqual({'init_time': 1, 'step': 37, 'variable': 12, 'x': 455, 'y': 639}, ds.dims)
+                self.assertEqual(({'init_time': 1, 'step': 37, 'variable': 12, 'y': 704, 'x': 548}), ds.dims)
                 self.assertEqual(np.datetime64(initTime.replace(tzinfo=None)), ds.coords["init_time"].values[0])
 
         def tearDown(self) -> None:

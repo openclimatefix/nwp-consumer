@@ -23,6 +23,7 @@ PARAMETER_IGNORE_LIST: typing.Sequence[str] = (
 
 COORDINATE_IGNORE_LIST: typing.Sequence[str] = (
     "height", "pressure", "meanSea", "level", "atmosphere", "cloudBase", "heightAboveGround", "heightAboveGroundLayer",
+    "valid_time", "surface",
 )
 
 # Defines the mapping from CEDA parameter names to OCF parameter names

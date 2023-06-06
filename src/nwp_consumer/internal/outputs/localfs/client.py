@@ -97,13 +97,17 @@ class LocalFSClient(internal.StorageInterface):
         #     many/all variables at once from disk).
 
         # Create single-variate dataarray from dataset, with new "variable" dimension
-        da = data.to_array(dim="variable", name="UKV").compute()
+        da = data \
+            .to_array(dim="variable", name="UKV") \
+            .compute()
         del data
 
         # Convert back to dataset, order dimensions, and chunk
-        chunkedDataset = da.to_dataset()[
-            ["init_time", "variable", "step", "y", "x", "UKV"]
-            ].chunk({
+        chunkedDataset = da.to_dataset() \
+            .transpose("init_time", "step", "variable", "y", "x") \
+            .sortby("step") \
+            .sortby("variable") \
+            .chunk({
                 "init_time": 1,
                 "step": 1,
                 "variable": -1,
@@ -123,6 +127,7 @@ class LocalFSClient(internal.StorageInterface):
         )
 
         chunkedDataset["UKV"] = chunkedDataset.astype(np.float16)["UKV"]
+        print(chunkedDataset)
         chunkedDataset.to_zarr(path, **to_zarr_kwargs)
         del chunkedDataset
         return path
