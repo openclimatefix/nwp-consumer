@@ -44,7 +44,6 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
 
         for path in paths:
             ds = xr.open_zarr(path)
-            print(ds)
             self.assertEqual(["UKV"], list(ds.data_vars))
             self.assertEqual(({"init_time": 1, "step": 13, "variable": 3, "y": 639, "x": 455}), ds.dims)
             self.assertEqual(np.datetime64(initTime.replace(tzinfo=None)), ds.coords["init_time"].values[0])
@@ -83,7 +82,6 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
 
             for path in paths:
                 ds = xr.open_zarr(path)
-                print(ds)
                 self.assertEqual(["UKV"], list(ds.data_vars))
                 self.assertEqual(({'init_time': 1, 'step': 37, 'variable': 12, 'y': 704, 'x': 548}), ds.dims)
                 self.assertEqual(np.datetime64(initTime.replace(tzinfo=None)), ds.coords["init_time"].values[0])

@@ -31,7 +31,7 @@ class TestExistsInRawDir(unittest.TestCase):
 
     def test_file_does_not_exist(self) -> None:
         # Check if the file exists using the function
-        exists = self.client.existsInRawDir(self.fileName, self.initTime)
+        exists = self.client.existsInRawDir(self.fileName + "not-here", self.initTime)
 
         # Assert that the file does not exist
         self.assertFalse(exists)
@@ -83,9 +83,9 @@ class TestListInitTimesInRawDir(unittest.TestCase):
 
         # Assert that the list of init times is correct
         expected_initTimes = [
-            dt.datetime(2023, 1, 1, 3),
-            dt.datetime(2023, 1, 2, 6),
-            dt.datetime(2023, 1, 3, 9)
+            dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc),
+            dt.datetime(2023, 1, 2, 6, tzinfo=dt.timezone.utc),
+            dt.datetime(2023, 1, 3, 9, tzinfo=dt.timezone.utc)
         ]
         self.assertEqual(initTimes, expected_initTimes)
 

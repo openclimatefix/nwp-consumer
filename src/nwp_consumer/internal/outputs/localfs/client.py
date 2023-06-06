@@ -127,7 +127,6 @@ class LocalFSClient(internal.StorageInterface):
         )
 
         chunkedDataset["UKV"] = chunkedDataset.astype(np.float16)["UKV"]
-        print(chunkedDataset)
         chunkedDataset.to_zarr(path, **to_zarr_kwargs)
         del chunkedDataset
         return path
