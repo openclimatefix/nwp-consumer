@@ -26,12 +26,11 @@ currently packaged with adapters for pulling and converting `.grib` data from th
 [MetOffice](https://gridded-data-ui.cda.api.metoffice.gov.uk) and from [CEDA](https://catalogue.ceda.ac.uk). Its modular
 nature enables straightforward extension to alternate future sources.
 
-### :warning: This is still a work in progress!
-
-Still TODO:
-- Complete the module for storage in S3
-
 ## Running the service
+
+Depending on the source and sink you choose to read and write data from, environment variables will need to be set.
+The program will inform you of missing env vars, but you can also check the 
+[config](src/nwp_consumer/internal/config/config.py) for the given module.
 
 ### Using Docker (recommended)
 
@@ -40,11 +39,10 @@ It is recommended to run it this way due to the present dependency on various ex
 cannot be easily distributed in a PyPi package. To run, pull the latest version from `ghcr.io` via:
 
 ```shell
-$ docker run ghcr.io/openclimatefix/nwp-consumer:latest \
+$ docker run \
   -v /path/to/datadir:/data \
-  -e ZARR_DIR=/data/zarr \
-  -e RAW_DIR=/data/raw \
-  -e <other required env vars...>  
+  -e ENV_VAR=<value> \
+  ghcr.io/openclimatefix/nwp-consumer:latest <command...>  
 ```
 
 ### Using the Python Package (not recommended)
@@ -65,7 +63,7 @@ Ensure the [external dependencies](#external-dependencies) are installed. Then, 
 Then run the service via
 
 ```shell
-$ ZARR_DIR="~/zarr" RAW_DIR="~/raw" <other required env vars...> nwp-consumer <command...> 
+$ ENV_VAR=<value> nwp-consumer <command...> 
 ```
 
 ## Repository structure

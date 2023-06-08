@@ -5,7 +5,6 @@ import unittest
 import moto
 import boto3
 import xarray as xr
-import numpy as np
 
 from nwp_consumer import internal
 from . import S3Client
@@ -30,6 +29,7 @@ class TestS3Client(unittest.TestCase):
         self.client = S3Client(
             key="test-key",
             secret="test-secret",
+            region="us-east-1",
             rawDir="raw",
             zarrDir="zarr",
             bucket=self.bucket,

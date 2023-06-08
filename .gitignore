@@ -144,6 +144,9 @@ raw
 zarr
 /testing
 
+# S3 mocking
+s3:
+
 # MacOS
 .DS_Store
 

@@ -16,7 +16,6 @@ cedaInitTime: dt.datetime = dt.datetime(year=2022, month=1, day=1, hour=0, minut
 metOfficeInitTime: dt.datetime = dt.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
 cc = config.CEDAConfig()
-lc = config.LocalFSConfig()
 mc = config.MetOfficeConfig()
 cedaClient = inputs.ceda.CEDAClient(
     ftpUsername=cc.CEDA_FTP_USER,
@@ -28,8 +27,8 @@ metOfficeClient = inputs.metoffice.MetOfficeClient(
     clientSecret=mc.METOFFICE_CLIENT_SECRET,
 )
 storageClient = outputs.localfs.LocalFSClient(
-    rawDir=lc.RAW_DIR,
-    zarrDir=lc.ZARR_DIR
+    rawDir='data/raw',
+    zarrDir='data/zarr',
 )
 
 
