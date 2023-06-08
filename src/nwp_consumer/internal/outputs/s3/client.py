@@ -27,7 +27,7 @@ class S3Client(internal.StorageInterface):
     # S3 Accessor
     __s3: botocore.client
 
-    def __init__(self, key: str, secret: str, rawDir: str, zarrDir: str, bucket: str):
+    def __init__(self, key: str, secret: str, rawDir: str, zarrDir: str, bucket: str, region: str):
         """Create a new S3Client."""
         rawPath: pathlib.Path = pathlib.Path(rawDir)
         zarrPath: pathlib.Path = pathlib.Path(zarrDir)
@@ -36,7 +36,7 @@ class S3Client(internal.StorageInterface):
             's3',
             aws_access_key_id=key,
             aws_secret_access_key=secret,
-            region_name='eu-west-1',
+            region_name=region,
         )
 
         self.__rawDir = rawPath

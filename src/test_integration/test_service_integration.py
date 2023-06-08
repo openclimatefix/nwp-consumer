@@ -35,7 +35,7 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
         )
 
     def test_downloadAndConvertDataset(self):
-        initTime: dt.datetime = dt.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+        initTime: dt.date = dt.datetime.now().date()
 
         paths = self.testService.DownloadRawDataset(startDate=initTime, endDate=initTime)
         self.assertGreater(len(paths), 0)
@@ -46,7 +46,7 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
             ds = xr.open_zarr(path)
             self.assertEqual(["UKV"], list(ds.data_vars))
             self.assertEqual(({"init_time": 1, "step": 13, "variable": 3, "y": 639, "x": 455}), ds.dims)
-            self.assertEqual(np.datetime64(initTime.replace(tzinfo=None)), ds.coords["init_time"].values[0])
+            self.assertEqual(np.datetime64(initTime), ds.coords["init_time"].values[0])
 
     def tearDown(self) -> None:
         shutil.rmtree(self.lc.RAW_DIR, ignore_errors=True)
@@ -74,7 +74,7 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
             )
 
         def test_downloadAndConvertDataset(self):
-            initTime: dt.datetime = dt.datetime(year=2022, month=1, day=1, hour=0, minute=0, tzinfo=None)
+            initTime: dt.date = dt.date(year=2022, month=1, day=1)
 
             paths = self.testService.DownloadRawDataset(startDate=initTime, endDate=initTime)
             self.assertGreater(len(paths), 0)
@@ -84,7 +84,7 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
                 ds = xr.open_zarr(path)
                 self.assertEqual(["UKV"], list(ds.data_vars))
                 self.assertEqual(({'init_time': 1, 'step': 37, 'variable': 12, 'y': 704, 'x': 548}), ds.dims)
-                self.assertEqual(np.datetime64(initTime.replace(tzinfo=None)), ds.coords["init_time"].values[0])
+                self.assertEqual(np.datetime64(initTime), ds.coords["init_time"].values[0])
 
         def tearDown(self) -> None:
             shutil.rmtree(self.lc.RAW_DIR, ignore_errors=True)

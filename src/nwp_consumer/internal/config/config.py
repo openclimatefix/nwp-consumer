@@ -47,10 +47,12 @@ class MetOfficeConfig(_EnvParseMixin):
     METOFFICE_CLIENT_SECRET: str
 
 
-class LocalFSConfig(_EnvParseMixin):
-    """Config for local filesystem."""
+class S3Config(_EnvParseMixin):
+    """Config for S3."""
 
-    RAW_DIR: str
-    ZARR_DIR: str
+    AWS_S3_BUCKET: str
+    AWS_ACCESS_KEY: str
+    AWS_ACCESS_SECRET: str
+    AWS_REGION: str
 
 

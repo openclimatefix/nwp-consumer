@@ -48,8 +48,8 @@ class NWPConsumerService:
             return downloadedPaths
 
         # Download the files in parallel
-        # * CEDA can only handle 10 concurrent connections so limit the number of workers to 10
-        with PoolExecutor(max_workers=10) as pe:
+        # * CEDA has a concurrent connection limit so limit the number of workers
+        with PoolExecutor(max_workers=5) as pe:
             futures: list[concurrent.futures.Future[tuple[internal.FileInfoModel, bytes]]] = [
                 pe.submit(self.fetcher.fetchRawFileBytes, fileInfo=fi) for fi in allWantedFileInfos
             ]
@@ -83,7 +83,7 @@ class NWPConsumerService:
             return savedPaths
 
         # For each init time, load the files from the storer and convert them to a dataset
-        with PoolExecutor(max_workers=10) as pe:
+        with PoolExecutor(max_workers=8) as pe:
             futures: list[concurrent.futures.Future[list[bytes]]] = [
                 pe.submit(self.storer.readBytesForInitTime, initTime=it) for it in desiredInitTimes
             ]
@@ -106,3 +106,13 @@ class NWPConsumerService:
                 savedPaths.append(savedZarrPath)
 
         return savedPaths
+
+    def DownloadAndConvert(self, startDate: dt.date, endDate: dt.date) -> pathlib.Path:
+        """Fetches a dataset for each initTime in the given time range and saves it as Zarr to the given store."""
+        _ = self.DownloadRawDataset(startDate=startDate, endDate=endDate)
+        paths = self.ConvertRawDatasetToZarr(startDate=startDate, endDate=endDate)
+
+        # Sort paths by name, which is the init time, and sort
+        # * The last entry in the list is the latest init time
+        paths.sort(key=lambda p: p.name)
+        return paths[-1]
