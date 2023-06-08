@@ -1,5 +1,5 @@
 <h2 align="center">
-🌐 nwp-consumer 🌐
+NWP CONSUMER
 <br>
 <br>
 Microservice for consuming NWP data.
@@ -8,13 +8,13 @@ Microservice for consuming NWP data.
 <div align="center">
 
 <a href="https://github.com/openclimatefix/nwp-consumer/graphs/contributors" alt="Contributors">
-    <img src="https://img.shields.io/github/contributors/openclimatefix/nwp-consumer?style=for-the-badge" /></a>
+    <img src="https://img.shields.io/github/contributors/openclimatefix/nwp-consumer?style=for-the-badge&color=FFFFFF" /></a>
 <a href="https://github.com/openclimatefix/nwp-consumer/actions/workflows/ci.yml">
-    <img alt="GitHub Workflow Status (with branch)" src="https://img.shields.io/github/actions/workflow/status/openclimatefix/nwp-consumer/ci.yml?branch=main&style=for-the-badge"></a>
+    <img alt="GitHub Workflow Status (with branch)" src="https://img.shields.io/github/actions/workflow/status/openclimatefix/nwp-consumer/ci.yml?branch=main&style=for-the-badge&color=FFD053"></a>
 <a href="https://github.com/openclimatefix/nwp-consumer/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc">
-    <img src="https://img.shields.io/github/issues/openclimatefix/nwp-consumer?style=for-the-badge"></a>
+    <img src="https://img.shields.io/github/issues/openclimatefix/nwp-consumer?style=for-the-badge&color=FFAC5F"></a>
 <a href="https://github.com/openclimatefix/nwp-consumer/tags">
-    <img alt="GitHub tag (latest SemVer pre-release)" src="https://img.shields.io/github/v/tag/openclimatefix/nwp-consumer?include_prereleases&sort=semver&style=for-the-badge"></a>
+    <img alt="GitHub tag (latest SemVer pre-release)" src="https://img.shields.io/github/v/tag/openclimatefix/nwp-consumer?include_prereleases&sort=semver&style=for-the-badge&color=7BCDF3"></a>
 
 </div>
 
