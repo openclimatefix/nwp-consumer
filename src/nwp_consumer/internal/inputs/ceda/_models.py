@@ -22,7 +22,7 @@ class CEDAFileInfo(internal.FileInfoModel):
         The init time is found the first part of the file name for CEDA files,
         e.g. 202201010000_u1096_ng_umqv_Wholesale1.grib
         """
-        return dt.datetime.strptime(self.name.split("_")[0], '%Y%m%d%H%M').replace(tzinfo=dt.timezone.utc)
+        return dt.datetime.strptime(self.name.split("_")[0], '%Y%m%d%H%M').replace(tzinfo=None)
 
     def fname(self) -> str:
         """Returns the file name."""

@@ -90,27 +90,27 @@ class TestClient_LoadRawInitTimeDataAsOCFDataset(unittest.TestCase):
 class Test_IsWantedFile(unittest.TestCase):
 
     def test_correctlyFiltersMetOfficeFileInfos(self):
-        initTime: dt.datetime = dt.datetime(year=2023, month=3, day=24, hour=0, minute=0, tzinfo=dt.timezone.utc)
+        initTime: dt.datetime = dt.datetime(year=2023, month=3, day=24, hour=0, minute=0, tzinfo=None)
 
         wantedFileInfos: list[MetOfficeFileInfo] = [
             MetOfficeFileInfo(
                 fileId="agl_temperature_1.5_2023032400",
-                runDateTime=dt.datetime(year=2023, month=3, day=24, hour=0, minute=0, tzinfo=dt.timezone.utc)
+                runDateTime=dt.datetime(year=2023, month=3, day=24, hour=0, minute=0, tzinfo=None)
             ),
             MetOfficeFileInfo(
                 fileId="ground_downward-short-wave-radiation-flux_2023032400",
-                runDateTime=dt.datetime(year=2023, month=3, day=24, hour=0, minute=0, tzinfo=dt.timezone.utc)
+                runDateTime=dt.datetime(year=2023, month=3, day=24, hour=0, minute=0, tzinfo=None)
             )
         ]
 
         unwantedFileInfos: list[MetOfficeFileInfo] = [
             MetOfficeFileInfo(
                 fileId="agl_temperature_1.5+00",
-                runDateTime=dt.datetime(year=2023, month=3, day=24, hour=0, minute=0, tzinfo=dt.timezone.utc)
+                runDateTime=dt.datetime(year=2023, month=3, day=24, hour=0, minute=0, tzinfo=None)
             ),
             MetOfficeFileInfo(
                 fileId="agl_temperature_1.5_2023032403",
-                runDateTime=dt.datetime(year=2023, month=3, day=24, hour=3, minute=0, tzinfo=dt.timezone.utc)
+                runDateTime=dt.datetime(year=2023, month=3, day=24, hour=3, minute=0, tzinfo=None)
             ),
         ]
 

@@ -35,7 +35,7 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
         )
 
     def test_downloadAndConvertDataset(self):
-        initTime: dt.datetime = dt.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=dt.timezone.utc)
+        initTime: dt.datetime = dt.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
 
         paths = self.testService.DownloadRawDataset(startDate=initTime, endDate=initTime)
         self.assertGreater(len(paths), 0)
@@ -74,7 +74,7 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
             )
 
         def test_downloadAndConvertDataset(self):
-            initTime: dt.datetime = dt.datetime(year=2022, month=1, day=1, hour=0, minute=0, tzinfo=dt.timezone.utc)
+            initTime: dt.datetime = dt.datetime(year=2022, month=1, day=1, hour=0, minute=0, tzinfo=None)
 
             paths = self.testService.DownloadRawDataset(startDate=initTime, endDate=initTime)
             self.assertGreater(len(paths), 0)

@@ -28,7 +28,7 @@ class NWPConsumerService:
 
         # Get the list of init times as datetime objects
         # * This spans every hour between the start and end dates inclusive
-        allInitTimes: list[dt.datetime] = pd.date_range(startDate, endDate, freq='H').to_pydatetime().tolist()
+        allInitTimes: list[dt.datetime] = pd.date_range(startDate, endDate, inclusive='left', freq='H').to_pydatetime().tolist()
 
         # For each init time, get the list of files that need to be downloaded
         allWantedFileInfos: list[internal.FileInfoModel] = list(itertools.chain.from_iterable(
@@ -72,7 +72,7 @@ class NWPConsumerService:
         allInitTimes: list[dt.datetime] = self.storer.listInitTimesInRawDir()
         desiredInitTimes: list[dt.datetime] = [
             it for it in allInitTimes if
-            ((startDate <= it <= endDate) and
+            ((startDate <= it.date() <= endDate) and
              not self.storer.existsInZarrDir(fileName=it.strftime('%Y%m%d%H%M.zarr'), initTime=it))
         ]
 

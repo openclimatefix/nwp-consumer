@@ -49,7 +49,7 @@ class TestLoadWholesaleFileAsDataset(unittest.TestCase):
 class TestIsWantedFile(unittest.TestCase):
 
     def test_correctlyFiltersCEDAFileInfos(self):
-        initTime: dt.datetime = dt.datetime(year=2021, month=1, day=1, hour=0, minute=0, tzinfo=dt.timezone.utc)
+        initTime: dt.datetime = dt.datetime(year=2021, month=1, day=1, hour=0, minute=0, tzinfo=None)
 
         wantedFileInfos: list[CEDAFileInfo] = [
             CEDAFileInfo(name="202101010000_u1096_ng_umqv_Wholesale1.grib"),

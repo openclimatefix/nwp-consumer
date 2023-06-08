@@ -2,7 +2,12 @@ import datetime as dt
 import pathlib
 
 import boto3
+import botocore.exceptions
+import botocore.client
 import xarray as xr
+import numpy as np
+
+from ocf_blosc2 import Blosc2
 
 from nwp_consumer import internal
 
@@ -20,18 +25,18 @@ class S3Client(internal.StorageInterface):
     __zarrDir: pathlib.Path
 
     # S3 Accessor
-    __s3: boto3.session.Session.resource
+    __s3: botocore.client
 
     def __init__(self, key: str, secret: str, rawDir: str, zarrDir: str, bucket: str):
         """Create a new S3Client."""
         rawPath: pathlib.Path = pathlib.Path(rawDir)
         zarrPath: pathlib.Path = pathlib.Path(zarrDir)
 
-        self.__s3 = boto3.resource(
+        self.__s3 = boto3.client(
             's3',
-            region_name='eu-west-1',
             aws_access_key_id=key,
             aws_secret_access_key=secret,
+            region_name='eu-west-1',
         )
 
         self.__rawDir = rawPath
@@ -41,27 +46,109 @@ class S3Client(internal.StorageInterface):
     def existsInRawDir(self, fileName: str, initTime: dt.datetime) -> bool:
         """Check if a file exists in the raw directory."""
         path = self.__rawDir / initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING) / fileName
-        return self.__s3.Object(bucket_name=self.__bucket, key=path.as_posix()).exists()
+        try:
+            self.__s3.head_object(Bucket=self.__bucket, Key=path.as_posix())
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == "404":
+                # The key does not exist.
+                return False
+            else:
+                # Something else has gone wrong.
+                raise e
+        return True
 
     def writeBytesToRawDir(self, fileName: str, initTime: dt.datetime, data: bytes) -> pathlib.Path:
         """Write the given bytes to the raw directory."""
         path = self.__rawDir / initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING) / fileName
 
-        self.__s3.Object(bucket_name=self.__bucket, key=path.as_posix()).put(Body=data)
+        self.__s3.put_object(Bucket=self.__bucket, Key=path.as_posix(), Body=data)
         return path
 
     def listInitTimesInRawDir(self) -> list[dt.datetime]:
-        raise NotImplementedError()
+        """List all initTimes in the raw directory."""
+        paginator = self.__s3.get_paginator('list_objects_v2')
+        pages = paginator.paginate(Bucket=self.__bucket, Prefix=self.__rawDir.as_posix() + "/")
+
+        # Get a list of all the Prefixes in the bucket
+        # * Follow the pattern 'rawDir/{PREFIX/MAY/HAVE/SLASHES}/filename.ext'
+        allDirs = set()
+        for page in pages:
+            for obj in page['Contents']:
+                allDirs.add(pathlib.Path(obj['Key']).relative_to(self.__rawDir).parent)
+
+        # Get the initTime from the folder pattern
+        initTimes = [dt.datetime.strptime(f.as_posix(), internal.RAW_FOLDER_PATTERN_FMT_STRING) for f in allDirs
+                     if f.match('*/*/*/*')]
+
+        return sorted(initTimes)
 
     def readBytesForInitTime(self, initTime: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
-        """Read a file from the raw dir, returning a file-like object."""
+        """Read bytes of all files from the raw dir for the given initTime."""
         initTimeDirPath = self.__rawDir / initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)
-        raise NotImplementedError()
+        response = self.__s3.list_objects_v2(Bucket=self.__bucket, Prefix=initTimeDirPath.as_posix() + "/")
+
+        return initTime, [self.__s3.get_object(Bucket=self.__bucket, Key=obj['Key'])['Body'].read()
+                          for obj in response['Contents']]
 
     def writeDatasetToZarrDir(self, fileName: str, initTime: dt.datetime, data: xr.Dataset) -> pathlib.Path:
-        raise NotImplementedError()
+        """Write the given Dataset to the zarr directory."""
+        path: pathlib.Path = pathlib.Path(f's3://{self.__bucket}/{self.__zarrDir.as_posix()}/{fileName}')
+
+        # Ensure the zarr path doesn't already exist
+        if self.existsInZarrDir(fileName=fileName, initTime=initTime):
+            raise FileExistsError(f"Zarr path already exists: {path}")
+
+        # Create a chunked Dask Dataset from the input multi-variate Dataset.
+        # *  Converts the input multivariate DataSet (with different DataArrays for
+        #     each NWP variable) to a single DataArray with a `variable` dimension.
+        # * This allows each Zarr chunk to hold multiple variables (useful for loading
+        #     many/all variables at once from disk).
+
+        # Create single-variate dataarray from dataset, with new "variable" dimension
+        da = data \
+            .to_array(dim="variable", name="UKV") \
+            .compute()
+        del data
+
+        # Convert back to dataset, order dimensions, and chunk
+        chunkedDataset = da.to_dataset() \
+            .transpose("init_time", "step", "variable", "y", "x") \
+            .sortby("step") \
+            .sortby("variable") \
+            .chunk({
+            "init_time": 1,
+            "step": 1,
+            "variable": -1,
+            "y": len(da.y) // 2,
+            "x": len(da.x) // 2,
+        }).compute()
+        del da
+
+        # Create new Zarr store.
+        to_zarr_kwargs = dict(
+            encoding={
+                "init_time": {"units": "nanoseconds since 1970-01-01"},
+                "UKV": {
+                    "compressor": Blosc2(cname="zstd", clevel=5),
+                },
+            },
+        )
+
+        chunkedDataset["UKV"] = chunkedDataset.astype(np.float16)["UKV"]
+        chunkedDataset.to_zarr(path, **to_zarr_kwargs)
+        del chunkedDataset
+        return path
 
     def existsInZarrDir(self, fileName: str, initTime: dt.datetime) -> bool:
         """Check if a file exists in the zarr directory."""
         path = self.__zarrDir / fileName
-        return self.__s3.Object(bucket_name=self.__bucket, key=path.as_posix()).exists()
+        try:
+            self.__s3.head_object(Bucket=self.__bucket, Key=path.as_posix())
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == "404":
+                # The key does not exist.
+                return False
+            else:
+                # Something else has gone wrong.
+                raise e
+        return True

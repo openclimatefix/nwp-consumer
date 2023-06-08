@@ -83,9 +83,9 @@ class TestListInitTimesInRawDir(unittest.TestCase):
 
         # Assert that the list of init times is correct
         expected_initTimes = [
-            dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc),
-            dt.datetime(2023, 1, 2, 6, tzinfo=dt.timezone.utc),
-            dt.datetime(2023, 1, 3, 9, tzinfo=dt.timezone.utc)
+            dt.datetime(2023, 1, 1, 3, tzinfo=None),
+            dt.datetime(2023, 1, 2, 6, tzinfo=None),
+            dt.datetime(2023, 1, 3, 9, tzinfo=None)
         ]
         self.assertEqual(initTimes, expected_initTimes)
 

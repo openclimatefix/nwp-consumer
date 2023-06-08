@@ -49,14 +49,12 @@ class LocalFSClient(internal.StorageInterface):
     def listInitTimesInRawDir(self) -> list[dt.datetime]:
         """List all initTimes in the raw directory."""
 
-        dirs = list(self.__rawDir.glob('*/*/*/*'))
-
         # List all the YYYY/MM/DD/INITTIME folders in the raw directory
         files = [f.relative_to(self.__rawDir) for f in self.__rawDir.glob('*/*/*/*') if f.is_dir()]
 
         # Get the set of initTimes from the file paths
         initTimes = set([
-            dt.datetime.strptime(f.as_posix(), internal.RAW_FOLDER_PATTERN_FMT_STRING).replace(tzinfo=dt.timezone.utc) for f in files
+            dt.datetime.strptime(f.as_posix(), internal.RAW_FOLDER_PATTERN_FMT_STRING).replace(tzinfo=None) for f in files
         ])
 
         return sorted(initTimes)

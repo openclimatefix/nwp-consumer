@@ -197,7 +197,7 @@ def _loadSingleParameterGRIBAsOCFDataset(data: bytes) -> xr.Dataset:
 def _isWantedFile(fileInfo: MetOfficeFileInfo, desiredInitTime: dt.datetime) -> bool:
     """Checks if the input FileInfo corresponds to a wanted GRIB file."""
     # False if item has an init_time not equal to desired init time
-    if fileInfo.initTime().replace(tzinfo=dt.timezone.utc) != desiredInitTime.replace(tzinfo=dt.timezone.utc):
+    if fileInfo.initTime().replace(tzinfo=None) != desiredInitTime.replace(tzinfo=None):
         return False
     # False if item is one of the ones ending in +HH
     if "+" in fileInfo.fname():

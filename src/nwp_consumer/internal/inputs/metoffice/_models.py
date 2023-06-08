@@ -20,7 +20,7 @@ class MetOfficeFileInfo(internal.FileInfoModel):
 
     def initTime(self) -> dt.datetime:
         """Returns the init time of the file."""
-        return self.runDateTime.replace(tzinfo=dt.timezone.utc)
+        return self.runDateTime.replace(tzinfo=None)
 
     def fname(self) -> str:
         """Returns the file name."""
