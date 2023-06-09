@@ -4,12 +4,12 @@ WARNING: Requires environment variables to be set for the MetOffice and CEDA API
 Will download up to a GB of data. Costs may apply for usage of the APIs.
 """
 
+import datetime as dt
 import shutil
 import unittest
-import datetime as dt
-import xarray as xr
-import numpy as np
 
+import numpy as np
+import xarray as xr
 from nwp_consumer.internal import config, inputs, outputs, service
 
 

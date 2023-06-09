@@ -2,11 +2,12 @@ import datetime as dt
 import pathlib
 import unittest
 
-import moto
 import boto3
+import moto
 import xarray as xr
 
 from nwp_consumer import internal
+
 from . import S3Client
 
 
@@ -52,7 +53,7 @@ class TestS3Client(unittest.TestCase):
         # Call the writeBytesToRawDir method
         init_time = dt.datetime(2023, 1, 1)
         file_name = "test_file"
-        file_path = self.client.writeBytesToRawDir(file_name, init_time, b"test_data")
+        self.client.writeBytesToRawDir(file_name, init_time, b"test_data")
 
         # Verify the written file in the raw directory
         self.assertTrue(self.client.existsInRawDir(file_name, init_time))

@@ -1,10 +1,11 @@
+"""Tests for the metoffice module."""
+
 import datetime as dt
 import pathlib
 import unittest.mock
 
 from ._models import MetOfficeFileInfo
 from .client import MetOfficeClient, _isWantedFile, _loadSingleParameterGRIBAsOCFDataset
-
 
 # --------- Test setup --------- #
 
@@ -15,6 +16,7 @@ testClient = MetOfficeClient(orderID="tmp", clientID="tmp", clientSecret="tmp")
 
 
 class TestClient_Init(unittest.TestCase):
+    """Tests for the MetOfficeClient.__init__ method."""
     def test_errorsWhenVariablesAreNotSet(self):
         with self.assertRaises(KeyError):
             _ = MetOfficeClient(
@@ -27,6 +29,7 @@ class TestClient_Init(unittest.TestCase):
 
 
 class Test_LoadSingleParameterGRIBAsOCFDataset(unittest.TestCase):
+    """Tests for the _loadSingleParameterGRIBAsOCFDataset method."""
 
     def test_loadsCorrectly(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_knownparam.grib"
@@ -73,6 +76,7 @@ class Test_LoadSingleParameterGRIBAsOCFDataset(unittest.TestCase):
 
 
 class TestClient_LoadRawInitTimeDataAsOCFDataset(unittest.TestCase):
+    """Tests for the MetOfficeClient.loadRawInitTimeDataAsOCFDataset method."""
 
     def test_loadsRawInitTimeDataCorrectly(self):
 
@@ -88,6 +92,7 @@ class TestClient_LoadRawInitTimeDataAsOCFDataset(unittest.TestCase):
 
 
 class Test_IsWantedFile(unittest.TestCase):
+    """Tests for the _isWantedFile method."""
 
     def test_correctlyFiltersMetOfficeFileInfos(self):
         initTime: dt.datetime = dt.datetime(year=2023, month=3, day=24, hour=0, minute=0, tzinfo=None)

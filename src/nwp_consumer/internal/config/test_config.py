@@ -1,9 +1,12 @@
+"""Tests for the config module."""
+
 import unittest.mock
 
 from .config import _EnvParseMixin
 
 
 class Test_EnvParseMixin(unittest.TestCase):
+    """Tests for the _EnvParseMixin class."""
 
     @unittest.mock.patch.dict("os.environ", {
         "TEST_STR": "test",

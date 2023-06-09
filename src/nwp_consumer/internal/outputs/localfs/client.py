@@ -1,9 +1,9 @@
+import datetime as dt
 import pathlib
 
 import numpy as np
 import xarray as xr
 from ocf_blosc2 import Blosc2
-import datetime as dt
 
 from nwp_consumer import internal
 
@@ -48,7 +48,6 @@ class LocalFSClient(internal.StorageInterface):
 
     def listInitTimesInRawDir(self) -> list[dt.datetime]:
         """List all initTimes in the raw directory."""
-
         # List all the YYYY/MM/DD/INITTIME folders in the raw directory
         files = [f.relative_to(self.__rawDir) for f in self.__rawDir.glob('*/*/*/*') if f.is_dir()]
 
@@ -61,7 +60,6 @@ class LocalFSClient(internal.StorageInterface):
 
     def readBytesForInitTime(self, initTime: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
         """Read all files from the raw dir as bytes for the given init time."""
-
         initTimeDirPath = pathlib.Path(f"{self.__rawDir}/{initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}")
 
         if not initTimeDirPath.exists():

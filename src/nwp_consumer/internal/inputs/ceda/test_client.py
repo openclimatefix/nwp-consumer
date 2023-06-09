@@ -1,16 +1,15 @@
 import datetime as dt
 import pathlib
 import unittest.mock
+
 import xarray as xr
 
 from ._models import CEDAFileInfo
 from .client import (
-    COORDINATE_IGNORE_LIST,
-    PARAMETER_IGNORE_LIST,
     CEDAClient,
     _isWantedFile,
-    _reshapeTo2DGrid,
     _loadWholesaleFileAsDataset,
+    _reshapeTo2DGrid,
 )
 
 # --------- Test setup --------- #

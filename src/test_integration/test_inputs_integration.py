@@ -7,8 +7,7 @@ Will download up to a GB of data. Costs may apply for usage of the APIs.
 import datetime as dt
 import unittest
 
-from nwp_consumer.internal import config
-from nwp_consumer.internal import inputs, outputs
+from nwp_consumer.internal import config, inputs, outputs
 from nwp_consumer.internal.inputs.ceda._models import CEDAFileInfo
 from nwp_consumer.internal.inputs.metoffice._models import MetOfficeFileInfo
 

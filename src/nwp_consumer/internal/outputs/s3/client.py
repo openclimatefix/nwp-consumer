@@ -2,11 +2,10 @@ import datetime as dt
 import pathlib
 
 import boto3
-import botocore.exceptions
 import botocore.client
-import xarray as xr
+import botocore.exceptions
 import numpy as np
-
+import xarray as xr
 from ocf_blosc2 import Blosc2
 
 from nwp_consumer import internal

@@ -1,10 +1,12 @@
+import datetime as dt
 import shutil
 import unittest
-import datetime as dt
-from nwp_consumer import internal
 from pathlib import Path
+
 import numpy as np
 import xarray as xr
+
+from nwp_consumer import internal
 
 # Import the class to be tested
 from .client import LocalFSClient
@@ -174,7 +176,7 @@ class TestWriteDatasetToZarrDir(unittest.TestCase):
 
     def test_write_dataset_to_zarr_dir(self) -> None:
         # Write the dataset to the zarr directory using the function
-        path = self.client.writeDatasetToZarrDir(self.fileName, self.initTime, self.data)
+        self.client.writeDatasetToZarrDir(self.fileName, self.initTime, self.data)
 
         # Assert that the path exists
         self.assertTrue(self.client.existsInZarrDir(self.fileName, self.initTime))

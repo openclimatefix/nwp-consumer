@@ -1,10 +1,13 @@
+"""The service class for the NWP Consumer."""
+
+import concurrent.futures
 import datetime as dt
+import itertools
 import pathlib
 from concurrent.futures import ProcessPoolExecutor as PoolExecutor
-import concurrent.futures
+
 import pandas as pd
 import structlog
-import itertools
 
 from nwp_consumer import internal
 
@@ -22,8 +25,7 @@ class NWPConsumerService:
         self.storer = storer
 
     def DownloadRawDataset(self, startDate: dt.date, endDate: dt.date) -> list[pathlib.Path]:
-        """Fetches a dataset for each initTime in the given time range and saves it to the given store."""
-
+        """Fetch raw data for each initTime in the given range."""
         downloadedPaths: list[pathlib.Path] = []
 
         # Get the list of init times as datetime objects
@@ -64,8 +66,7 @@ class NWPConsumerService:
         return downloadedPaths
 
     def ConvertRawDatasetToZarr(self, startDate: dt.date, endDate: dt.date) -> list[pathlib.Path]:
-        """Fetches a dataset for each initTime in the given time range and saves it as Zarr to the given store."""
-
+        """Convert raw data for the given time range to Zarr."""
         savedPaths: list[pathlib.Path] = []
 
         # Get a list of all the init times that are stored locally between the start and end dates
@@ -108,7 +109,7 @@ class NWPConsumerService:
         return savedPaths
 
     def DownloadAndConvert(self, startDate: dt.date, endDate: dt.date) -> pathlib.Path:
-        """Fetches a dataset for each initTime in the given time range and saves it as Zarr to the given store."""
+        """Fetch and save as Zarr a dataset for each initTime in the given time range."""
         _ = self.DownloadRawDataset(startDate=startDate, endDate=endDate)
         paths = self.ConvertRawDatasetToZarr(startDate=startDate, endDate=endDate)
 

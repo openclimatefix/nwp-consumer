@@ -59,7 +59,7 @@ class FetcherInterface(abc.ABC):
             number of variables and steps in the dataset
 
     The following functions define generic transforms based around these principals.
-     """
+    """
 
     @abc.abstractmethod
     def listRawFilesForInitTime(self, initTime: dt.datetime) -> list[FileInfoModel]:

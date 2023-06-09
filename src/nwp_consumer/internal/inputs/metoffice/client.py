@@ -58,20 +58,24 @@ class MetOfficeClient(internal.FetcherInterface):
             "X-IBM-Client-Secret": clientSecret,
         }
 
-    def fetchRawFileBytes(self, fileInfo: MetOfficeFileInfo) -> tuple[internal.FileInfoModel, bytes]:
-        """Downloads a GRIB file corresponding to the input FileInfo object."""
-
+    def fetchRawFileBytes(self, fileInfo: MetOfficeFileInfo) \
+            -> tuple[internal.FileInfoModel, bytes]:
+        """Download a GRIB file corresponding to the input FileInfo object."""
         log.debug(f"Requesting download of {fileInfo.fname()}", item=fileInfo.fname())
         url: str = f"{self.baseurl}/{fileInfo.fname()}/data"
         try:
             opener = urllib.request.build_opener()
-            opener.addheaders = list(dict(self.__headers, **{"Accept": "application/x-grib"}).items())
+            opener.addheaders = list(dict(
+                self.__headers, **{"Accept": "application/x-grib"}
+            ).items())
             urllib.request.install_opener(opener)
             response = urllib.request.urlopen(url=url)
             if not response.status == 200:
-                raise ConnectionError(f"Error response code {response.status} for url {url}: {response.read()}")
+                raise ConnectionError(
+                    f"Error response code {response.status} for url {url}: {response.read()}"
+                )
         except Exception as e:
-            raise ConnectionError(f"Error calling url {url} for {fileInfo.fname()}: {e}")
+            raise ConnectionError(f"Error calling url {url} for {fileInfo.fname()}: {e}") from e
 
         filedata = response.read()
         log.debug(f"Fetched all data from {fileInfo.fname()}", path=url)
@@ -80,7 +84,6 @@ class MetOfficeClient(internal.FetcherInterface):
 
     def listRawFilesForInitTime(self, initTime: dt.datetime) -> list[internal.FileInfoModel]:
         """Get a list of FileInfo objects according to the input initTime."""
-
         if initTime.date() != dt.datetime.utcnow().date():
             log.warn("MetOffice API only supports fetching data for the current day")
             return []
@@ -93,26 +96,29 @@ class MetOfficeClient(internal.FetcherInterface):
             params=self.querystring
         )
         if not response.ok:
-            raise AssertionError(f"Response did not return with an ok status: {response.content}")
+            raise AssertionError(
+                f"Response did not return with an ok status: {response.content}"
+            ) from None
 
         # Map the response to a MetOfficeResponse object
         try:
             responseObj: MetOfficeResponse = MetOfficeResponse.Schema().load(response.json())
         except Exception as e:
             raise TypeError(
-                f"Error marshalling json to MetOfficeResponse object: {e}, response: {response.json()}"
+                f"Error marshalling json to MetOfficeResponse object: {e}, "
+                f"response: {response.json()}"
             )
 
         # Filter the file infos for the desired init time
         wantedFileInfos: list[MetOfficeFileInfo] = [
-            fo for fo in responseObj.orderDetails.files if _isWantedFile(fileInfo=fo, desiredInitTime=initTime)
+            fo for fo in responseObj.orderDetails.files
+            if _isWantedFile(fileInfo=fo, desiredInitTime=initTime)
         ]
 
         return wantedFileInfos
 
     def loadRawInitTimeDataAsOCFDataset(self, fileBytesList: list[bytes]) -> xr.Dataset:
         """Converts a list of raw file bytes into an OCF XArray Dataset."""
-
         # Load the single parameter files as OCF DataArrays
         parameterDataArrays: list[xr.Dataset] = [
             _loadSingleParameterGRIBAsOCFDataset(data=bd) for bd in fileBytesList
@@ -156,7 +162,7 @@ def _loadSingleParameterGRIBAsOCFDataset(data: bytes) -> xr.Dataset:
                 backend_kwargs={'read_keys': ['name', 'parameterNumber'], 'indexpath': ''}
             )
         except Exception as e:
-            raise ValueError(f"Failed to load GRIB file as a cube: {e}")
+            raise ValueError(f"Failed to load GRIB file as a cube: {e}") from e
 
         parameterDataset.load()
 

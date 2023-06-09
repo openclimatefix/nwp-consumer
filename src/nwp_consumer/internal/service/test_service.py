@@ -1,13 +1,12 @@
 import datetime as dt
 import pathlib
 import unittest
-from unittest import mock
 
 import xarray as xr
 
-from . import NWPConsumerService
-from .. import models as internal
 from .. import FileInfoModel
+from .. import models as internal
+from . import NWPConsumerService
 
 # Two days, four init times per day -> 8 init times
 DAYS = [1, 2]
