@@ -59,21 +59,30 @@ class FetcherInterface(abc.ABC):
             number of variables and steps in the dataset
 
     The following functions define generic transforms based around these principals.
-     """
+    """
 
     @abc.abstractmethod
-    def listRawFilesForInitTime(self, initTime: dt.datetime) -> list[FileInfoModel]:
-        """List the relative path of all files available from source for the given init_time."""
+    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[FileInfoModel]:
+        """List the relative path of all files available from source for the given init_time.
+
+        :param it: Init Time to list files for
+        """
         pass
 
     @abc.abstractmethod
-    def fetchRawFileBytes(self, fileInfo: FileInfoModel) -> tuple[FileInfoModel, bytes]:
-        """Fetch the bytes of a single raw file from source given its relative path."""
+    def fetchRawFileBytes(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, bytes]:
+        """Fetch the bytes of a single raw file from source given its relative path.
+
+        :param fi: File Info object describing the file to fetch
+        """
         pass
 
     @abc.abstractmethod
-    def loadRawInitTimeDataAsOCFDataset(self, fileBytesList: list[bytes]) -> xr.Dataset:
-        """Create an xarray dataset from the given RAW file bytedata."""
+    def loadRawInitTimeDataAsOCFDataset(self, *, fbl: list[bytes]) -> xr.Dataset:
+        """Create an xarray dataset from the given RAW file bytedata.
+
+        :param fbl: List of file bytes to load
+        """
         pass
 
 
@@ -81,13 +90,22 @@ class StorageInterface(abc.ABC):
     """Generic interface for storing data, used for dependency injection."""
 
     @abc.abstractmethod
-    def existsInRawDir(self, fileName: str, initTime: dt.datetime) -> bool:
-        """Check if a file exists in the raw directory."""
+    def rawFileExistsForInitTime(self, *, name: str, it: dt.datetime) -> bool:
+        """Check if a file exists in the raw directory.
+
+        :param name: Name of the file to check
+        :param it: Init Time of the model data within the file
+        """
         pass
 
     @abc.abstractmethod
-    def writeBytesToRawDir(self, fileName: str, initTime: dt.datetime, data: bytes) -> pathlib.Path:
-        """Write the given bytes to the raw directory."""
+    def writeBytesToRawFile(self, *, name: str, it: dt.datetime, b: bytes) -> pathlib.Path:
+        """Write the given bytes to the raw directory.
+
+        :param name: Name of the file to write
+        :param it: Init Time of the model data within the file
+        :param b: Bytes to write
+        """
         pass
 
     @abc.abstractmethod
@@ -96,18 +114,29 @@ class StorageInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def existsInZarrDir(self, fileName: str, initTime: dt.datetime) -> bool:
-        """Check if a file exists in the zarr directory."""
+    def zarrExistsForInitTime(self, *, name: str, it: dt.datetime) -> bool:
+        """Check if a file exists in the zarr directory.
+
+        :param name: Name of the file to check
+        :param it: Init Time of the model data within the file"""
         pass
 
     @abc.abstractmethod
-    def readBytesForInitTime(self, initTime: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
-        """Read bytes for all files for the given initTime."""
+    def readRawFilesForInitTime(self, *, it: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
+        """Read bytes for all files for the given initTime.
+
+        :param it: Init Time to read files for
+        """
         pass
 
     @abc.abstractmethod
-    def writeDatasetToZarrDir(self, fileName: str, initTime: dt.datetime, data: xr.Dataset) -> pathlib.Path:
-        """Write the given dataset to the zarr directory."""
+    def writeDatasetAsZarr(self, *, name: str, it: dt.datetime, ds: xr.Dataset) -> pathlib.Path:
+        """Write the given dataset to the zarr directory.
+
+        :param name: Name of the file to write
+        :param it: Init Time of the model data within the Dataset
+        :param ds: Dataset to write
+        """
         pass
 
 

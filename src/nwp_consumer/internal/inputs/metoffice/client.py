@@ -45,7 +45,7 @@ class MetOfficeClient(internal.FetcherInterface):
     # Query string headers to pass to the MetOffice API
     __headers: dict[str, str]
 
-    def __init__(self, orderID: str, clientID: str, clientSecret: str):
+    def __init__(self, *, orderID: str, clientID: str, clientSecret: str):
         if any([value in [None, "", "unset"] for value in [clientID, clientSecret, orderID]]):
             raise KeyError("Must provide clientID, clientSecret, and orderID")
         self.orderID: str = orderID
@@ -58,30 +58,39 @@ class MetOfficeClient(internal.FetcherInterface):
             "X-IBM-Client-Secret": clientSecret,
         }
 
-    def fetchRawFileBytes(self, fileInfo: MetOfficeFileInfo) -> tuple[internal.FileInfoModel, bytes]:
-        """Downloads a GRIB file corresponding to the input FileInfo object."""
+    def fetchRawFileBytes(self, *, fi: MetOfficeFileInfo) \
+            -> tuple[internal.FileInfoModel, bytes]:
+        """Download a GRIB file corresponding to the input FileInfo object.
 
-        log.debug(f"Requesting download of {fileInfo.fname()}", item=fileInfo.fname())
-        url: str = f"{self.baseurl}/{fileInfo.fname()}/data"
+        :param fi: FileInfo object describing the file to download
+        """
+        log.debug(f"Requesting download of {fi.fname()}", item=fi.fname())
+        url: str = f"{self.baseurl}/{fi.fname()}/data"
         try:
             opener = urllib.request.build_opener()
-            opener.addheaders = list(dict(self.__headers, **{"Accept": "application/x-grib"}).items())
+            opener.addheaders = list(dict(
+                self.__headers, **{"Accept": "application/x-grib"}
+            ).items())
             urllib.request.install_opener(opener)
             response = urllib.request.urlopen(url=url)
             if not response.status == 200:
-                raise ConnectionError(f"Error response code {response.status} for url {url}: {response.read()}")
+                raise ConnectionError(
+                    f"Error response code {response.status} for url {url}: {response.read()}"
+                )
         except Exception as e:
-            raise ConnectionError(f"Error calling url {url} for {fileInfo.fname()}: {e}")
+            raise ConnectionError(f"Error calling url {url} for {fi.fname()}: {e}") from e
 
         filedata = response.read()
-        log.debug(f"Fetched all data from {fileInfo.fname()}", path=url)
+        log.debug(f"Fetched all data from {fi.fname()}", path=url)
 
-        return fileInfo, filedata
+        return fi, filedata
 
-    def listRawFilesForInitTime(self, initTime: dt.datetime) -> list[internal.FileInfoModel]:
-        """Get a list of FileInfo objects according to the input initTime."""
+    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
+        """Get a list of FileInfo objects according to the input initTime.
 
-        if initTime.date() != dt.datetime.utcnow().date():
+        :param it: Init Time to fetch data for
+        """
+        if it.date() != dt.datetime.utcnow().date():
             log.warn("MetOffice API only supports fetching data for the current day")
             return []
 
@@ -93,35 +102,42 @@ class MetOfficeClient(internal.FetcherInterface):
             params=self.querystring
         )
         if not response.ok:
-            raise AssertionError(f"Response did not return with an ok status: {response.content}")
+            raise AssertionError(
+                f"Response did not return with an ok status: {response.content}"
+            ) from None
 
         # Map the response to a MetOfficeResponse object
         try:
             responseObj: MetOfficeResponse = MetOfficeResponse.Schema().load(response.json())
         except Exception as e:
             raise TypeError(
-                f"Error marshalling json to MetOfficeResponse object: {e}, response: {response.json()}"
+                f"Error marshalling json to MetOfficeResponse object: {e}, "
+                f"response: {response.json()}"
             )
 
         # Filter the file infos for the desired init time
         wantedFileInfos: list[MetOfficeFileInfo] = [
-            fo for fo in responseObj.orderDetails.files if _isWantedFile(fileInfo=fo, desiredInitTime=initTime)
+            fo for fo in responseObj.orderDetails.files
+            if _isWantedFile(fi=fo, dit=it)
         ]
 
         return wantedFileInfos
 
-    def loadRawInitTimeDataAsOCFDataset(self, fileBytesList: list[bytes]) -> xr.Dataset:
-        """Converts a list of raw file bytes into an OCF XArray Dataset."""
+    def loadRawInitTimeDataAsOCFDataset(self, *, fbl: list[bytes]) -> xr.Dataset:
+        """Converts a list of raw file bytes into an OCF XArray Dataset.
 
+        :param fbl: List of raw file bytes to convert
+        """
         # Load the single parameter files as OCF DataArrays
         parameterDataArrays: list[xr.Dataset] = [
-            _loadSingleParameterGRIBAsOCFDataset(data=bd) for bd in fileBytesList
+            _loadSingleParameterGRIBAsOCFDataset(b=bd) for bd in fbl
         ]
 
         # Merge the DataArrays into a single Dataset
         dataset = xr.merge(
-            parameterDataArrays,
-            compat='identical', combine_attrs='drop_conflicts'
+            objects=parameterDataArrays,
+            compat='identical',
+            combine_attrs='drop_conflicts'
         )
 
         # Load the whole dataset into memory
@@ -139,14 +155,17 @@ class MetOfficeClient(internal.FetcherInterface):
         return dataset
 
 
-def _loadSingleParameterGRIBAsOCFDataset(data: bytes) -> xr.Dataset:
-    """Loads a MetOffice single-parameter GRIB file as an OCF-compliant Dataset."""
+def _loadSingleParameterGRIBAsOCFDataset(*, b: bytes) -> xr.Dataset:
+    """Loads a MetOffice single-parameter GRIB file as an OCF-compliant Dataset.
+
+    :param b: Raw file bytes to load
+    """
     parameterDataset: xr.Dataset = xr.Dataset()
 
     # Cfgrib is built upon eccodes which needs an in-memory file to read from
     with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib") as tempParameterFile:
         # Copy the raw file to a local temp file
-        tempParameterFile.write(data)
+        tempParameterFile.write(b)
         tempParameterFile.seek(0)
 
         # Load the GRIB file as a cube
@@ -156,7 +175,7 @@ def _loadSingleParameterGRIBAsOCFDataset(data: bytes) -> xr.Dataset:
                 backend_kwargs={'read_keys': ['name', 'parameterNumber'], 'indexpath': ''}
             )
         except Exception as e:
-            raise ValueError(f"Failed to load GRIB file as a cube: {e}")
+            raise ValueError(f"Failed to load GRIB file as a cube: {e}") from e
 
         parameterDataset.load()
 
@@ -194,13 +213,17 @@ def _loadSingleParameterGRIBAsOCFDataset(data: bytes) -> xr.Dataset:
     return parameterDataset
 
 
-def _isWantedFile(fileInfo: MetOfficeFileInfo, desiredInitTime: dt.datetime) -> bool:
-    """Checks if the input FileInfo corresponds to a wanted GRIB file."""
+def _isWantedFile(*, fi: MetOfficeFileInfo, dit: dt.datetime) -> bool:
+    """Checks if the input FileInfo corresponds to a wanted GRIB file.
+
+    :param fi: FileInfo describing the file to check
+    :param dit: Desired init time
+    """
     # False if item has an init_time not equal to desired init time
-    if fileInfo.initTime().replace(tzinfo=None) != desiredInitTime.replace(tzinfo=None):
+    if fi.initTime().replace(tzinfo=None) != dit.replace(tzinfo=None):
         return False
     # False if item is one of the ones ending in +HH
-    if "+" in fileInfo.fname():
+    if "+" in fi.fname():
         return False
 
     return True

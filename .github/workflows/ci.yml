@@ -8,8 +8,9 @@ on:
     tags:
       - 'v*'
   pull_request:
-    branches:
-      - 'main'
+    branches: []
+    paths-ignore:
+      - 'README.md'
 
 # Specify concurrency such that only one workflow can run at a time
 # * Different workflow files are not affected

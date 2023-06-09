@@ -2,11 +2,10 @@ import datetime as dt
 import pathlib
 
 import boto3
-import botocore.exceptions
 import botocore.client
-import xarray as xr
+import botocore.exceptions
 import numpy as np
-
+import xarray as xr
 from ocf_blosc2 import Blosc2
 
 from nwp_consumer import internal
@@ -43,9 +42,13 @@ class S3Client(internal.StorageInterface):
         self.__zarrDir = zarrPath
         self.__bucket = bucket
 
-    def existsInRawDir(self, fileName: str, initTime: dt.datetime) -> bool:
-        """Check if a file exists in the raw directory."""
-        path = self.__rawDir / initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING) / fileName
+    def rawFileExistsForInitTime(self, name: str, it: dt.datetime) -> bool:
+        """Check if a file exists in the raw directory.
+        
+        :param name: The name of the file to check for
+        :param it: The init time of the data within the file
+        """
+        path = self.__rawDir / it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING) / name
         try:
             self.__s3.head_object(Bucket=self.__bucket, Key=path.as_posix())
         except botocore.exceptions.ClientError as e:
@@ -57,11 +60,16 @@ class S3Client(internal.StorageInterface):
                 raise e
         return True
 
-    def writeBytesToRawDir(self, fileName: str, initTime: dt.datetime, data: bytes) -> pathlib.Path:
-        """Write the given bytes to the raw directory."""
-        path = self.__rawDir / initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING) / fileName
+    def writeBytesToRawFile(self, name: str, it: dt.datetime, b: bytes) -> pathlib.Path:
+        """Write the given bytes to the raw directory.
+        
+        :param name: The name of the file to write
+        :param it: The init time of the data within the file
+        :param b: The bytes to write
+        """
+        path = self.__rawDir / it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING) / name
 
-        self.__s3.put_object(Bucket=self.__bucket, Key=path.as_posix(), Body=data)
+        self.__s3.put_object(Bucket=self.__bucket, Key=path.as_posix(), Body=b)
         return path
 
     def listInitTimesInRawDir(self) -> list[dt.datetime]:
@@ -82,20 +90,28 @@ class S3Client(internal.StorageInterface):
 
         return sorted(initTimes)
 
-    def readBytesForInitTime(self, initTime: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
-        """Read bytes of all files from the raw dir for the given initTime."""
-        initTimeDirPath = self.__rawDir / initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)
+    def readRawFilesForInitTime(self, it: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
+        """Read bytes of all files from the raw dir for the given initTime.
+
+        :param it: The init time to read for
+        """
+        initTimeDirPath = self.__rawDir / it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)
         response = self.__s3.list_objects_v2(Bucket=self.__bucket, Prefix=initTimeDirPath.as_posix() + "/")
 
-        return initTime, [self.__s3.get_object(Bucket=self.__bucket, Key=obj['Key'])['Body'].read()
-                          for obj in response['Contents']]
+        return it, [self.__s3.get_object(Bucket=self.__bucket, Key=obj['Key'])['Body'].read()
+                    for obj in response['Contents']]
 
-    def writeDatasetToZarrDir(self, fileName: str, initTime: dt.datetime, data: xr.Dataset) -> pathlib.Path:
-        """Write the given Dataset to the zarr directory."""
-        path: pathlib.Path = pathlib.Path(f's3://{self.__bucket}/{self.__zarrDir.as_posix()}/{fileName}')
+    def writeDatasetAsZarr(self, name: str, it: dt.datetime, ds: xr.Dataset) -> pathlib.Path:
+        """Write the given Dataset to the zarr directory.
+        
+        :param name: The name of the file to write
+        :param it: The init time of the data within the Dataset
+        :param ds: The Dataset to write
+        """
+        path: pathlib.Path = pathlib.Path(f's3://{self.__bucket}/{self.__zarrDir.as_posix()}/{name}')
 
         # Ensure the zarr path doesn't already exist
-        if self.existsInZarrDir(fileName=fileName, initTime=initTime):
+        if self.zarrExistsForInitTime(name=name, it=it):
             raise FileExistsError(f"Zarr path already exists: {path}")
 
         # Create a chunked Dask Dataset from the input multi-variate Dataset.
@@ -105,10 +121,10 @@ class S3Client(internal.StorageInterface):
         #     many/all variables at once from disk).
 
         # Create single-variate dataarray from dataset, with new "variable" dimension
-        da = data \
+        da = ds \
             .to_array(dim="variable", name="UKV") \
             .compute()
-        del data
+        del ds
 
         # Convert back to dataset, order dimensions, and chunk
         chunkedDataset = da.to_dataset() \
@@ -139,9 +155,13 @@ class S3Client(internal.StorageInterface):
         del chunkedDataset
         return path
 
-    def existsInZarrDir(self, fileName: str, initTime: dt.datetime) -> bool:
-        """Check if a file exists in the zarr directory."""
-        path = self.__zarrDir / fileName
+    def zarrExistsForInitTime(self, name: str, it: dt.datetime) -> bool:
+        """Check if a file exists in the zarr directory.
+        
+        :param name: The name of the file to check for
+        :param it: The init time of the data within the file
+        """
+        path = self.__zarrDir / name
         try:
             self.__s3.head_object(Bucket=self.__bucket, Key=path.as_posix())
         except botocore.exceptions.ClientError as e:

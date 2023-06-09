@@ -1,10 +1,10 @@
 import datetime as dt
 from typing import ClassVar, Type
 
-from nwp_consumer import internal
-
 from marshmallow import EXCLUDE, Schema, fields
 from marshmallow_dataclass import dataclass
+
+from nwp_consumer import internal
 
 
 @dataclass
@@ -19,11 +19,11 @@ class MetOfficeFileInfo(internal.FileInfoModel):
     Schema: ClassVar[Type[Schema]] = Schema  # To prevent confusing type checkers
 
     def initTime(self) -> dt.datetime:
-        """Returns the init time of the file."""
+        """Return the init time of the file."""
         return self.runDateTime.replace(tzinfo=None)
 
     def fname(self) -> str:
-        """Returns the file name."""
+        """Return the file name."""
         return self.fileId
 
 

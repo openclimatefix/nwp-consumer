@@ -1,16 +1,15 @@
 import datetime as dt
 import pathlib
 import unittest.mock
+
 import xarray as xr
 
 from ._models import CEDAFileInfo
 from .client import (
-    COORDINATE_IGNORE_LIST,
-    PARAMETER_IGNORE_LIST,
     CEDAClient,
     _isWantedFile,
-    _reshapeTo2DGrid,
     _loadWholesaleFileAsDataset,
+    _reshapeTo2DGrid,
 )
 
 # --------- Test setup --------- #
@@ -29,7 +28,7 @@ class TestLoadWholesaleFileAsDataset(unittest.TestCase):
         wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wholesale1.grib"
 
         out = _loadWholesaleFileAsDataset(
-            data=wholesalePath.read_bytes(),
+            b=wholesalePath.read_bytes(),
         )
 
         self.assertEqual(({"step": 4, "values": 385792}), out.dims)
@@ -39,7 +38,7 @@ class TestLoadWholesaleFileAsDataset(unittest.TestCase):
         wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wholesale2.grib"
 
         out = _loadWholesaleFileAsDataset(
-            data=wholesalePath.read_bytes(),
+            b=wholesalePath.read_bytes(),
         )
 
         self.assertEqual(({"step": 4, "values": 385792}), out.dims)
@@ -69,9 +68,9 @@ class TestIsWantedFile(unittest.TestCase):
         ]
 
         self.assertTrue(
-            all([_isWantedFile(fileInfo=fo, desiredInitTime=initTime) for fo in wantedFileInfos]))
+            all([_isWantedFile(fi=fo, dit=initTime) for fo in wantedFileInfos]))
         self.assertFalse(
-            all([_isWantedFile(fileInfo=fo, desiredInitTime=initTime) for fo in unwantedFileInfos]))
+            all([_isWantedFile(fi=fo, dit=initTime) for fo in unwantedFileInfos]))
 
 
 class TestReshapeTo2DGrid(unittest.TestCase):
@@ -80,9 +79,9 @@ class TestReshapeTo2DGrid(unittest.TestCase):
         wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wholesale1.grib"
 
         dataset = _loadWholesaleFileAsDataset(
-            data=wholesalePath.read_bytes())
+            b=wholesalePath.read_bytes())
 
-        reshapedDataset = _reshapeTo2DGrid(dataset=dataset)
+        reshapedDataset = _reshapeTo2DGrid(ds=dataset)
 
         self.assertEqual(548, reshapedDataset.dims['x'])
         self.assertEqual(704, reshapedDataset.dims['y'])
@@ -101,4 +100,4 @@ class TestReshapeTo2DGrid(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError):
-            _ = _reshapeTo2DGrid(dataset=ds1)
+            _ = _reshapeTo2DGrid(ds=ds1)

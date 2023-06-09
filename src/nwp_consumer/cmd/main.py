@@ -43,6 +43,7 @@ log = structlog.stdlib.get_logger()
 
 
 def run():
+    """Entry point for the nwp-consumer CLI."""
     # Parse command line arguments from docstring
     arguments = docopt(__doc__, version=__version__)
 
@@ -68,7 +69,8 @@ def run():
                 rawDir=arguments['--rdir'],
                 zarrDir=arguments['--zdir'],
             )
-        case _: raise ValueError(f"Unknown sink {arguments['--sink']}")
+        case _:
+            raise ValueError(f"Unknown sink {arguments['--sink']}")
 
     match arguments['--source']:
         case 'ceda':
@@ -84,29 +86,35 @@ def run():
                 clientID=mc.METOFFICE_CLIENT_ID,
                 clientSecret=mc.METOFFICE_CLIENT_SECRET,
             )
-        case _: raise ValueError(f"Unknown source {arguments['--source']}")
+        case _:
+            raise ValueError(f"Unknown source {arguments['--source']}")
 
     service = NWPConsumerService(
         fetcher=fetcher,
         storer=storer
     )
 
+    startDate: dt.date = dt.datetime.strptime(arguments['--from'], "%Y-%m-%d").date()
+    endDate: dt.date = dt.datetime.strptime(arguments['--to'], "%Y-%m-%d").date()
+    if endDate < startDate:
+        raise ValueError("Argument '--from' cannot specify date prior to '--to'")
+
     if arguments['download']:
         service.DownloadRawDataset(
-            startDate=dt.datetime.strptime(arguments['--from'], "%Y-%m-%d").date(),
-            endDate=dt.datetime.strptime(arguments['--to'], "%Y-%m-%d").date()
+            start=startDate,
+            end=endDate
         )
 
     if arguments['convert']:
         service.ConvertRawDatasetToZarr(
-            startDate=dt.datetime.strptime(arguments['--from'], "%Y-%m-%d").date(),
-            endDate=dt.datetime.strptime(arguments['--to'], "%Y-%m-%d").date()
+            start=endDate,
+            end=endDate
         )
 
     if arguments['consume']:
         service.DownloadAndConvert(
-            startDate=dt.datetime.strptime(arguments['--from'], "%Y-%m-%d").date(),
-            endDate=dt.datetime.strptime(arguments['--to'], "%Y-%m-%d").date()
+            start=startDate,
+            end=endDate
         )
 
 

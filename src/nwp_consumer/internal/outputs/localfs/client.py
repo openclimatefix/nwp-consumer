@@ -1,9 +1,9 @@
+import datetime as dt
 import pathlib
 
 import numpy as np
 import xarray as xr
 from ocf_blosc2 import Blosc2
-import datetime as dt
 
 from nwp_consumer import internal
 
@@ -30,25 +30,33 @@ class LocalFSClient(internal.StorageInterface):
         self.__rawDir = rawPath
         self.__zarrDir = zarrPath
 
-    def existsInRawDir(self, fileName: str, initTime: dt.datetime) -> bool:
-        """Check if a file exists in the raw directory."""
+    def rawFileExistsForInitTime(self, *, name: str, it: dt.datetime) -> bool:
+        """Check if a file exists in the raw directory.
+        
+        :param name: The name of the file to check for
+        :param it: The init time of the data within the file
+        """
         path = pathlib.Path(
-            f"{self.__rawDir}/{initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{fileName}")
+            f"{self.__rawDir}/{it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{name}")
         return path.exists()
 
-    def writeBytesToRawDir(self, fileName: str, initTime: dt.datetime, data: bytes) -> pathlib.Path:
-        """Write the given bytes to the raw directory."""
-        path = pathlib.Path(f"{self.__rawDir}/{initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{fileName}")
+    def writeBytesToRawFile(self, name: str, it: dt.datetime, b: bytes) -> pathlib.Path:
+        """Write the given bytes to the raw directory.
+        
+        :param name: The name of the file to write
+        :param it: The init time of the data within the file
+        :param b: The bytes to write
+        """
+        path = pathlib.Path(f"{self.__rawDir}/{it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{name}")
 
         # Create the path to the file if the folders do not exist
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        path.write_bytes(data)
+        path.write_bytes(b)
         return path
 
     def listInitTimesInRawDir(self) -> list[dt.datetime]:
         """List all initTimes in the raw directory."""
-
         # List all the YYYY/MM/DD/INITTIME folders in the raw directory
         files = [f.relative_to(self.__rawDir) for f in self.__rawDir.glob('*/*/*/*') if f.is_dir()]
 
@@ -59,13 +67,15 @@ class LocalFSClient(internal.StorageInterface):
 
         return sorted(initTimes)
 
-    def readBytesForInitTime(self, initTime: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
-        """Read all files from the raw dir as bytes for the given init time."""
+    def readRawFilesForInitTime(self, it: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
+        """Read all files from the raw dir as bytes for the given init time.
 
-        initTimeDirPath = pathlib.Path(f"{self.__rawDir}/{initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}")
+        :param it: The init time to read files for
+        """
+        initTimeDirPath = pathlib.Path(f"{self.__rawDir}/{it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}")
 
         if not initTimeDirPath.exists():
-            raise FileNotFoundError(f"Folder does not exist for init time {initTime} at {initTimeDirPath.as_posix()}")
+            raise FileNotFoundError(f"Folder does not exist for init time {it} at {initTimeDirPath.as_posix()}")
 
         paths: list[pathlib.Path] = list(initTimeDirPath.iterdir())
 
@@ -73,19 +83,28 @@ class LocalFSClient(internal.StorageInterface):
 
         # Read all files as bytes
         fileByteList: list[bytes] = [path.read_bytes() for path in paths]
-        return initTime, fileByteList
+        return it, fileByteList
 
-    def existsInZarrDir(self, fileName: str, initTime: dt.datetime) -> bool:
-        """Check if a file exists in the zarr directory."""
-        path = pathlib.Path(f"{self.__zarrDir}/{fileName}")
+    def zarrExistsForInitTime(self, name: str, it: dt.datetime) -> bool:
+        """Check if a file exists in the zarr directory.
+        
+        :param name: The name of the file to check for
+        :param it: The init time of the data within the Dataset
+        """
+        path = pathlib.Path(f"{self.__zarrDir}/{name}")
         return path.exists()
 
-    def writeDatasetToZarrDir(self, fileName: str, initTime: dt.datetime, data: xr.Dataset) -> pathlib.Path:
-        """Write the given Dataset to the zarr directory."""
-        path = pathlib.Path(f"{self.__zarrDir}/{fileName}")
+    def writeDatasetAsZarr(self, name: str, it: dt.datetime, ds: xr.Dataset) -> pathlib.Path:
+        """Write the given Dataset to the zarr directory.
+        
+        :param name: Name of the file to write
+        :param it: Init time of the data within the Dataset
+        :param ds: Dataset to write
+        """
+        path = pathlib.Path(f"{self.__zarrDir}/{name}")
 
         # Ensure the zarr path doesn't already exist
-        if self.existsInZarrDir(fileName=fileName, initTime=initTime):
+        if self.zarrExistsForInitTime(name=name, it=it):
             raise FileExistsError(f"Zarr path already exists: {path}")
 
         # Create a chunked Dask Dataset from the input multi-variate Dataset.
@@ -95,10 +114,10 @@ class LocalFSClient(internal.StorageInterface):
         #     many/all variables at once from disk).
 
         # Create single-variate dataarray from dataset, with new "variable" dimension
-        da = data \
+        da = ds \
             .to_array(dim="variable", name="UKV") \
             .compute()
-        del data
+        del ds
 
         # Convert back to dataset, order dimensions, and chunk
         chunkedDataset = da.to_dataset() \
