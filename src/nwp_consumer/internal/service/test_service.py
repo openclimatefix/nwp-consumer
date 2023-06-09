@@ -24,8 +24,11 @@ class DummyStorer(internal.StorageInterface):
             return True
         return False
 
-    def writeBytesToRawDir(self, fileName: str, initTime: dt.datetime, data: bytes) -> pathlib.Path:
-        return pathlib.Path(f"{initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{fileName}")
+    def writeBytesToRawDir(
+            self, fileName: str, initTime: dt.datetime, data: bytes) -> pathlib.Path:
+        return pathlib.Path(
+            f"{initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{fileName}"
+        )
 
     def listInitTimesInRawDir(self) -> list[dt.datetime]:
         return testInitTimes
@@ -40,7 +43,8 @@ class DummyStorer(internal.StorageInterface):
             bytes(initTime.strftime("%Y%m%d%H%M"), "utf-8") for _ in INIT_TIME_FILES
         ]
 
-    def writeDatasetToZarrDir(self, fileName: str, initTime: dt.datetime, data: xr.Dataset) -> pathlib.Path:
+    def writeDatasetToZarrDir(
+            self, fileName: str, initTime: dt.datetime, data: xr.Dataset) -> pathlib.Path:
         return pathlib.Path(fileName)
 
 
@@ -58,14 +62,18 @@ class DummyFileInfo(internal.FileInfoModel):
 
 class DummyFetcher(internal.FetcherInterface):
 
-    def listRawFilesForInitTime(self, initTime: dt.datetime) -> list[FileInfoModel]:
-        return [DummyFileInfo(file, initTime) for file in INIT_TIME_FILES if initTime in testInitTimes]
+    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[FileInfoModel]:
+        return [
+            DummyFileInfo(file, it)
+            for file in INIT_TIME_FILES
+            if it in testInitTimes
+        ]
 
-    def fetchRawFileBytes(self, fileInfo: FileInfoModel) -> tuple[FileInfoModel, bytes]:
-        return fileInfo, bytes(fileInfo.initTime().strftime("%Y%m%d%H%M"), "utf-8")
+    def fetchRawFileBytes(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, bytes]:
+        return fi, bytes(fi.initTime().strftime("%Y%m%d%H%M"), "utf-8")
 
-    def loadRawInitTimeDataAsOCFDataset(self, fileBytesList: list[bytes]) -> xr.Dataset:
-        initTime = dt.datetime.strptime(fileBytesList[0].decode("utf-8"), "%Y%m%d%H%M")
+    def loadRawInitTimeDataAsOCFDataset(self, *, fbl: list[bytes]) -> xr.Dataset:
+        initTime = dt.datetime.strptime(fbl[0].decode("utf-8"), "%Y%m%d%H%M")
         return xr.Dataset(
             data_vars={
                 'wdir10': (('init_time', 'step', 'values'), [[[1, 2, 3, 4], [5, 6, 7, 8]]]),
@@ -102,7 +110,6 @@ class TestNWPConsumerService(unittest.TestCase):
         endDate = testInitTimes[-1].date()
 
         paths = service.ConvertRawDatasetToZarr(startDate=startDate, endDate=endDate)
-        print(paths)
 
         # 1 Dataset per init time, all init times per day, all days
         self.assertEqual(1 * len(INIT_HOURS) * (len(DAYS)), len(paths))

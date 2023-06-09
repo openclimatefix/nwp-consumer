@@ -62,18 +62,27 @@ class FetcherInterface(abc.ABC):
     """
 
     @abc.abstractmethod
-    def listRawFilesForInitTime(self, initTime: dt.datetime) -> list[FileInfoModel]:
-        """List the relative path of all files available from source for the given init_time."""
+    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[FileInfoModel]:
+        """List the relative path of all files available from source for the given init_time.
+
+        :param it: Init Time to list files for
+        """
         pass
 
     @abc.abstractmethod
-    def fetchRawFileBytes(self, fileInfo: FileInfoModel) -> tuple[FileInfoModel, bytes]:
-        """Fetch the bytes of a single raw file from source given its relative path."""
+    def fetchRawFileBytes(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, bytes]:
+        """Fetch the bytes of a single raw file from source given its relative path.
+
+        :param fi: File Info object describing the file to fetch
+        """
         pass
 
     @abc.abstractmethod
-    def loadRawInitTimeDataAsOCFDataset(self, fileBytesList: list[bytes]) -> xr.Dataset:
-        """Create an xarray dataset from the given RAW file bytedata."""
+    def loadRawInitTimeDataAsOCFDataset(self, *, fbl: list[bytes]) -> xr.Dataset:
+        """Create an xarray dataset from the given RAW file bytedata.
+
+        :param fbl: List of file bytes to load
+        """
         pass
 
 

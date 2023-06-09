@@ -9,7 +9,11 @@ from .client import MetOfficeClient, _isWantedFile, _loadSingleParameterGRIBAsOC
 
 # --------- Test setup --------- #
 
-testClient = MetOfficeClient(orderID="tmp", clientID="tmp", clientSecret="tmp")
+testClient = MetOfficeClient(
+    orderID="tmp",
+    clientID="tmp",
+    clientSecret="tmp"
+)
 
 
 # --------- Client methods --------- #
@@ -17,6 +21,7 @@ testClient = MetOfficeClient(orderID="tmp", clientID="tmp", clientSecret="tmp")
 
 class TestClient_Init(unittest.TestCase):
     """Tests for the MetOfficeClient.__init__ method."""
+
     def test_errorsWhenVariablesAreNotSet(self):
         with self.assertRaises(KeyError):
             _ = MetOfficeClient(
@@ -35,7 +40,7 @@ class Test_LoadSingleParameterGRIBAsOCFDataset(unittest.TestCase):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_knownparam.grib"
 
         out = _loadSingleParameterGRIBAsOCFDataset(
-            data=testFilePath.read_bytes(),
+            b=testFilePath.read_bytes(),
         )
 
         actual = out.dims
@@ -45,7 +50,7 @@ class Test_LoadSingleParameterGRIBAsOCFDataset(unittest.TestCase):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wrongnameparam.grib"
 
         out = _loadSingleParameterGRIBAsOCFDataset(
-            data=testFilePath.read_bytes(),
+            b=testFilePath.read_bytes(),
         )
 
         actual = list(out.data_vars)
@@ -55,7 +60,7 @@ class Test_LoadSingleParameterGRIBAsOCFDataset(unittest.TestCase):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknownparam1.grib"
 
         out = _loadSingleParameterGRIBAsOCFDataset(
-            data=testFilePath.read_bytes(),
+            b=testFilePath.read_bytes(),
         )
 
         actual = list(out.data_vars)
@@ -66,7 +71,7 @@ class Test_LoadSingleParameterGRIBAsOCFDataset(unittest.TestCase):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknownparam2.grib"
 
         out = _loadSingleParameterGRIBAsOCFDataset(
-            data=testFilePath.read_bytes(),
+            b=testFilePath.read_bytes(),
         )
 
         actual = list(out.data_vars)
@@ -85,7 +90,7 @@ class TestClient_LoadRawInitTimeDataAsOCFDataset(unittest.TestCase):
             ["test_knownparam.grib", "test_wrongnameparam.grib"]
         ]
 
-        dataset = testClient.loadRawInitTimeDataAsOCFDataset(fileBytesList=fileBytesList)
+        dataset = testClient.loadRawInitTimeDataAsOCFDataset(fbl=fileBytesList)
 
         actual = len(dataset.data_vars)
         self.assertEqual(2, actual)
@@ -119,6 +124,6 @@ class Test_IsWantedFile(unittest.TestCase):
             ),
         ]
 
-        self.assertTrue(all([_isWantedFile(fileInfo=fo, desiredInitTime=initTime) for fo in wantedFileInfos]))
-        self.assertFalse(all([_isWantedFile(fileInfo=fo, desiredInitTime=initTime) for fo in unwantedFileInfos]))
+        self.assertTrue(all([_isWantedFile(fi=fo, dit=initTime) for fo in wantedFileInfos]))
+        self.assertFalse(all([_isWantedFile(fi=fo, dit=initTime) for fo in unwantedFileInfos]))
 

@@ -34,7 +34,7 @@ class NWPConsumerService:
 
         # For each init time, get the list of files that need to be downloaded
         allWantedFileInfos: list[internal.FileInfoModel] = list(itertools.chain.from_iterable(
-            [self.fetcher.listRawFilesForInitTime(initTime=initTime) for initTime in allInitTimes]
+            [self.fetcher.listRawFilesForInitTime(it=initTime) for initTime in allInitTimes]
         ))
 
         # Check which files are already downloaded
@@ -95,7 +95,7 @@ class NWPConsumerService:
                     f"Creating Zarr for initTime {initTime.strftime('%Y-%m-%d %H:%M')}",
                     initTime=initTime.strftime("%Y-%m-%d %H:%M")
                 )
-                dataset = self.fetcher.loadRawInitTimeDataAsOCFDataset(fileBytesList=fileBytesList)
+                dataset = self.fetcher.loadRawInitTimeDataAsOCFDataset(fbl=fileBytesList)
 
                 # Save the dataset to a zarr file
                 initTime = pd.Timestamp(dataset.coords["init_time"].values[0])
