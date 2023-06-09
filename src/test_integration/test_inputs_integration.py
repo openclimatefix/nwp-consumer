@@ -55,7 +55,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         self.assertTrue(len(fileInfos) > 0)
 
     def test_getsFileInfosFromMetOffice(self):
-        fileInfos = metOfficeClient.listRawFilesForInitTime(initTime=metOfficeInitTime)
+        fileInfos = metOfficeClient.listRawFilesForInitTime(it=metOfficeInitTime)
         self.assertTrue(len(fileInfos) > 0)
 
 

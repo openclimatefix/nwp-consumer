@@ -65,7 +65,7 @@ jobs:
           METOFFICE_ORDER_ID: ${{ secrets.METOFFICE_ORDER_ID }}
         if:  |
           (github.ref == 'refs/heads/main' && github.event_name != 'tag') || 
-          (github.event_name == 'pull_request' && github.base_ref == 'refs/heads/main')
+          (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'refs/heads/main')
         run: python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
 
       # Create test summary to be visualised on the job summary screen on GitHub
