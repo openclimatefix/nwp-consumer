@@ -21,6 +21,11 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+
+# Ensure the GitHub token can remove packages
+permissions:
+  packages: write
+
 jobs:
 
   # Define a "test" job that runs on all branches and PRs
@@ -103,6 +108,8 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=sha,event=branch
+            type=sha,event=pr
+            type=ref,event=push
             type=semver,pattern={{version}}
 
       # Build and push the Docker image to the registry
@@ -120,6 +127,16 @@ jobs:
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Clean up old docker images from the registry
+      # * Only keeps the last 10 images tagged with the commit SHA
+      # * Does not affect images tagged with a semantic version
+      - uses: actions/delete-package-versions@v4
+        with:
+          package-name: 'nwp-consumer'
+          package-type: 'container'
+          min-versions-to-keep: 10
+          ignore-versions: ^\d+\.\d+\.\d+$
 
   # Define a "build-wheel" job that runs on main branch commits only
   # * Only runs if test job passes
