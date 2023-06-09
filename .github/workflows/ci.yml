@@ -132,8 +132,8 @@ jobs:
       # Clean up old Container images from the registry
       # * Only keeps the last 10 images tagged with the commit SHA
       # * Does not affect images tagged with a semantic version
-      - Name: Delete old container images
-      - uses: actions/delete-package-versions@v4
+      - name: Delete old container images
+        uses: actions/delete-package-versions@v4
         with:
           package-name: 'nwp-consumer'
           package-type: 'container'
