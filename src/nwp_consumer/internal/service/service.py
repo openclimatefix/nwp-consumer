@@ -57,7 +57,7 @@ class NWPConsumerService:
         # * CEDA has a concurrent connection limit so limit the number of workers
         with PoolExecutor(max_workers=5) as pe:
             futures: list[concurrent.futures.Future[tuple[internal.FileInfoModel, bytes]]] = [
-                pe.submit(self.fetcher.fetchRawFileBytes, fileInfo=fi) for fi in allWantedFileInfos
+                pe.submit(self.fetcher.fetchRawFileBytes, fi=fi) for fi in allWantedFileInfos
             ]
             # Save the files as their downloads are completed
             for future in concurrent.futures.as_completed(futures):
@@ -99,7 +99,7 @@ class NWPConsumerService:
         # For each init time, load the files from the storer and convert them to a dataset
         with PoolExecutor(max_workers=8) as pe:
             futures: list[concurrent.futures.Future[list[bytes]]] = [
-                pe.submit(self.storer.readRawFilesForInitTime, initTime=it) for it in desiredInitTimes
+                pe.submit(self.storer.readRawFilesForInitTime, it=it) for it in desiredInitTimes
             ]
             # Convert the files once they are read in
             for future in concurrent.futures.as_completed(futures):
