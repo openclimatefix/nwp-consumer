@@ -52,9 +52,9 @@ class TestS3Client(unittest.TestCase):
         )
 
         # Call the existsInRawDir method
-        exists = self.client.existsInRawDir(
-            fileName=fileName,
-            initTime=initTime
+        exists = self.client.rawFileExistsForInitTime(
+            name=fileName,
+            it=initTime
         )
 
         # Verify the existence of the file
@@ -64,12 +64,12 @@ class TestS3Client(unittest.TestCase):
         # Call the writeBytesToRawDir method
         initTime = dt.datetime(2023, 1, 1)
         fileName = "test_file"
-        self.client.writeBytesToRawDir(fileName, initTime, b"test_data")
+        self.client.writeBytesToRawFile(fileName, initTime, b"test_data")
 
         # Verify the written file in the raw directory
-        self.assertTrue(self.client.existsInRawDir(
-            fileName=fileName,
-            initTime=initTime
+        self.assertTrue(self.client.rawFileExistsForInitTime(
+            name=fileName,
+            it=initTime
         ))
 
     def test_listInitTimesInRawDir(self):
@@ -109,8 +109,8 @@ class TestS3Client(unittest.TestCase):
         )
 
         # Call the readBytesForInitTime method
-        readInitTime, readBytes = self.client.readBytesForInitTime(
-            initTime=initTime
+        readInitTime, readBytes = self.client.readRawFilesForInitTime(
+            it=initTime
         )
 
         # Verify the returned init time and bytes
@@ -137,10 +137,10 @@ class TestS3Client(unittest.TestCase):
         )
 
         # Call the writeDatasetToZarrDir method
-        path = self.client.writeDatasetToZarrDir(
-            fileName="test_file",
-            initTime=dt.datetime(2023, 1, 1),
-            data=mock_dataset
+        path = self.client.writeDatasetAsZarr(
+            name="test_file",
+            it=dt.datetime(2023, 1, 1),
+            ds=mock_dataset
         )
 
         # Verify the returned path
@@ -158,9 +158,9 @@ class TestS3Client(unittest.TestCase):
         )
 
         # Call the existsInZarrDir method
-        exists = self.client.existsInZarrDir(
-            fileName=fileName,
-            initTime=dt.datetime(2023, 1, 1)
+        exists = self.client.zarrExistsForInitTime(
+            name=fileName,
+            it=dt.datetime(2023, 1, 1)
         )
 
         # Verify the existence of the file

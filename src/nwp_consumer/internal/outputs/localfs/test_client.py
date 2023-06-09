@@ -26,14 +26,14 @@ class TestExistsInRawDir(unittest.TestCase):
 
     def test_file_exists(self) -> None:
         # Check if the file exists using the function
-        exists = self.client.existsInRawDir(self.fileName, self.initTime)
+        exists = self.client.rawFileExistsForInitTime(self.fileName, self.initTime)
 
         # Assert that the file exists
         self.assertTrue(exists)
 
     def test_file_does_not_exist(self) -> None:
         # Check if the file exists using the function
-        exists = self.client.existsInRawDir(self.fileName + "not-here", self.initTime)
+        exists = self.client.rawFileExistsForInitTime(self.fileName + "not-here", self.initTime)
 
         # Assert that the file does not exist
         self.assertFalse(exists)
@@ -53,10 +53,10 @@ class TestWriteBytesToRawDir(unittest.TestCase):
 
     def test_write_bytes_to_raw_dir(self) -> None:
         # Write the bytes to the raw directory using the function
-        path = self.client.writeBytesToRawDir(self.fileName, self.initTime, self.data)
+        path = self.client.writeBytesToRawFile(self.fileName, self.initTime, self.data)
 
         # Assert that the path exists
-        self.assertTrue(self.client.existsInRawDir(self.fileName, self.initTime))
+        self.assertTrue(self.client.rawFileExistsForInitTime(self.fileName, self.initTime))
 
         # Assert that the file content is correct
         self.assertEqual(path.read_bytes(), self.data)
@@ -113,7 +113,7 @@ class TestReadBytesForInitTime(unittest.TestCase):
 
     def test_read_bytes_for_init_time(self) -> None:
         # Read the bytes for the init time using the function
-        initTime, fileByteList = self.client.readBytesForInitTime(initTime=self.initTime)
+        initTime, fileByteList = self.client.readRawFilesForInitTime(it=self.initTime)
 
         # Assert that the returned init time is correct
         self.assertEqual(initTime, self.initTime)
@@ -139,14 +139,14 @@ class TestExistsInZarrDir(unittest.TestCase):
         file_path.touch()
 
         # Check if the file exists using the function
-        exists = self.client.existsInZarrDir(self.fileName, self.initTime)
+        exists = self.client.zarrExistsForInitTime(self.fileName, self.initTime)
 
         # Assert that the file exists
         self.assertTrue(exists)
 
     def test_file_does_not_exist(self) -> None:
         # Check if the file exists using the function
-        exists = self.client.existsInZarrDir('no_such_' + self.fileName, self.initTime)
+        exists = self.client.zarrExistsForInitTime('no_such_' + self.fileName, self.initTime)
 
         # Assert that the file does not exist
         self.assertFalse(exists)
@@ -176,10 +176,10 @@ class TestWriteDatasetToZarrDir(unittest.TestCase):
 
     def test_write_dataset_to_zarr_dir(self) -> None:
         # Write the dataset to the zarr directory using the function
-        self.client.writeDatasetToZarrDir(self.fileName, self.initTime, self.data)
+        self.client.writeDatasetAsZarr(self.fileName, self.initTime, self.data)
 
         # Assert that the path exists
-        self.assertTrue(self.client.existsInZarrDir(self.fileName, self.initTime))
+        self.assertTrue(self.client.zarrExistsForInitTime(self.fileName, self.initTime))
 
     def tearDown(self) -> None:
         shutil.rmtree("test_raw_dir")

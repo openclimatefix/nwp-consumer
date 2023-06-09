@@ -37,10 +37,10 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
     def test_downloadAndConvertDataset(self):
         initTime: dt.date = dt.datetime.now().date()
 
-        paths = self.testService.DownloadRawDataset(startDate=initTime, endDate=initTime)
+        paths = self.testService.DownloadRawDataset(start=initTime, end=initTime)
         self.assertGreater(len(paths), 0)
 
-        paths = self.testService.ConvertRawDatasetToZarr(startDate=initTime, endDate=initTime)
+        paths = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
 
         for path in paths:
             ds = xr.open_zarr(path)
@@ -78,9 +78,9 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
     def test_downloadAndConvertDataset(self):
         initTime: dt.date = dt.date(year=2022, month=1, day=1)
 
-        paths = self.testService.DownloadRawDataset(startDate=initTime, endDate=initTime)
+        paths = self.testService.DownloadRawDataset(start=initTime, end=initTime)
         self.assertGreater(len(paths), 0)
-        paths = self.testService.ConvertRawDatasetToZarr(startDate=initTime, endDate=initTime)
+        paths = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
 
         for path in paths:
             ds = xr.open_zarr(path)

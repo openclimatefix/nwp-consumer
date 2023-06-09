@@ -101,20 +101,20 @@ def run():
 
     if arguments['download']:
         service.DownloadRawDataset(
-            startDate=startDate,
-            endDate=endDate
+            start=startDate,
+            end=endDate
         )
 
     if arguments['convert']:
         service.ConvertRawDatasetToZarr(
-            startDate=endDate,
-            endDate=endDate
+            start=endDate,
+            end=endDate
         )
 
     if arguments['consume']:
         service.DownloadAndConvert(
-            startDate=startDate,
-            endDate=endDate
+            start=startDate,
+            end=endDate
         )
 
 

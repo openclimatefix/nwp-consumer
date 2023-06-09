@@ -19,33 +19,33 @@ testInitTimes = [dt.datetime(2021, 1, d, h, 0, 0, tzinfo=None)
 
 class DummyStorer(internal.StorageInterface):
 
-    def existsInRawDir(self, fileName: str, initTime: dt.datetime) -> bool:
-        if "exists" in fileName:
+    def rawFileExistsForInitTime(self, name: str, it: dt.datetime) -> bool:
+        if "exists" in name:
             return True
         return False
 
-    def writeBytesToRawDir(
-            self, fileName: str, initTime: dt.datetime, data: bytes) -> pathlib.Path:
+    def writeBytesToRawFile(
+            self, name: str, it: dt.datetime, b: bytes) -> pathlib.Path:
         return pathlib.Path(
-            f"{initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{fileName}"
+            f"{it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{name}"
         )
 
     def listInitTimesInRawDir(self) -> list[dt.datetime]:
         return testInitTimes
 
-    def existsInZarrDir(self, fileName: str, initTime: dt.datetime) -> bool:
-        if "exists" in fileName:
+    def zarrExistsForInitTime(self, name: str, it: dt.datetime) -> bool:
+        if "exists" in name:
             return True
         return False
 
-    def readBytesForInitTime(self, initTime: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
-        return initTime, [
-            bytes(initTime.strftime("%Y%m%d%H%M"), "utf-8") for _ in INIT_TIME_FILES
+    def readRawFilesForInitTime(self, it: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
+        return it, [
+            bytes(it.strftime("%Y%m%d%H%M"), "utf-8") for _ in INIT_TIME_FILES
         ]
 
-    def writeDatasetToZarrDir(
-            self, fileName: str, initTime: dt.datetime, data: xr.Dataset) -> pathlib.Path:
-        return pathlib.Path(fileName)
+    def writeDatasetAsZarr(
+            self, name: str, it: dt.datetime, ds: xr.Dataset) -> pathlib.Path:
+        return pathlib.Path(name)
 
 
 class DummyFileInfo(internal.FileInfoModel):
@@ -98,7 +98,7 @@ class TestNWPConsumerService(unittest.TestCase):
         startDate = testInitTimes[0].date()
         endDate = testInitTimes[-1].date()
 
-        paths = service.DownloadRawDataset(startDate=startDate, endDate=endDate)
+        paths = service.DownloadRawDataset(start=startDate, end=endDate)
 
         # 2 files per init time, all init times except the last one
         self.assertEqual(2 * len(INIT_HOURS) * (len(DAYS) - 1), len(paths))
@@ -109,7 +109,7 @@ class TestNWPConsumerService(unittest.TestCase):
         startDate = testInitTimes[0].date()
         endDate = testInitTimes[-1].date()
 
-        paths = service.ConvertRawDatasetToZarr(startDate=startDate, endDate=endDate)
+        paths = service.ConvertRawDatasetToZarr(start=startDate, end=endDate)
 
         # 1 Dataset per init time, all init times per day, all days
         self.assertEqual(1 * len(INIT_HOURS) * (len(DAYS)), len(paths))
