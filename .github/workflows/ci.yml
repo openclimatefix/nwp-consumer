@@ -17,9 +17,15 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Registry for storing Container images
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+
+# Ensure the GitHub token can remove packages
+permissions:
+  packages: write
+
 
 jobs:
 
@@ -56,7 +62,9 @@ jobs:
           METOFFICE_CLIENT_ID: ${{ secrets.METOFFICE_CLIENT_ID }}
           METOFFICE_CLIENT_SECRET: ${{ secrets.METOFFICE_CLIENT_SECRET }}
           METOFFICE_ORDER_ID: ${{ secrets.METOFFICE_ORDER_ID }}
-        if:  github.ref == 'refs/heads/main' && github.event_name != 'tag'
+        if:  |
+          (github.ref == 'refs/heads/main' && github.event_name != 'tag') || 
+          (github.event_name == 'pull_request' && github.base_ref == 'refs/heads/main')
         run: python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
 
       # Create test summary to be visualised on the job summary screen on GitHub
@@ -68,10 +76,10 @@ jobs:
           show: "fail, skip"
         if: always()
 
-  # Define a "build-docker" job that runs on branch commits only
-  # * Builds and pushes a Docker image to the registry defined in the environment variables
+  # Define a "build-container" job that runs on branch commits only
+  # * Builds and pushes an OCI Container image to the registry defined in the environment variables
   # * Only runs if test job passes
-  build-docker:
+  build-container:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -83,7 +91,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
+      - name: Set up Buildx
         uses: docker/setup-buildx-action@v2
 
       - name: Log in to the Container registry
@@ -96,20 +104,22 @@ jobs:
       # Tag the built image according to the event type
       # * If the event is a tag, use the tag name
       # * If the event is a branch commit, use the commit sha
-      - name: Extract metadata (tags, labels) for Docker
+      - name: Extract metadata (tags, labels) for Container
         id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=sha,event=branch
+            type=sha,event=pr
+            type=sha,event=push
             type=semver,pattern={{version}}
 
-      # Build and push the Docker image to the registry
+      # Build and push the Container image to the registry
       # * Creates a multiplatform-aware image
       # * Semantic versioning is handled via the meta action
       # * The image layers are cached between action runs
-      - name: Build and push Docker image
+      - name: Build and push Container image
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -120,6 +130,17 @@ jobs:
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Clean up old Container images from the registry
+      # * Only keeps the last 10 images tagged with the commit SHA
+      # * Does not affect images tagged with a semantic version
+      - name: Delete old container images
+        uses: actions/delete-package-versions@v4
+        with:
+          package-name: 'nwp-consumer'
+          package-type: 'container'
+          min-versions-to-keep: 10
+          ignore-versions: '^\d+\.\d+\.\d+$'
 
   # Define a "build-wheel" job that runs on main branch commits only
   # * Only runs if test job passes
