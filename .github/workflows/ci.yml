@@ -109,7 +109,7 @@ jobs:
           tags: |
             type=sha,event=branch
             type=sha,event=pr
-            type=ref,event=push
+            type=sha,event=push
             type=semver,pattern={{version}}
 
       # Build and push the Docker image to the registry
