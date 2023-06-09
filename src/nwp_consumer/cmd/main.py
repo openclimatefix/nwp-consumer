@@ -91,22 +91,27 @@ def run():
         storer=storer
     )
 
+    startDate: dt.date = dt.datetime.strptime(arguments['--from'], "%Y-%m-%d").date()
+    endDate: dt.date = dt.datetime.strptime(arguments['--to'], "%Y-%m-%d").date()
+    if endDate < startDate:
+        raise ValueError("Argument '--from' cannot specify date prior to '--to'")
+
     if arguments['download']:
         service.DownloadRawDataset(
-            startDate=dt.datetime.strptime(arguments['--from'], "%Y-%m-%d").date(),
-            endDate=dt.datetime.strptime(arguments['--to'], "%Y-%m-%d").date()
+            startDate=startDate,
+            endDate=endDate
         )
 
     if arguments['convert']:
         service.ConvertRawDatasetToZarr(
-            startDate=dt.datetime.strptime(arguments['--from'], "%Y-%m-%d").date(),
-            endDate=dt.datetime.strptime(arguments['--to'], "%Y-%m-%d").date()
+            startDate=endDate,
+            endDate=endDate
         )
 
     if arguments['consume']:
         service.DownloadAndConvert(
-            startDate=dt.datetime.strptime(arguments['--from'], "%Y-%m-%d").date(),
-            endDate=dt.datetime.strptime(arguments['--to'], "%Y-%m-%d").date()
+            startDate=startDate,
+            endDate=endDate
         )
 
 
