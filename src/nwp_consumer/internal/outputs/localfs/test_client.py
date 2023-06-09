@@ -26,14 +26,20 @@ class TestExistsInRawDir(unittest.TestCase):
 
     def test_file_exists(self) -> None:
         # Check if the file exists using the function
-        exists = self.client.rawFileExistsForInitTime(self.fileName, self.initTime)
+        exists = self.client.rawFileExistsForInitTime(
+            name=self.fileName,
+            it=self.initTime
+        )
 
         # Assert that the file exists
         self.assertTrue(exists)
 
     def test_file_does_not_exist(self) -> None:
         # Check if the file exists using the function
-        exists = self.client.rawFileExistsForInitTime(self.fileName + "not-here", self.initTime)
+        exists = self.client.rawFileExistsForInitTime(
+            name=self.fileName + "not-here",
+            it=self.initTime
+        )
 
         # Assert that the file does not exist
         self.assertFalse(exists)
@@ -53,10 +59,17 @@ class TestWriteBytesToRawDir(unittest.TestCase):
 
     def test_write_bytes_to_raw_dir(self) -> None:
         # Write the bytes to the raw directory using the function
-        path = self.client.writeBytesToRawFile(self.fileName, self.initTime, self.data)
+        path = self.client.writeBytesToRawFile(
+            name=self.fileName,
+            it=self.initTime,
+            b=self.data
+        )
 
         # Assert that the path exists
-        self.assertTrue(self.client.rawFileExistsForInitTime(self.fileName, self.initTime))
+        self.assertTrue(self.client.rawFileExistsForInitTime(
+            name=self.fileName,
+            it=self.initTime
+        ))
 
         # Assert that the file content is correct
         self.assertEqual(path.read_bytes(), self.data)
