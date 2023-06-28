@@ -4,6 +4,8 @@ import pathlib
 import numpy as np
 import xarray as xr
 from ocf_blosc2 import Blosc2
+from distutils.dir_util import copy_tree
+import shutil
 
 from nwp_consumer import internal
 
@@ -147,3 +149,15 @@ class LocalFSClient(internal.StorageInterface):
         chunkedDataset.to_zarr(path, **to_zarr_kwargs)
         del chunkedDataset
         return path
+
+    def deleteZarrForInitTime(self, *, name: str, it: dt.datetime) -> None:
+        """Delete the Zarr file for the given init time."""
+
+        path = pathlib.Path(f"{self.__zarrDir}/{name}")
+
+        if not path.exists():
+            raise FileNotFoundError(f"Zarr file does not exist: {path}")
+
+        shutil.rmtree(path.as_posix())
+        return
+

@@ -6,13 +6,13 @@ import itertools
 import pathlib
 from concurrent.futures import ProcessPoolExecutor as PoolExecutor
 
+
 import pandas as pd
 import structlog
 
 from nwp_consumer import internal
 
 log = structlog.stdlib.get_logger()
-
 
 class NWPConsumerService:
     """The service class for the NWP Consumer.
@@ -44,7 +44,11 @@ class NWPConsumerService:
         # Check which files are already downloaded
         # * If the file is already downloaded, remove it from the list of files to download
         allWantedFileInfos: list[internal.FileInfoModel] = [
-            p for p in allWantedFileInfos if not self.storer.rawFileExistsForInitTime(name=p.fname(), it=p.initTime())
+            p for p in allWantedFileInfos
+            if not self.storer.rawFileExistsForInitTime(
+                name=p.fname() + ".grib",
+                it=p.initTime()
+            )
         ]
 
         if not allWantedFileInfos:
@@ -63,7 +67,7 @@ class NWPConsumerService:
             for future in concurrent.futures.as_completed(futures):
                 fileInfo, fileBytes = future.result()
                 savedFilePath = self.storer.writeBytesToRawFile(
-                    name=fileInfo.fname(),
+                    name=fileInfo.fname() + ".grib",
                     it=fileInfo.initTime(),
                     b=fileBytes
                 )
@@ -121,7 +125,7 @@ class NWPConsumerService:
 
         return savedPaths
 
-    def DownloadAndConvert(self, *, start: dt.date, end: dt.date) -> pathlib.Path:
+    def DownloadAndConvert(self, *, start: dt.date, end: dt.date) -> list[pathlib.Path]:
         """Fetch and save as Zarr a dataset for each initTime in the given time range.
 
         :param start: The start date of the time range to download and convert
@@ -136,7 +140,35 @@ class NWPConsumerService:
             end=end
         )
 
-        # Sort paths by name, which is the init time, and sort
-        # * The last entry in the list is the latest init time
-        paths.sort(key=lambda p: p.name)
-        return paths[-1]
+        return paths
+
+    def CreateLatestZarr(self) -> pathlib.Path:
+        """Create a Zarr file for the latest init time."""
+
+        # Get the latest init time
+        allInitTimes: list[dt.datetime] = self.storer.listInitTimesInRawDir()
+        if not allInitTimes:
+            log.info("No init times found in raw directory")
+            return pathlib.Path()
+        latestInitTime = allInitTimes[-1]
+
+        # Check if the latest init time is already stored as a Zarr file
+        if self.storer.zarrExistsForInitTime(name='latest.zarr', it=latestInitTime):
+            self.storer.deleteZarrForInitTime(name='latest.zarr', it=latestInitTime)
+
+        # Load the latest init time as a dataset
+        _, fileBytesList = self.storer.readRawFilesForInitTime(it=latestInitTime)
+        log.info(
+            f"Creating Latest Zarr for initTime {latestInitTime.strftime('%Y-%m-%d %H:%M')}",
+            initTime=latestInitTime.strftime("%Y-%m-%d %H:%M")
+        )
+        dataset = self.fetcher.loadRawInitTimeDataAsOCFDataset(fbl=fileBytesList)
+
+        # Save the dataset to a zarr file
+        savedZarrPath = self.storer.writeDatasetAsZarr(
+            name='latest.zarr',
+            it=latestInitTime,
+            ds=dataset
+        )
+
+        return savedZarrPath

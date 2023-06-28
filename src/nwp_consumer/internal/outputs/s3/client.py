@@ -7,6 +7,7 @@ import botocore.exceptions
 import numpy as np
 import xarray as xr
 from ocf_blosc2 import Blosc2
+import s3fs
 
 from nwp_consumer import internal
 
@@ -108,7 +109,7 @@ class S3Client(internal.StorageInterface):
         :param it: The init time of the data within the Dataset
         :param ds: The Dataset to write
         """
-        path: pathlib.Path = pathlib.Path(f's3://{self.__bucket}/{self.__zarrDir.as_posix()}/{name}')
+        path: pathlib.Path = self.__bucket / self.__zarrDir / name
 
         # Ensure the zarr path doesn't already exist
         if self.zarrExistsForInitTime(name=name, it=it):
@@ -132,16 +133,19 @@ class S3Client(internal.StorageInterface):
             .sortby("step") \
             .sortby("variable") \
             .chunk({
-            "init_time": 1,
-            "step": 1,
-            "variable": -1,
-            "y": len(da.y) // 2,
-            "x": len(da.x) // 2,
-        }).compute()
+                "init_time": 1,
+                "step": 1,
+                "variable": -1,
+                "y": len(da.y) // 2,
+                "x": len(da.x) // 2,
+            }) \
+            .compute()
         del da
 
         # Create new Zarr store.
-        to_zarr_kwargs = dict(
+        chunkedDataset["UKV"] = chunkedDataset.astype(np.float16)["UKV"]
+        chunkedDataset.to_zarr(
+            store="s3://" + path.as_posix(),
             encoding={
                 "init_time": {"units": "nanoseconds since 1970-01-01"},
                 "UKV": {
@@ -149,11 +153,8 @@ class S3Client(internal.StorageInterface):
                 },
             },
         )
-
-        chunkedDataset["UKV"] = chunkedDataset.astype(np.float16)["UKV"]
-        chunkedDataset.to_zarr(path, **to_zarr_kwargs)
         del chunkedDataset
-        return path
+        return pathlib.Path(path)
 
     def zarrExistsForInitTime(self, name: str, it: dt.datetime) -> bool:
         """Check if a file exists in the zarr directory.
@@ -163,7 +164,10 @@ class S3Client(internal.StorageInterface):
         """
         path = self.__zarrDir / name
         try:
-            self.__s3.head_object(Bucket=self.__bucket, Key=path.as_posix())
+            self.__s3.head_object(
+                Bucket=self.__bucket,
+                Key=path.as_posix()
+            )
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == "404":
                 # The key does not exist.
@@ -172,3 +176,16 @@ class S3Client(internal.StorageInterface):
                 # Something else has gone wrong.
                 raise e
         return True
+
+    def deleteZarrForInitTime(self, *, name: str, it: dt.datetime) -> None:
+        """Delete the Zarr file for the given init time."""
+
+        paginator = self.__s3.get_paginator('list_objects_v2')
+        pages = paginator.paginate(Bucket=self.__bucket, Prefix=(self.__zarrDir / name).as_posix() + "/")
+
+        # Get a list of all the files in the zarr folder
+        allDirs = set()
+        for page in pages:
+            print(page)
+            for obj in page['Contents']:
+                print(obj)

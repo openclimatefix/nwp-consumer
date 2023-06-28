@@ -139,4 +139,12 @@ class StorageInterface(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def deleteZarrForInitTime(self, *, name: str, it: dt.datetime) -> None:
+        """Delete the zarr file for the given initTime.
 
+        :param name: Name of the file to delete
+        :param it: Init Time of the model data within the file
+        """
+
+        pass

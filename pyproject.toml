@@ -17,10 +17,11 @@ authors = [
 ]
 classifiers = ["Programming Language :: Python :: 3"]
 dependencies = [
-    "boto3 == 1.26.124",
+    "boto3 == 1.26.161",
     "cfgrib == 0.9.10.3",
     "docopt == 0.6.2",
     "eccodes == 1.5.1",
+    "fsspec[s3] == 2023.6.0",
     "marshmallow == 3.19.0",
     "marshmallow-dataclass == 8.5.12",
     "numpy == 1.24.2",
@@ -38,7 +39,7 @@ dependencies = [
 dev = [
     "ruff == 0.0.259",
     "unittest-xml-reporting == 3.2.0",
-    "moto[s3] == 4.1.11"
+    "moto[s3] == 4.1.11",
 ]
 
 [project.scripts]
