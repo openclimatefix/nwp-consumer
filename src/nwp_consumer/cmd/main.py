@@ -20,6 +20,7 @@ Options:
   --sink <sink>       Data sink to use (local/s3) [default: local].
   --rdir <rawdir>     Directory of raw data store [default: /tmp/raw].
   --zdir <zarrdir>    Directory of zarr data store [default: /tmp/zarr].
+  --create-latest     Create a zarr of the dataset with the latest init time [default: False].
 """
 
 import datetime as dt
@@ -44,6 +45,8 @@ log = structlog.stdlib.get_logger()
 
 def run():
     """Entry point for the nwp-consumer CLI."""
+    programStartTime = dt.datetime.now()
+
     # Parse command line arguments from docstring
     arguments = docopt(__doc__, version=__version__)
 
@@ -99,23 +102,35 @@ def run():
     if endDate < startDate:
         raise ValueError("Argument '--from' cannot specify date prior to '--to'")
 
+    downloaded = []
+    converted = []
+
     if arguments['download']:
-        service.DownloadRawDataset(
+        downloaded = service.DownloadRawDataset(
             start=startDate,
             end=endDate
         )
 
     if arguments['convert']:
-        service.ConvertRawDatasetToZarr(
+        converted = service.ConvertRawDatasetToZarr(
             start=endDate,
             end=endDate
         )
 
     if arguments['consume']:
-        service.DownloadAndConvert(
+        converted = service.DownloadAndConvert(
             start=startDate,
             end=endDate
         )
+
+    if arguments['--create-latest']:
+        service.CreateLatestZarr()
+
+    programEndTime = dt.datetime.now()
+    log.info(
+        "Finished nwp-consumer.",
+        elapsed_time=programEndTime - programStartTime,
+        version=__version__)
 
 
 if __name__ == "__main__":

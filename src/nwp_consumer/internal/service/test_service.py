@@ -47,6 +47,9 @@ class DummyStorer(internal.StorageInterface):
             self, name: str, it: dt.datetime, ds: xr.Dataset) -> pathlib.Path:
         return pathlib.Path(name)
 
+    def deleteZarrForInitTime(self, *, name: str, it: dt.datetime) -> None:
+        pass
+
 
 class DummyFileInfo(internal.FileInfoModel):
     def __init__(self, fileName: str, initTime: dt.datetime):
@@ -113,3 +116,9 @@ class TestNWPConsumerService(unittest.TestCase):
 
         # 1 Dataset per init time, all init times per day, all days
         self.assertEqual(1 * len(INIT_HOURS) * (len(DAYS)), len(paths))
+
+    def test_createLatestZarr(self):
+        service = NWPConsumerService(fetcher=self.testFetcher, storer=self.testStorer)
+
+        path = service.CreateLatestZarr()
+        self.assertEqual(pathlib.Path("latest.zarr"), path)

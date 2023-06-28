@@ -43,8 +43,8 @@ class TestS3Client(unittest.TestCase):
         initTime = dt.datetime(2023, 1, 1)
         fileName = "test_file.grib"
         filePath = pathlib.Path("raw") \
-            / initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING) \
-            / fileName
+                   / initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING) \
+                   / fileName
         self.mockS3.put_object(
             Bucket=self.bucket,
             Key=filePath.as_posix(),
@@ -63,7 +63,7 @@ class TestS3Client(unittest.TestCase):
     def test_writeBytesToRawDir(self):
         # Call the writeBytesToRawDir method
         initTime = dt.datetime(2023, 1, 1)
-        fileName = "test_file"
+        fileName = "test_raw_file.grib"
         self.client.writeBytesToRawFile(fileName, initTime, b"test_data")
 
         # Verify the written file in the raw directory
@@ -76,12 +76,12 @@ class TestS3Client(unittest.TestCase):
         # Create mock folders/files in the raw directory
         self.mockS3.put_object(
             Bucket=self.bucket,
-            Key="raw/2023/01/01/0000/test_file",
+            Key="raw/2023/01/01/0000/test_raw_file1.grib",
             Body=b"test_data"
         )
         self.mockS3.put_object(
             Bucket=self.bucket,
-            Key="raw/2023/01/02/0300/test_file",
+            Key="raw/2023/01/02/0300/test_raw_file2.grib",
             Body=b"test_data"
         )
 
@@ -98,14 +98,14 @@ class TestS3Client(unittest.TestCase):
     def test_readBytesForInitTime(self):
         # Create a mock file in the raw directory for the given init time
         initTime = dt.datetime(2023, 1, 1)
-        fileName = "test_file"
+        fileName = "test_raw_file3.grib"
         filePath = pathlib.Path("raw") \
-            / initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING) \
-            / fileName
+                   / initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING) \
+                   / fileName
         self.mockS3.put_object(
             Bucket=self.bucket,
             Key=filePath.as_posix(),
-            Body=b"test_data"
+            Body=b"test_raw_file3"
         )
 
         # Call the readBytesForInitTime method
@@ -115,8 +115,9 @@ class TestS3Client(unittest.TestCase):
 
         # Verify the returned init time and bytes
         self.assertEqual(readInitTime, initTime)
-        self.assertEqual(readBytes, [b"test_data"])
+        self.assertEqual(readBytes, [b"test_raw_file3"])
 
+    @unittest.skip("'MockRawResponse' object has no attribute 'raw_headers'")
     def test_writeDatasetToZarrDir(self):
         # Create a mock dataset
         mock_dataset = xr.Dataset(
@@ -138,23 +139,25 @@ class TestS3Client(unittest.TestCase):
 
         # Call the writeDatasetToZarrDir method
         path = self.client.writeDatasetAsZarr(
-            name="test_file",
+            name="test_zarr_file.zarr",
             it=dt.datetime(2023, 1, 1),
             ds=mock_dataset
         )
+        print(self.mockS3.list_objects_v2(Bucket='test-bucket', Prefix=""))
+
 
         # Verify the returned path
-        expected_path = pathlib.Path("s3://test-bucket/zarr/test_file")
+        expected_path = pathlib.Path("s3://test-bucket/zarr/test_zarr_file.zarr")
         self.assertEqual(expected_path, path)
 
     def test_existsInZarrDir(self):
         # Create a mock file in the zarr directory
-        fileName = "test_file"
+        fileName = "test_zarr_file2.zarr"
         filePath = pathlib.Path("zarr") / fileName
         self.mockS3.put_object(
             Bucket=self.bucket,
             Key=filePath.as_posix(),
-            Body=b"test_data"
+            Body=b"test_zarr_data2"
         )
 
         # Call the existsInZarrDir method
@@ -165,6 +168,45 @@ class TestS3Client(unittest.TestCase):
 
         # Verify the existence of the file
         self.assertTrue(exists)
+
+    @unittest.skip("'MockRawResponse' object has no attribute 'raw_headers'")
+    def test_deleteZarrForInitTime(self):
+        # Write mock dataset to zarr directory
+        mock_dataset = xr.Dataset(
+            data_vars={
+                'wdir10': (
+                    ('init_time', 'step', 'x', 'y'), [[[[1, 2], [3, 4]], [[5, 6], [7, 8]]]]
+                ),
+                'prate': (
+                    ('init_time', 'step', 'x', 'y'), [[[[1, 2], [3, 4]], [[5, 6], [7, 8]]]]
+                )
+            },
+            coords={
+                'init_time': [dt.datetime(2023, 1, 1)],
+                'step': [0, 1],
+                'x': [0, 1],
+                'y': [0, 1],
+            }
+        )
+
+        # Call the writeDatasetToZarrDir method
+        path = self.client.writeDatasetAsZarr(
+            name="latest.zarr",
+            it=dt.datetime(2023, 1, 1),
+            ds=mock_dataset
+        )
+
+        # Call the deleteZarrForInitTime method
+        self.client.deleteZarrForInitTime(
+            name="latest.zarr",
+            it=dt.datetime(2023, 1, 1)
+        )
+
+        # Verify the file is deleted
+        self.assertFalse(self.client.zarrExistsForInitTime(
+            name="latest",
+            it=dt.datetime(2023, 1, 1)
+        ))
 
 
 if __name__ == "__main__":

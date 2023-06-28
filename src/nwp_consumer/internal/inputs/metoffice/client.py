@@ -207,8 +207,10 @@ def _loadSingleParameterGRIBAsOCFDataset(*, b: bytes) -> xr.Dataset:
             return xr.Dataset()
 
     parameterDataset = parameterDataset \
-        .drop_vars(["height", "pressure", "valid_time", "surface"], errors="ignore") \
-        .compute()
+        .drop_vars(
+            names=["height", "pressure", "valid_time", "surface", "heightAboveGround"],
+            errors="ignore"
+        ).compute()
 
     return parameterDataset
 

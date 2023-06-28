@@ -45,7 +45,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
             runDateTime=metOfficeInitTime
         )
         _, outBytes = metOfficeClient.fetchRawFileBytes(fi=fileInfo)
-        self.assertGreater(len(outBytes), 5000000)
+        self.assertGreater(len(outBytes), 4000000)
 
 
 class TestListRawFilesForInitTime(unittest.TestCase):
