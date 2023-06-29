@@ -132,16 +132,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Clean up old Container images from the registry
-      # * Only keeps the last 10 images tagged with the commit SHA
-      # * Does not affect images tagged with a semantic version
-      - name: Delete old container images
-        uses: actions/delete-package-versions@v4
-        with:
-          package-name: 'nwp-consumer'
-          package-type: 'container'
-          delete-only-untagged-versions: true
-
   # Define a "build-wheel" job that runs on main branch commits only
   # * Only runs if test job passes
   build-wheel:
