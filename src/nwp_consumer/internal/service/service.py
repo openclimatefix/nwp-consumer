@@ -4,7 +4,6 @@ import concurrent.futures
 import datetime as dt
 import itertools
 import pathlib
-import xarray as xr
 from concurrent.futures import ProcessPoolExecutor as PoolExecutor
 
 
@@ -14,6 +13,7 @@ import structlog
 from nwp_consumer import internal
 
 log = structlog.stdlib.get_logger()
+
 
 class NWPConsumerService:
     """The service class for the NWP Consumer.
