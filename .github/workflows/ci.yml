@@ -140,8 +140,7 @@ jobs:
         with:
           package-name: 'nwp-consumer'
           package-type: 'container'
-          min-versions-to-keep: 10
-          ignore-versions: '^\\d+\\.\\d+\\.\\d+$'
+          delete-only-untagged-versions: true
 
   # Define a "build-wheel" job that runs on main branch commits only
   # * Only runs if test job passes
