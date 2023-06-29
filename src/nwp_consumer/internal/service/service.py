@@ -4,6 +4,7 @@ import concurrent.futures
 import datetime as dt
 import itertools
 import pathlib
+import xarray as xr
 from concurrent.futures import ProcessPoolExecutor as PoolExecutor
 
 
@@ -108,11 +109,20 @@ class NWPConsumerService:
             # Convert the files once they are read in
             for future in concurrent.futures.as_completed(futures):
                 initTime, fileBytesList = future.result()
-                log.info(
-                    f"Creating Zarr for initTime {initTime.strftime('%Y-%m-%d %H:%M')}",
-                    initTime=initTime.strftime("%Y-%m-%d %H:%M")
+                log.debug(
+                    f"Creating Zarr for initTime {initTime.strftime('%Y/%m/%d %H:%M')}",
+                    initTime=initTime.strftime("%Y/%m/%d %H:%M")
                 )
                 dataset = self.fetcher.loadRawInitTimeDataAsOCFDataset(fbl=fileBytesList)
+
+                # Carry out a basic data quality check
+                for var in dataset.data_vars:
+                    if True in dataset[var].isnull():
+                        log.warn(
+                            f"Dataset for initTime {initTime.strftime('%Y/%m/%d %H:%M')} has NaNs in variable {var}",
+                            initTime=initTime.strftime("%Y/%m/%d %H:%M"),
+                            variable=var
+                        )
 
                 # Save the dataset to a zarr file
                 initTime = pd.Timestamp(dataset.coords["init_time"].values[0])
@@ -148,7 +158,7 @@ class NWPConsumerService:
         # Get the latest init time
         allInitTimes: list[dt.datetime] = self.storer.listInitTimesInRawDir()
         if not allInitTimes:
-            log.info("No init times found in raw directory")
+            log.info(event="No init times found in raw directory")
             return pathlib.Path()
         latestInitTime = allInitTimes[-1]
 
@@ -159,8 +169,8 @@ class NWPConsumerService:
         # Load the latest init time as a dataset
         _, fileBytesList = self.storer.readRawFilesForInitTime(it=latestInitTime)
         log.info(
-            f"Creating Latest Zarr for initTime {latestInitTime.strftime('%Y-%m-%d %H:%M')}",
-            initTime=latestInitTime.strftime("%Y-%m-%d %H:%M")
+            event=f"Creating Latest Zarr for initTime {latestInitTime.strftime('%Y/%m/%d %H:%M')}",
+            initTime=latestInitTime.strftime("%Y/%m/%d %H:%M")
         )
         dataset = self.fetcher.loadRawInitTimeDataAsOCFDataset(fbl=fileBytesList)
 
