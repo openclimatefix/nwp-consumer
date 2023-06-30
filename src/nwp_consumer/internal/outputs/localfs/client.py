@@ -75,9 +75,16 @@ class LocalFSClient(internal.StorageInterface):
                 # Add the initTime to the set
                 initTimes.add(ddt)
             except ValueError:
-                log.warn(f"Invalid folder name found in raw directory: {dir}")
+                log.debug(f"Invalid folder name found in raw directory: {dir}. Ignoring")
 
-        return sorted(initTimes)
+        sortedInitTimes = sorted(initTimes)
+        log.debug(
+            event=f"Found {len(initTimes)} init times in raw directory",
+            earliest=sortedInitTimes[0],
+            latest=sortedInitTimes[-1]
+        )
+
+        return sortedInitTimes
 
     def readRawFilesForInitTime(self, it: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
         """Read all files from the raw dir as bytes for the given init time.

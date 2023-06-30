@@ -7,10 +7,12 @@ import botocore.exceptions
 import numpy as np
 import xarray as xr
 from ocf_blosc2 import Blosc2
-import s3fs
+import structlog
 
 from nwp_consumer import internal
 
+
+log = structlog.stdlib.get_logger()
 
 class S3Client(internal.StorageInterface):
     """Client for AWS S3."""
@@ -86,10 +88,26 @@ class S3Client(internal.StorageInterface):
                 allDirs.add(pathlib.Path(obj['Key']).relative_to(self.__rawDir).parent)
 
         # Get the initTime from the folder pattern
-        initTimes = [dt.datetime.strptime(f.as_posix(), internal.RAW_FOLDER_PATTERN_FMT_STRING) for f in allDirs
-                     if f.match('*/*/*/*')]
+        initTimes = set()
+        for dir in allDirs:
+            if dir.match('*/*/*/*'):
+                try:
+                    # Try to parse the folder name as a datetime
+                    ddt = dt.datetime.strptime(
+                        dir.as_posix(),
+                        internal.RAW_FOLDER_PATTERN_FMT_STRING
+                    ).replace(tzinfo=None)
+                    initTimes.add(ddt)
+                except ValueError:
+                    log.debug(f"Invalid folder name found in raw directory: {dir}. Ignoring")
 
-        return sorted(initTimes)
+        sortedInitTimes = sorted(initTimes)
+        log.debug(
+            event=f"Found {len(initTimes)} init times in raw directory",
+            earliest=sortedInitTimes[0],
+            latest=sortedInitTimes[-1]
+        )
+        return sortedInitTimes
 
     def readRawFilesForInitTime(self, it: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
         """Read bytes of all files from the raw dir for the given initTime.
