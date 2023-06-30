@@ -85,20 +85,23 @@ class NWPConsumerService:
         savedPaths: list[pathlib.Path] = []
 
         # Get a list of all the init times that are stored locally between the start and end dates
+        desiredInitTimes: list[dt.datetime] = []
         allInitTimes: list[dt.datetime] = self.storer.listInitTimesInRawDir()
-        desiredInitTimes: list[dt.datetime] = [
-            it for it in allInitTimes if
-            ((start <= it.date() <= end) and
-             not self.storer.zarrExistsForInitTime(
-                 name=it.strftime('%Y%m%d%H%M.zarr'),
-                 it=it)
-             )
-        ]
+        for it in allInitTimes:
+            # Don't convert files that already exist
+            if self.storer.zarrExistsForInitTime(name=it.strftime('%Y%m%d%H%M.zarr'), it=it):
+                log.debug(
+                    f"Zarr for initTime {it.strftime('%Y/%m/%d %H:%M')} already exists, skipping.",
+                    initTime=it.strftime("%Y/%m/%d %H:%M")
+                )
+                continue
+            if start <= it.date() <= end:
+                desiredInitTimes.append(it)
 
         if not desiredInitTimes:
             log.info("No new files to convert to Zarr, exiting.",
-                     startDate=start.strftime("%Y-%m-%d %H:%M"),
-                     endDate=end.strftime("%Y-%m-%d %H:%M"))
+                     startDate=start.strftime("%Y/%m/%d %H:%M"),
+                     endDate=end.strftime("%Y/%m/%d %H:%M"))
             return savedPaths
 
         # For each init time, load the files from the storer and convert them to a dataset
