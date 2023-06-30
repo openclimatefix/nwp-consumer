@@ -2,12 +2,14 @@ import datetime as dt
 import pathlib
 
 import numpy as np
+import structlog
 import xarray as xr
 from ocf_blosc2 import Blosc2
-from distutils.dir_util import copy_tree
 import shutil
 
 from nwp_consumer import internal
+
+log = structlog.stdlib.get_logger()
 
 
 class LocalFSClient(internal.StorageInterface):
@@ -60,12 +62,20 @@ class LocalFSClient(internal.StorageInterface):
     def listInitTimesInRawDir(self) -> list[dt.datetime]:
         """List all initTimes in the raw directory."""
         # List all the YYYY/MM/DD/INITTIME folders in the raw directory
-        files = [f.relative_to(self.__rawDir) for f in self.__rawDir.glob('*/*/*/*') if f.is_dir()]
+        dirs = [f.relative_to(self.__rawDir) for f in self.__rawDir.glob('*/*/*/*') if f.suffix == ""]
 
-        # Get the set of initTimes from the file paths
-        initTimes = set([
-            dt.datetime.strptime(f.as_posix(), internal.RAW_FOLDER_PATTERN_FMT_STRING).replace(tzinfo=None) for f in files
-        ])
+        initTimes = set()
+        for dir in dirs:
+            try:
+                # Try to parse the dir as a datetime
+                ddt: dt.datetime = dt.datetime.strptime(
+                    dir.as_posix(),
+                    internal.RAW_FOLDER_PATTERN_FMT_STRING
+                ).replace(tzinfo=None)
+                # Add the initTime to the set
+                initTimes.add(ddt)
+            except ValueError:
+                log.warn(f"Invalid folder name found in raw directory: {dir}")
 
         return sorted(initTimes)
 

@@ -230,5 +230,6 @@ class TestDeleteZarrForInitTime(unittest.TestCase):
         shutil.rmtree("test_raw_dir")
         shutil.rmtree("test_zarr_dir")
 
+
 if __name__ == "__main__":
     unittest.main()
