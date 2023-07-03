@@ -3,7 +3,7 @@
 Usage:
   nwp-consumer download --from <startDate> --to <endDate> [options]
   nwp-consumer convert --from <startDate> --to <endDate> [options]
-  nwp-consumer consume --from <startDate> --to <endDate> [options]
+  nwp-consumer consume [options]
   nwp-consumer (-h | --help)
   nwp-consumer --version
 
@@ -14,8 +14,8 @@ Options:
 
   -h --help           Show this screen.
   --version           Show version.
-  --from <startDate>  Start date in YYYY-MM-DD format
-  --to <endDate>      End date in YYYY-MM-DD format
+  --from <startDate>  Start date in YYYY-MM-DD format [default: today].
+  --to <endDate>      End date in YYYY-MM-DD format [default: today].
   --source <source>   Data source to use (ceda/metoffice) [default: ceda].
   --sink <sink>       Data sink to use (local/s3) [default: local].
   --rdir <rawdir>     Directory of raw data store [default: /tmp/raw].
@@ -97,6 +97,13 @@ def run():
         storer=storer
     )
 
+    # Set default values for start and end dates
+    if arguments['--from'] is "today" or None:
+        arguments['--from'] = dt.datetime.now().strftime("%Y-%m-%d")
+    if arguments['--to'] is "today" or None:
+        arguments['--to'] = dt.datetime.now().strftime("%Y-%m-%d")
+
+    # Parse start and end dates
     startDate: dt.date = dt.datetime.strptime(arguments['--from'], "%Y-%m-%d").date()
     endDate: dt.date = dt.datetime.strptime(arguments['--to'], "%Y-%m-%d").date()
     if endDate < startDate:
