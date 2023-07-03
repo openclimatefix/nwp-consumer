@@ -103,9 +103,14 @@ class NWPConsumerService:
                      startDate=start.strftime("%Y/%m/%d %H:%M"),
                      endDate=end.strftime("%Y/%m/%d %H:%M"))
             return savedPaths
+        else:
+            log.info(
+                event=f"Converting {len(desiredInitTimes)} init times to zarr.",
+                num=len(desiredInitTimes)
+            )
 
         # For each init time, load the files from the storer and convert them to a dataset
-        with PoolExecutor(max_workers=8) as pe:
+        with PoolExecutor(max_workers=2) as pe:
             futures: list[concurrent.futures.Future[list[bytes]]] = [
                 pe.submit(self.storer.readRawFilesForInitTime, it=it) for it in desiredInitTimes
             ]
@@ -117,6 +122,9 @@ class NWPConsumerService:
                     initTime=initTime.strftime("%Y/%m/%d %H:%M")
                 )
                 dataset = self.fetcher.loadRawInitTimeDataAsOCFDataset(fbl=fileBytesList)
+
+                # Delete the filebytes from memory
+                del fileBytesList
 
                 # Carry out a basic data quality check
                 for var in dataset.data_vars:
@@ -135,6 +143,9 @@ class NWPConsumerService:
                     ds=dataset
                 )
                 savedPaths.append(savedZarrPath)
+
+                # Delete the dataset from memory
+                del dataset
 
         return savedPaths
 
