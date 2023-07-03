@@ -67,12 +67,14 @@ class NWPConsumerService:
             # Save the files as their downloads are completed
             for future in concurrent.futures.as_completed(futures):
                 fileInfo, fileBytes = future.result()
+                del future
                 savedFilePath = self.storer.writeBytesToRawFile(
                     name=fileInfo.fname() + ".grib",
                     it=fileInfo.initTime(),
                     b=fileBytes
                 )
                 downloadedPaths.append(savedFilePath)
+                del fileBytes
 
         return downloadedPaths
 
@@ -117,13 +119,13 @@ class NWPConsumerService:
             # Convert the files once they are read in
             for future in concurrent.futures.as_completed(futures):
                 initTime, fileBytesList = future.result()
+                del future
+
                 log.debug(
                     f"Creating Zarr for initTime {initTime.strftime('%Y/%m/%d %H:%M')}",
                     initTime=initTime.strftime("%Y/%m/%d %H:%M")
                 )
                 dataset = self.fetcher.loadRawInitTimeDataAsOCFDataset(fbl=fileBytesList)
-
-                # Delete the filebytes from memory
                 del fileBytesList
 
                 # Carry out a basic data quality check
@@ -143,8 +145,6 @@ class NWPConsumerService:
                     ds=dataset
                 )
                 savedPaths.append(savedZarrPath)
-
-                # Delete the dataset from memory
                 del dataset
 
         return savedPaths
@@ -194,5 +194,6 @@ class NWPConsumerService:
             it=latestInitTime,
             ds=dataset
         )
+        del dataset
 
         return savedZarrPath
