@@ -12,7 +12,7 @@ import structlog
 
 from nwp_consumer import internal
 
-log = structlog.stdlib.get_logger()
+log = structlog.getLogger()
 
 
 class NWPConsumerService:

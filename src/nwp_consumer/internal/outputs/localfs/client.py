@@ -9,7 +9,7 @@ import shutil
 
 from nwp_consumer import internal
 
-log = structlog.stdlib.get_logger()
+log = structlog.getLogger()
 
 
 class LocalFSClient(internal.StorageInterface):

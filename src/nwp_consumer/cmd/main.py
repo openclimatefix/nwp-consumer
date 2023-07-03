@@ -21,6 +21,7 @@ Options:
   --rdir <rawdir>     Directory of raw data store [default: /tmp/raw].
   --zdir <zarrdir>    Directory of zarr data store [default: /tmp/zarr].
   --create-latest     Create a zarr of the dataset with the latest init time [default: False].
+  --verbose           Enable verbose logging [default: False].
 """
 
 import datetime as dt
@@ -40,7 +41,7 @@ except importlib.metadata.PackageNotFoundError:
     # package is not installed
     pass
 
-log = structlog.stdlib.get_logger()
+log = structlog.getLogger()
 
 
 def run():

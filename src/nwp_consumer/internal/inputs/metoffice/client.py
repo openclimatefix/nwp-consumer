@@ -12,7 +12,7 @@ from nwp_consumer import internal
 
 from ._models import MetOfficeFileInfo, MetOfficeResponse
 
-log = structlog.stdlib.get_logger()
+log = structlog.getLogger()
 
 # Defines the mapping from MetOffice parameter names to OCF parameter names
 PARAMETER_RENAME_MAP: dict[str, str] = {

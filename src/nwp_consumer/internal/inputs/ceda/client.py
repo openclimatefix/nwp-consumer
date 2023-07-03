@@ -16,7 +16,7 @@ from nwp_consumer import internal
 
 from ._models import CEDAFileInfo, CEDAResponse
 
-log = structlog.stdlib.get_logger()
+log = structlog.getLogger()
 
 # Defines parameters in CEDA that are not available from MetOffice
 PARAMETER_IGNORE_LIST: typing.Sequence[str] = (
