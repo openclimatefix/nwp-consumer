@@ -120,7 +120,7 @@ def run():
 
     if arguments['convert']:
         converted = service.ConvertRawDatasetToZarr(
-            start=endDate,
+            start=startDate,
             end=endDate
         )
 
