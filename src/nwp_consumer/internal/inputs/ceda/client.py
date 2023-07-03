@@ -96,9 +96,18 @@ class CEDAClient(internal.FetcherInterface):
             method="GET",
             url=f"{self.httpsBase}/{self.dataUrl}/{it:%Y/%m/%d}?json"
         )
+
+        if response.status_code == 404:
+            # No data available for this init time. Fail soft
+            log.warn(
+                event=f"No data available for init time {it:%Y/%m/%d %H:%M}",
+                url=response.url
+            )
+            return []
         if not response.ok:
-            raise AssertionError(
-                f"Non-okay status for {response.url}: {response.status_code}"
+            # Something else has gone wrong. Fail hard
+            raise ConnectionError(
+                f"Error calling url {response.url}: {response.status_code}"
             ) from None
 
         # Map the response to a CEDAResponse object to ensure it looks as expected
