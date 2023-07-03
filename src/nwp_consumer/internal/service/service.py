@@ -95,13 +95,6 @@ class NWPConsumerService:
                     initTime=it.strftime("%Y/%m/%d %H:%M")
                 )
                 continue
-            log.debug(
-                event=f"Investigating init time {it:%Y/%m/%d %H:%M}",
-                date=it.date(),
-                start=start,
-                end=end,
-                added=start <= it.date() <= end
-            )
             if start <= it.date() <= end:
                 desiredInitTimes.append(it)
 
