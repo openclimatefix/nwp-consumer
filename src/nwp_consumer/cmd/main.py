@@ -99,9 +99,9 @@ def run():
     )
 
     # Set default values for start and end dates
-    if arguments['--from'] is "today" or None:
+    if arguments['--from'] == "today" or arguments['--from'] is None:
         arguments['--from'] = dt.datetime.now().strftime("%Y-%m-%d")
-    if arguments['--to'] is "today" or None:
+    if arguments['--to'] == "today" or arguments['--to'] is None:
         arguments['--to'] = dt.datetime.now().strftime("%Y-%m-%d")
 
     # Parse start and end dates

@@ -138,6 +138,7 @@ class CEDAClient(internal.FetcherInterface):
         wholesaleDatasets: list[xr.Dataset] = [
             _loadWholesaleFileAsDataset(b=bd) for bd in fbl
         ]
+        del fbl
 
         # Merge the wholesale datasets into one
         # TODO: Enable concatenation of datasets for different step sets
@@ -177,6 +178,7 @@ def _loadWholesaleFileAsDataset(*, b: bytes) -> xr.Dataset:
         # Copy the raw file to a local temp file
         tempParameterFile.write(b)
         tempParameterFile.seek(0)
+        del b
 
         # Load the wholesale file as a dataset
         try:
