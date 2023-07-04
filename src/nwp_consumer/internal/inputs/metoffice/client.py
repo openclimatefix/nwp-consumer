@@ -1,6 +1,7 @@
 """Implements a client to fetch the data from the MetOffice API."""
 
 import datetime as dt
+import gc
 import tempfile
 import urllib.request
 
@@ -144,6 +145,7 @@ class MetOfficeClient(internal.FetcherInterface):
         # * Enables the deletion of the old DataArrays
         dataset.load()
         del parameterDataArrays
+        gc.collect()
 
         # Add the init time as a coordinate
         dataset = dataset \

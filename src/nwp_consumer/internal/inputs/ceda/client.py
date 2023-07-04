@@ -1,6 +1,7 @@
 """Client adapting CEDA API to internal Fetcher port."""
 
 import datetime as dt
+import gc
 import tempfile
 import typing
 import urllib.parse
@@ -152,6 +153,7 @@ class CEDAClient(internal.FetcherInterface):
         # * Enables deletion of the old datasets
         wholesaleDataset.load()
         del wholesaleDatasets
+        gc.collect()
 
         # Add in x and y coordinates
         wholesaleDataset = _reshapeTo2DGrid(

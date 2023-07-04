@@ -2,6 +2,7 @@
 
 import concurrent.futures
 import datetime as dt
+import gc
 import itertools
 import pathlib
 from concurrent.futures import ProcessPoolExecutor as PoolExecutor
@@ -75,6 +76,7 @@ class NWPConsumerService:
                 )
                 downloadedPaths.append(savedFilePath)
                 del fileBytes
+                gc.collect()
 
         return downloadedPaths
 
@@ -127,6 +129,7 @@ class NWPConsumerService:
                 )
                 dataset = self.fetcher.loadRawInitTimeDataAsOCFDataset(fbl=fileBytesList)
                 del fileBytesList
+                gc.collect()
 
                 # Carry out a basic data quality check
                 for var in dataset.data_vars:
@@ -146,6 +149,7 @@ class NWPConsumerService:
                 )
                 savedPaths.append(savedZarrPath)
                 del dataset
+                gc.collect()
 
         return savedPaths
 
