@@ -159,7 +159,10 @@ class TestExistsInZarrDir(unittest.TestCase):
 
     def test_file_does_not_exist(self) -> None:
         # Check if the file exists using the function
-        exists = self.client.zarrExistsForInitTime(name='no_such_' + self.fileName, it=self.initTime)
+        exists = self.client.zarrExistsForInitTime(
+            name='no_such_' + self.fileName,
+            it=self.initTime
+        )
 
         # Assert that the file does not exist
         self.assertFalse(exists)

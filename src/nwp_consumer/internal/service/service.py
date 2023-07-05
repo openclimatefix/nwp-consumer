@@ -7,7 +7,6 @@ import itertools
 import pathlib
 from concurrent.futures import ProcessPoolExecutor as PoolExecutor
 
-
 import pandas as pd
 import structlog
 
@@ -35,8 +34,12 @@ class NWPConsumerService:
         downloadedPaths: list[pathlib.Path] = []
 
         # Get the list of init times as datetime objects
-        # * This spans every hour between the start and end dates inclusive
-        allInitTimes: list[dt.datetime] = pd.date_range(start, end, inclusive='left', freq='H').to_pydatetime().tolist()
+        # * This spans every hour between the start and end dates up to 11:00pm on the end date
+        allInitTimes: list[dt.datetime] = pd.date_range(
+            start=start,
+            end=end+dt.timedelta(days=1),
+            inclusive='left',
+            freq='H').to_pydatetime().tolist()
 
         # For each init time, get the list of files that need to be downloaded
         allWantedFileInfos: list[internal.FileInfoModel] = list(itertools.chain.from_iterable(
@@ -135,7 +138,8 @@ class NWPConsumerService:
                 for var in dataset.data_vars:
                     if True in dataset[var].isnull():
                         log.warn(
-                            f"Dataset for initTime {initTime.strftime('%Y/%m/%d %H:%M')} has NaNs in variable {var}",
+                            event=f"Dataset for initTime {initTime.strftime('%Y/%m/%d %H:%M')}"
+                            f" has NaNs in variable {var}",
                             initTime=initTime.strftime("%Y/%m/%d %H:%M"),
                             variable=var
                         )
@@ -172,7 +176,6 @@ class NWPConsumerService:
 
     def CreateLatestZarr(self) -> pathlib.Path:
         """Create a Zarr file for the latest init time."""
-
         # Get the latest init time
         allInitTimes: list[dt.datetime] = self.storer.listInitTimesInRawDir()
         if not allInitTimes:

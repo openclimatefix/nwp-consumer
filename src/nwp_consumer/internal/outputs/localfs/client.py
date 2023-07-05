@@ -1,11 +1,11 @@
 import datetime as dt
 import pathlib
+import shutil
 
 import numpy as np
 import structlog
 import xarray as xr
 from ocf_blosc2 import Blosc2
-import shutil
 
 from nwp_consumer import internal
 
@@ -36,7 +36,7 @@ class LocalFSClient(internal.StorageInterface):
 
     def rawFileExistsForInitTime(self, *, name: str, it: dt.datetime) -> bool:
         """Check if a file exists in the raw directory.
-        
+
         :param name: The name of the file to check for
         :param it: The init time of the data within the file
         """
@@ -46,7 +46,7 @@ class LocalFSClient(internal.StorageInterface):
 
     def writeBytesToRawFile(self, name: str, it: dt.datetime, b: bytes) -> pathlib.Path:
         """Write the given bytes to the raw directory.
-        
+
         :param name: The name of the file to write
         :param it: The init time of the data within the file
         :param b: The bytes to write
@@ -106,7 +106,7 @@ class LocalFSClient(internal.StorageInterface):
 
     def zarrExistsForInitTime(self, name: str, it: dt.datetime) -> bool:
         """Check if a file exists in the zarr directory.
-        
+
         :param name: The name of the file to check for
         :param it: The init time of the data within the Dataset
         """
@@ -115,7 +115,7 @@ class LocalFSClient(internal.StorageInterface):
 
     def writeDatasetAsZarr(self, name: str, it: dt.datetime, ds: xr.Dataset) -> pathlib.Path:
         """Write the given Dataset to the zarr directory.
-        
+
         :param name: Name of the file to write
         :param it: Init time of the data within the Dataset
         :param ds: Dataset to write
@@ -169,7 +169,6 @@ class LocalFSClient(internal.StorageInterface):
 
     def deleteZarrForInitTime(self, *, name: str, it: dt.datetime) -> None:
         """Delete the Zarr file for the given init time."""
-
         path = pathlib.Path(f"{self.__zarrDir}/{name}")
 
         if not path.exists():

@@ -125,7 +125,7 @@ class MetOfficeClient(internal.FetcherInterface):
         return wantedFileInfos
 
     def loadRawInitTimeDataAsOCFDataset(self, *, fbl: list[bytes]) -> xr.Dataset:
-        """Converts a list of raw file bytes into an OCF XArray Dataset.
+        """Convert a list of raw file bytes into an OCF XArray Dataset.
 
         :param fbl: List of raw file bytes to convert
         """
@@ -158,7 +158,7 @@ class MetOfficeClient(internal.FetcherInterface):
 
 
 def _loadSingleParameterGRIBAsOCFDataset(*, b: bytes) -> xr.Dataset:
-    """Loads a MetOffice single-parameter GRIB file as an OCF-compliant Dataset.
+    """Load a MetOffice single-parameter GRIB file as an OCF-compliant Dataset.
 
     :param b: Raw file bytes to load
     """
@@ -218,7 +218,7 @@ def _loadSingleParameterGRIBAsOCFDataset(*, b: bytes) -> xr.Dataset:
 
 
 def _isWantedFile(*, fi: MetOfficeFileInfo, dit: dt.datetime) -> bool:
-    """Checks if the input FileInfo corresponds to a wanted GRIB file.
+    """Check if the input FileInfo corresponds to a wanted GRIB file.
 
     :param fi: FileInfo describing the file to check
     :param dit: Desired init time

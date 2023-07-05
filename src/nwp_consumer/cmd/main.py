@@ -110,23 +110,21 @@ def run():
     if endDate < startDate:
         raise ValueError("Argument '--from' cannot specify date prior to '--to'")
 
-    downloaded = []
-    converted = []
 
     if arguments['download']:
-        downloaded = service.DownloadRawDataset(
+        service.DownloadRawDataset(
             start=startDate,
             end=endDate
         )
 
     if arguments['convert']:
-        converted = service.ConvertRawDatasetToZarr(
+        service.ConvertRawDatasetToZarr(
             start=startDate,
             end=endDate
         )
 
     if arguments['consume']:
-        converted = service.DownloadAndConvert(
+        service.DownloadAndConvert(
             start=startDate,
             end=endDate
         )

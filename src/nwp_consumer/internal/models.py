@@ -37,12 +37,12 @@ class FileInfoModel(abc.ABC):
 
     @abc.abstractmethod
     def fname(self) -> str:
-        """Returns the file name."""
+        """Return the file name."""
         pass
 
     @abc.abstractmethod
     def initTime(self) -> dt.datetime:
-        """Returns the init time of the file."""
+        """Return the init time of the file."""
         pass
 
 
@@ -118,7 +118,8 @@ class StorageInterface(abc.ABC):
         """Check if a file exists in the zarr directory.
 
         :param name: Name of the file to check
-        :param it: Init Time of the model data within the file"""
+        :param it: Init Time of the model data within the file
+        """
         pass
 
     @abc.abstractmethod
@@ -146,5 +147,4 @@ class StorageInterface(abc.ABC):
         :param name: Name of the file to delete
         :param it: Init Time of the model data within the file
         """
-
         pass

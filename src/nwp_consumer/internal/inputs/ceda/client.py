@@ -189,7 +189,7 @@ def _loadWholesaleFileAsDataset(*, b: bytes) -> xr.Dataset:
                 backend_kwargs={"indexpath": ""}
             )
         except Exception as e:
-            raise Exception(f"Error loading wholesale file as dataset: {e}")
+            raise Exception(f"Error loading wholesale file as dataset: {e}") from e
 
         for i in range(len(datasets)):
             ds = datasets[i]
