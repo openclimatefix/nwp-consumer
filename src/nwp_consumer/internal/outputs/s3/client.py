@@ -54,8 +54,10 @@ class S3Client(internal.StorageInterface):
         :param name: The name of the file to check for
         :param it: The init time of the data within the file
         """
-        path = self.__bucket / self.__rawDir \
-               / it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING) / name
+        path = self.__bucket \
+               / self.__rawDir \
+               / it.strftime(internal.IT_FOLDER_FMTSTR) \
+               / name
         return self.__fs.exists(path.as_posix())
 
     def writeBytesToRawFile(self, name: str, it: dt.datetime, b: bytes) -> pathlib.Path:
@@ -66,7 +68,7 @@ class S3Client(internal.StorageInterface):
         :param b: The bytes to write
         """
         path = self.__bucket / self.__rawDir \
-               / it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING) / name
+               / it.strftime(internal.IT_FOLDER_FMTSTR) / name
 
         self.__fs.write_bytes(path.as_posix(), b)
         return path
@@ -87,7 +89,7 @@ class S3Client(internal.StorageInterface):
                     # Try to parse the folder name as a datetime
                     ddt = dt.datetime.strptime(
                         dir.as_posix(),
-                        internal.RAW_FOLDER_PATTERN_FMT_STRING
+                        internal.IT_FOLDER_FMTSTR
                     ).replace(tzinfo=None)
                     initTimes.add(ddt)
                 except ValueError:
@@ -107,7 +109,7 @@ class S3Client(internal.StorageInterface):
         :param it: The init time to read for
         """
         initTimeDirPath = self.__bucket / self.__rawDir \
-                          / it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)
+                          / it.strftime(internal.IT_FOLDER_FMTSTR)
         files = self.__fs.ls(initTimeDirPath.as_posix())
 
         return it, [self.__fs.read_bytes(f) for f in files]
@@ -146,8 +148,7 @@ class S3Client(internal.StorageInterface):
                 "variable": -1,
                 "y": len(da.y) // 2,
                 "x": len(da.x) // 2,
-            }) \
-            .compute()
+            }).compute()
         del da
 
         # Create new Zarr store.

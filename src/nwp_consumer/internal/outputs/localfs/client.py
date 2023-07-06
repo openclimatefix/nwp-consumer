@@ -41,7 +41,7 @@ class LocalFSClient(internal.StorageInterface):
         :param it: The init time of the data within the file
         """
         path = pathlib.Path(
-            f"{self.__rawDir}/{it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{name}")
+            f"{self.__rawDir}/{it.strftime(internal.IT_FOLDER_FMTSTR)}/{name}")
         return path.exists()
 
     def writeBytesToRawFile(self, name: str, it: dt.datetime, b: bytes) -> pathlib.Path:
@@ -51,7 +51,7 @@ class LocalFSClient(internal.StorageInterface):
         :param it: The init time of the data within the file
         :param b: The bytes to write
         """
-        path = pathlib.Path(f"{self.__rawDir}/{it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{name}")
+        path = pathlib.Path(f"{self.__rawDir}/{it.strftime(internal.IT_FOLDER_FMTSTR)}/{name}")
 
         # Create the path to the file if the folders do not exist
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -70,7 +70,7 @@ class LocalFSClient(internal.StorageInterface):
                 # Try to parse the dir as a datetime
                 ddt: dt.datetime = dt.datetime.strptime(
                     dir.as_posix(),
-                    internal.RAW_FOLDER_PATTERN_FMT_STRING
+                    internal.IT_FOLDER_FMTSTR
                 ).replace(tzinfo=None)
                 # Add the initTime to the set
                 initTimes.add(ddt)
@@ -91,7 +91,7 @@ class LocalFSClient(internal.StorageInterface):
 
         :param it: The init time to read files for
         """
-        initTimeDirPath = pathlib.Path(f"{self.__rawDir}/{it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}")
+        initTimeDirPath = pathlib.Path(f"{self.__rawDir}/{it.strftime(internal.IT_FOLDER_FMTSTR)}")
 
         if not initTimeDirPath.exists():
             raise FileNotFoundError(f"Folder does not exist for init time {it} at {initTimeDirPath.as_posix()}")

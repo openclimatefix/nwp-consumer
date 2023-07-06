@@ -20,7 +20,7 @@ class TestExistsInRawDir(unittest.TestCase):
 
         # Create a temporary file to simulate an existing file in the raw directory
         self.file_path = Path(
-            f"test_raw_dir/{self.initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{self.fileName}")
+            f"test_raw_dir/{self.initTime.strftime(internal.IT_FOLDER_FMTSTR)}/{self.fileName}")
         self.file_path.parent.mkdir(parents=True, exist_ok=True)
         self.file_path.touch()
 
@@ -85,9 +85,9 @@ class TestListInitTimesInRawDir(unittest.TestCase):
         self.client = LocalFSClient("test_raw_dir", "test_zarr_dir", createDirs=True)
         # Create temporary directories and files to simulate the raw directory structure
         self.dir_paths = [
-            Path(f"test_raw_dir/{dt.datetime(2023, 1, 1, 3).strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}"),
-            Path(f"test_raw_dir/{dt.datetime(2023, 1, 2, 6).strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}"),
-            Path(f"test_raw_dir/{dt.datetime(2023, 1, 3, 9).strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}")
+            Path(f"test_raw_dir/{dt.datetime(2023, 1, 1, 3).strftime(internal.IT_FOLDER_FMTSTR)}"),
+            Path(f"test_raw_dir/{dt.datetime(2023, 1, 2, 6).strftime(internal.IT_FOLDER_FMTSTR)}"),
+            Path(f"test_raw_dir/{dt.datetime(2023, 1, 3, 9).strftime(internal.IT_FOLDER_FMTSTR)}")
         ]
         for path in self.dir_paths:
             path.mkdir(parents=True, exist_ok=True)
@@ -116,9 +116,9 @@ class TestReadBytesForInitTime(unittest.TestCase):
         self.initTime = dt.datetime(2023, 1, 1, 3)
         # Create temporary directories and files to simulate the raw directory structure
         self.file_paths = [
-            Path(f"test_raw_dir/{self.initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/1.grib"),
-            Path(f"test_raw_dir/{self.initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/2.grib"),
-            Path(f"test_raw_dir/{self.initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/3.grib")
+            Path(f"test_raw_dir/{self.initTime.strftime(internal.IT_FOLDER_FMTSTR)}/1.grib"),
+            Path(f"test_raw_dir/{self.initTime.strftime(internal.IT_FOLDER_FMTSTR)}/2.grib"),
+            Path(f"test_raw_dir/{self.initTime.strftime(internal.IT_FOLDER_FMTSTR)}/3.grib")
         ]
         for path in self.file_paths:
             path.parent.mkdir(parents=True, exist_ok=True)

@@ -10,7 +10,7 @@ import xarray as xr
 # ------- Global constants ------- #
 
 # The folder pattern format string for the raw data's init time
-RAW_FOLDER_PATTERN_FMT_STRING = "%Y/%m/%d/%H%M"
+IT_FOLDER_FMTSTR = "%Y/%m/%d/%H%M"
 
 
 # ------- Domain models ------- #

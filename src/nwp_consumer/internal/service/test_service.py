@@ -27,7 +27,7 @@ class DummyStorer(internal.StorageInterface):
     def writeBytesToRawFile(
             self, name: str, it: dt.datetime, b: bytes) -> pathlib.Path:
         return pathlib.Path(
-            f"{it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{name}"
+            f"{it.strftime(internal.IT_FOLDER_FMTSTR)}/{name}"
         )
 
     def listInitTimesInRawDir(self) -> list[dt.datetime]:
@@ -103,8 +103,8 @@ class TestNWPConsumerService(unittest.TestCase):
 
         paths = service.DownloadRawDataset(start=startDate, end=endDate)
 
-        # 2 files per init time, all init times except the last one
-        self.assertEqual(2 * len(INIT_HOURS) * (len(DAYS) - 1), len(paths))
+        # 2 files per init time, all init times
+        self.assertEqual(2 * len(INIT_HOURS) * (len(DAYS)), len(paths))
 
     def test_convertRawDataset(self):
         service = NWPConsumerService(fetcher=self.testFetcher, storer=self.testStorer)

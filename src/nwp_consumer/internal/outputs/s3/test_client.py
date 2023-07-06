@@ -14,37 +14,39 @@ from . import S3Client
 
 class TestS3Client(unittest.TestCase):
 
-    def setUp(self):
-        self.server = ThreadedMotoServer()
-        self.server.start()
+    @classmethod
+    def setUpClass(cls):
+        cls.server = ThreadedMotoServer()
+        cls.server.start()
 
         session = Session()
-        self.mockS3 = session.create_client(
+        cls.mockS3 = session.create_client(
             service_name="s3",
             region_name="us-east-1",
             endpoint_url="http://localhost:5000"
         )
 
         # Create a mock S3 bucket
-        self.bucket = "test-bucket"
+        cls.bucket = "test-bucket"
 
-        self.mockS3.create_bucket(
-            Bucket=self.bucket
+        cls.mockS3.create_bucket(
+            Bucket=cls.bucket
         )
 
         # Create an instance of the S3Client class
-        self.client = S3Client(
+        cls.client = S3Client(
             key="test-key",
             secret="test-secret",
             region="us-east-1",
             rawDir="raw",
             zarrDir="zarr",
-            bucket=self.bucket,
+            bucket=cls.bucket,
             endpointURL="http://localhost:5000",
         )
 
-    def tearDown(self):
-        self.server.stop()
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.stop()
 
     def test_existsInRawDir(self):
         # Create a mock file in the raw directory
@@ -138,7 +140,7 @@ class TestS3Client(unittest.TestCase):
         initTime = dt.datetime(2023, 1, 1)
         fileName = "test_raw_file3.grib"
         filePath = pathlib.Path("raw") \
-                   / initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING) \
+                   / initTime.strftime(internal.IT_FOLDER_FMTSTR) \
                    / fileName
         self.mockS3.put_object(
             Bucket=self.bucket,
