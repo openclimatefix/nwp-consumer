@@ -14,6 +14,10 @@ from . import S3Client
 
 class TestS3Client(unittest.TestCase):
 
+    mockS3 = None
+    bucket = None
+    server = None
+
     @classmethod
     def setUpClass(cls):
         cls.server = ThreadedMotoServer()
@@ -23,7 +27,9 @@ class TestS3Client(unittest.TestCase):
         cls.mockS3 = session.create_client(
             service_name="s3",
             region_name="us-east-1",
-            endpoint_url="http://localhost:5000"
+            endpoint_url="http://localhost:5000",
+            aws_access_key_id="test-key",
+            aws_secret_access_key="test-secret",
         )
 
         # Create a mock S3 bucket
