@@ -79,7 +79,7 @@ class TestS3Client(unittest.TestCase):
         self.testS3.put_object(
             Bucket=BUCKET,
             Key=filePath,
-            Body=b"test_data"
+            Body=bytes(fileName, 'utf-8')
         )
 
         # Call the existsInRawDir method
@@ -139,14 +139,14 @@ class TestS3Client(unittest.TestCase):
     def test_readBytesForInitTime(self):
         # Create a mock file in the raw directory for the given init time
         initTime = dt.datetime(2023, 1, 1)
-        fileName = "test_raw_file3.grib"
+        fileName = inspect.stack()[0][3] + ".grib"
         filePath = pathlib.Path("raw") \
                    / initTime.strftime(internal.IT_FOLDER_FMTSTR) \
                    / fileName
         self.testS3.put_object(
             Bucket=BUCKET,
             Key=filePath.as_posix(),
-            Body=b"test_raw_file3"
+            Body=bytes(fileName, 'utf-8')
         )
 
         # Call the readBytesForInitTime method
@@ -156,7 +156,7 @@ class TestS3Client(unittest.TestCase):
 
         # Verify the returned init time and bytes
         self.assertEqual(initTime, readInitTime)
-        self.assertEqual([b"test_raw_file3"], readBytes)
+        self.assertEqual([bytes(fileName, 'utf-8')], readBytes)
 
     def test_writeDatasetToZarrDir(self):
         # Create a mock dataset
@@ -177,25 +177,26 @@ class TestS3Client(unittest.TestCase):
             }
         )
 
+        filename = inspect.stack()[0][3] + ".zarr"
+
         # Call the writeDatasetToZarrDir method
         path = self.client.writeDatasetAsZarr(
-            name="test_zarr_file.zarr",
+            name=filename,
             it=dt.datetime(2023, 1, 1),
             ds=mock_dataset
         )
 
         # Verify the returned path
-        expected_path = pathlib.Path("test-bucket/zarr/test_zarr_file.zarr")
+        expected_path = pathlib.Path(f"test-bucket/zarr/{filename}")
         self.assertEqual(expected_path, path)
 
     def test_existsInZarrDir(self):
         # Create a mock file in the zarr directory
-        fileName = "test_zarr_file2.zarr"
-        filePath = pathlib.Path("zarr") / fileName
+        fileName = inspect.stack()[0][3] + ".zarr"
         self.testS3.put_object(
             Bucket=BUCKET,
-            Key=filePath.as_posix(),
-            Body=b"test_zarr_data2"
+            Key=f"zarr/{fileName}",
+            Body=bytes(fileName, 'utf-8')
         )
 
         # Call the existsInZarrDir method
