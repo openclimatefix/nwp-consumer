@@ -175,7 +175,7 @@ class TestExistsInZarrDir(unittest.TestCase):
 class TestWriteDatasetToZarrDir(unittest.TestCase):
     def setUp(self) -> None:
         self.client = LocalFSClient("test_raw_dir", "test_zarr_dir", createDirs=True)
-        self.fileName = "test_file"
+        self.fileName = "test_file.zarr"
         self.initTime = dt.datetime(2023, 1, 1)
         self.data = xr.Dataset(
             data_vars={

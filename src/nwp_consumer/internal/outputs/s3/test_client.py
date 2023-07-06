@@ -11,43 +11,48 @@ from nwp_consumer import internal
 
 from . import S3Client
 
+ENDPOINT_URL = "http://localhost:5000"
+BUCKET = "test-bucket"
+KEY = "test-key"
+SECRET = "test-secret"
+REGION = "us-east-1"
+
 
 class TestS3Client(unittest.TestCase):
 
-    mockS3 = None
+    testS3 = None
     bucket = None
     server = None
 
     @classmethod
     def setUpClass(cls):
+        # Start a local S3 server
         cls.server = ThreadedMotoServer()
         cls.server.start()
 
         session = Session()
-        cls.mockS3 = session.create_client(
+        cls.testS3 = session.create_client(
             service_name="s3",
-            region_name="us-east-1",
-            endpoint_url="http://localhost:5000",
-            aws_access_key_id="test-key",
-            aws_secret_access_key="test-secret",
+            region_name=REGION,
+            endpoint_url=ENDPOINT_URL,
+            aws_access_key_id=KEY,
+            aws_secret_access_key=SECRET,
         )
 
         # Create a mock S3 bucket
-        cls.bucket = "test-bucket"
-
-        cls.mockS3.create_bucket(
-            Bucket=cls.bucket
+        cls.testS3.create_bucket(
+            Bucket=BUCKET,
         )
 
         # Create an instance of the S3Client class
         cls.client = S3Client(
-            key="test-key",
-            secret="test-secret",
-            region="us-east-1",
+            key=KEY,
+            secret=SECRET,
+            region=REGION,
             rawDir="raw",
             zarrDir="zarr",
-            bucket=cls.bucket,
-            endpointURL="http://localhost:5000",
+            bucket=BUCKET,
+            endpointURL=ENDPOINT_URL,
         )
 
     @classmethod
@@ -59,8 +64,8 @@ class TestS3Client(unittest.TestCase):
         initTime = dt.datetime(2023, 1, 1)
         fileName = inspect.stack()[0][3] + ".grib"
         filePath = f"raw/{initTime:%Y/%m/%d/%H%M}/{fileName}"
-        self.mockS3.put_object(
-            Bucket=self.bucket,
+        self.testS3.put_object(
+            Bucket=BUCKET,
             Key=filePath,
             Body=b"test_data"
         )
@@ -72,8 +77,8 @@ class TestS3Client(unittest.TestCase):
         )
 
         # Remove the mock file in the raw directory
-        self.mockS3.delete_object(
-            Bucket=self.bucket,
+        self.testS3.delete_object(
+            Bucket=BUCKET,
             Key=filePath,
         )
 
@@ -96,27 +101,27 @@ class TestS3Client(unittest.TestCase):
         path = self.client.writeBytesToRawFile(fileName, initTime, bytes(fileName, 'utf-8'))
 
         # Verify the written file in the raw directory
-        response = self.mockS3.get_object(
-            Bucket=self.bucket,
-            Key=path.relative_to(self.bucket).as_posix()
+        response = self.testS3.get_object(
+            Bucket=BUCKET,
+            Key=path.relative_to(BUCKET).as_posix()
         )
         self.assertEqual(response["Body"].read(), bytes(fileName, 'utf-8'))
 
         # Remove the mock file in the raw directory
-        self.mockS3.delete_object(
-            Bucket=self.bucket,
-            Key=path.relative_to(self.bucket).as_posix(),
+        self.testS3.delete_object(
+            Bucket=BUCKET,
+            Key=path.relative_to(BUCKET).as_posix(),
         )
 
     def test_listInitTimesInRawDir(self):
         # Create mock folders/files in the raw directory
-        self.mockS3.put_object(
-            Bucket=self.bucket,
+        self.testS3.put_object(
+            Bucket=BUCKET,
             Key="raw/2023/01/01/0000/test_raw_file1.grib",
             Body=b"test_data"
         )
-        self.mockS3.put_object(
-            Bucket=self.bucket,
+        self.testS3.put_object(
+            Bucket=BUCKET,
             Key="raw/2023/01/02/0300/test_raw_file2.grib",
             Body=b"test_data"
         )
@@ -125,12 +130,12 @@ class TestS3Client(unittest.TestCase):
         init_times = self.client.listInitTimesInRawDir()
 
         # Remove the mock files in the raw directory
-        self.mockS3.delete_object(
-            Bucket=self.bucket,
+        self.testS3.delete_object(
+            Bucket=BUCKET,
             Key="raw/2023/01/01/0000/test_raw_file1.grib"
         )
-        self.mockS3.delete_object(
-            Bucket=self.bucket,
+        self.testS3.delete_object(
+            Bucket=BUCKET,
             Key="raw/2023/01/02/0300/test_raw_file2.grib"
         )
 
@@ -148,8 +153,8 @@ class TestS3Client(unittest.TestCase):
         filePath = pathlib.Path("raw") \
                    / initTime.strftime(internal.IT_FOLDER_FMTSTR) \
                    / fileName
-        self.mockS3.put_object(
-            Bucket=self.bucket,
+        self.testS3.put_object(
+            Bucket=BUCKET,
             Key=filePath.as_posix(),
             Body=b"test_raw_file3"
         )
@@ -160,8 +165,8 @@ class TestS3Client(unittest.TestCase):
         )
 
         # Remove the mock file in the raw directory
-        self.mockS3.delete_object(
-            Bucket=self.bucket,
+        self.testS3.delete_object(
+            Bucket=BUCKET,
             Key=filePath.as_posix()
         )
 
@@ -203,8 +208,8 @@ class TestS3Client(unittest.TestCase):
         # Create a mock file in the zarr directory
         fileName = "test_zarr_file2.zarr"
         filePath = pathlib.Path("zarr") / fileName
-        self.mockS3.put_object(
-            Bucket=self.bucket,
+        self.testS3.put_object(
+            Bucket=BUCKET,
             Key=filePath.as_posix(),
             Body=b"test_zarr_data2"
         )
