@@ -59,6 +59,18 @@ class TestS3Client(unittest.TestCase):
     def tearDownClass(cls):
         cls.server.stop()
 
+    def tearDown(self) -> None:
+        # Delete all objects in bucket
+        response = self.testS3.list_objects_v2(
+            Bucket=BUCKET,
+        )
+        if "Contents" in response:
+            for obj in response["Contents"]:
+                self.testS3.delete_object(
+                    Bucket=BUCKET,
+                    Key=obj["Key"],
+                )
+
     def test_existsInRawDir(self):
         # Create a mock file in the raw directory
         initTime = dt.datetime(2023, 1, 1)
@@ -74,12 +86,6 @@ class TestS3Client(unittest.TestCase):
         exists = self.client.rawFileExistsForInitTime(
             name=fileName,
             it=initTime
-        )
-
-        # Remove the mock file in the raw directory
-        self.testS3.delete_object(
-            Bucket=BUCKET,
-            Key=filePath,
         )
 
         # Verify the existence of the file
@@ -107,12 +113,6 @@ class TestS3Client(unittest.TestCase):
         )
         self.assertEqual(response["Body"].read(), bytes(fileName, 'utf-8'))
 
-        # Remove the mock file in the raw directory
-        self.testS3.delete_object(
-            Bucket=BUCKET,
-            Key=path.relative_to(BUCKET).as_posix(),
-        )
-
     def test_listInitTimesInRawDir(self):
         # Create mock folders/files in the raw directory
         self.testS3.put_object(
@@ -128,16 +128,6 @@ class TestS3Client(unittest.TestCase):
 
         # Call the listInitTimesInRawDir method
         init_times = self.client.listInitTimesInRawDir()
-
-        # Remove the mock files in the raw directory
-        self.testS3.delete_object(
-            Bucket=BUCKET,
-            Key="raw/2023/01/01/0000/test_raw_file1.grib"
-        )
-        self.testS3.delete_object(
-            Bucket=BUCKET,
-            Key="raw/2023/01/02/0300/test_raw_file2.grib"
-        )
 
         # Verify the returned list of init times
         expected_init_times = [
@@ -162,12 +152,6 @@ class TestS3Client(unittest.TestCase):
         # Call the readBytesForInitTime method
         readInitTime, readBytes = self.client.readRawFilesForInitTime(
             it=initTime
-        )
-
-        # Remove the mock file in the raw directory
-        self.testS3.delete_object(
-            Bucket=BUCKET,
-            Key=filePath.as_posix()
         )
 
         # Verify the returned init time and bytes
