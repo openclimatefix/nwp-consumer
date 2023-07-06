@@ -38,8 +38,8 @@ dependencies = [
 dev = [
     "ruff == 0.0.259",
     "unittest-xml-reporting == 3.2.0",
-    "moto[s3,server] == 4.1.11",
-    "flask == 2.3.2",
+    "moto[s3,server] == 4.0.5",
+    "flask == 2.0.2",
     "flask-cors == 4.0.0",
 ]
 
