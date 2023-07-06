@@ -38,9 +38,9 @@ class S3Client(internal.StorageInterface):
         self.__fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
             key=key,
             secret=secret,
-            endpoint_url=endpointURL,
             client_kwargs={
-                'region_name': region
+                'region_name': region,
+                'endpoint_url': endpointURL,
             }
         )
 
