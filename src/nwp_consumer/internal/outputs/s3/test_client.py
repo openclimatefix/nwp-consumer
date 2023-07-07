@@ -6,6 +6,7 @@ import unittest
 import xarray as xr
 from botocore.session import Session
 from moto.server import ThreadedMotoServer
+import numpy as np
 
 from nwp_consumer import internal
 
@@ -162,18 +163,14 @@ class TestS3Client(unittest.TestCase):
         # Create a mock dataset
         mock_dataset = xr.Dataset(
             data_vars={
-                'wdir10': (
-                    ('init_time', 'step', 'x', 'y'), [[[[1, 2], [3, 4]], [[5, 6], [7, 8]]]]
-                ),
-                'prate': (
-                    ('init_time', 'step', 'x', 'y'), [[[[1, 2], [3, 4]], [[5, 6], [7, 8]]]]
-                )
+                'UKV': (('init_time', 'variable', 'step', 'x', 'y'), np.random.rand(1, 2, 12, 100, 100)),
             },
             coords={
                 'init_time': [dt.datetime(2023, 1, 1)],
-                'step': [0, 1],
-                'x': [0, 1],
-                'y': [0, 1],
+                'variable': ['wdir10', 'prate'],
+                'step': range(12),
+                'x': range(100),
+                'y': range(100),
             }
         )
 
@@ -212,18 +209,14 @@ class TestS3Client(unittest.TestCase):
         # Write mock dataset to zarr directory
         mock_dataset = xr.Dataset(
             data_vars={
-                'wdir10': (
-                    ('init_time', 'step', 'x', 'y'), [[[[1, 2], [3, 4]], [[5, 6], [7, 8]]]]
-                ),
-                'prate': (
-                    ('init_time', 'step', 'x', 'y'), [[[[1, 2], [3, 4]], [[5, 6], [7, 8]]]]
-                )
+                'UKV': (('init_time', 'variable', 'step', 'x', 'y'), np.random.rand(1, 2, 12, 100, 100)),
             },
             coords={
                 'init_time': [dt.datetime(2023, 1, 1)],
-                'step': [0, 1],
-                'x': [0, 1],
-                'y': [0, 1],
+                'variable': ['wdir10', 'prate'],
+                'step': range(12),
+                'x': range(100),
+                'y': range(100),
             }
         )
 

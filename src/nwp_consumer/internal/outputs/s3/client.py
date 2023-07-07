@@ -121,39 +121,15 @@ class S3Client(internal.StorageInterface):
         :param it: The init time of the data within the Dataset
         :param ds: The Dataset to write
         """
-        path: pathlib.Path = self.__bucket / self.__zarrDir / name
+        path: pathlib.Path = (self.__bucket / self.__zarrDir / name).with_suffix('.zarr')
 
         # Ensure the zarr path doesn't already exist
         if self.zarrExistsForInitTime(name=name, it=it):
             raise FileExistsError(f"Zarr path already exists: {path}")
 
-        # Create a chunked Dask Dataset from the input multi-variate Dataset.
-        # *  Converts the input multivariate DataSet (with different DataArrays for
-        #     each NWP variable) to a single DataArray with a `variable` dimension.
-        # * This allows each Zarr chunk to hold multiple variables (useful for loading
-        #     many/all variables at once from disk).
-
-        # Create single-variate dataarray from dataset, with new "variable" dimension
-        da = ds.to_array(dim="variable", name="UKV").compute()
-        del ds
-
-        # Convert back to dataset, order dimensions, and chunk
-        chunkedDataset = da.to_dataset() \
-            .transpose("init_time", "step", "variable", "y", "x") \
-            .sortby("step") \
-            .sortby("variable") \
-            .chunk({
-                "init_time": 1,
-                "step": 1,
-                "variable": -1,
-                "y": len(da.y) // 2,
-                "x": len(da.x) // 2,
-            }).compute()
-        del da
-
         # Create new Zarr store.
-        chunkedDataset["UKV"] = chunkedDataset.astype(np.float16)["UKV"]
-        chunkedDataset.to_zarr(
+        ds["UKV"] = ds.astype(np.float16)["UKV"]
+        ds.to_zarr(
             store=s3fs.S3Map(root="s3://" + path.as_posix(), s3=self.__fs, check=False),
             encoding={
                 "init_time": {"units": "nanoseconds since 1970-01-01"},
@@ -162,7 +138,7 @@ class S3Client(internal.StorageInterface):
                 },
             },
         )
-        del chunkedDataset
+        del ds
         return pathlib.Path(path)
 
     def zarrExistsForInitTime(self, name: str, it: dt.datetime) -> bool:

@@ -130,115 +130,109 @@ class CEDAClient(internal.FetcherInterface):
 
         return wantedFiles
 
-    def loadRawInitTimeDataAsOCFDataset(self, *, fbl: list[bytes]) -> xr.Dataset:
-        """Create an xarray dataset from the given raw files.
 
-        :param fbl: The list of raw file bytes to load.
+    def convertRawFileToDataset(self, *, b: bytes) -> xr.Dataset:
+        """Load a multi-parameter GRIB file as an OCF-compliant Dataset.
+
+        :param b: The bytes of the grib file to load
         """
-        # Load the wholesale files as OCF datasets
-        wholesaleDatasets: list[xr.Dataset] = [
-            _loadWholesaleFileAsDataset(b=bd) for bd in fbl
-        ]
-        del fbl
+        # Cfgrib is built upon eccodes which needs an in-memory file to read from
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempParameterFile:
+            # Copy the raw file to a local temp file
+            tempParameterFile.write(b)
+            tempParameterFile.seek(0)
+            del b
 
-        # Merge the wholesale datasets into one
-        # TODO: Enable concatenation of datasets for different step sets
-        wholesaleDataset: xr.Dataset = xr.merge(
-            objects=wholesaleDatasets,
-            compat='identical',
-            combine_attrs='drop_conflicts'
-        )
+            # Load the wholesale file as a list of datasets
+            # * cfgrib loads multiple hypercubes for a single multi-parameter grib file
+            try:
+                datasets: list[xr.Dataset] = cfgrib.open_datasets(
+                    path=tempParameterFile.name,
+                    backend_kwargs={"indexpath": ""}
+                )
+            except Exception as e:
+                raise Exception(f"Error loading wholesale file as dataset: {e}") from e
 
-        # Load the new dataset into memory
-        # * Enables deletion of the old datasets
-        wholesaleDataset.load()
-        del wholesaleDatasets
-        gc.collect()
+            for i in range(len(datasets)):
+                ds = datasets[i]
 
-        # Add in x and y coordinates
-        wholesaleDataset = _reshapeTo2DGrid(
-            ds=wholesaleDataset
-        )
+                # Rename the parameters to the OCF names
+                # * Only do so if they exist in the dataset
+                for oldParamName, newParamName in PARAMETER_RENAME_MAP.items():
+                    if oldParamName in ds:
+                        ds = ds.rename({oldParamName: newParamName})
 
-        # Add the init time as a coordinate
-        wholesaleDataset = wholesaleDataset \
-            .rename({"time": "init_time"}) \
-            .expand_dims("init_time") \
-            .chunk("auto") \
-            .load()
+                # Ensure the temperature is defined at 1 meter above ground level
+                # * In the early NWPs (definitely in the 2016-03-22 NWPs):
+                #   - `heightAboveGround` only has one entry ("1" meter above ground)
+                #   - `heightAboveGround` isn't set as a dimension for `t`.
+                # * In later NWPs, 'heightAboveGround' has 2 values (0, 1) and is a dimension for `t`.
+                if "t" in ds and "heightAboveGround" in ds["t"].dims:
+                    ds = ds.sel(heightAboveGround=1)
+
+                # Snow depth is in `m` from CEDA, but OCF expects `kg m-2`.
+                # * A scaling factor of 1000 converts between the two.
+                # * See "Snow Depth" entry in https://gridded-data-ui.cda.api.metoffice.gov.uk/glossary
+                if "sde" in ds:
+                    ds = ds.assign(sde=ds["sde"] * 1000)
+
+                # Delete unnecessary data variables
+                for var_name in PARAMETER_IGNORE_LIST:
+                    if var_name in ds:
+                        del ds[var_name]
+
+                # Delete unwanted coordinates
+                ds = ds.drop_vars(
+                    names=COORDINATE_IGNORE_LIST,
+                    errors="ignore"
+                )
+
+                # Replace the dataset in the list with the modified one
+                # * Delete the modified dataset to free up memory
+                datasets[i] = ds
+                del ds
+
+            # Merge the datasets back into one
+            wholesaleDataset = xr.merge(
+                objects=datasets,
+                compat='override',
+                combine_attrs='drop_conflicts'
+            )
+
+            # Add in x and y coordinates
+            wholesaleDataset = _reshapeTo2DGrid(
+                ds=wholesaleDataset
+            )
+
+            # Create a chunked Dask Dataset from the input multi-variate Dataset.
+            # *  Converts the input multivariate DataSet (with different DataArrays for
+            #     each NWP variable) to a single DataArray with a `variable` dimension.
+            # * This allows each Zarr chunk to hold multiple variables (useful for loading
+            #     many/all variables at once from disk).
+            # * The chunking is done in such a way that each chunk is a single time step
+            #     for a single variable.
+            # * Transpose the Dataset so that the dimensions are correctly ordered
+            wholesaleDataset = wholesaleDataset \
+                .rename({"time": "init_time"}) \
+                .expand_dims("init_time") \
+                .to_array(dim="variable", name="UKV") \
+                .to_dataset() \
+                .transpose("init_time", "step", "variable", "y", "x") \
+                .sortby("step") \
+                .sortby("variable") \
+                .chunk({
+                    "init_time": 1,
+                    "step": 1,
+                    "variable": -1,
+                    "y": len(wholesaleDataset.y) // 2,
+                    "x": len(wholesaleDataset.x) // 2,
+                }) \
+                .transpose("init_time", "step", "variable", "y", "x") \
+                .compute()
+
+            del datasets
 
         return wholesaleDataset
-
-
-def _loadWholesaleFileAsDataset(*, b: bytes) -> xr.Dataset:
-    """Load a multi-parameter GRIB file as an OCF-compliant Dataset.
-
-    :param b: The bytes of the grib file to load
-    """
-    # Cfgrib is built upon eccodes which needs an in-memory file to read from
-    with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempParameterFile:
-        # Copy the raw file to a local temp file
-        tempParameterFile.write(b)
-        tempParameterFile.seek(0)
-        del b
-
-        # Load the wholesale file as a dataset
-        try:
-            datasets: list[xr.Dataset] = cfgrib.open_datasets(
-                path=tempParameterFile.name,
-                backend_kwargs={"indexpath": ""}
-            )
-        except Exception as e:
-            raise Exception(f"Error loading wholesale file as dataset: {e}") from e
-
-        for i in range(len(datasets)):
-            ds = datasets[i]
-
-            # Rename the parameters to the OCF names
-            # * Only do so if they exist in the dataset
-            for oldParamName, newParamName in PARAMETER_RENAME_MAP.items():
-                if oldParamName in ds:
-                    ds = ds.rename({oldParamName: newParamName})
-
-            # Ensure the temperature is defined at 1 meter above ground level
-            # * In the early NWPs (definitely in the 2016-03-22 NWPs):
-            #   - `heightAboveGround` only has one entry ("1" meter above ground)
-            #   - `heightAboveGround` isn't set as a dimension for `t`.
-            # * In later NWPs, 'heightAboveGround' has 2 values (0, 1) and is a dimension for `t`.
-            if "t" in ds and "heightAboveGround" in ds["t"].dims:
-                ds = ds.sel(heightAboveGround=1)
-
-            # Snow depth is in `m` from CEDA, but OCF expects `kg m-2`.
-            # * A scaling factor of 1000 converts between the two.
-            # * See "Snow Depth" entry in https://gridded-data-ui.cda.api.metoffice.gov.uk/glossary
-            if "sde" in ds:
-                ds = ds.assign(sde=ds["sde"] * 1000)
-
-            # Delete unnecessary data variables
-            for var_name in PARAMETER_IGNORE_LIST:
-                if var_name in ds:
-                    del ds[var_name]
-
-            # Delete unwanted coordinates
-            ds = ds.drop_vars(
-                names=COORDINATE_IGNORE_LIST,
-                errors="ignore"
-            )
-
-            # Replace the dataset in the list with the modified one
-            # * Delete the modified dataset to free up memory
-            datasets[i] = ds
-            del ds
-
-        wholesaleDataset = xr.merge(
-            objects=datasets,
-            compat='override',
-            combine_attrs='drop_conflicts'
-        )
-        wholesaleDataset.load()
-        del datasets
-
-    return wholesaleDataset
 
 
 def _isWantedFile(*, fi: CEDAFileInfo, dit: dt.datetime) -> bool:

@@ -179,15 +179,15 @@ class TestWriteDatasetToZarrDir(unittest.TestCase):
         self.initTime = dt.datetime(2023, 1, 1)
         self.data = xr.Dataset(
             data_vars={
-                "t": (["init_time", "step", "x", "y"], np.random.rand(1, 46, 100, 100)),
-                "r": (["init_time", "step", "x", "y"], np.random.rand(1, 46, 100, 100))
+                'UKV': (('init_time', 'variable', 'step', 'x', 'y'), np.random.rand(1, 2, 12, 100, 100)),
             },
             coords={
-                "init_time": (["init_time"], [self.initTime]),
-                "step": (["step"], np.arange(46)),
-                "x": (["x"], np.arange(100)),
-                "y": (["y"], np.arange(100))
-            },
+                'init_time': [dt.datetime(2023, 1, 1)],
+                'variable': ['t', 'r'],
+                'step': range(12),
+                'x': range(100),
+                'y': range(100),
+            }
         )
 
     def test_write_dataset_to_zarr_dir(self) -> None:
@@ -201,6 +201,7 @@ class TestWriteDatasetToZarrDir(unittest.TestCase):
         shutil.rmtree("test_raw_dir")
         shutil.rmtree("test_zarr_dir")
 
+
 class TestDeleteZarrForInitTime(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -209,15 +210,15 @@ class TestDeleteZarrForInitTime(unittest.TestCase):
         self.initTime = dt.datetime(2023, 1, 1)
         self.data = xr.Dataset(
             data_vars={
-                "t": (["init_time", "step", "x", "y"], np.random.rand(1, 46, 100, 100)),
-                "r": (["init_time", "step", "x", "y"], np.random.rand(1, 46, 100, 100))
+                'UKV': (('init_time', 'variable', 'step', 'x', 'y'), np.random.rand(1, 2, 12, 100, 100)),
             },
             coords={
-                "init_time": (["init_time"], [self.initTime]),
-                "step": (["step"], np.arange(46)),
-                "x": (["x"], np.arange(100)),
-                "y": (["y"], np.arange(100))
-            },
+                'init_time': [dt.datetime(2023, 1, 1)],
+                'variable': ['t', 'r'],
+                'step': range(12),
+                'x': range(100),
+                'y': range(100),
+            }
         )
         # Write the dataset to the zarr directory using the function
         self.client.writeDatasetAsZarr(name=self.fileName, it=self.initTime, ds=self.data)

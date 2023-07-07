@@ -5,6 +5,7 @@ import datetime as dt
 import pathlib
 from enum import Enum
 
+import typing
 import xarray as xr
 
 # ------- Global constants ------- #
@@ -78,10 +79,10 @@ class FetcherInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def loadRawInitTimeDataAsOCFDataset(self, *, fbl: list[bytes]) -> xr.Dataset:
+    def convertRawFileToDataset(self, *, b: bytes) -> xr.Dataset:
         """Create an xarray dataset from the given RAW file bytedata.
 
-        :param fbl: List of file bytes to load
+        :param b: Bytes of raw file
         """
         pass
 

@@ -126,45 +126,18 @@ class LocalFSClient(internal.StorageInterface):
         if self.zarrExistsForInitTime(name=name, it=it):
             raise FileExistsError(f"Zarr path already exists: {path}")
 
-        # Create a chunked Dask Dataset from the input multi-variate Dataset.
-        # *  Converts the input multivariate DataSet (with different DataArrays for
-        #     each NWP variable) to a single DataArray with a `variable` dimension.
-        # * This allows each Zarr chunk to hold multiple variables (useful for loading
-        #     many/all variables at once from disk).
-
-        # Create single-variate dataarray from dataset, with new "variable" dimension
-        da = ds \
-            .to_array(dim="variable", name="UKV") \
-            .compute()
-        del ds
-
-        # Convert back to dataset, order dimensions, and chunk
-        chunkedDataset = da.to_dataset() \
-            .transpose("init_time", "step", "variable", "y", "x") \
-            .sortby("step") \
-            .sortby("variable") \
-            .chunk({
-                "init_time": 1,
-                "step": 1,
-                "variable": -1,
-                "y": len(da.y) // 2,
-                "x": len(da.x) // 2,
-            }).compute()
-        del da
-
         # Create new Zarr store.
-        to_zarr_kwargs = dict(
+        ds["UKV"] = ds.astype(np.float16)["UKV"]
+        ds.to_zarr(
+            store=path,
             encoding={
                 "init_time": {"units": "nanoseconds since 1970-01-01"},
                 "UKV": {
                     "compressor": Blosc2(cname="zstd", clevel=5),
                 },
-            },
+            }
         )
-
-        chunkedDataset["UKV"] = chunkedDataset.astype(np.float16)["UKV"]
-        chunkedDataset.to_zarr(path, **to_zarr_kwargs)
-        del chunkedDataset
+        del ds
         return path
 
     def deleteZarrForInitTime(self, *, name: str, it: dt.datetime) -> None:

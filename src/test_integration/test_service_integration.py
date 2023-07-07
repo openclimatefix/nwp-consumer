@@ -88,7 +88,10 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
             self.assertEqual(
                 ({'init_time': 1, 'step': 37, 'variable': 12, 'y': 704, 'x': 548}), ds.dims
             )
-            self.assertEqual(np.datetime64(initTime), ds.coords["init_time"].values[0])
+            self.assertEqual(
+                np.datetime64(dt.datetime.strptime(path.with_suffix('').stem, "%Y%m%d%H%M")),
+                ds.coords["init_time"].values[0]
+            )
 
     def tearDown(self) -> None:
         shutil.rmtree('data/raw', ignore_errors=True)

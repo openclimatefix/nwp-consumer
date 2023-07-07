@@ -5,7 +5,7 @@ import pathlib
 import unittest.mock
 
 from ._models import MetOfficeFileInfo
-from .client import MetOfficeClient, _isWantedFile, _loadSingleParameterGRIBAsOCFDataset
+from .client import MetOfficeClient, _isWantedFile
 
 # --------- Test setup --------- #
 
@@ -30,70 +30,70 @@ class TestClient_Init(unittest.TestCase):
                 clientSecret="test_client_secret")
 
 
-# --------- Static methods --------- #
+class TestClient_ConvertRawFileToDataset(unittest.TestCase):
+    """Tests for the MetOfficeClient.convertRawFileToDataset method."""
 
-
-class Test_LoadSingleParameterGRIBAsOCFDataset(unittest.TestCase):
-    """Tests for the _loadSingleParameterGRIBAsOCFDataset method."""
-
-    def test_loadsCorrectly(self):
+    def test_convertsCorrectly(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_knownparam.grib"
 
-        out = _loadSingleParameterGRIBAsOCFDataset(
+        out = testClient.convertRawFileToDataset(
             b=testFilePath.read_bytes(),
         )
 
-        actual = out.dims
-        self.assertEqual(({"step": 13, "y": 639, "x": 455}), actual)
+        # Ensure the dimensions have the right sizes
+        self.assertDictEqual({"init_time": 1, "variable": 1, "step": 13, "y": 639, "x": 455}, dict(out.dims.items()))
+        # Ensure the dimensions of the variables are in the correct order
+        self.assertEqual(("init_time", "step", "variable", "y", "x"), out["UKV"].dims)
+        # Ensure the correct variables are in the variable dimension
+        self.assertListEqual(['dswrf'], sorted(list(out.coords["variable"].values)))
 
     def test_renamesVariables(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wrongnameparam.grib"
 
-        out = _loadSingleParameterGRIBAsOCFDataset(
+        out = testClient.convertRawFileToDataset(
             b=testFilePath.read_bytes(),
         )
 
-        actual = list(out.data_vars)
-        self.assertEqual(["prate"], actual)
+        # Ensure the dimensions have the right sizes
+        self.assertDictEqual({"init_time": 1, "variable": 1, "step": 13, "y": 639, "x": 455}, dict(out.dims.items()))
+        # Ensure the dimensions of the variables are in the correct order
+        self.assertEqual(("init_time", "step", "variable", "y", "x"), out["UKV"].dims)
+        # Ensure the correct variables are in the variable dimension
+        self.assertListEqual(['prate'], sorted(list(out.coords["variable"].values)))
 
     def test_handlesUnknownsInMetOfficeData(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknownparam1.grib"
 
-        out = _loadSingleParameterGRIBAsOCFDataset(
+        out = testClient.convertRawFileToDataset(
             b=testFilePath.read_bytes(),
         )
 
-        actual = list(out.data_vars)
-
-        self.assertNotEqual(["unknown"], actual)
-        self.assertEqual(["si10"], actual)
+        # Ensure the dimensions have the right sizes
+        self.assertDictEqual({"init_time": 1, "variable": 1, "step": 43, "y": 639, "x": 455}, dict(out.dims.items()))
+        # Ensure the dimensions of the variables are in the correct order
+        self.assertEqual(("init_time", "step", "variable", "y", "x"), out["UKV"].dims)
+        # Ensure the correct variables are in the variable dimension
+        self.assertListEqual(['si10'], sorted(list(out.coords["variable"].values)))
+        self.assertNotEqual(['unknown'], sorted(list(out.coords["variable"].values)))
 
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknownparam2.grib"
 
-        out = _loadSingleParameterGRIBAsOCFDataset(
+        out = testClient.convertRawFileToDataset(
             b=testFilePath.read_bytes(),
         )
 
         actual = list(out.data_vars)
 
-        self.assertNotEqual(["unknown"], actual)
-        self.assertEqual(["wdir10"], actual)
+        # Ensure the dimensions have the right sizes
+        self.assertDictEqual({"init_time": 1, "variable": 1, "step": 10, "y": 639, "x": 455}, dict(out.dims.items()))
+        # Ensure the dimensions of the variables are in the correct order
+        self.assertEqual(("init_time", "step", "variable", "y", "x"), out["UKV"].dims)
+        # Ensure the correct variables are in the variable dimension
+        self.assertListEqual(['wdir10'], sorted(list(out.coords["variable"].values)))
+        self.assertNotEqual(['unknown'], sorted(list(out.coords["variable"].values)))
 
 
-class TestClient_LoadRawInitTimeDataAsOCFDataset(unittest.TestCase):
-    """Tests for the MetOfficeClient.loadRawInitTimeDataAsOCFDataset method."""
-
-    def test_loadsRawInitTimeDataCorrectly(self):
-
-        fileBytesList: list[bytes] = [
-            (pathlib.Path(__file__).parent / file).read_bytes() for file in
-            ["test_knownparam.grib", "test_wrongnameparam.grib"]
-        ]
-
-        dataset = testClient.loadRawInitTimeDataAsOCFDataset(fbl=fileBytesList)
-
-        actual = len(dataset.data_vars)
-        self.assertEqual(2, actual)
+# --------- Static methods --------- #
 
 
 class Test_IsWantedFile(unittest.TestCase):

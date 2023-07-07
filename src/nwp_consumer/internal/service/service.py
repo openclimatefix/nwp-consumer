@@ -9,6 +9,8 @@ from concurrent.futures import ProcessPoolExecutor as PoolExecutor
 
 import pandas as pd
 import structlog
+import dask.bag
+import xarray as xr
 
 from nwp_consumer import internal
 
@@ -130,13 +132,17 @@ class NWPConsumerService:
                     f"Creating Zarr for initTime {initTime.strftime('%Y/%m/%d %H:%M')}",
                     initTime=initTime.strftime("%Y/%m/%d %H:%M")
                 )
-                dataset = self.fetcher.loadRawInitTimeDataAsOCFDataset(fbl=fileBytesList)
+
+                # Create a pipeline to convert the raw files and merge them as a dataset
+                bag: dask.bag.Bag = dask.bag.from_sequence(fileBytesList)
+                dataset = bag.map(lambda b: self.fetcher.convertRawFileToDataset(b=b)) \
+                    .fold(lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts")) \
+                    .compute()
                 del fileBytesList
-                gc.collect()
 
                 # Carry out a basic data quality check
-                for var in dataset.data_vars:
-                    if True in dataset[var].isnull():
+                for var in dataset.coords['variable'].values:
+                    if True in dataset.sel(variable=var).isnull():
                         log.warn(
                             event=f"Dataset for initTime {initTime.strftime('%Y/%m/%d %H:%M')}"
                             f" has NaNs in variable {var}",
@@ -193,7 +199,13 @@ class NWPConsumerService:
             event=f"Creating Latest Zarr for initTime {latestInitTime.strftime('%Y/%m/%d %H:%M')}",
             initTime=latestInitTime.strftime("%Y/%m/%d %H:%M")
         )
-        dataset = self.fetcher.loadRawInitTimeDataAsOCFDataset(fbl=fileBytesList)
+
+        # Create a pipeline to convert the raw files and merge them as a dataset
+        bag: dask.bag.Bag = dask.bag.from_sequence(fileBytesList)
+        dataset = bag.map(lambda b: self.fetcher.convertRawFileToDataset(b=b)) \
+            .fold(lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts")) \
+            .compute()
+        del fileBytesList
 
         # Save the dataset to a zarr file
         savedZarrPath = self.storer.writeDatasetAsZarr(
