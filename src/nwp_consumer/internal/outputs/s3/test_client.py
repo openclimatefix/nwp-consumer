@@ -58,6 +58,17 @@ class TestS3Client(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        # Delete all objects in bucket
+        print("Tearing down bucket")
+        response = cls.testS3.list_objects_v2(
+            Bucket=BUCKET,
+        )
+        if "Contents" in response:
+            for obj in response["Contents"]:
+                cls.testS3.delete_object(
+                    Bucket=BUCKET,
+                    Key=obj["Key"],
+                )
         cls.server.stop()
 
     def setUp(self) -> None:
@@ -65,16 +76,7 @@ class TestS3Client(unittest.TestCase):
 
     def tearDown(self) -> None:
         # Delete all objects in bucket
-        print("Tearing down bucket")
-        response = self.testS3.list_objects_v2(
-            Bucket=BUCKET,
-        )
-        if "Contents" in response:
-            for obj in response["Contents"]:
-                self.testS3.delete_object(
-                    Bucket=BUCKET,
-                    Key=obj["Key"],
-                )
+        print("Tearing down test")
 
     def test_existsInRawDir(self):
         # Create a mock file in the raw directory
@@ -105,6 +107,12 @@ class TestS3Client(unittest.TestCase):
         # Verify the non-existence of the file
         self.assertFalse(exists)
 
+        # Delete the created files
+        self.testS3.delete_object(
+            Bucket=BUCKET,
+            Key=filePath,
+        )
+
     def test_writeBytesToRawDir(self):
         # Call the writeBytesToRawDir method
         initTime = dt.datetime(2023, 1, 2)
@@ -117,6 +125,12 @@ class TestS3Client(unittest.TestCase):
             Key=path.relative_to(BUCKET).as_posix()
         )
         self.assertEqual(response["Body"].read(), bytes(fileName, 'utf-8'))
+
+        # Delete the created file
+        self.testS3.delete_object(
+            Bucket=BUCKET,
+            Key=path.relative_to(BUCKET).as_posix()
+        )
 
     def test_listInitTimesInRawDir(self):
         # Create mock folders/files in the raw directory
@@ -141,6 +155,16 @@ class TestS3Client(unittest.TestCase):
         ]
         self.assertEqual(init_times, expected_init_times)
 
+        # Delete the created files
+        self.testS3.delete_object(
+            Bucket=BUCKET,
+            Key="raw/2023/01/03/0000/test_raw_file1.grib",
+        )
+        self.testS3.delete_object(
+            Bucket=BUCKET,
+            Key="raw/2023/01/04/0300/test_raw_file2.grib",
+        )
+
     def test_readBytesForInitTime(self):
         # Create a mock file in the raw directory for the given init time
         initTime = dt.datetime(2023, 1, 5)
@@ -162,6 +186,12 @@ class TestS3Client(unittest.TestCase):
         # Verify the returned init time and bytes
         self.assertEqual(initTime, readInitTime)
         self.assertEqual([bytes(fileName, 'utf-8')], readBytes)
+
+        # Delete the created file
+        self.testS3.delete_object(
+            Bucket=BUCKET,
+            Key=filePath.as_posix(),
+        )
 
     def test_writeDatasetToZarrDir(self):
         # Create a mock dataset
@@ -191,6 +221,19 @@ class TestS3Client(unittest.TestCase):
         expected_path = pathlib.Path(f"test-bucket/zarr/{filename}")
         self.assertEqual(expected_path, path)
 
+        # Delete the created files
+        response = self.testS3.list_objects_v2(
+            Bucket=BUCKET,
+            Prefix=f"zarr/{filename}"
+        )
+        if "Contents" in response:
+            for obj in response["Contents"]:
+                self.testS3.delete_object(
+                    Bucket=BUCKET,
+                    Key=obj["Key"],
+                )
+
+
     def test_existsInZarrDir(self):
         # Create a mock file in the zarr directory
         fileName = inspect.stack()[0][3] + ".zarr"
@@ -208,6 +251,12 @@ class TestS3Client(unittest.TestCase):
 
         # Verify the existence of the file
         self.assertTrue(exists)
+
+        # Delete the created file
+        self.testS3.delete_object(
+            Bucket=BUCKET,
+            Key=f"zarr/{fileName}",
+        )
 
     def test_deleteZarrForInitTime(self):
         # Write mock dataset to zarr directory
