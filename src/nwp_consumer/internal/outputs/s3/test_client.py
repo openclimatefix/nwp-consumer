@@ -103,7 +103,7 @@ class TestS3Client(unittest.TestCase):
 
     def test_writeBytesToRawDir(self):
         # Call the writeBytesToRawDir method
-        initTime = dt.datetime(2023, 1, 1)
+        initTime = dt.datetime(2023, 1, 2)
         fileName = inspect.stack()[0][3] + ".grib"
         path = self.client.writeBytesToRawFile(fileName, initTime, bytes(fileName, 'utf-8'))
 
@@ -118,12 +118,12 @@ class TestS3Client(unittest.TestCase):
         # Create mock folders/files in the raw directory
         self.testS3.put_object(
             Bucket=BUCKET,
-            Key="raw/2023/01/01/0000/test_raw_file1.grib",
+            Key="raw/2023/01/03/0000/test_raw_file1.grib",
             Body=b"test_data"
         )
         self.testS3.put_object(
             Bucket=BUCKET,
-            Key="raw/2023/01/02/0300/test_raw_file2.grib",
+            Key="raw/2023/01/04/0300/test_raw_file2.grib",
             Body=b"test_data"
         )
 
@@ -132,14 +132,14 @@ class TestS3Client(unittest.TestCase):
 
         # Verify the returned list of init times
         expected_init_times = [
-            dt.datetime(2023, 1, 1, 0, 0),
-            dt.datetime(2023, 1, 2, 3, 0),
+            dt.datetime(2023, 1, 3, 0, 0),
+            dt.datetime(2023, 1, 4, 3, 0),
         ]
         self.assertEqual(init_times, expected_init_times)
 
     def test_readBytesForInitTime(self):
         # Create a mock file in the raw directory for the given init time
-        initTime = dt.datetime(2023, 1, 1)
+        initTime = dt.datetime(2023, 1, 5)
         fileName = inspect.stack()[0][3] + ".grib"
         filePath = pathlib.Path("raw") \
                    / initTime.strftime(internal.IT_FOLDER_FMTSTR) \
@@ -179,7 +179,7 @@ class TestS3Client(unittest.TestCase):
         # Call the writeDatasetToZarrDir method
         path = self.client.writeDatasetAsZarr(
             name=filename,
-            it=dt.datetime(2023, 1, 1),
+            it=dt.datetime(2023, 1, 6),
             ds=mock_dataset
         )
 
@@ -199,7 +199,7 @@ class TestS3Client(unittest.TestCase):
         # Call the existsInZarrDir method
         exists = self.client.zarrExistsForInitTime(
             name=fileName,
-            it=dt.datetime(2023, 1, 1)
+            it=dt.datetime(2023, 1, 6)
         )
 
         # Verify the existence of the file
@@ -223,20 +223,20 @@ class TestS3Client(unittest.TestCase):
         # Call the writeDatasetToZarrDir method
         self.client.writeDatasetAsZarr(
             name="latest.zarr",
-            it=dt.datetime(2023, 1, 1),
+            it=dt.datetime(2023, 1, 7),
             ds=mock_dataset
         )
 
         # Call the deleteZarrForInitTime method
         self.client.deleteZarrForInitTime(
             name="latest.zarr",
-            it=dt.datetime(2023, 1, 1)
+            it=dt.datetime(2023, 1, 7)
         )
 
         # Verify the file is deleted
         self.assertFalse(self.client.zarrExistsForInitTime(
             name="latest",
-            it=dt.datetime(2023, 1, 1)
+            it=dt.datetime(2023, 1, 7)
         ))
 
 
