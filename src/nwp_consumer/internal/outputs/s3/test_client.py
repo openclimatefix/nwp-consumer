@@ -60,8 +60,12 @@ class TestS3Client(unittest.TestCase):
     def tearDownClass(cls):
         cls.server.stop()
 
+    def setUp(self) -> None:
+        print("Setting up test")
+
     def tearDown(self) -> None:
         # Delete all objects in bucket
+        print("Tearing down bucket")
         response = self.testS3.list_objects_v2(
             Bucket=BUCKET,
         )
