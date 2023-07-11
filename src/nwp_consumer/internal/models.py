@@ -3,6 +3,7 @@
 import abc
 import datetime as dt
 import pathlib
+import tempfile
 from enum import Enum
 
 import typing
@@ -71,7 +72,7 @@ class FetcherInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def fetchRawFileBytes(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, bytes]:
+    def fetchRawFileBytes(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, tempfile.NamedTemporaryFile]:
         """Fetch the bytes of a single raw file from source given its relative path.
 
         :param fi: File Info object describing the file to fetch
@@ -79,10 +80,10 @@ class FetcherInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def convertRawFileToDataset(self, *, b: bytes) -> xr.Dataset:
+    def convertRawFileToDataset(self, *, f: tempfile.NamedTemporaryFile) -> xr.Dataset:
         """Create an xarray dataset from the given RAW file bytedata.
 
-        :param b: Bytes of raw file
+        :param f: Bytes of raw file
         """
         pass
 
@@ -100,12 +101,12 @@ class StorageInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def writeBytesToRawFile(self, *, name: str, it: dt.datetime, b: bytes) -> pathlib.Path:
+    def writeBytesToRawFile(self, *, name: str, it: dt.datetime, f: tempfile.NamedTemporaryFile) -> pathlib.Path:
         """Write the given bytes to the raw directory.
 
         :param name: Name of the file to write
         :param it: Init Time of the model data within the file
-        :param b: Bytes to write
+        :param f: Bytes to write
         """
         pass
 
@@ -124,7 +125,7 @@ class StorageInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def readRawFilesForInitTime(self, *, it: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
+    def readRawFilesForInitTime(self, *, it: dt.datetime) -> tuple[dt.datetime, list[tempfile.NamedTemporaryFile]]:
         """Read bytes for all files for the given initTime.
 
         :param it: Init Time to read files for

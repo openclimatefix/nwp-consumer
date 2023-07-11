@@ -36,9 +36,8 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
     def test_convertsCorrectly(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_knownparam.grib"
 
-        out = testClient.convertRawFileToDataset(
-            b=testFilePath.read_bytes(),
-        )
+        with testFilePath.open("rb") as f:
+            out = testClient.convertRawFileToDataset(f=f)
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual({"init_time": 1, "variable": 1, "step": 13, "y": 639, "x": 455}, dict(out.dims.items()))
@@ -50,9 +49,8 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
     def test_renamesVariables(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wrongnameparam.grib"
 
-        out = testClient.convertRawFileToDataset(
-            b=testFilePath.read_bytes(),
-        )
+        with testFilePath.open("rb") as f:
+            out = testClient.convertRawFileToDataset(f=f)
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual({"init_time": 1, "variable": 1, "step": 13, "y": 639, "x": 455}, dict(out.dims.items()))
@@ -64,9 +62,8 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
     def test_handlesUnknownsInMetOfficeData(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknownparam1.grib"
 
-        out = testClient.convertRawFileToDataset(
-            b=testFilePath.read_bytes(),
-        )
+        with testFilePath.open("rb") as f:
+            out = testClient.convertRawFileToDataset(f=f)
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual({"init_time": 1, "variable": 1, "step": 43, "y": 639, "x": 455}, dict(out.dims.items()))
@@ -78,9 +75,8 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
 
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknownparam2.grib"
 
-        out = testClient.convertRawFileToDataset(
-            b=testFilePath.read_bytes(),
-        )
+        with testFilePath.open("rb") as f:
+            out = testClient.convertRawFileToDataset(f=f)
 
         actual = list(out.data_vars)
 

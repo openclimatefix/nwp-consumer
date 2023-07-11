@@ -1,6 +1,7 @@
 import datetime as dt
 import pathlib
 import shutil
+import tempfile
 
 import numpy as np
 import structlog
@@ -44,19 +45,22 @@ class LocalFSClient(internal.StorageInterface):
             f"{self.__rawDir}/{it.strftime(internal.IT_FOLDER_FMTSTR)}/{name}")
         return path.exists()
 
-    def writeBytesToRawFile(self, name: str, it: dt.datetime, b: bytes) -> pathlib.Path:
+    def writeBytesToRawFile(self, name: str, it: dt.datetime, f: tempfile.NamedTemporaryFile) -> pathlib.Path:
         """Write the given bytes to the raw directory.
 
         :param name: The name of the file to write
         :param it: The init time of the data within the file
-        :param b: The bytes to write
+        :param f: The bytes to write
         """
         path = pathlib.Path(f"{self.__rawDir}/{it.strftime(internal.IT_FOLDER_FMTSTR)}/{name}")
 
         # Create the path to the file if the folders do not exist
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        path.write_bytes(b)
+        with path.open('wb') as o:
+            for chunk in iter(lambda: f.read(16 * 1024), b""):
+                o.write(chunk)
+
         return path
 
     def listInitTimesInRawDir(self) -> list[dt.datetime]:
@@ -86,7 +90,7 @@ class LocalFSClient(internal.StorageInterface):
 
         return sortedInitTimes
 
-    def readRawFilesForInitTime(self, it: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
+    def readRawFilesForInitTime(self, it: dt.datetime) -> tuple[dt.datetime, list[tempfile.NamedTemporaryFile]]:
         """Read all files from the raw dir as bytes for the given init time.
 
         :param it: The init time to read files for
@@ -100,9 +104,17 @@ class LocalFSClient(internal.StorageInterface):
 
         # TODO: Filter unwanted filenames
 
-        # Read all files as bytes
-        fileByteList: list[bytes] = [path.read_bytes() for path in paths]
-        return it, fileByteList
+        # Read all files as temporary files
+        tempfiles: list[tempfile.NamedTemporaryFile] = []
+        for path in paths:
+            with tempfile.NamedTemporaryFile("w+b", delete=False) as outfile:
+                with path.open("rb") as infile:
+                    for chunk in iter(lambda: infile.read(16 * 1024), b""):
+                        outfile.write(chunk)
+                        outfile.flush()
+                    tempfiles.append(outfile)
+
+        return it, tempfiles
 
     def zarrExistsForInitTime(self, name: str, it: dt.datetime) -> bool:
         """Check if a file exists in the zarr directory.

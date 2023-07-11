@@ -1,5 +1,6 @@
 import datetime as dt
 import pathlib
+import tempfile
 
 import botocore.client
 import botocore.exceptions
@@ -60,17 +61,20 @@ class S3Client(internal.StorageInterface):
                / name
         return self.__fs.exists(path.as_posix())
 
-    def writeBytesToRawFile(self, name: str, it: dt.datetime, b: bytes) -> pathlib.Path:
+    def writeBytesToRawFile(self, name: str, it: dt.datetime, f: tempfile.NamedTemporaryFile) -> pathlib.Path:
         """Write the given bytes to the raw directory.
 
         :param name: The name of the file to write
         :param it: The init time of the data within the file
-        :param b: The bytes to write
+        :param f: The bytes to write
         """
         path = self.__bucket / self.__rawDir \
                / it.strftime(internal.IT_FOLDER_FMTSTR) / name
 
-        self.__fs.write_bytes(path.as_posix(), b)
+        with self.__fs.open(path.as_posix(), 'wb') as o:
+            for chunk in iter(lambda: f.read(16 * 1024), b""):
+                o.write(chunk)
+
         return path
 
     def listInitTimesInRawDir(self) -> list[dt.datetime]:
@@ -103,7 +107,7 @@ class S3Client(internal.StorageInterface):
         )
         return sortedInitTimes
 
-    def readRawFilesForInitTime(self, it: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
+    def readRawFilesForInitTime(self, it: dt.datetime) -> tuple[dt.datetime, list[tempfile.NamedTemporaryFile]]:
         """Read bytes of all files from the raw dir for the given initTime.
 
         :param it: The init time to read for
@@ -112,7 +116,17 @@ class S3Client(internal.StorageInterface):
                           / it.strftime(internal.IT_FOLDER_FMTSTR)
         files = self.__fs.ls(initTimeDirPath.as_posix())
 
-        return it, [self.__fs.read_bytes(f) for f in files]
+        # Read all files as temporary files
+        tempfiles: list[tempfile.NamedTemporaryFile] = []
+        for file in files:
+            with tempfile.NamedTemporaryFile("w+b", delete=False) as outfile:
+                with self.__fs.open(file, "rb") as infile:
+                    for chunk in iter(lambda: infile.read(16 * 1024), b""):
+                        outfile.write(chunk)
+                        outfile.flush()
+                    tempfiles.append(outfile)
+
+        return it, tempfiles
 
     def writeDatasetAsZarr(self, name: str, it: dt.datetime, ds: xr.Dataset) -> pathlib.Path:
         """Write the given Dataset to the zarr directory.

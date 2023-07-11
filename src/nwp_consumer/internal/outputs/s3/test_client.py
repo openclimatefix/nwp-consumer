@@ -1,6 +1,7 @@
 import datetime as dt
 import inspect
 import pathlib
+import tempfile
 import unittest
 
 import xarray as xr
@@ -116,7 +117,17 @@ class TestS3Client(unittest.TestCase):
         # Call the writeBytesToRawDir method
         initTime = dt.datetime(2023, 1, 2)
         fileName = inspect.stack()[0][3] + ".grib"
-        path = self.client.writeBytesToRawFile(fileName, initTime, bytes(fileName, 'utf-8'))
+
+        with tempfile.NamedTemporaryFile('w+b') as f:
+            # Write the data to the temporary file
+            f.write(bytes(fileName, 'utf-8'))
+            f.seek(0)
+
+            path = self.client.writeBytesToRawFile(
+                name=fileName,
+                it=initTime,
+                f=f
+            )
 
         # Verify the written file in the raw directory
         response = self.testS3.get_object(
@@ -178,13 +189,15 @@ class TestS3Client(unittest.TestCase):
         )
 
         # Call the readBytesForInitTime method
-        readInitTime, readBytes = self.client.readRawFilesForInitTime(
+        readInitTime, fileList = self.client.readRawFilesForInitTime(
             it=initTime
         )
 
         # Verify the returned init time and bytes
         self.assertEqual(initTime, readInitTime)
-        self.assertEqual([bytes(fileName, 'utf-8')], readBytes)
+        for file in fileList:
+            with open(file.name, 'rb') as f:
+                self.assertEqual(f.read(), bytes(fileName, 'utf-8'))
 
         # Delete the created file
         self.testS3.delete_object(

@@ -4,7 +4,9 @@ import concurrent.futures
 import datetime as dt
 import gc
 import itertools
+import os
 import pathlib
+import tempfile
 from concurrent.futures import ProcessPoolExecutor as PoolExecutor
 
 import pandas as pd
@@ -67,21 +69,22 @@ class NWPConsumerService:
         # Download the files in parallel
         # * CEDA has a concurrent connection limit so limit the number of workers
         with PoolExecutor(max_workers=5) as pe:
-            futures: list[concurrent.futures.Future[tuple[internal.FileInfoModel, bytes]]] = [
+            futures: list[concurrent.futures.Future[tuple[internal.FileInfoModel, tempfile.NamedTemporaryFile]]] = [
                 pe.submit(self.fetcher.fetchRawFileBytes, fi=fi) for fi in allWantedFileInfos
             ]
             # Save the files as their downloads are completed
             for future in concurrent.futures.as_completed(futures):
-                fileInfo, fileBytes = future.result()
+                fileInfo, tempFile = future.result()
                 del future
                 savedFilePath = self.storer.writeBytesToRawFile(
                     name=fileInfo.fname() + ".grib",
                     it=fileInfo.initTime(),
-                    b=fileBytes
+                    f=tempFile
                 )
                 downloadedPaths.append(savedFilePath)
-                del fileBytes
-                gc.collect()
+
+                # Delete the temporary file
+                os.remove(tempFile.name)
 
         return downloadedPaths
 
@@ -125,7 +128,7 @@ class NWPConsumerService:
             ]
             # Convert the files once they are read in
             for future in concurrent.futures.as_completed(futures):
-                initTime, fileBytesList = future.result()
+                initTime, tempFiles = future.result()
                 del future
 
                 log.debug(
@@ -134,11 +137,10 @@ class NWPConsumerService:
                 )
 
                 # Create a pipeline to convert the raw files and merge them as a dataset
-                bag: dask.bag.Bag = dask.bag.from_sequence(fileBytesList)
-                dataset = bag.map(lambda b: self.fetcher.convertRawFileToDataset(b=b)) \
+                bag: dask.bag.Bag = dask.bag.from_sequence(tempFiles)
+                dataset = bag.map(lambda f: self.fetcher.convertRawFileToDataset(f=f)) \
                     .fold(lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts")) \
                     .compute()
-                del fileBytesList
 
                 # Carry out a basic data quality check
                 for var in dataset.coords['variable'].values:
@@ -158,8 +160,10 @@ class NWPConsumerService:
                     ds=dataset
                 )
                 savedPaths.append(savedZarrPath)
-                del dataset
-                gc.collect()
+
+                # Delete the temporary files
+                for f in tempFiles:
+                    os.remove(f.name)
 
         return savedPaths
 
@@ -194,18 +198,17 @@ class NWPConsumerService:
             self.storer.deleteZarrForInitTime(name='latest.zarr', it=latestInitTime)
 
         # Load the latest init time as a dataset
-        _, fileBytesList = self.storer.readRawFilesForInitTime(it=latestInitTime)
+        _, tempFiles = self.storer.readRawFilesForInitTime(it=latestInitTime)
         log.info(
             event=f"Creating Latest Zarr for initTime {latestInitTime.strftime('%Y/%m/%d %H:%M')}",
             initTime=latestInitTime.strftime("%Y/%m/%d %H:%M")
         )
 
         # Create a pipeline to convert the raw files and merge them as a dataset
-        bag: dask.bag.Bag = dask.bag.from_sequence(fileBytesList)
-        dataset = bag.map(lambda b: self.fetcher.convertRawFileToDataset(b=b)) \
+        bag: dask.bag.Bag = dask.bag.from_sequence(tempFiles)
+        dataset = bag.map(lambda f: self.fetcher.convertRawFileToDataset(f=f)) \
             .fold(lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts")) \
             .compute()
-        del fileBytesList
 
         # Save the dataset to a zarr file
         savedZarrPath = self.storer.writeDatasetAsZarr(
@@ -213,6 +216,9 @@ class NWPConsumerService:
             it=latestInitTime,
             ds=dataset
         )
-        del dataset
+
+        # Delete the temporary files
+        for f in tempFiles:
+            os.remove(f.name)
 
         return savedZarrPath

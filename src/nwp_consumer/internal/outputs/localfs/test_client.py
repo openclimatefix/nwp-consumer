@@ -1,5 +1,6 @@
 import datetime as dt
 import shutil
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -57,13 +58,18 @@ class TestWriteBytesToRawDir(unittest.TestCase):
         self.initTime = dt.datetime(2023, 1, 1)
         self.data = b"test_data"
 
-    def test_write_bytes_to_raw_dir(self) -> None:
-        # Write the bytes to the raw directory using the function
-        path = self.client.writeBytesToRawFile(
-            name=self.fileName,
-            it=self.initTime,
-            b=self.data
-        )
+    def test_writeBytesToRawDir(self) -> None:
+        with tempfile.NamedTemporaryFile('w+b') as f:
+            # Write the data to the temporary file
+            f.write(self.data)
+            f.seek(0)
+
+            # Write the bytes to the raw directory using the function
+            path = self.client.writeBytesToRawFile(
+                name=self.fileName,
+                it=self.initTime,
+                f=f
+            )
 
         # Assert that the path exists
         self.assertTrue(self.client.rawFileExistsForInitTime(
@@ -126,13 +132,15 @@ class TestReadBytesForInitTime(unittest.TestCase):
 
     def test_read_bytes_for_init_time(self) -> None:
         # Read the bytes for the init time using the function
-        initTime, fileByteList = self.client.readRawFilesForInitTime(it=self.initTime)
+        initTime, fileList = self.client.readRawFilesForInitTime(it=self.initTime)
 
         # Assert that the returned init time is correct
         self.assertEqual(initTime, self.initTime)
 
-        # Assert that the list of file bytes is correct
-        self.assertEqual(fileByteList, [b"test_data"] * 3)
+        # Assert that the list of file objects contains the correct data
+        for file in fileList:
+            with open(file.name, 'rb') as f:
+                self.assertEqual(f.read(), b"test_data")
 
     def tearDown(self) -> None:
         shutil.rmtree("test_raw_dir")

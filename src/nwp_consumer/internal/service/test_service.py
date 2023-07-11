@@ -2,6 +2,7 @@ import datetime as dt
 import json
 import pathlib
 import random
+import tempfile
 import unittest
 
 import numpy as np
@@ -28,7 +29,7 @@ class DummyStorer(internal.StorageInterface):
         return False
 
     def writeBytesToRawFile(
-            self, name: str, it: dt.datetime, b: bytes) -> pathlib.Path:
+            self, name: str, it: dt.datetime, f: bytes) -> pathlib.Path:
         return pathlib.Path(
             f"{it.strftime(internal.IT_FOLDER_FMTSTR)}/{name}"
         )
@@ -75,11 +76,11 @@ class DummyFetcher(internal.FetcherInterface):
             if it in testInitTimes
         ]
 
-    def fetchRawFileBytes(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, bytes]:
-        return fi, bytes("testfile", "utf-8")
+    def fetchRawFileBytes(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, tempfile.NamedTemporaryFile]:
+        return fi, None
 
-    def convertRawFileToDataset(self, *, b: bytes) -> xr.Dataset:
-        data = json.loads(b.decode('utf-8'))
+    def convertRawFileToDataset(self, *, f: tempfile.NamedTemporaryFile) -> xr.Dataset:
+        data = json.loads(f.decode('utf-8'))
         initTime = dt.datetime.strptime(data["it"], "%Y%m%d%H%M")
         name = data["name"]
         return xr.Dataset(

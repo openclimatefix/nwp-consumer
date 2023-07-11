@@ -60,7 +60,7 @@ class MetOfficeClient(internal.FetcherInterface):
         }
 
     def fetchRawFileBytes(self, *, fi: MetOfficeFileInfo) \
-            -> tuple[internal.FileInfoModel, bytes]:
+            -> tuple[internal.FileInfoModel, tempfile.NamedTemporaryFile]:
         """Download a GRIB file corresponding to the input FileInfo object.
 
         :param fi: FileInfo object describing the file to download
@@ -81,10 +81,14 @@ class MetOfficeClient(internal.FetcherInterface):
         except Exception as e:
             raise ConnectionError(f"Error calling url {url} for {fi.fname()}: {e}") from e
 
-        filedata = response.read()
+        # Stream the filedata into a temporary file
+        with tempfile.TemporaryFile(mode='w+b', delete=False) as tf:
+            for chunk in iter(lambda: response.read(16 * 1024), b''):
+                tf.write(chunk)
+
         log.debug(f"Fetched all data from {fi.fname()}", path=url)
 
-        return fi, filedata
+        return fi, tf
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
         """Get a list of FileInfo objects according to the input initTime.
@@ -124,29 +128,22 @@ class MetOfficeClient(internal.FetcherInterface):
 
         return wantedFileInfos
 
-    def convertRawFileToDataset(self, *, b: bytes) -> xr.Dataset:
+    def convertRawFileToDataset(self, *, f: tempfile.NamedTemporaryFile) -> xr.Dataset:
         """Load a MetOffice single-parameter GRIB file as an OCF-compliant Dataset.
 
-        :param b: Raw file bytes to load
+        :param f: Raw file bytes to load
         """
-        parameterDataset: xr.Dataset = xr.Dataset()
 
         # Cfgrib is built upon eccodes which needs an in-memory file to read from
-        with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib") as tempParameterFile:
-            # Copy the raw file to a local temp file
-            tempParameterFile.write(b)
-            tempParameterFile.seek(0)
-
-            # Load the GRIB file as a cube
-            try:
-                parameterDataset: xr.Dataset = xr.open_dataset(
-                    tempParameterFile.name, engine='cfgrib',
-                    backend_kwargs={'read_keys': ['name', 'parameterNumber'], 'indexpath': ''}
-                )
-            except Exception as e:
-                raise ValueError(f"Failed to load GRIB file as a cube: {e}") from e
-
-            parameterDataset.load()
+        # Load the GRIB file as a cube
+        try:
+            parameterDataset: xr.Dataset = xr.open_dataset(
+                f.name,
+                engine='cfgrib',
+                backend_kwargs={'read_keys': ['name', 'parameterNumber'], 'indexpath': ''}
+            )
+        except Exception as e:
+            raise ValueError(f"Failed to load GRIB file as a cube: {e}") from e
 
         # Make the DataArray OCF-compliant
         # 1. Rename the parameter to the OCF short name
@@ -197,8 +194,7 @@ class MetOfficeClient(internal.FetcherInterface):
                 "variable": -1,
                 "y": len(parameterDataset.y) // 2,
                 "x": len(parameterDataset.x) // 2,
-            }) \
-            .compute()
+            })
 
         return parameterDataset
 
