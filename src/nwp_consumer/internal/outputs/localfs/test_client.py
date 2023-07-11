@@ -1,5 +1,6 @@
 import datetime as dt
 import shutil
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -20,7 +21,7 @@ class TestExistsInRawDir(unittest.TestCase):
 
         # Create a temporary file to simulate an existing file in the raw directory
         self.file_path = Path(
-            f"test_raw_dir/{self.initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{self.fileName}")
+            f"test_raw_dir/{self.initTime.strftime(internal.IT_FOLDER_FMTSTR)}/{self.fileName}")
         self.file_path.parent.mkdir(parents=True, exist_ok=True)
         self.file_path.touch()
 
@@ -57,13 +58,18 @@ class TestWriteBytesToRawDir(unittest.TestCase):
         self.initTime = dt.datetime(2023, 1, 1)
         self.data = b"test_data"
 
-    def test_write_bytes_to_raw_dir(self) -> None:
-        # Write the bytes to the raw directory using the function
-        path = self.client.writeBytesToRawFile(
-            name=self.fileName,
-            it=self.initTime,
-            b=self.data
-        )
+    def test_writeBytesToRawDir(self) -> None:
+        with tempfile.NamedTemporaryFile('w+b') as f:
+            # Write the data to the temporary file
+            f.write(self.data)
+            f.seek(0)
+
+            # Write the bytes to the raw directory using the function
+            path = self.client.writeBytesToRawFile(
+                name=self.fileName,
+                it=self.initTime,
+                f=f
+            )
 
         # Assert that the path exists
         self.assertTrue(self.client.rawFileExistsForInitTime(
@@ -85,9 +91,9 @@ class TestListInitTimesInRawDir(unittest.TestCase):
         self.client = LocalFSClient("test_raw_dir", "test_zarr_dir", createDirs=True)
         # Create temporary directories and files to simulate the raw directory structure
         self.dir_paths = [
-            Path(f"test_raw_dir/{dt.datetime(2023, 1, 1, 3).strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}"),
-            Path(f"test_raw_dir/{dt.datetime(2023, 1, 2, 6).strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}"),
-            Path(f"test_raw_dir/{dt.datetime(2023, 1, 3, 9).strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}")
+            Path(f"test_raw_dir/{dt.datetime(2023, 1, 1, 3).strftime(internal.IT_FOLDER_FMTSTR)}"),
+            Path(f"test_raw_dir/{dt.datetime(2023, 1, 2, 6).strftime(internal.IT_FOLDER_FMTSTR)}"),
+            Path(f"test_raw_dir/{dt.datetime(2023, 1, 3, 9).strftime(internal.IT_FOLDER_FMTSTR)}")
         ]
         for path in self.dir_paths:
             path.mkdir(parents=True, exist_ok=True)
@@ -116,9 +122,9 @@ class TestReadBytesForInitTime(unittest.TestCase):
         self.initTime = dt.datetime(2023, 1, 1, 3)
         # Create temporary directories and files to simulate the raw directory structure
         self.file_paths = [
-            Path(f"test_raw_dir/{self.initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/1.grib"),
-            Path(f"test_raw_dir/{self.initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/2.grib"),
-            Path(f"test_raw_dir/{self.initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/3.grib")
+            Path(f"test_raw_dir/{self.initTime.strftime(internal.IT_FOLDER_FMTSTR)}/1.grib"),
+            Path(f"test_raw_dir/{self.initTime.strftime(internal.IT_FOLDER_FMTSTR)}/2.grib"),
+            Path(f"test_raw_dir/{self.initTime.strftime(internal.IT_FOLDER_FMTSTR)}/3.grib")
         ]
         for path in self.file_paths:
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -126,13 +132,15 @@ class TestReadBytesForInitTime(unittest.TestCase):
 
     def test_read_bytes_for_init_time(self) -> None:
         # Read the bytes for the init time using the function
-        initTime, fileByteList = self.client.readRawFilesForInitTime(it=self.initTime)
+        initTime, fileList = self.client.readRawFilesForInitTime(it=self.initTime)
 
         # Assert that the returned init time is correct
         self.assertEqual(initTime, self.initTime)
 
-        # Assert that the list of file bytes is correct
-        self.assertEqual(fileByteList, [b"test_data"] * 3)
+        # Assert that the list of file objects contains the correct data
+        for file in fileList:
+            with open(file.name, 'rb') as f:
+                self.assertEqual(f.read(), b"test_data")
 
     def tearDown(self) -> None:
         shutil.rmtree("test_raw_dir")
@@ -159,7 +167,10 @@ class TestExistsInZarrDir(unittest.TestCase):
 
     def test_file_does_not_exist(self) -> None:
         # Check if the file exists using the function
-        exists = self.client.zarrExistsForInitTime(name='no_such_' + self.fileName, it=self.initTime)
+        exists = self.client.zarrExistsForInitTime(
+            name='no_such_' + self.fileName,
+            it=self.initTime
+        )
 
         # Assert that the file does not exist
         self.assertFalse(exists)
@@ -172,19 +183,19 @@ class TestExistsInZarrDir(unittest.TestCase):
 class TestWriteDatasetToZarrDir(unittest.TestCase):
     def setUp(self) -> None:
         self.client = LocalFSClient("test_raw_dir", "test_zarr_dir", createDirs=True)
-        self.fileName = "test_file"
+        self.fileName = "test_file.zarr"
         self.initTime = dt.datetime(2023, 1, 1)
         self.data = xr.Dataset(
             data_vars={
-                "t": (["init_time", "step", "x", "y"], np.random.rand(1, 46, 100, 100)),
-                "r": (["init_time", "step", "x", "y"], np.random.rand(1, 46, 100, 100))
+                'UKV': (('init_time', 'variable', 'step', 'x', 'y'), np.random.rand(1, 2, 12, 100, 100)),
             },
             coords={
-                "init_time": (["init_time"], [self.initTime]),
-                "step": (["step"], np.arange(46)),
-                "x": (["x"], np.arange(100)),
-                "y": (["y"], np.arange(100))
-            },
+                'init_time': [dt.datetime(2023, 1, 1)],
+                'variable': ['t', 'r'],
+                'step': range(12),
+                'x': range(100),
+                'y': range(100),
+            }
         )
 
     def test_write_dataset_to_zarr_dir(self) -> None:
@@ -198,6 +209,7 @@ class TestWriteDatasetToZarrDir(unittest.TestCase):
         shutil.rmtree("test_raw_dir")
         shutil.rmtree("test_zarr_dir")
 
+
 class TestDeleteZarrForInitTime(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -206,15 +218,15 @@ class TestDeleteZarrForInitTime(unittest.TestCase):
         self.initTime = dt.datetime(2023, 1, 1)
         self.data = xr.Dataset(
             data_vars={
-                "t": (["init_time", "step", "x", "y"], np.random.rand(1, 46, 100, 100)),
-                "r": (["init_time", "step", "x", "y"], np.random.rand(1, 46, 100, 100))
+                'UKV': (('init_time', 'variable', 'step', 'x', 'y'), np.random.rand(1, 2, 12, 100, 100)),
             },
             coords={
-                "init_time": (["init_time"], [self.initTime]),
-                "step": (["step"], np.arange(46)),
-                "x": (["x"], np.arange(100)),
-                "y": (["y"], np.arange(100))
-            },
+                'init_time': [dt.datetime(2023, 1, 1)],
+                'variable': ['t', 'r'],
+                'step': range(12),
+                'x': range(100),
+                'y': range(100),
+            }
         )
         # Write the dataset to the zarr directory using the function
         self.client.writeDatasetAsZarr(name=self.fileName, it=self.initTime, ds=self.data)
@@ -229,6 +241,7 @@ class TestDeleteZarrForInitTime(unittest.TestCase):
     def tearDown(self) -> None:
         shutil.rmtree("test_raw_dir")
         shutil.rmtree("test_zarr_dir")
+
 
 if __name__ == "__main__":
     unittest.main()

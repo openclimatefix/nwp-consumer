@@ -1,7 +1,11 @@
 import datetime as dt
+import json
 import pathlib
+import random
+import tempfile
 import unittest
 
+import numpy as np
 import xarray as xr
 
 from .. import FileInfoModel
@@ -11,7 +15,7 @@ from . import NWPConsumerService
 # Two days, four init times per day -> 8 init times
 DAYS = [1, 2]
 INIT_HOURS = [0, 6, 12, 18]
-INIT_TIME_FILES = ["file1", "file2"]
+INIT_TIME_FILES = ["wdir10", "prate"]
 testInitTimes = [dt.datetime(2021, 1, d, h, 0, 0, tzinfo=None)
                  for h in INIT_HOURS
                  for d in DAYS]
@@ -25,9 +29,9 @@ class DummyStorer(internal.StorageInterface):
         return False
 
     def writeBytesToRawFile(
-            self, name: str, it: dt.datetime, b: bytes) -> pathlib.Path:
+            self, name: str, it: dt.datetime, f: bytes) -> pathlib.Path:
         return pathlib.Path(
-            f"{it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{name}"
+            f"{it.strftime(internal.IT_FOLDER_FMTSTR)}/{name}"
         )
 
     def listInitTimesInRawDir(self) -> list[dt.datetime]:
@@ -40,7 +44,7 @@ class DummyStorer(internal.StorageInterface):
 
     def readRawFilesForInitTime(self, it: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
         return it, [
-            bytes(it.strftime("%Y%m%d%H%M"), "utf-8") for _ in INIT_TIME_FILES
+            json.dumps({"it": it.strftime("%Y%m%d%H%M"), "name": f}).encode("utf-8") for f in INIT_TIME_FILES
         ]
 
     def writeDatasetAsZarr(
@@ -72,19 +76,23 @@ class DummyFetcher(internal.FetcherInterface):
             if it in testInitTimes
         ]
 
-    def fetchRawFileBytes(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, bytes]:
-        return fi, bytes(fi.initTime().strftime("%Y%m%d%H%M"), "utf-8")
+    def fetchRawFileBytes(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, tempfile.NamedTemporaryFile]:
+        return fi, None
 
-    def loadRawInitTimeDataAsOCFDataset(self, *, fbl: list[bytes]) -> xr.Dataset:
-        initTime = dt.datetime.strptime(fbl[0].decode("utf-8"), "%Y%m%d%H%M")
+    def convertRawFileToDataset(self, *, f: tempfile.NamedTemporaryFile) -> xr.Dataset:
+        data = json.loads(f.decode('utf-8'))
+        initTime = dt.datetime.strptime(data["it"], "%Y%m%d%H%M")
+        name = data["name"]
         return xr.Dataset(
             data_vars={
-                'wdir10': (('init_time', 'step', 'values'), [[[1, 2, 3, 4], [5, 6, 7, 8]]]),
-                'prate': (('init_time', 'step', 'values'), [[[1, 2, 3, 4], [5, 6, 7, 8]]])
+                'UKV': (('init_time', 'variable', 'step', 'x', 'y'), np.random.rand(1, 1, 12, 100, 100)),
             },
             coords={
                 'init_time': [initTime],
-                'step': [0, 1],
+                'variable': [name],
+                'step': range(12),
+                'x': range(100),
+                'y': range(100),
             }
         )
 
@@ -103,8 +111,8 @@ class TestNWPConsumerService(unittest.TestCase):
 
         paths = service.DownloadRawDataset(start=startDate, end=endDate)
 
-        # 2 files per init time, all init times except the last one
-        self.assertEqual(2 * len(INIT_HOURS) * (len(DAYS) - 1), len(paths))
+        # 2 files per init time, all init times
+        self.assertEqual(2 * len(INIT_HOURS) * (len(DAYS)), len(paths))
 
     def test_convertRawDataset(self):
         service = NWPConsumerService(fetcher=self.testFetcher, storer=self.testStorer)

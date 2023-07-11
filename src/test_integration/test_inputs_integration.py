@@ -5,6 +5,7 @@ Will download up to a GB of data. Costs may apply for usage of the APIs.
 """
 
 import datetime as dt
+import os
 import unittest
 
 from nwp_consumer.internal import config, inputs, outputs
@@ -35,17 +36,17 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
 
     def test_downloadsRawGribFileFromCEDA(self):
         fileInfo = CEDAFileInfo(name="202201010000_u1096_ng_umqv_Wholesale1.grib")
-        _, outBytes = cedaClient.fetchRawFileBytes(fi=fileInfo)
+        _, outTmpFile = cedaClient.fetchRawFileBytes(fi=fileInfo)
 
-        self.assertGreater(len(outBytes), 100000000)
+        self.assertGreater(len(os.stat(outTmpFile.name)), 100000000)
 
     def test_downloadsRawGribFileFromMetOffice(self):
         fileInfo = MetOfficeFileInfo(
             fileId=f'agl_temperature_1.5_{dt.datetime.now().strftime("%Y%m%d")}00',
             runDateTime=metOfficeInitTime
         )
-        _, outBytes = metOfficeClient.fetchRawFileBytes(fi=fileInfo)
-        self.assertGreater(len(outBytes), 4000000)
+        _, outTmpFile = metOfficeClient.fetchRawFileBytes(fi=fileInfo)
+        self.assertGreater(len(os.stat(outTmpFile.name)), 4000000)
 
 
 class TestListRawFilesForInitTime(unittest.TestCase):

@@ -2,17 +2,21 @@
 
 import concurrent.futures
 import datetime as dt
+import gc
 import itertools
+import os
 import pathlib
+import tempfile
 from concurrent.futures import ProcessPoolExecutor as PoolExecutor
-
 
 import pandas as pd
 import structlog
+import dask.bag
+import xarray as xr
 
 from nwp_consumer import internal
 
-log = structlog.stdlib.get_logger()
+log = structlog.getLogger()
 
 
 class NWPConsumerService:
@@ -34,8 +38,12 @@ class NWPConsumerService:
         downloadedPaths: list[pathlib.Path] = []
 
         # Get the list of init times as datetime objects
-        # * This spans every hour between the start and end dates inclusive
-        allInitTimes: list[dt.datetime] = pd.date_range(start, end, inclusive='left', freq='H').to_pydatetime().tolist()
+        # * This spans every hour between the start and end dates up to 11:00pm on the end date
+        allInitTimes: list[dt.datetime] = pd.date_range(
+            start=start,
+            end=end+dt.timedelta(days=1),
+            inclusive='left',
+            freq='H').to_pydatetime().tolist()
 
         # For each init time, get the list of files that need to be downloaded
         allWantedFileInfos: list[internal.FileInfoModel] = list(itertools.chain.from_iterable(
@@ -61,18 +69,22 @@ class NWPConsumerService:
         # Download the files in parallel
         # * CEDA has a concurrent connection limit so limit the number of workers
         with PoolExecutor(max_workers=5) as pe:
-            futures: list[concurrent.futures.Future[tuple[internal.FileInfoModel, bytes]]] = [
+            futures: list[concurrent.futures.Future[tuple[internal.FileInfoModel, tempfile.NamedTemporaryFile]]] = [
                 pe.submit(self.fetcher.fetchRawFileBytes, fi=fi) for fi in allWantedFileInfos
             ]
             # Save the files as their downloads are completed
             for future in concurrent.futures.as_completed(futures):
-                fileInfo, fileBytes = future.result()
+                fileInfo, tempFile = future.result()
+                del future
                 savedFilePath = self.storer.writeBytesToRawFile(
                     name=fileInfo.fname() + ".grib",
                     it=fileInfo.initTime(),
-                    b=fileBytes
+                    f=tempFile
                 )
                 downloadedPaths.append(savedFilePath)
+
+                # Delete the temporary file
+                os.remove(tempFile.name)
 
         return downloadedPaths
 
@@ -85,41 +97,57 @@ class NWPConsumerService:
         savedPaths: list[pathlib.Path] = []
 
         # Get a list of all the init times that are stored locally between the start and end dates
+        desiredInitTimes: list[dt.datetime] = []
         allInitTimes: list[dt.datetime] = self.storer.listInitTimesInRawDir()
-        desiredInitTimes: list[dt.datetime] = [
-            it for it in allInitTimes if
-            ((start <= it.date() <= end) and
-             not self.storer.zarrExistsForInitTime(
-                 name=it.strftime('%Y%m%d%H%M.zarr'),
-                 it=it)
-             )
-        ]
+        for it in allInitTimes:
+            # Don't convert files that already exist
+            if self.storer.zarrExistsForInitTime(name=it.strftime('%Y%m%d%H%M.zarr'), it=it):
+                log.debug(
+                    f"Zarr for initTime {it.strftime('%Y/%m/%d %H:%M')} already exists, skipping.",
+                    initTime=it.strftime("%Y/%m/%d %H:%M")
+                )
+                continue
+            if start <= it.date() <= end:
+                desiredInitTimes.append(it)
 
         if not desiredInitTimes:
             log.info("No new files to convert to Zarr, exiting.",
-                     startDate=start.strftime("%Y-%m-%d %H:%M"),
-                     endDate=end.strftime("%Y-%m-%d %H:%M"))
+                     startDate=start.strftime("%Y/%m/%d %H:%M"),
+                     endDate=end.strftime("%Y/%m/%d %H:%M"))
             return savedPaths
+        else:
+            log.info(
+                event=f"Converting {len(desiredInitTimes)} init times to zarr.",
+                num=len(desiredInitTimes)
+            )
 
         # For each init time, load the files from the storer and convert them to a dataset
-        with PoolExecutor(max_workers=8) as pe:
+        with PoolExecutor(max_workers=2) as pe:
             futures: list[concurrent.futures.Future[list[bytes]]] = [
                 pe.submit(self.storer.readRawFilesForInitTime, it=it) for it in desiredInitTimes
             ]
             # Convert the files once they are read in
             for future in concurrent.futures.as_completed(futures):
-                initTime, fileBytesList = future.result()
+                initTime, tempFiles = future.result()
+                del future
+
                 log.debug(
                     f"Creating Zarr for initTime {initTime.strftime('%Y/%m/%d %H:%M')}",
                     initTime=initTime.strftime("%Y/%m/%d %H:%M")
                 )
-                dataset = self.fetcher.loadRawInitTimeDataAsOCFDataset(fbl=fileBytesList)
+
+                # Create a pipeline to convert the raw files and merge them as a dataset
+                bag: dask.bag.Bag = dask.bag.from_sequence(tempFiles)
+                dataset = bag.map(lambda f: self.fetcher.convertRawFileToDataset(f=f)) \
+                    .fold(lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts")) \
+                    .compute()
 
                 # Carry out a basic data quality check
-                for var in dataset.data_vars:
-                    if True in dataset[var].isnull():
+                for var in dataset.coords['variable'].values:
+                    if True in dataset.sel(variable=var).isnull():
                         log.warn(
-                            f"Dataset for initTime {initTime.strftime('%Y/%m/%d %H:%M')} has NaNs in variable {var}",
+                            event=f"Dataset for initTime {initTime.strftime('%Y/%m/%d %H:%M')}"
+                            f" has NaNs in variable {var}",
                             initTime=initTime.strftime("%Y/%m/%d %H:%M"),
                             variable=var
                         )
@@ -132,6 +160,10 @@ class NWPConsumerService:
                     ds=dataset
                 )
                 savedPaths.append(savedZarrPath)
+
+                # Delete the temporary files
+                for f in tempFiles:
+                    os.remove(f.name)
 
         return savedPaths
 
@@ -154,7 +186,6 @@ class NWPConsumerService:
 
     def CreateLatestZarr(self) -> pathlib.Path:
         """Create a Zarr file for the latest init time."""
-
         # Get the latest init time
         allInitTimes: list[dt.datetime] = self.storer.listInitTimesInRawDir()
         if not allInitTimes:
@@ -167,12 +198,17 @@ class NWPConsumerService:
             self.storer.deleteZarrForInitTime(name='latest.zarr', it=latestInitTime)
 
         # Load the latest init time as a dataset
-        _, fileBytesList = self.storer.readRawFilesForInitTime(it=latestInitTime)
+        _, tempFiles = self.storer.readRawFilesForInitTime(it=latestInitTime)
         log.info(
             event=f"Creating Latest Zarr for initTime {latestInitTime.strftime('%Y/%m/%d %H:%M')}",
             initTime=latestInitTime.strftime("%Y/%m/%d %H:%M")
         )
-        dataset = self.fetcher.loadRawInitTimeDataAsOCFDataset(fbl=fileBytesList)
+
+        # Create a pipeline to convert the raw files and merge them as a dataset
+        bag: dask.bag.Bag = dask.bag.from_sequence(tempFiles)
+        dataset = bag.map(lambda f: self.fetcher.convertRawFileToDataset(f=f)) \
+            .fold(lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts")) \
+            .compute()
 
         # Save the dataset to a zarr file
         savedZarrPath = self.storer.writeDatasetAsZarr(
@@ -180,5 +216,9 @@ class NWPConsumerService:
             it=latestInitTime,
             ds=dataset
         )
+
+        # Delete the temporary files
+        for f in tempFiles:
+            os.remove(f.name)
 
         return savedZarrPath

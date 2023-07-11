@@ -3,14 +3,16 @@
 import abc
 import datetime as dt
 import pathlib
+import tempfile
 from enum import Enum
 
+import typing
 import xarray as xr
 
 # ------- Global constants ------- #
 
 # The folder pattern format string for the raw data's init time
-RAW_FOLDER_PATTERN_FMT_STRING = "%Y/%m/%d/%H%M"
+IT_FOLDER_FMTSTR = "%Y/%m/%d/%H%M"
 
 
 # ------- Domain models ------- #
@@ -37,12 +39,12 @@ class FileInfoModel(abc.ABC):
 
     @abc.abstractmethod
     def fname(self) -> str:
-        """Returns the file name."""
+        """Return the file name."""
         pass
 
     @abc.abstractmethod
     def initTime(self) -> dt.datetime:
-        """Returns the init time of the file."""
+        """Return the init time of the file."""
         pass
 
 
@@ -70,7 +72,7 @@ class FetcherInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def fetchRawFileBytes(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, bytes]:
+    def fetchRawFileBytes(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, tempfile.NamedTemporaryFile]:
         """Fetch the bytes of a single raw file from source given its relative path.
 
         :param fi: File Info object describing the file to fetch
@@ -78,10 +80,10 @@ class FetcherInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def loadRawInitTimeDataAsOCFDataset(self, *, fbl: list[bytes]) -> xr.Dataset:
+    def convertRawFileToDataset(self, *, f: tempfile.NamedTemporaryFile) -> xr.Dataset:
         """Create an xarray dataset from the given RAW file bytedata.
 
-        :param fbl: List of file bytes to load
+        :param f: Bytes of raw file
         """
         pass
 
@@ -99,12 +101,12 @@ class StorageInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def writeBytesToRawFile(self, *, name: str, it: dt.datetime, b: bytes) -> pathlib.Path:
+    def writeBytesToRawFile(self, *, name: str, it: dt.datetime, f: tempfile.NamedTemporaryFile) -> pathlib.Path:
         """Write the given bytes to the raw directory.
 
         :param name: Name of the file to write
         :param it: Init Time of the model data within the file
-        :param b: Bytes to write
+        :param f: Bytes to write
         """
         pass
 
@@ -118,11 +120,12 @@ class StorageInterface(abc.ABC):
         """Check if a file exists in the zarr directory.
 
         :param name: Name of the file to check
-        :param it: Init Time of the model data within the file"""
+        :param it: Init Time of the model data within the file
+        """
         pass
 
     @abc.abstractmethod
-    def readRawFilesForInitTime(self, *, it: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
+    def readRawFilesForInitTime(self, *, it: dt.datetime) -> tuple[dt.datetime, list[tempfile.NamedTemporaryFile]]:
         """Read bytes for all files for the given initTime.
 
         :param it: Init Time to read files for
@@ -146,5 +149,4 @@ class StorageInterface(abc.ABC):
         :param name: Name of the file to delete
         :param it: Init Time of the model data within the file
         """
-
         pass

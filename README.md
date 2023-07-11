@@ -66,6 +66,17 @@ Then run the service via
 $ ENV_VAR=<value> nwp-consumer <command...> 
 ```
 
+## Ubiquitous Language
+
+The following terms are used throughout the codebase and documentation. They are defined here to avoid ambiguity.
+
+- ***InitTime*** - The time at which a forecast is initialised. For example, a forecast initialised at 12:00 on 1st 
+January.
+
+- ***TargetTime*** - The time at which a predicted value is valid. For example, a forecast with InitTime 12:00 on 1st 
+January predicts that the temperature at TargetTime 12:00 on 2nd January will be 10 degrees.
+
+
 ## Repository structure
 
 Produced using [exa](https://github.com/ogham/exa):

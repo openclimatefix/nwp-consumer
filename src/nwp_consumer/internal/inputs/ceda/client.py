@@ -1,6 +1,7 @@
 """Client adapting CEDA API to internal Fetcher port."""
 
 import datetime as dt
+import gc
 import tempfile
 import typing
 import urllib.parse
@@ -16,7 +17,7 @@ from nwp_consumer import internal
 
 from ._models import CEDAFileInfo, CEDAResponse
 
-log = structlog.stdlib.get_logger()
+log = structlog.getLogger()
 
 # Defines parameters in CEDA that are not available from MetOffice
 PARAMETER_IGNORE_LIST: typing.Sequence[str] = (
@@ -65,7 +66,7 @@ class CEDAClient(internal.FetcherInterface):
         self.__ftpBase: str = f'ftp://{self.__username}:{self.__password}@ftp.ceda.ac.uk'
 
     def fetchRawFileBytes(self, *, fi: internal.FileInfoModel) \
-            -> tuple[internal.FileInfoModel, bytes]:
+            -> tuple[internal.FileInfoModel, tempfile.TemporaryFile]:
         """Download a GRIB file corresponding to the input relative path.
 
         :param fi: FileInfo object describing the file to fetch
@@ -80,10 +81,14 @@ class CEDAClient(internal.FetcherInterface):
                 f"Error calling url {url} for {fi.fname()}: {e}"
             ) from e
 
-        filedata = response.read()
+        # Stream the filedata into a temporary file
+        with tempfile.TemporaryFile(mode='w+b', delete=False) as tf:
+            for chunk in iter(lambda: response.read(16 * 1024), b''):
+                tf.write(chunk)
+
         log.debug(f"Fetched all data from: {fi.fname()}", path=anonUrl)
 
-        return fi, filedata
+        return fi, tf
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
         """Get a list of FileInfo objects according to the input initTime.
@@ -96,9 +101,18 @@ class CEDAClient(internal.FetcherInterface):
             method="GET",
             url=f"{self.httpsBase}/{self.dataUrl}/{it:%Y/%m/%d}?json"
         )
+
+        if response.status_code == 404:
+            # No data available for this init time. Fail soft
+            log.warn(
+                event=f"No data available for init time {it:%Y/%m/%d %H:%M}",
+                url=response.url
+            )
+            return []
         if not response.ok:
-            raise AssertionError(
-                f"Non-okay status for {response.url}: {response.status_code}"
+            # Something else has gone wrong. Fail hard
+            raise ConnectionError(
+                f"Error calling url {response.url}: {response.status_code}"
             ) from None
 
         # Map the response to a CEDAResponse object to ensure it looks as expected
@@ -120,67 +134,24 @@ class CEDAClient(internal.FetcherInterface):
 
         return wantedFiles
 
-    def loadRawInitTimeDataAsOCFDataset(self, *, fbl: list[bytes]) -> xr.Dataset:
-        """Create an xarray dataset from the given raw files.
+    def convertRawFileToDataset(self, *, f: tempfile.NamedTemporaryFile) -> xr.Dataset:
+        """Load a multi-parameter GRIB file as an OCF-compliant Dataset.
 
-        :param fbl: The list of raw file bytes to load.
+        :param f: The bytes of the grib file to load
         """
-        # Load the wholesale files as OCF datasets
-        wholesaleDatasets: list[xr.Dataset] = [
-            _loadWholesaleFileAsDataset(b=bd) for bd in fbl
-        ]
+        # Cfgrib is built upon eccodes which needs an in-memory file to read from
+        # Load the wholesale file as a list of datasets
+        # * cfgrib loads multiple hypercubes for a single multi-parameter grib file
 
-        # Merge the wholesale datasets into one
-        # TODO: Enable concatenation of datasets for different step sets
-        wholesaleDataset: xr.Dataset = xr.merge(
-            objects=wholesaleDatasets,
-            compat='identical',
-            combine_attrs='drop_conflicts'
-        )
-
-        # Load the new dataset into memory
-        # * Enables deletion of the old datasets
-        wholesaleDataset.load()
-        del wholesaleDatasets
-
-        # Add in x and y coordinates
-        wholesaleDataset = _reshapeTo2DGrid(
-            ds=wholesaleDataset
-        )
-
-        # Add the init time as a coordinate
-        wholesaleDataset = wholesaleDataset \
-            .rename({"time": "init_time"}) \
-            .expand_dims("init_time") \
-            .chunk("auto") \
-            .load()
-
-        return wholesaleDataset
-
-
-def _loadWholesaleFileAsDataset(*, b: bytes) -> xr.Dataset:
-    """Load a multi-parameter GRIB file as an OCF-compliant Dataset.
-
-    :param b: The bytes of the grib file to load
-    """
-    # Cfgrib is built upon eccodes which needs an in-memory file to read from
-    with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib2") as tempParameterFile:
-        # Copy the raw file to a local temp file
-        tempParameterFile.write(b)
-        tempParameterFile.seek(0)
-
-        # Load the wholesale file as a dataset
         try:
             datasets: list[xr.Dataset] = cfgrib.open_datasets(
-                path=tempParameterFile.name,
+                path=f.name,
                 backend_kwargs={"indexpath": ""}
             )
         except Exception as e:
-            raise Exception(f"Error loading wholesale file as dataset: {e}")
+            raise Exception(f"Error loading wholesale file as dataset: {e}") from e
 
-        for i in range(len(datasets)):
-            ds = datasets[i]
-
+        for i, ds in enumerate(datasets):
             # Rename the parameters to the OCF names
             # * Only do so if they exist in the dataset
             for oldParamName, newParamName in PARAMETER_RENAME_MAP.items():
@@ -212,20 +183,48 @@ def _loadWholesaleFileAsDataset(*, b: bytes) -> xr.Dataset:
                 errors="ignore"
             )
 
-            # Replace the dataset in the list with the modified one
-            # * Delete the modified dataset to free up memory
+            # Put the modified dataset back in the list
             datasets[i] = ds
-            del ds
 
+        # Merge the datasets back into one
         wholesaleDataset = xr.merge(
             objects=datasets,
             compat='override',
             combine_attrs='drop_conflicts'
         )
-        wholesaleDataset.load()
+
+        # Add in x and y coordinates
+        wholesaleDataset = _reshapeTo2DGrid(
+            ds=wholesaleDataset
+        )
+
+        # Create a chunked Dask Dataset from the input multi-variate Dataset.
+        # *  Converts the input multivariate DataSet (with different DataArrays for
+        #     each NWP variable) to a single DataArray with a `variable` dimension.
+        # * This allows each Zarr chunk to hold multiple variables (useful for loading
+        #     many/all variables at once from disk).
+        # * The chunking is done in such a way that each chunk is a single time step
+        #     for a single variable.
+        # * Transpose the Dataset so that the dimensions are correctly ordered
+        wholesaleDataset = wholesaleDataset \
+            .rename({"time": "init_time"}) \
+            .expand_dims("init_time") \
+            .to_array(dim="variable", name="UKV") \
+            .to_dataset() \
+            .transpose("init_time", "step", "variable", "y", "x") \
+            .sortby("step") \
+            .sortby("variable") \
+            .chunk({
+                "init_time": 1,
+                "step": 1,
+                "variable": -1,
+                "y": len(wholesaleDataset.y) // 2,
+                "x": len(wholesaleDataset.x) // 2,
+            })
+
         del datasets
 
-    return wholesaleDataset
+        return wholesaleDataset
 
 
 def _isWantedFile(*, fi: CEDAFileInfo, dit: dt.datetime) -> bool:

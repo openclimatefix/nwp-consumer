@@ -1,15 +1,18 @@
 import datetime as dt
 import pathlib
+import tempfile
 
-import boto3
 import botocore.client
 import botocore.exceptions
 import numpy as np
+import s3fs
+import structlog
 import xarray as xr
 from ocf_blosc2 import Blosc2
-import s3fs
 
 from nwp_consumer import internal
+
+log = structlog.getLogger()
 
 
 class S3Client(internal.StorageInterface):
@@ -27,16 +30,19 @@ class S3Client(internal.StorageInterface):
     # S3 Accessor
     __s3: botocore.client
 
-    def __init__(self, key: str, secret: str, rawDir: str, zarrDir: str, bucket: str, region: str):
+    def __init__(self, key: str, secret: str, rawDir: str, zarrDir: str, bucket: str, region: str,
+                 endpointURL: str = None):
         """Create a new S3Client."""
         rawPath: pathlib.Path = pathlib.Path(rawDir)
         zarrPath: pathlib.Path = pathlib.Path(zarrDir)
 
-        self.__s3 = boto3.client(
-            's3',
-            aws_access_key_id=key,
-            aws_secret_access_key=secret,
-            region_name=region,
+        self.__fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
+            key=key,
+            secret=secret,
+            client_kwargs={
+                'region_name': region,
+                'endpoint_url': endpointURL,
+            }
         )
 
         self.__rawDir = rawPath
@@ -45,107 +51,100 @@ class S3Client(internal.StorageInterface):
 
     def rawFileExistsForInitTime(self, name: str, it: dt.datetime) -> bool:
         """Check if a file exists in the raw directory.
-        
+
         :param name: The name of the file to check for
         :param it: The init time of the data within the file
         """
-        path = self.__rawDir / it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING) / name
-        try:
-            self.__s3.head_object(Bucket=self.__bucket, Key=path.as_posix())
-        except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Code'] == "404":
-                # The key does not exist.
-                return False
-            else:
-                # Something else has gone wrong.
-                raise e
-        return True
+        path = self.__bucket \
+               / self.__rawDir \
+               / it.strftime(internal.IT_FOLDER_FMTSTR) \
+               / name
+        return self.__fs.exists(path.as_posix())
 
-    def writeBytesToRawFile(self, name: str, it: dt.datetime, b: bytes) -> pathlib.Path:
+    def writeBytesToRawFile(self, name: str, it: dt.datetime, f: tempfile.NamedTemporaryFile) -> pathlib.Path:
         """Write the given bytes to the raw directory.
-        
+
         :param name: The name of the file to write
         :param it: The init time of the data within the file
-        :param b: The bytes to write
+        :param f: The bytes to write
         """
-        path = self.__rawDir / it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING) / name
+        path = self.__bucket / self.__rawDir \
+               / it.strftime(internal.IT_FOLDER_FMTSTR) / name
 
-        self.__s3.put_object(Bucket=self.__bucket, Key=path.as_posix(), Body=b)
+        with self.__fs.open(path.as_posix(), 'wb') as o:
+            for chunk in iter(lambda: f.read(16 * 1024), b""):
+                o.write(chunk)
+
         return path
 
     def listInitTimesInRawDir(self) -> list[dt.datetime]:
         """List all initTimes in the raw directory."""
-        paginator = self.__s3.get_paginator('list_objects_v2')
-        pages = paginator.paginate(Bucket=self.__bucket, Prefix=self.__rawDir.as_posix() + "/")
-
-        # Get a list of all the Prefixes in the bucket
-        # * Follow the pattern 'rawDir/{PREFIX/MAY/HAVE/SLASHES}/filename.ext'
-        allDirs = set()
-        for page in pages:
-            for obj in page['Contents']:
-                allDirs.add(pathlib.Path(obj['Key']).relative_to(self.__rawDir).parent)
+        allDirs = [
+            pathlib.Path(d).relative_to(f'{self.__bucket}/{self.__rawDir}')
+            for d in self.__fs.glob(f'{self.__bucket}/{self.__rawDir}/*/*/*/*')
+            if self.__fs.isdir(d)
+        ]
 
         # Get the initTime from the folder pattern
-        initTimes = [dt.datetime.strptime(f.as_posix(), internal.RAW_FOLDER_PATTERN_FMT_STRING) for f in allDirs
-                     if f.match('*/*/*/*')]
+        initTimes = set()
+        for dir in allDirs:
+            if dir.match('*/*/*/*'):
+                try:
+                    # Try to parse the folder name as a datetime
+                    ddt = dt.datetime.strptime(
+                        dir.as_posix(),
+                        internal.IT_FOLDER_FMTSTR
+                    ).replace(tzinfo=None)
+                    initTimes.add(ddt)
+                except ValueError:
+                    log.debug(f"Invalid folder name found in raw directory: {dir}. Ignoring")
 
-        return sorted(initTimes)
+        sortedInitTimes = sorted(initTimes)
+        log.debug(
+            event=f"Found {len(initTimes)} init times in raw directory",
+            earliest=sortedInitTimes[0],
+            latest=sortedInitTimes[-1]
+        )
+        return sortedInitTimes
 
-    def readRawFilesForInitTime(self, it: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
+    def readRawFilesForInitTime(self, it: dt.datetime) -> tuple[dt.datetime, list[tempfile.NamedTemporaryFile]]:
         """Read bytes of all files from the raw dir for the given initTime.
 
         :param it: The init time to read for
         """
-        initTimeDirPath = self.__rawDir / it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)
-        response = self.__s3.list_objects_v2(Bucket=self.__bucket, Prefix=initTimeDirPath.as_posix() + "/")
+        initTimeDirPath = self.__bucket / self.__rawDir \
+                          / it.strftime(internal.IT_FOLDER_FMTSTR)
+        files = self.__fs.ls(initTimeDirPath.as_posix())
 
-        return it, [self.__s3.get_object(Bucket=self.__bucket, Key=obj['Key'])['Body'].read()
-                    for obj in response['Contents']]
+        # Read all files as temporary files
+        tempfiles: list[tempfile.NamedTemporaryFile] = []
+        for file in files:
+            with tempfile.NamedTemporaryFile("w+b", delete=False) as outfile:
+                with self.__fs.open(file, "rb") as infile:
+                    for chunk in iter(lambda: infile.read(16 * 1024), b""):
+                        outfile.write(chunk)
+                        outfile.flush()
+                    tempfiles.append(outfile)
+
+        return it, tempfiles
 
     def writeDatasetAsZarr(self, name: str, it: dt.datetime, ds: xr.Dataset) -> pathlib.Path:
         """Write the given Dataset to the zarr directory.
-        
+
         :param name: The name of the file to write
         :param it: The init time of the data within the Dataset
         :param ds: The Dataset to write
         """
-        path: pathlib.Path = self.__bucket / self.__zarrDir / name
+        path: pathlib.Path = (self.__bucket / self.__zarrDir / name).with_suffix('.zarr')
 
         # Ensure the zarr path doesn't already exist
         if self.zarrExistsForInitTime(name=name, it=it):
             raise FileExistsError(f"Zarr path already exists: {path}")
 
-        # Create a chunked Dask Dataset from the input multi-variate Dataset.
-        # *  Converts the input multivariate DataSet (with different DataArrays for
-        #     each NWP variable) to a single DataArray with a `variable` dimension.
-        # * This allows each Zarr chunk to hold multiple variables (useful for loading
-        #     many/all variables at once from disk).
-
-        # Create single-variate dataarray from dataset, with new "variable" dimension
-        da = ds \
-            .to_array(dim="variable", name="UKV") \
-            .compute()
-        del ds
-
-        # Convert back to dataset, order dimensions, and chunk
-        chunkedDataset = da.to_dataset() \
-            .transpose("init_time", "step", "variable", "y", "x") \
-            .sortby("step") \
-            .sortby("variable") \
-            .chunk({
-                "init_time": 1,
-                "step": 1,
-                "variable": -1,
-                "y": len(da.y) // 2,
-                "x": len(da.x) // 2,
-            }) \
-            .compute()
-        del da
-
         # Create new Zarr store.
-        chunkedDataset["UKV"] = chunkedDataset.astype(np.float16)["UKV"]
-        chunkedDataset.to_zarr(
-            store="s3://" + path.as_posix(),
+        ds["UKV"] = ds.astype(np.float16)["UKV"]
+        ds.to_zarr(
+            store=s3fs.S3Map(root="s3://" + path.as_posix(), s3=self.__fs, check=False),
             encoding={
                 "init_time": {"units": "nanoseconds since 1970-01-01"},
                 "UKV": {
@@ -153,39 +152,18 @@ class S3Client(internal.StorageInterface):
                 },
             },
         )
-        del chunkedDataset
+        del ds
         return pathlib.Path(path)
 
     def zarrExistsForInitTime(self, name: str, it: dt.datetime) -> bool:
         """Check if a file exists in the zarr directory.
-        
+
         :param name: The name of the file to check for
         :param it: The init time of the data within the file
         """
-        path = self.__zarrDir / name
-        try:
-            self.__s3.head_object(
-                Bucket=self.__bucket,
-                Key=path.as_posix()
-            )
-        except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Code'] == "404":
-                # The key does not exist.
-                return False
-            else:
-                # Something else has gone wrong.
-                raise e
-        return True
+        path = self.__bucket / self.__zarrDir / name
+        return self.__fs.exists(path.as_posix())
 
     def deleteZarrForInitTime(self, *, name: str, it: dt.datetime) -> None:
         """Delete the Zarr file for the given init time."""
-
-        paginator = self.__s3.get_paginator('list_objects_v2')
-        pages = paginator.paginate(Bucket=self.__bucket, Prefix=(self.__zarrDir / name).as_posix() + "/")
-
-        # Get a list of all the files in the zarr folder
-        allDirs = set()
-        for page in pages:
-            print(page)
-            for obj in page['Contents']:
-                print(obj)
+        self.__fs.rm((self.__bucket / self.__zarrDir / name).as_posix(), recursive=True)

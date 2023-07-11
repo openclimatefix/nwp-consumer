@@ -3,7 +3,7 @@
 Usage:
   nwp-consumer download --from <startDate> --to <endDate> [options]
   nwp-consumer convert --from <startDate> --to <endDate> [options]
-  nwp-consumer consume --from <startDate> --to <endDate> [options]
+  nwp-consumer consume [options]
   nwp-consumer (-h | --help)
   nwp-consumer --version
 
@@ -14,13 +14,14 @@ Options:
 
   -h --help           Show this screen.
   --version           Show version.
-  --from <startDate>  Start date in YYYY-MM-DD format
-  --to <endDate>      End date in YYYY-MM-DD format
+  --from <startDate>  Start date in YYYY-MM-DD format [default: today].
+  --to <endDate>      End date in YYYY-MM-DD format [default: today].
   --source <source>   Data source to use (ceda/metoffice) [default: ceda].
   --sink <sink>       Data sink to use (local/s3) [default: local].
   --rdir <rawdir>     Directory of raw data store [default: /tmp/raw].
   --zdir <zarrdir>    Directory of zarr data store [default: /tmp/zarr].
   --create-latest     Create a zarr of the dataset with the latest init time [default: False].
+  --verbose           Enable verbose logging [default: False].
 """
 
 import datetime as dt
@@ -40,7 +41,7 @@ except importlib.metadata.PackageNotFoundError:
     # package is not installed
     pass
 
-log = structlog.stdlib.get_logger()
+log = structlog.getLogger()
 
 
 def run():
@@ -97,28 +98,33 @@ def run():
         storer=storer
     )
 
+    # Set default values for start and end dates
+    if arguments['--from'] == "today" or arguments['--from'] is None:
+        arguments['--from'] = dt.datetime.now().strftime("%Y-%m-%d")
+    if arguments['--to'] == "today" or arguments['--to'] is None:
+        arguments['--to'] = dt.datetime.now().strftime("%Y-%m-%d")
+
+    # Parse start and end dates
     startDate: dt.date = dt.datetime.strptime(arguments['--from'], "%Y-%m-%d").date()
     endDate: dt.date = dt.datetime.strptime(arguments['--to'], "%Y-%m-%d").date()
     if endDate < startDate:
         raise ValueError("Argument '--from' cannot specify date prior to '--to'")
 
-    downloaded = []
-    converted = []
 
     if arguments['download']:
-        downloaded = service.DownloadRawDataset(
+        service.DownloadRawDataset(
             start=startDate,
             end=endDate
         )
 
     if arguments['convert']:
-        converted = service.ConvertRawDatasetToZarr(
-            start=endDate,
+        service.ConvertRawDatasetToZarr(
+            start=startDate,
             end=endDate
         )
 
     if arguments['consume']:
-        converted = service.DownloadAndConvert(
+        service.DownloadAndConvert(
             start=startDate,
             end=endDate
         )
