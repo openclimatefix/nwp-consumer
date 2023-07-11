@@ -29,6 +29,7 @@ dependencies = [
     "requests == 2.31.0",
     "scitools-iris == 3.4.1",
     "structlog == 22.1.0",
+    "typeid-python == 0.2.1",
     "urllib3 == 1.26.15",
     "xarray == 2023.2.0",
     "zarr == 2.14.2"

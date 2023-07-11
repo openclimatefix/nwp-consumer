@@ -25,27 +25,24 @@ metOfficeClient = inputs.metoffice.MetOfficeClient(
     clientID=mc.METOFFICE_CLIENT_ID,
     clientSecret=mc.METOFFICE_CLIENT_SECRET,
 )
-storageClient = outputs.localfs.LocalFSClient(
-    rawDir='data/raw',
-    zarrDir='data/zarr',
-)
+storageClient = outputs.localfs.LocalFSClient()
 
 
 class TestClient_FetchRawFileBytes(unittest.TestCase):
 
     def test_downloadsRawGribFileFromCEDA(self):
         fileInfo = CEDAFileInfo(name="202201010000_u1096_ng_umqv_Wholesale1.grib")
-        _, outBytes = cedaClient.fetchRawFileBytes(fi=fileInfo)
+        _, tmpPath = cedaClient.downloadToTemp(fi=fileInfo)
 
-        self.assertGreater(len(outBytes), 100000000)
+        self.assertGreater(tmpPath.stat().st_size, 100000000)
 
     def test_downloadsRawGribFileFromMetOffice(self):
         fileInfo = MetOfficeFileInfo(
             fileId=f'agl_temperature_1.5_{dt.datetime.now().strftime("%Y%m%d")}00',
             runDateTime=metOfficeInitTime
         )
-        _, outBytes = metOfficeClient.fetchRawFileBytes(fi=fileInfo)
-        self.assertGreater(len(outBytes), 4000000)
+        _, tmpPath = metOfficeClient.downloadToTemp(fi=fileInfo)
+        self.assertGreater(tmpPath.stat().st_size, 4000000)
 
 
 class TestListRawFilesForInitTime(unittest.TestCase):

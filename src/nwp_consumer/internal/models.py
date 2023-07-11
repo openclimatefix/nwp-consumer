@@ -5,14 +5,12 @@ import datetime as dt
 import pathlib
 from enum import Enum
 
-import typing
 import xarray as xr
 
 # ------- Global constants ------- #
 
 # The folder pattern format string for the raw data's init time
 IT_FOLDER_FMTSTR = "%Y/%m/%d/%H%M"
-
 
 # ------- Domain models ------- #
 
@@ -71,18 +69,20 @@ class FetcherInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def fetchRawFileBytes(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, bytes]:
-        """Fetch the bytes of a single raw file from source given its relative path.
+    def downloadToTemp(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, pathlib.Path]:
+        """Fetch the bytes of a single raw file from source and save to a temp file.
 
         :param fi: File Info object describing the file to fetch
+        :return: Tuple of the File Info object and a path to the local temp file
         """
         pass
 
     @abc.abstractmethod
-    def convertRawFileToDataset(self, *, b: bytes) -> xr.Dataset:
-        """Create an xarray dataset from the given RAW file bytedata.
+    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
+        """Create an xarray dataset from the given RAW data in a temp file.
 
-        :param b: Bytes of raw file
+        :param p: Path to temp file holding raw data
+        :return: Dataset created from the raw data
         """
         pass
 
@@ -91,61 +91,48 @@ class StorageInterface(abc.ABC):
     """Generic interface for storing data, used for dependency injection."""
 
     @abc.abstractmethod
-    def rawFileExistsForInitTime(self, *, name: str, it: dt.datetime) -> bool:
-        """Check if a file exists in the raw directory.
+    def exists(self, *, dst: pathlib.Path) -> bool:
+        """Check if the given path exists.
 
-        :param name: Name of the file to check
-        :param it: Init Time of the model data within the file
+        :param dst: Path to check
+        :return: True if the path exists, False otherwise
         """
         pass
 
     @abc.abstractmethod
-    def writeBytesToRawFile(self, *, name: str, it: dt.datetime, b: bytes) -> pathlib.Path:
-        """Write the given bytes to the raw directory.
+    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
+        """Move the given temp file to the store at path p, deleting the temp file.
 
-        :param name: Name of the file to write
-        :param it: Init Time of the model data within the file
-        :param b: Bytes to write
+        :param src: Path to temp file to move
+        :param dst: Desired path in store
+        :return: Number of bytes copied
         """
         pass
 
     @abc.abstractmethod
-    def listInitTimesInRawDir(self) -> list[dt.datetime]:
-        """List all initTime folders in the raw directory."""
-        pass
+    def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:
+        """List all initTime folders in the given prefix.
 
-    @abc.abstractmethod
-    def zarrExistsForInitTime(self, *, name: str, it: dt.datetime) -> bool:
-        """Check if a file exists in the zarr directory.
-
-        :param name: Name of the file to check
-        :param it: Init Time of the model data within the file
+        :param prefix: Path to prefix to list initTimes for
+        :return: List of initTimes
         """
         pass
 
     @abc.abstractmethod
-    def readRawFilesForInitTime(self, *, it: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
-        """Read bytes for all files for the given initTime.
+    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) \
+            -> tuple[dt.datetime, list[pathlib.Path]]:
+        """Copy all files in given folder to temp files.
 
-        :param it: Init Time to read files for
+        :param prefix: Path of folder in which to find initTimes
+        :param it: InitTime to copy files for
+        :return: Tuple of the initTime and list of paths to temp files
         """
         pass
 
     @abc.abstractmethod
-    def writeDatasetAsZarr(self, *, name: str, it: dt.datetime, ds: xr.Dataset) -> pathlib.Path:
-        """Write the given dataset to the zarr directory.
+    def delete(self, *, p: pathlib.Path) -> None:
+        """Delete the given path.
 
-        :param name: Name of the file to write
-        :param it: Init Time of the model data within the Dataset
-        :param ds: Dataset to write
-        """
-        pass
-
-    @abc.abstractmethod
-    def deleteZarrForInitTime(self, *, name: str, it: dt.datetime) -> None:
-        """Delete the zarr file for the given initTime.
-
-        :param name: Name of the file to delete
-        :param it: Init Time of the model data within the file
+        :param p: Path to delete
         """
         pass

@@ -3,11 +3,9 @@ import pathlib
 
 import botocore.client
 import botocore.exceptions
-import numpy as np
 import s3fs
 import structlog
-import xarray as xr
-from ocf_blosc2 import Blosc2
+from typeid import TypeID
 
 from nwp_consumer import internal
 
@@ -18,23 +16,14 @@ class S3Client(internal.StorageInterface):
     """Client for AWS S3."""
 
     # S3 Bucket
-    __bucket: str
-
-    # Location to save raw (Usually GRIB) files
-    __rawDir: pathlib.Path
-
-    # Location to save Zarr files
-    __zarrDir: pathlib.Path
+    __bucket: pathlib.Path
 
     # S3 Accessor
     __s3: botocore.client
 
-    def __init__(self, key: str, secret: str, rawDir: str, zarrDir: str, bucket: str, region: str,
+    def __init__(self, key: str, secret: str, bucket: str, region: str,
                  endpointURL: str = None):
         """Create a new S3Client."""
-        rawPath: pathlib.Path = pathlib.Path(rawDir)
-        zarrPath: pathlib.Path = pathlib.Path(zarrDir)
-
         self.__fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
             key=key,
             secret=secret,
@@ -44,40 +33,21 @@ class S3Client(internal.StorageInterface):
             }
         )
 
-        self.__rawDir = rawPath
-        self.__zarrDir = zarrPath
-        self.__bucket = bucket
+        self.__bucket = pathlib.Path(bucket)
 
-    def rawFileExistsForInitTime(self, name: str, it: dt.datetime) -> bool:
-        """Check if a file exists in the raw directory.
+    def exists(self, *, dst: pathlib.Path) -> bool:
+        return self.__fs.exists((self.__bucket / dst).as_posix())
 
-        :param name: The name of the file to check for
-        :param it: The init time of the data within the file
-        """
-        path = self.__bucket \
-               / self.__rawDir \
-               / it.strftime(internal.IT_FOLDER_FMTSTR) \
-               / name
-        return self.__fs.exists(path.as_posix())
+    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
+        self.__fs.put(lpath=src.as_posix(), rpath=(self.__bucket / dst).as_posix(), recursive=True)
+        src.unlink()
+        return self.__fs.du((self.__bucket / dst).as_posix())
 
-    def writeBytesToRawFile(self, name: str, it: dt.datetime, b: bytes) -> pathlib.Path:
-        """Write the given bytes to the raw directory.
-
-        :param name: The name of the file to write
-        :param it: The init time of the data within the file
-        :param b: The bytes to write
-        """
-        path = self.__bucket / self.__rawDir \
-               / it.strftime(internal.IT_FOLDER_FMTSTR) / name
-
-        self.__fs.write_bytes(path.as_posix(), b)
-        return path
-
-    def listInitTimesInRawDir(self) -> list[dt.datetime]:
+    def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:
         """List all initTimes in the raw directory."""
         allDirs = [
-            pathlib.Path(d).relative_to(f'{self.__bucket}/{self.__rawDir}')
-            for d in self.__fs.glob(f'{self.__bucket}/{self.__rawDir}/*/*/*/*')
+            pathlib.Path(d).relative_to(self.__bucket / prefix)
+            for d in self.__fs.glob(f'{self.__bucket}/{prefix}/*/*/*/*')
             if self.__fs.isdir(d)
         ]
 
@@ -103,53 +73,27 @@ class S3Client(internal.StorageInterface):
         )
         return sortedInitTimes
 
-    def readRawFilesForInitTime(self, it: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
-        """Read bytes of all files from the raw dir for the given initTime.
-
-        :param it: The init time to read for
-        """
-        initTimeDirPath = self.__bucket / self.__rawDir \
+    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) \
+            -> tuple[dt.datetime, list[pathlib.Path]]:
+        initTimeDirPath = self.__bucket / prefix \
                           / it.strftime(internal.IT_FOLDER_FMTSTR)
-        files = self.__fs.ls(initTimeDirPath.as_posix())
+        paths = [pathlib.Path(p)
+                 for p in self.__fs.ls(initTimeDirPath.as_posix())]
 
-        return it, [self.__fs.read_bytes(f) for f in files]
+        # Read all files into temporary files
+        tempPaths: list[pathlib.Path] = []
+        for path in paths:
+            with self.__fs.open(path=path.as_posix(), mode="rb") as infile:
+                tfp: pathlib.Path = pathlib.Path(f"/tmp/{str(TypeID(prefix='nwpc'))}")
+                with tfp.open("wb") as tmpfile:
+                    for chunk in iter(lambda: infile.read(16 * 1024), b""):
+                        tmpfile.write(chunk)
+                tempPaths.append(tfp)
 
-    def writeDatasetAsZarr(self, name: str, it: dt.datetime, ds: xr.Dataset) -> pathlib.Path:
-        """Write the given Dataset to the zarr directory.
+        return it, tempPaths
 
-        :param name: The name of the file to write
-        :param it: The init time of the data within the Dataset
-        :param ds: The Dataset to write
-        """
-        path: pathlib.Path = (self.__bucket / self.__zarrDir / name).with_suffix('.zarr')
-
-        # Ensure the zarr path doesn't already exist
-        if self.zarrExistsForInitTime(name=name, it=it):
-            raise FileExistsError(f"Zarr path already exists: {path}")
-
-        # Create new Zarr store.
-        ds["UKV"] = ds.astype(np.float16)["UKV"]
-        ds.to_zarr(
-            store=s3fs.S3Map(root="s3://" + path.as_posix(), s3=self.__fs, check=False),
-            encoding={
-                "init_time": {"units": "nanoseconds since 1970-01-01"},
-                "UKV": {
-                    "compressor": Blosc2(cname="zstd", clevel=5),
-                },
-            },
-        )
-        del ds
-        return pathlib.Path(path)
-
-    def zarrExistsForInitTime(self, name: str, it: dt.datetime) -> bool:
-        """Check if a file exists in the zarr directory.
-
-        :param name: The name of the file to check for
-        :param it: The init time of the data within the file
-        """
-        path = self.__bucket / self.__zarrDir / name
-        return self.__fs.exists(path.as_posix())
-
-    def deleteZarrForInitTime(self, *, name: str, it: dt.datetime) -> None:
-        """Delete the Zarr file for the given init time."""
-        self.__fs.rm((self.__bucket / self.__zarrDir / name).as_posix(), recursive=True)
+    def delete(self, *, p: pathlib.Path) -> None:
+        if self.__fs.isdir((self.__bucket / p).as_posix()):
+            self.__fs.rm((self.__bucket / p).as_posix(), recursive=True)
+        else:
+            self.__fs.rm((self.__bucket / p).as_posix())

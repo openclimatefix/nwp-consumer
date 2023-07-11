@@ -15,9 +15,7 @@ testClient = MetOfficeClient(
     clientSecret="tmp"
 )
 
-
 # --------- Client methods --------- #
-
 
 class TestClient_Init(unittest.TestCase):
     """Tests for the MetOfficeClient.__init__ method."""
@@ -36,9 +34,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
     def test_convertsCorrectly(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_knownparam.grib"
 
-        out = testClient.convertRawFileToDataset(
-            b=testFilePath.read_bytes(),
-        )
+        out = testClient.mapTemp(p=testFilePath)
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual({"init_time": 1, "variable": 1, "step": 13, "y": 639, "x": 455}, dict(out.dims.items()))
@@ -50,9 +46,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
     def test_renamesVariables(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wrongnameparam.grib"
 
-        out = testClient.convertRawFileToDataset(
-            b=testFilePath.read_bytes(),
-        )
+        out = testClient.mapTemp(p=testFilePath)
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual({"init_time": 1, "variable": 1, "step": 13, "y": 639, "x": 455}, dict(out.dims.items()))
@@ -64,9 +58,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
     def test_handlesUnknownsInMetOfficeData(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknownparam1.grib"
 
-        out = testClient.convertRawFileToDataset(
-            b=testFilePath.read_bytes(),
-        )
+        out = testClient.mapTemp(p=testFilePath)
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual({"init_time": 1, "variable": 1, "step": 43, "y": 639, "x": 455}, dict(out.dims.items()))
@@ -78,11 +70,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
 
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknownparam2.grib"
 
-        out = testClient.convertRawFileToDataset(
-            b=testFilePath.read_bytes(),
-        )
-
-        actual = list(out.data_vars)
+        out = testClient.mapTemp(p=testFilePath)
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual({"init_time": 1, "variable": 1, "step": 10, "y": 639, "x": 455}, dict(out.dims.items()))
@@ -92,9 +80,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
         self.assertListEqual(['wdir10'], sorted(list(out.coords["variable"].values)))
         self.assertNotEqual(['unknown'], sorted(list(out.coords["variable"].values)))
 
-
 # --------- Static methods --------- #
-
 
 class Test_IsWantedFile(unittest.TestCase):
     """Tests for the _isWantedFile method."""

@@ -26,6 +26,7 @@ Options:
 
 import datetime as dt
 import importlib.metadata
+import pathlib
 
 import structlog
 from docopt import docopt
@@ -58,20 +59,14 @@ def run():
 
     match arguments['--sink']:
         case 'local':
-            storer = outputs.localfs.LocalFSClient(
-                rawDir=arguments['--rdir'],
-                zarrDir=arguments['--zdir'],
-                createDirs=True
-            )
+            storer = outputs.localfs.LocalFSClient()
         case 's3':
             s3c = config.S3Config()
             storer = outputs.s3.S3Client(
                 key=s3c.AWS_ACCESS_KEY,
                 bucket=s3c.AWS_S3_BUCKET,
                 secret=s3c.AWS_ACCESS_SECRET,
-                region=s3c.AWS_REGION,
-                rawDir=arguments['--rdir'],
-                zarrDir=arguments['--zdir'],
+                region=s3c.AWS_REGION
             )
         case _:
             raise ValueError(f"Unknown sink {arguments['--sink']}")
@@ -95,7 +90,9 @@ def run():
 
     service = NWPConsumerService(
         fetcher=fetcher,
-        storer=storer
+        storer=storer,
+        zarrdir=arguments['--zdir'],
+        rawdir=arguments['--rdir'],
     )
 
     # Set default values for start and end dates
@@ -109,7 +106,6 @@ def run():
     endDate: dt.date = dt.datetime.strptime(arguments['--to'], "%Y-%m-%d").date()
     if endDate < startDate:
         raise ValueError("Argument '--from' cannot specify date prior to '--to'")
-
 
     if arguments['download']:
         service.DownloadRawDataset(
@@ -140,4 +136,7 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    try:
+        run()
+    finally:
+        _ = [p.unlink() for p in pathlib.Path("/tmp").glob("nwpc_*")]

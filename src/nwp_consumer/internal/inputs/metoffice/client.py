@@ -1,13 +1,13 @@
 """Implements a client to fetch the data from the MetOffice API."""
 
 import datetime as dt
-import gc
-import tempfile
+import pathlib
 import urllib.request
 
 import requests
 import structlog.stdlib
 import xarray as xr
+from typeid import TypeID
 
 from nwp_consumer import internal
 
@@ -59,12 +59,9 @@ class MetOfficeClient(internal.FetcherInterface):
             "X-IBM-Client-Secret": clientSecret,
         }
 
-    def fetchRawFileBytes(self, *, fi: MetOfficeFileInfo) \
-            -> tuple[internal.FileInfoModel, bytes]:
-        """Download a GRIB file corresponding to the input FileInfo object.
+    def downloadToTemp(self, *, fi: MetOfficeFileInfo) \
+            -> tuple[internal.FileInfoModel, pathlib.Path]:
 
-        :param fi: FileInfo object describing the file to download
-        """
         log.debug(f"Requesting download of {fi.fname()}", item=fi.fname())
         url: str = f"{self.baseurl}/{fi.fname()}/data"
         try:
@@ -81,16 +78,18 @@ class MetOfficeClient(internal.FetcherInterface):
         except Exception as e:
             raise ConnectionError(f"Error calling url {url} for {fi.fname()}: {e}") from e
 
-        filedata = response.read()
+        # Stream the filedata into a temporary file
+        tfp: pathlib.Path = pathlib.Path(f"/tmp/{str(TypeID(prefix='nwpc'))}")
+        with tfp.open("wb") as f:
+            for chunk in iter(lambda: response.read(16 * 1024), b''):
+                f.write(chunk)
+
         log.debug(f"Fetched all data from {fi.fname()}", path=url)
 
-        return fi, filedata
+        return fi, tfp
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
-        """Get a list of FileInfo objects according to the input initTime.
 
-        :param it: Init Time to fetch data for
-        """
         if it.date() != dt.datetime.utcnow().date():
             log.warn("MetOffice API only supports fetching data for the current day")
             return []
@@ -124,29 +123,18 @@ class MetOfficeClient(internal.FetcherInterface):
 
         return wantedFileInfos
 
-    def convertRawFileToDataset(self, *, b: bytes) -> xr.Dataset:
-        """Load a MetOffice single-parameter GRIB file as an OCF-compliant Dataset.
-
-        :param b: Raw file bytes to load
-        """
-        parameterDataset: xr.Dataset = xr.Dataset()
+    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
 
         # Cfgrib is built upon eccodes which needs an in-memory file to read from
-        with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib") as tempParameterFile:
-            # Copy the raw file to a local temp file
-            tempParameterFile.write(b)
-            tempParameterFile.seek(0)
-
-            # Load the GRIB file as a cube
-            try:
-                parameterDataset: xr.Dataset = xr.open_dataset(
-                    tempParameterFile.name, engine='cfgrib',
-                    backend_kwargs={'read_keys': ['name', 'parameterNumber'], 'indexpath': ''}
-                )
-            except Exception as e:
-                raise ValueError(f"Failed to load GRIB file as a cube: {e}") from e
-
-            parameterDataset.load()
+        # Load the GRIB file as a cube
+        try:
+            parameterDataset: xr.Dataset = xr.open_dataset(
+                p.as_posix(),
+                engine='cfgrib',
+                backend_kwargs={'read_keys': ['name', 'parameterNumber'], 'indexpath': ''}
+            )
+        except Exception as e:
+            raise ValueError(f"Failed to load GRIB file as a cube: {e}") from e
 
         # Make the DataArray OCF-compliant
         # 1. Rename the parameter to the OCF short name
@@ -197,8 +185,7 @@ class MetOfficeClient(internal.FetcherInterface):
                 "variable": -1,
                 "y": len(parameterDataset.y) // 2,
                 "x": len(parameterDataset.x) // 2,
-            }) \
-            .compute()
+            })
 
         return parameterDataset
 

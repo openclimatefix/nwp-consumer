@@ -36,9 +36,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
     def test_convertsWholesale1FileCorrectly(self):
         wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wholesale1.grib"
 
-        out = testClient.convertRawFileToDataset(
-            b=wholesalePath.read_bytes(),
-        )
+        out = testClient.mapTemp(p=wholesalePath)
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual({"init_time": 1, "variable": 6, "step": 4, "y": 704, "x": 548}, dict(out.dims.items()))
@@ -50,9 +48,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
     def test_convertsWholesale2FileCorrectly(self):
         wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wholesale2.grib"
 
-        out = testClient.convertRawFileToDataset(
-            b=wholesalePath.read_bytes(),
-        )
+        out = testClient.mapTemp(p=wholesalePath)
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual({"init_time": 1, "variable": 6, "step": 4, "y": 704, "x": 548}, dict(out.dims.items()))
@@ -60,6 +56,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
         self.assertEqual(("init_time", "step", "variable", "y", "x"), out["UKV"].dims)
         # Ensure the correct variables are in the variable dimension
         self.assertListEqual(['dlwrf', 'dswrf', 'hcc', 'lcc', 'mcc', 'sde'], sorted(list(out.coords["variable"].values)))
+
 
 # --------- Static methods --------- #
 
@@ -94,8 +91,6 @@ class TestIsWantedFile(unittest.TestCase):
 class TestReshapeTo2DGrid(unittest.TestCase):
 
     def test_correctlyReshapesData(self):
-        wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wholesale1.grib"
-
         dataset = xr.Dataset(
             data_vars={
                 'wdir10': (('step', 'values'), np.random.rand(4, 385792)),
