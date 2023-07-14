@@ -115,9 +115,9 @@ class TestNWPConsumerService(unittest.TestCase):
         n = self.service.ConvertRawDatasetToZarr(start=startDate, end=endDate)
 
         # 1 Dataset per init time, all init times per day, all days
-        self.assertEqual(1 * len(INIT_HOURS) * (len(DAYS)) * len("YYYYMMDDHHMM.zarr"), n)
+        self.assertEqual(1 * len(INIT_HOURS) * (len(DAYS)) * len("YYYYMMDDHHMM.zarr.zip"), n)
 
     def test_createLatestZarr(self):
 
         n = self.service.CreateLatestZarr()
-        self.assertEqual(len("latest.zarr"), n)
+        self.assertEqual(len("latest.zarr.zip"), n)
