@@ -62,10 +62,15 @@ class NWPConsumerService:
         ]
 
         if not allWantedFileInfos:
-            log.info("No new files to download, exiting.",
+            log.info("No new files to download",
                      startDate=start.strftime("%Y-%m-%d %H:%M"),
                      endDate=end.strftime("%Y-%m-%d %H:%M"))
             return nbytes
+        else:
+            log.info("Downloading files",
+                     startDate=start.strftime("%Y-%m-%d %H:%M"),
+                     endDate=end.strftime("%Y-%m-%d %H:%M"),
+                     numFiles=len(allWantedFileInfos))
 
         # Download the files to temp in parallel
         # * CEDA has a concurrent connection limit so limit the number of workers
@@ -150,15 +155,17 @@ class NWPConsumerService:
                 # Save the dataset to a temp zarr file
                 initTime = pd.Timestamp(dataset.coords["init_time"].values[0])
                 tempZarrPath = pathlib.Path(f'/tmp/{str(TypeID(prefix="nwpc"))}')
-                dataset.to_zarr(
-                    store=zarr.ZipStore(path=tempZarrPath.as_posix(), mode='w'),
-                    encoding={
-                        "init_time": {"units": "nanoseconds since 1970-01-01"},
-                        "UKV": {
-                            "compressor": Blosc2(cname="zstd", clevel=5),
+                with zarr.ZipStore(path=tempZarrPath.as_posix(), mode='w') as store:
+                    dataset.to_zarr(
+                        store=store,
+                        encoding={
+                            "init_time": {"units": "nanoseconds since 1970-01-01"},
+                            "UKV": {
+                                "compressor": Blosc2(cname="zstd", clevel=5),
+                            },
                         },
-                    },
-                )
+                        compute=True
+                    )
 
                 # Move the temp zarr file to the store
                 nbytes += self.storer.store(
