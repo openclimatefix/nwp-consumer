@@ -5,230 +5,178 @@ from pathlib import Path
 
 import numpy as np
 import xarray as xr
+from typeid import TypeID
 
 from nwp_consumer import internal
 
-# Import the class to be tested
 from .client import LocalFSClient
 
+RAW = Path("test_raw_dir")
+ZARR = Path("test_zarr_dir")
 
-class TestExistsInRawDir(unittest.TestCase):
-    def setUp(self) -> None:
-        self.client = LocalFSClient("test_raw_dir", "test_zarr_dir", createDirs=True)
-        self.fileName = "test_file"
-        self.initTime = dt.datetime(2023, 1, 1)
 
-        # Create a temporary file to simulate an existing file in the raw directory
-        self.file_path = Path(
-            f"test_raw_dir/{self.initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{self.fileName}")
-        self.file_path.parent.mkdir(parents=True, exist_ok=True)
-        self.file_path.touch()
+class TestLocalFSClient(unittest.TestCase):
 
-    def test_file_exists(self) -> None:
+    @classmethod
+    def setUpClass(cls) -> None:
+        # Make test directories
+        RAW.mkdir(parents=True, exist_ok=True)
+        ZARR.mkdir(parents=True, exist_ok=True)
+
+        cls.testClient = LocalFSClient()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        # Clean up the temporary directory
+        shutil.rmtree(RAW.as_posix())
+        shutil.rmtree(ZARR.as_posix())
+
+    def test_exists(self):
+        initTime = dt.datetime(2021, 1, 1, 0, 0, 0)
+
+        # Create a file in the raw directory
+        path = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_file.grib"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+
         # Check if the file exists using the function
-        exists = self.client.rawFileExistsForInitTime(
-            name=self.fileName,
-            it=self.initTime
-        )
+        exists = self.testClient.exists(dst=path)
 
         # Assert that the file exists
         self.assertTrue(exists)
 
-    def test_file_does_not_exist(self) -> None:
-        # Check if the file exists using the function
-        exists = self.client.rawFileExistsForInitTime(
-            name=self.fileName + "not-here",
-            it=self.initTime
+        # Remove the init time folder
+        shutil.rmtree(RAW / "2021")
+
+        # Check that the function returns false when the file does not exist
+        exists = self.testClient.exists(
+            dst=RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "not_exists.grib"
         )
 
         # Assert that the file does not exist
         self.assertFalse(exists)
 
-    def tearDown(self) -> None:
-        # Clean up the temporary directory
-        shutil.rmtree("test_raw_dir")
-        shutil.rmtree("test_zarr_dir")
+        # Create a zarr file in the zarr directory
+        xr.Dataset(
+            data_vars={
+                'UKV': (('init_time', 'variable', 'step', 'x', 'y'), np.random.rand(1, 2, 12, 100, 100)),
+            },
+            coords={
+                'init_time': [dt.datetime(2023, 1, 1)],
+                'variable': ['t', 'r'],
+                'step': range(12),
+                'x': range(100),
+                'y': range(100),
+            }
+        ).to_zarr(store=ZARR / "test_file.zarr")
 
+        # Check if the file exists using the function
+        exists = self.testClient.exists(dst=ZARR / "test_file.zarr")
 
-class TestWriteBytesToRawDir(unittest.TestCase):
-    def setUp(self) -> None:
-        self.client = LocalFSClient("test_raw_dir", "test_zarr_dir", createDirs=True)
-        self.fileName = "test_file"
-        self.initTime = dt.datetime(2023, 1, 1)
-        self.data = b"test_data"
+        # Assert that the file exists
+        self.assertTrue(exists)
 
-    def test_write_bytes_to_raw_dir(self) -> None:
-        # Write the bytes to the raw directory using the function
-        path = self.client.writeBytesToRawFile(
-            name=self.fileName,
-            it=self.initTime,
-            b=self.data
+    def test_store(self):
+        initTime = dt.datetime(2021, 1, 2, 0, 0, 0)
+        dst = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_store.grib"
+        src = Path(f"/tmp/{str(TypeID(prefix='nwpc'))}")
+        # Create a temporary file to simulate a file to be stored
+        src.write_bytes(bytes("test_file_contents", 'utf-8'))
+
+        # Store the file using the function
+        size = self.testClient.store(
+            src=src,
+            dst=dst
         )
 
-        # Assert that the path exists
-        self.assertTrue(self.client.rawFileExistsForInitTime(
-            name=self.fileName,
-            it=self.initTime
-        ))
+        # Assert that the file exists
+        self.assertTrue(dst.exists())
+        # Assert that the file has the correct size
+        self.assertEqual(size, 18)
+        # Assert that the temporary file has been deleted
+        self.assertFalse(src.exists())
 
-        # Assert that the file content is correct
-        self.assertEqual(path.read_bytes(), self.data)
-
-    def tearDown(self) -> None:
-        # Clean up the temporary file
-        shutil.rmtree("test_raw_dir")
-        shutil.rmtree("test_zarr_dir")
-
-
-class TestListInitTimesInRawDir(unittest.TestCase):
-    def setUp(self) -> None:
-        self.client = LocalFSClient("test_raw_dir", "test_zarr_dir", createDirs=True)
-        # Create temporary directories and files to simulate the raw directory structure
-        self.dir_paths = [
-            Path(f"test_raw_dir/{dt.datetime(2023, 1, 1, 3).strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}"),
-            Path(f"test_raw_dir/{dt.datetime(2023, 1, 2, 6).strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}"),
-            Path(f"test_raw_dir/{dt.datetime(2023, 1, 3, 9).strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}")
-        ]
-        for path in self.dir_paths:
-            path.mkdir(parents=True, exist_ok=True)
-
-    def test_list_init_times(self) -> None:
-        # Get the list of init times using the function
-        initTimes = self.client.listInitTimesInRawDir()
-
-        # Assert that the list of init times is correct
-        expected_initTimes = [
+    def test_listInitTimes(self):
+        expectedTimes = [
             dt.datetime(2023, 1, 1, 3, tzinfo=None),
             dt.datetime(2023, 1, 2, 6, tzinfo=None),
             dt.datetime(2023, 1, 3, 9, tzinfo=None)
         ]
-        self.assertEqual(initTimes, expected_initTimes)
 
-    def tearDown(self) -> None:
-        # Clean up the temporary directories
-        shutil.rmtree("test_raw_dir")
-        shutil.rmtree("test_zarr_dir")
+        # Create some files in the raw directory
+        dirs = [RAW / t.strftime(internal.IT_FOLDER_FMTSTR) for t in expectedTimes]
 
+        for d in dirs:
+            d.mkdir(parents=True, exist_ok=True)
 
-class TestReadBytesForInitTime(unittest.TestCase):
-    def setUp(self) -> None:
-        self.client = LocalFSClient("test_raw_dir", "test_zarr_dir", createDirs=True)
-        self.initTime = dt.datetime(2023, 1, 1, 3)
-        # Create temporary directories and files to simulate the raw directory structure
-        self.file_paths = [
-            Path(f"test_raw_dir/{self.initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/1.grib"),
-            Path(f"test_raw_dir/{self.initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/2.grib"),
-            Path(f"test_raw_dir/{self.initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/3.grib")
+        # Get the list of init times
+        initTimes = self.testClient.listInitTimes(prefix=Path(RAW))
+
+        # Assert that the list of init times is correct
+        self.assertEqual(initTimes, expectedTimes)
+
+        # Remove the files
+        for d in dirs:
+            shutil.rmtree(d)
+
+    def test_copyITFolderToTemp(self):
+        # Make some files in the raw directory
+        initTime = dt.datetime(2023, 1, 1, 3)
+        files = [
+            RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp1.grib",
+            RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp2.grib",
+            RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp3.grib"
         ]
-        for path in self.file_paths:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(b"test_data")
+        for f in files:
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_bytes(bytes("test_file_contents", 'utf-8'))
 
-    def test_read_bytes_for_init_time(self) -> None:
-        # Read the bytes for the init time using the function
-        initTime, fileByteList = self.client.readRawFilesForInitTime(it=self.initTime)
+        # Test the function
+        it, paths = self.testClient.copyITFolderToTemp(prefix=RAW, it=initTime)
 
-        # Assert that the returned init time is correct
-        self.assertEqual(initTime, self.initTime)
+        # Assert that the init time is correct
+        self.assertEqual(it, initTime)
+        # Assert the contents of the temp files is correct
+        for _i, path in enumerate(paths):
+            self.assertEqual(path.read_bytes(), bytes("test_file_contents", 'utf-8'))
 
-        # Assert that the list of file bytes is correct
-        self.assertEqual(fileByteList, [b"test_data"] * 3)
+        # Remove the files
+        shutil.rmtree(files[0].parent)
 
-    def tearDown(self) -> None:
-        shutil.rmtree("test_raw_dir")
-        shutil.rmtree("test_zarr_dir")
+    def test_delete(self):
+        # Create a file in the raw directory
+        initTime = dt.datetime(2023, 1, 1, 3)
+        path = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_delete.grib"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
 
+        # Delete the file using the function
+        self.testClient.delete(p=path)
 
-class TestExistsInZarrDir(unittest.TestCase):
-    def setUp(self) -> None:
-        self.client = LocalFSClient("test_raw_dir", "test_zarr_dir", createDirs=True)
-        self.fileName = "test_file.zarr"
-        self.initTime = dt.datetime(2023, 1, 1)
+        # Assert that the file no longer exists
+        self.assertFalse(path.exists())
 
-    def test_file_exists(self) -> None:
-        # Create a temporary file to simulate an existing file in the zarr directory
-        file_path = Path(f"test_zarr_dir/{self.fileName}")
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.touch()
-
-        # Check if the file exists using the function
-        exists = self.client.zarrExistsForInitTime(name=self.fileName, it=self.initTime)
-
-        # Assert that the file exists
-        self.assertTrue(exists)
-
-    def test_file_does_not_exist(self) -> None:
-        # Check if the file exists using the function
-        exists = self.client.zarrExistsForInitTime(name='no_such_' + self.fileName, it=self.initTime)
-
-        # Assert that the file does not exist
-        self.assertFalse(exists)
-
-    def tearDown(self) -> None:
-        shutil.rmtree("test_raw_dir")
-        shutil.rmtree("test_zarr_dir")
-
-
-class TestWriteDatasetToZarrDir(unittest.TestCase):
-    def setUp(self) -> None:
-        self.client = LocalFSClient("test_raw_dir", "test_zarr_dir", createDirs=True)
-        self.fileName = "test_file"
-        self.initTime = dt.datetime(2023, 1, 1)
-        self.data = xr.Dataset(
+        # Create a zarr folder in the zarr directory
+        path = ZARR / "test_delete.zarr"
+        _ = xr.Dataset(
             data_vars={
-                "t": (["init_time", "step", "x", "y"], np.random.rand(1, 46, 100, 100)),
-                "r": (["init_time", "step", "x", "y"], np.random.rand(1, 46, 100, 100))
+                'UKV': (('init_time', 'variable', 'step', 'x', 'y'), np.random.rand(1, 2, 12, 100, 100)),
             },
             coords={
-                "init_time": (["init_time"], [self.initTime]),
-                "step": (["step"], np.arange(46)),
-                "x": (["x"], np.arange(100)),
-                "y": (["y"], np.arange(100))
-            },
-        )
+                'init_time': [dt.datetime(2023, 1, 1)],
+                'variable': ['t', 'r'],
+                'step': range(12),
+                'x': range(100),
+                'y': range(100),
+            }
+        ).to_zarr(store=path)
 
-    def test_write_dataset_to_zarr_dir(self) -> None:
-        # Write the dataset to the zarr directory using the function
-        self.client.writeDatasetAsZarr(name=self.fileName, it=self.initTime, ds=self.data)
+        # Delete the folder using the function
+        self.testClient.delete(p=path)
 
-        # Assert that the path exists
-        self.assertTrue(self.client.zarrExistsForInitTime(name=self.fileName, it=self.initTime))
+        # Assert that the folder no longer exists
+        self.assertFalse(path.exists())
 
-    def tearDown(self) -> None:
-        shutil.rmtree("test_raw_dir")
-        shutil.rmtree("test_zarr_dir")
-
-class TestDeleteZarrForInitTime(unittest.TestCase):
-
-    def setUp(self) -> None:
-        self.client = LocalFSClient("test_raw_dir", "test_zarr_dir", createDirs=True)
-        self.fileName = "test_file.zarr"
-        self.initTime = dt.datetime(2023, 1, 1)
-        self.data = xr.Dataset(
-            data_vars={
-                "t": (["init_time", "step", "x", "y"], np.random.rand(1, 46, 100, 100)),
-                "r": (["init_time", "step", "x", "y"], np.random.rand(1, 46, 100, 100))
-            },
-            coords={
-                "init_time": (["init_time"], [self.initTime]),
-                "step": (["step"], np.arange(46)),
-                "x": (["x"], np.arange(100)),
-                "y": (["y"], np.arange(100))
-            },
-        )
-        # Write the dataset to the zarr directory using the function
-        self.client.writeDatasetAsZarr(name=self.fileName, it=self.initTime, ds=self.data)
-
-    def test_delete_zarr_for_init_time(self) -> None:
-        # Delete the zarr file for the init time using the function
-        self.client.deleteZarrForInitTime(name=self.fileName, it=self.initTime)
-
-        # Assert that the path does not exist
-        self.assertFalse(self.client.zarrExistsForInitTime(self.fileName, self.initTime))
-
-    def tearDown(self) -> None:
-        shutil.rmtree("test_raw_dir")
-        shutil.rmtree("test_zarr_dir")
 
 if __name__ == "__main__":
     unittest.main()

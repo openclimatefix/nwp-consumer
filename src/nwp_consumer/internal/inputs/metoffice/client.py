@@ -1,18 +1,19 @@
 """Implements a client to fetch the data from the MetOffice API."""
 
 import datetime as dt
-import tempfile
+import pathlib
 import urllib.request
 
 import requests
 import structlog.stdlib
 import xarray as xr
+from typeid import TypeID
 
 from nwp_consumer import internal
 
 from ._models import MetOfficeFileInfo, MetOfficeResponse
 
-log = structlog.stdlib.get_logger()
+log = structlog.getLogger()
 
 # Defines the mapping from MetOffice parameter names to OCF parameter names
 PARAMETER_RENAME_MAP: dict[str, str] = {
@@ -58,12 +59,9 @@ class MetOfficeClient(internal.FetcherInterface):
             "X-IBM-Client-Secret": clientSecret,
         }
 
-    def fetchRawFileBytes(self, *, fi: MetOfficeFileInfo) \
-            -> tuple[internal.FileInfoModel, bytes]:
-        """Download a GRIB file corresponding to the input FileInfo object.
+    def downloadToTemp(self, *, fi: MetOfficeFileInfo) \
+            -> tuple[internal.FileInfoModel, pathlib.Path]:
 
-        :param fi: FileInfo object describing the file to download
-        """
         log.debug(f"Requesting download of {fi.fname()}", item=fi.fname())
         url: str = f"{self.baseurl}/{fi.fname()}/data"
         try:
@@ -80,16 +78,18 @@ class MetOfficeClient(internal.FetcherInterface):
         except Exception as e:
             raise ConnectionError(f"Error calling url {url} for {fi.fname()}: {e}") from e
 
-        filedata = response.read()
+        # Stream the filedata into a temporary file
+        tfp: pathlib.Path = pathlib.Path(f"/tmp/{str(TypeID(prefix='nwpc'))}")
+        with tfp.open("wb") as f:
+            for chunk in iter(lambda: response.read(16 * 1024), b''):
+                f.write(chunk)
+
         log.debug(f"Fetched all data from {fi.fname()}", path=url)
 
-        return fi, filedata
+        return fi, tfp
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
-        """Get a list of FileInfo objects according to the input initTime.
 
-        :param it: Init Time to fetch data for
-        """
         if it.date() != dt.datetime.utcnow().date():
             log.warn("MetOffice API only supports fetching data for the current day")
             return []
@@ -123,100 +123,75 @@ class MetOfficeClient(internal.FetcherInterface):
 
         return wantedFileInfos
 
-    def loadRawInitTimeDataAsOCFDataset(self, *, fbl: list[bytes]) -> xr.Dataset:
-        """Converts a list of raw file bytes into an OCF XArray Dataset.
+    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
 
-        :param fbl: List of raw file bytes to convert
-        """
-        # Load the single parameter files as OCF DataArrays
-        parameterDataArrays: list[xr.Dataset] = [
-            _loadSingleParameterGRIBAsOCFDataset(b=bd) for bd in fbl
-        ]
-
-        # Merge the DataArrays into a single Dataset
-        dataset = xr.merge(
-            objects=parameterDataArrays,
-            compat='identical',
-            combine_attrs='drop_conflicts'
-        )
-
-        # Load the whole dataset into memory
-        # * Enables the deletion of the old DataArrays
-        dataset.load()
-        del parameterDataArrays
-
-        # Add the init time as a coordinate
-        dataset = dataset \
-            .rename({"time": "init_time"}) \
-            .expand_dims("init_time") \
-            .chunk("auto") \
-            .load()
-
-        return dataset
-
-
-def _loadSingleParameterGRIBAsOCFDataset(*, b: bytes) -> xr.Dataset:
-    """Loads a MetOffice single-parameter GRIB file as an OCF-compliant Dataset.
-
-    :param b: Raw file bytes to load
-    """
-    parameterDataset: xr.Dataset = xr.Dataset()
-
-    # Cfgrib is built upon eccodes which needs an in-memory file to read from
-    with tempfile.NamedTemporaryFile(mode="wb", suffix=".grib") as tempParameterFile:
-        # Copy the raw file to a local temp file
-        tempParameterFile.write(b)
-        tempParameterFile.seek(0)
-
+        # Cfgrib is built upon eccodes which needs an in-memory file to read from
         # Load the GRIB file as a cube
         try:
             parameterDataset: xr.Dataset = xr.open_dataset(
-                tempParameterFile.name, engine='cfgrib',
+                p.as_posix(),
+                engine='cfgrib',
                 backend_kwargs={'read_keys': ['name', 'parameterNumber'], 'indexpath': ''}
             )
         except Exception as e:
             raise ValueError(f"Failed to load GRIB file as a cube: {e}") from e
 
-        parameterDataset.load()
+        # Make the DataArray OCF-compliant
+        # 1. Rename the parameter to the OCF short name
+        currentName = list(parameterDataset.data_vars)[0]
+        parameterNumber = parameterDataset[currentName].attrs["GRIB_parameterNumber"]
 
-    # Make the DataArray OCF-compliant
-    # * Rename the parameter to the OCF name
-    # * Add the init time as a coordinate
-    # * Rename the time dimension to step_time
-    # * Compute the dataset to load the data from the temporary file
-    currentName = list(parameterDataset.data_vars)[0]
-    parameterNumber = parameterDataset[currentName].attrs["GRIB_parameterNumber"]
+        # The two wind dirs are the only parameters read in as "unknown"
+        # * Tell them apart via the parameterNumber attribute
+        #   which lines up with the last number in the GRIB2 code specified below
+        #   https://gridded-data-ui.cda.api.metoffice.gov.uk/glossary?groups=Wind&sortOrder=GRIB2_CODE
+        match currentName, parameterNumber:
+            case "unknown", 194:
+                parameterDataset = parameterDataset.rename({
+                    currentName: internal.OCFShortName.WindSpeedSurfaceAdjustedAGL.value})
+            case "unknown", 195:
+                parameterDataset = parameterDataset.rename({
+                    currentName: internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL.value})
+            case x, int() if x in PARAMETER_RENAME_MAP.keys():
+                parameterDataset = parameterDataset.rename({
+                    x: PARAMETER_RENAME_MAP[x]})
+            case _, _:
+                log.warn(f"Encountered unknown parameter {currentName}, ignoring file",
+                         parameterName=currentName, parameterNumber=parameterNumber)
+                return xr.Dataset()
 
-    # The two wind dirs are the only parameters read in as "unknown"
-    # * Tell them apart via the parameterNumber attribute
-    #   which lines up with the last number in the GRIB2 code specified below
-    #   https://gridded-data-ui.cda.api.metoffice.gov.uk/glossary?groups=Wind&sortOrder=GRIB2_CODE
-    match currentName, parameterNumber:
-        case "unknown", 194:
-            parameterDataset = parameterDataset.rename({
-                currentName: internal.OCFShortName.WindSpeedSurfaceAdjustedAGL.value})
-        case "unknown", 195:
-            parameterDataset = parameterDataset.rename({
-                currentName: internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL.value})
-        case x, int() if x in PARAMETER_RENAME_MAP.keys():
-            parameterDataset = parameterDataset.rename({
-                x: PARAMETER_RENAME_MAP[x]})
-        case _, _:
-            log.warn(f"Encountered unknown parameter {currentName}, ignoring file",
-                     parameterName=currentName, parameterNumber=parameterNumber)
-            return xr.Dataset()
+        # 2. Remove unneeded variables
+        # 3. Rename and Expand the init_time dimension
+        # 4. Create a chunked Dask Dataset from the input multi-variate Dataset.
+        # *  Converts the input multivariate DataSet (with different DataArrays for
+        #     each NWP variable) to a single DataArray with a `variable` dimension.
+        # * This allows each Zarr chunk to hold multiple variables (useful for loading
+        #     many/all variables at once from disk).
+        # * The chunking is done in such a way that each chunk is a single time step
+        #     for a single variable.
+        # * Transpose the Dataset so that the dimensions are correctly ordered
+        parameterDataset = parameterDataset \
+            .drop_vars(names=["height", "pressure", "valid_time", "surface", "heightAboveGround"], errors="ignore") \
+            .rename({"time": "init_time"}) \
+            .expand_dims("init_time") \
+            .to_array(dim="variable", name="UKV") \
+            .to_dataset() \
+            .transpose("init_time", "step", "variable", "y", "x") \
+            .sortby("step") \
+            .sortby("variable") \
+            .chunk({
+                "init_time": 1,
+                "step": 1,
+                "variable": -1,
+                "y": len(parameterDataset.y) // 2,
+                "x": len(parameterDataset.x) // 2,
+            })
 
-    parameterDataset = parameterDataset \
-        .drop_vars(
-            names=["height", "pressure", "valid_time", "surface", "heightAboveGround"],
-            errors="ignore"
-        ).compute()
-
-    return parameterDataset
+        return parameterDataset
 
 
 def _isWantedFile(*, fi: MetOfficeFileInfo, dit: dt.datetime) -> bool:
-    """Checks if the input FileInfo corresponds to a wanted GRIB file.
+    """Check if the input FileInfo corresponds to a wanted GRIB file.
 
     :param fi: FileInfo describing the file to check
     :param dit: Desired init time

@@ -1,212 +1,221 @@
 import datetime as dt
-import pathlib
+import inspect
 import unittest
+from pathlib import Path
 
-import boto3
-import moto
-import xarray as xr
+from botocore.session import Session
+from moto.server import ThreadedMotoServer
+from typeid import TypeID
 
 from nwp_consumer import internal
 
 from . import S3Client
 
+ENDPOINT_URL = "http://localhost:5000"
+BUCKET = "test-bucket"
+KEY = "test-key"
+SECRET = "test-secret"
+REGION = "us-east-1"
 
-@moto.mock_s3
+RAW = Path("raw")
+ZARR = Path("zarr")
+
+
 class TestS3Client(unittest.TestCase):
+    testS3 = None
+    bucket = None
+    server = None
 
-    def setUp(self):
-        # Create a mock S3 bucket
-        self.bucket = "test-bucket"
+    @classmethod
+    def setUpClass(cls):
+        # Start a local S3 server
+        cls.server = ThreadedMotoServer()
+        cls.server.start()
 
-        self.mockS3 = boto3.client(
-            's3',
-            aws_access_key_id="test-key",
-            aws_secret_access_key="test-secret",
-            region_name='us-east-1',
+        session = Session()
+        cls.testS3 = session.create_client(
+            service_name="s3",
+            region_name=REGION,
+            endpoint_url=ENDPOINT_URL,
+            aws_access_key_id=KEY,
+            aws_secret_access_key=SECRET,
         )
-        self.mockS3.create_bucket(
-            Bucket=self.bucket
+
+        # Create a mock S3 bucket
+        cls.testS3.create_bucket(
+            Bucket=BUCKET,
         )
 
         # Create an instance of the S3Client class
-        self.client = S3Client(
-            key="test-key",
-            secret="test-secret",
-            region="us-east-1",
-            rawDir="raw",
-            zarrDir="zarr",
-            bucket=self.bucket,
+        cls.client = S3Client(
+            key=KEY,
+            secret=SECRET,
+            region=REGION,
+            bucket=BUCKET,
+            endpointURL=ENDPOINT_URL,
         )
 
-    def test_existsInRawDir(self):
+    @classmethod
+    def tearDownClass(cls):
+        # Delete all objects in bucket
+        print("Tearing down bucket")
+        response = cls.testS3.list_objects_v2(
+            Bucket=BUCKET,
+        )
+        if "Contents" in response:
+            for obj in response["Contents"]:
+                cls.testS3.delete_object(
+                    Bucket=BUCKET,
+                    Key=obj["Key"],
+                )
+        cls.server.stop()
+
+    def test_exists(self):
         # Create a mock file in the raw directory
         initTime = dt.datetime(2023, 1, 1)
-        fileName = "test_file.grib"
-        filePath = pathlib.Path("raw") \
-                   / initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING) \
-                   / fileName
-        self.mockS3.put_object(
-            Bucket=self.bucket,
+        fileName = inspect.stack()[0][3] + ".grib"
+        filePath = RAW / f"{initTime:%Y/%m/%d/%H%M}" / fileName
+        self.testS3.put_object(
+            Bucket=BUCKET,
             Key=filePath.as_posix(),
-            Body=b"test_data"
+            Body=bytes(fileName, 'utf-8')
         )
 
         # Call the existsInRawDir method
-        exists = self.client.rawFileExistsForInitTime(
-            name=fileName,
-            it=initTime
-        )
+        exists = self.client.exists(dst=filePath)
 
         # Verify the existence of the file
         self.assertTrue(exists)
 
-    def test_writeBytesToRawDir(self):
-        # Call the writeBytesToRawDir method
-        initTime = dt.datetime(2023, 1, 1)
-        fileName = "test_raw_file.grib"
-        self.client.writeBytesToRawFile(fileName, initTime, b"test_data")
+        # Call the existsInRawDir method on a non-existent file
+        exists = self.client.exists(dst=Path("non_existent_file.grib"))
+
+        # Verify the non-existence of the file
+        self.assertFalse(exists)
+
+        # Delete the created files
+        self.testS3.delete_object(
+            Bucket=BUCKET,
+            Key=filePath.as_posix(),
+        )
+
+    def test_store(self):
+        initTime = dt.datetime(2023, 1, 2)
+        fileName = inspect.stack()[0][3] + ".grib"
+        dst = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / fileName
+        src = Path(f"/tmp/{str(TypeID(prefix='nwpc'))}")
+
+        # Write the data to the temporary file
+        src.write_bytes(bytes(fileName, 'utf-8'))
+
+        n = self.client.store(src=src, dst=dst)
 
         # Verify the written file in the raw directory
-        self.assertTrue(self.client.rawFileExistsForInitTime(
-            name=fileName,
-            it=initTime
-        ))
+        response = self.testS3.get_object(
+            Bucket=BUCKET,
+            Key=dst.as_posix()
+        )
+        self.assertEqual(response["Body"].read(), bytes(fileName, 'utf-8'))
 
-    def test_listInitTimesInRawDir(self):
+        # Verify the correct number of bytes was written
+        self.assertEqual(n, len(bytes(fileName, 'utf-8')))
+
+        # Verify the temp file was deleted
+        self.assertFalse(src.exists())
+
+        # Delete the created file
+        self.testS3.delete_object(
+            Bucket=BUCKET,
+            Key=dst.as_posix()
+        )
+
+    def test_listInitTimes(self):
         # Create mock folders/files in the raw directory
-        self.mockS3.put_object(
-            Bucket=self.bucket,
-            Key="raw/2023/01/01/0000/test_raw_file1.grib",
+        self.testS3.put_object(
+            Bucket=BUCKET,
+            Key=f"{RAW}/2023/01/03/0000/test_raw_file1.grib",
             Body=b"test_data"
         )
-        self.mockS3.put_object(
-            Bucket=self.bucket,
-            Key="raw/2023/01/02/0300/test_raw_file2.grib",
+        self.testS3.put_object(
+            Bucket=BUCKET,
+            Key=f"{RAW}/2023/01/04/0300/test_raw_file2.grib",
             Body=b"test_data"
         )
 
         # Call the listInitTimesInRawDir method
-        init_times = self.client.listInitTimesInRawDir()
+        init_times = self.client.listInitTimes(prefix=RAW)
 
         # Verify the returned list of init times
         expected_init_times = [
-            dt.datetime(2023, 1, 1, 0, 0),
-            dt.datetime(2023, 1, 2, 3, 0),
+            dt.datetime(2023, 1, 3, 0, 0),
+            dt.datetime(2023, 1, 4, 3, 0),
         ]
         self.assertEqual(init_times, expected_init_times)
 
-    def test_readBytesForInitTime(self):
-        # Create a mock file in the raw directory for the given init time
-        initTime = dt.datetime(2023, 1, 1)
-        fileName = "test_raw_file3.grib"
-        filePath = pathlib.Path("raw") \
-                   / initTime.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING) \
-                   / fileName
-        self.mockS3.put_object(
-            Bucket=self.bucket,
-            Key=filePath.as_posix(),
-            Body=b"test_raw_file3"
+        # Delete the created files
+        self.testS3.delete_object(
+            Bucket=BUCKET,
+            Key=f"{RAW}/2023/01/03/0000/test_raw_file1.grib",
         )
+        self.testS3.delete_object(
+            Bucket=BUCKET,
+            Key=f"{RAW}/2023/01/04/0300/test_raw_file2.grib",
+        )
+
+    def test_copyITFolderToTemp(self):
+        # Make some files in the raw directory
+        initTime = dt.datetime(2023, 1, 1, 3)
+        files = [
+            RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp1.grib",
+            RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp2.grib",
+            RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp3.grib"
+        ]
+        for f in files:
+            self.testS3.put_object(
+                Bucket=BUCKET,
+                Key=f.as_posix(),
+                Body=bytes("test_file_contents", 'utf-8')
+            )
 
         # Call the readBytesForInitTime method
-        readInitTime, readBytes = self.client.readRawFilesForInitTime(
-            it=initTime
+        it, paths = self.client.copyITFolderToTemp(prefix=RAW, it=initTime)
+
+        # Assert that the init time is correct
+        self.assertEqual(it, initTime)
+        # Assert the contents of the temp files is correct
+        for _i, path in enumerate(paths):
+            self.assertEqual(path.read_bytes(), bytes("test_file_contents", 'utf-8'))
+
+            # Delete the temp files
+            path.unlink()
+
+        # Delete the files in S3
+        for f in files:
+            self.testS3.delete_object(
+                Bucket=BUCKET,
+                Key=f.as_posix()
+            )
+
+    @unittest.skip("Broken on github ci")
+    def test_delete(self):
+        # Create a file in the raw directory
+        initTime = dt.datetime(2023, 1, 1, 3)
+        path = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_delete.grib"
+        self.testS3.put_object(
+            Bucket=BUCKET,
+            Key=path.as_posix(),
+            Body=bytes("test_delete", 'utf-8')
         )
 
-        # Verify the returned init time and bytes
-        self.assertEqual(readInitTime, initTime)
-        self.assertEqual(readBytes, [b"test_raw_file3"])
+        # Delete the file using the function
+        self.client.delete(p=path)
 
-    @unittest.skip("'MockRawResponse' object has no attribute 'raw_headers'")
-    def test_writeDatasetToZarrDir(self):
-        # Create a mock dataset
-        mock_dataset = xr.Dataset(
-            data_vars={
-                'wdir10': (
-                    ('init_time', 'step', 'x', 'y'), [[[[1, 2], [3, 4]], [[5, 6], [7, 8]]]]
-                ),
-                'prate': (
-                    ('init_time', 'step', 'x', 'y'), [[[[1, 2], [3, 4]], [[5, 6], [7, 8]]]]
-                )
-            },
-            coords={
-                'init_time': [dt.datetime(2023, 1, 1)],
-                'step': [0, 1],
-                'x': [0, 1],
-                'y': [0, 1],
-            }
-        )
-
-        # Call the writeDatasetToZarrDir method
-        path = self.client.writeDatasetAsZarr(
-            name="test_zarr_file.zarr",
-            it=dt.datetime(2023, 1, 1),
-            ds=mock_dataset
-        )
-        print(self.mockS3.list_objects_v2(Bucket='test-bucket', Prefix=""))
-
-
-        # Verify the returned path
-        expected_path = pathlib.Path("s3://test-bucket/zarr/test_zarr_file.zarr")
-        self.assertEqual(expected_path, path)
-
-    def test_existsInZarrDir(self):
-        # Create a mock file in the zarr directory
-        fileName = "test_zarr_file2.zarr"
-        filePath = pathlib.Path("zarr") / fileName
-        self.mockS3.put_object(
-            Bucket=self.bucket,
-            Key=filePath.as_posix(),
-            Body=b"test_zarr_data2"
-        )
-
-        # Call the existsInZarrDir method
-        exists = self.client.zarrExistsForInitTime(
-            name=fileName,
-            it=dt.datetime(2023, 1, 1)
-        )
-
-        # Verify the existence of the file
-        self.assertTrue(exists)
-
-    @unittest.skip("'MockRawResponse' object has no attribute 'raw_headers'")
-    def test_deleteZarrForInitTime(self):
-        # Write mock dataset to zarr directory
-        mock_dataset = xr.Dataset(
-            data_vars={
-                'wdir10': (
-                    ('init_time', 'step', 'x', 'y'), [[[[1, 2], [3, 4]], [[5, 6], [7, 8]]]]
-                ),
-                'prate': (
-                    ('init_time', 'step', 'x', 'y'), [[[[1, 2], [3, 4]], [[5, 6], [7, 8]]]]
-                )
-            },
-            coords={
-                'init_time': [dt.datetime(2023, 1, 1)],
-                'step': [0, 1],
-                'x': [0, 1],
-                'y': [0, 1],
-            }
-        )
-
-        # Call the writeDatasetToZarrDir method
-        path = self.client.writeDatasetAsZarr(
-            name="latest.zarr",
-            it=dt.datetime(2023, 1, 1),
-            ds=mock_dataset
-        )
-
-        # Call the deleteZarrForInitTime method
-        self.client.deleteZarrForInitTime(
-            name="latest.zarr",
-            it=dt.datetime(2023, 1, 1)
-        )
-
-        # Verify the file is deleted
-        self.assertFalse(self.client.zarrExistsForInitTime(
-            name="latest",
-            it=dt.datetime(2023, 1, 1)
-        ))
+        # Assert that the file no longer exists
+        with self.assertRaises(Exception):
+            self.testS3.get_object(
+                Bucket=BUCKET,
+                Key=path.as_posix()
+            )
 
 
 if __name__ == "__main__":

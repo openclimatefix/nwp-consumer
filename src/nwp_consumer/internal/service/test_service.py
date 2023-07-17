@@ -2,6 +2,7 @@ import datetime as dt
 import pathlib
 import unittest
 
+import numpy as np
 import xarray as xr
 
 from .. import FileInfoModel
@@ -11,7 +12,7 @@ from . import NWPConsumerService
 # Two days, four init times per day -> 8 init times
 DAYS = [1, 2]
 INIT_HOURS = [0, 6, 12, 18]
-INIT_TIME_FILES = ["file1", "file2"]
+INIT_TIME_FILES = ["dswrf", "prate"]
 testInitTimes = [dt.datetime(2021, 1, d, h, 0, 0, tzinfo=None)
                  for h in INIT_HOURS
                  for d in DAYS]
@@ -19,35 +20,25 @@ testInitTimes = [dt.datetime(2021, 1, d, h, 0, 0, tzinfo=None)
 
 class DummyStorer(internal.StorageInterface):
 
-    def rawFileExistsForInitTime(self, name: str, it: dt.datetime) -> bool:
-        if "exists" in name:
+    def exists(self, *, dst: pathlib.Path) -> bool:
+        if "exists" in dst.name:
             return True
         return False
 
-    def writeBytesToRawFile(
-            self, name: str, it: dt.datetime, b: bytes) -> pathlib.Path:
-        return pathlib.Path(
-            f"{it.strftime(internal.RAW_FOLDER_PATTERN_FMT_STRING)}/{name}"
-        )
+    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
+        src.unlink(missing_ok=True)
+        return len(dst.name)
 
-    def listInitTimesInRawDir(self) -> list[dt.datetime]:
+    def listInitTimes(self, prefix: pathlib.Path) -> list[dt.datetime]:
         return testInitTimes
 
-    def zarrExistsForInitTime(self, name: str, it: dt.datetime) -> bool:
-        if "exists" in name:
-            return True
-        return False
+    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) \
+            -> tuple[dt.datetime, list[pathlib.Path]]:
+        return it, [pathlib.Path(f'{it:%Y%m%d%H%M}/{f}')
+                    for f in INIT_TIME_FILES
+                    for it in testInitTimes]
 
-    def readRawFilesForInitTime(self, it: dt.datetime) -> tuple[dt.datetime, list[bytes]]:
-        return it, [
-            bytes(it.strftime("%Y%m%d%H%M"), "utf-8") for _ in INIT_TIME_FILES
-        ]
-
-    def writeDatasetAsZarr(
-            self, name: str, it: dt.datetime, ds: xr.Dataset) -> pathlib.Path:
-        return pathlib.Path(name)
-
-    def deleteZarrForInitTime(self, *, name: str, it: dt.datetime) -> None:
+    def delete(self, *, dst: pathlib.Path) -> None:
         pass
 
 
@@ -66,59 +57,67 @@ class DummyFileInfo(internal.FileInfoModel):
 class DummyFetcher(internal.FetcherInterface):
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[FileInfoModel]:
-        return [
+        raw_files = [
             DummyFileInfo(file, it)
             for file in INIT_TIME_FILES
             if it in testInitTimes
         ]
+        return raw_files
 
-    def fetchRawFileBytes(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, bytes]:
-        return fi, bytes(fi.initTime().strftime("%Y%m%d%H%M"), "utf-8")
+    def downloadToTemp(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, pathlib.Path]:
+        return fi, pathlib.Path(f'{fi.initTime():%Y%m%d%H%M}/{fi.fname()}')
 
-    def loadRawInitTimeDataAsOCFDataset(self, *, fbl: list[bytes]) -> xr.Dataset:
-        initTime = dt.datetime.strptime(fbl[0].decode("utf-8"), "%Y%m%d%H%M")
+    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
+        initTime = dt.datetime.strptime(p.parent.as_posix(), "%Y%m%d%H%M")
+        name = p.name
         return xr.Dataset(
             data_vars={
-                'wdir10': (('init_time', 'step', 'values'), [[[1, 2, 3, 4], [5, 6, 7, 8]]]),
-                'prate': (('init_time', 'step', 'values'), [[[1, 2, 3, 4], [5, 6, 7, 8]]])
+                'UKV': (('init_time', 'variable', 'step', 'x', 'y'), np.random.rand(1, 1, 12, 100, 100)),
             },
             coords={
                 'init_time': [initTime],
-                'step': [0, 1],
+                'variable': [name],
+                'step': range(12),
+                'x': range(100),
+                'y': range(100),
             }
         )
 
 
 class TestNWPConsumerService(unittest.TestCase):
 
-    def setUp(self) -> None:
-        self.testStorer = DummyStorer()
-        self.testFetcher = DummyFetcher()
+    @classmethod
+    def setUpClass(cls) -> None:
+        testStorer = DummyStorer()
+        testFetcher = DummyFetcher()
+
+        cls.service = NWPConsumerService(
+            fetcher=testFetcher,
+            storer=testStorer,
+            rawdir="raw",
+            zarrdir="zarr"
+        )
 
     def test_downloadRawDataset(self):
-        service = NWPConsumerService(fetcher=self.testFetcher, storer=self.testStorer)
 
         startDate = testInitTimes[0].date()
         endDate = testInitTimes[-1].date()
 
-        paths = service.DownloadRawDataset(start=startDate, end=endDate)
+        n = self.service.DownloadRawDataset(start=startDate, end=endDate)
 
-        # 2 files per init time, all init times except the last one
-        self.assertEqual(2 * len(INIT_HOURS) * (len(DAYS) - 1), len(paths))
+        # 2 files per init time, all init times
+        self.assertEqual(2 * len(INIT_HOURS) * (len(DAYS)) * len("xxxxx.grib"), n)
 
     def test_convertRawDataset(self):
-        service = NWPConsumerService(fetcher=self.testFetcher, storer=self.testStorer)
-
         startDate = testInitTimes[0].date()
         endDate = testInitTimes[-1].date()
 
-        paths = service.ConvertRawDatasetToZarr(start=startDate, end=endDate)
+        n = self.service.ConvertRawDatasetToZarr(start=startDate, end=endDate)
 
         # 1 Dataset per init time, all init times per day, all days
-        self.assertEqual(1 * len(INIT_HOURS) * (len(DAYS)), len(paths))
+        self.assertEqual(1 * len(INIT_HOURS) * (len(DAYS)) * len("YYYYMMDDHHMM.zarr.zip"), n)
 
     def test_createLatestZarr(self):
-        service = NWPConsumerService(fetcher=self.testFetcher, storer=self.testStorer)
 
-        path = service.CreateLatestZarr()
-        self.assertEqual(pathlib.Path("latest.zarr"), path)
+        n = self.service.CreateLatestZarr()
+        self.assertEqual(len("latest.zarr.zip"), n)

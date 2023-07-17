@@ -1,9 +1,15 @@
-__all__ = ["OCFShortName", "FetcherInterface", "StorageInterface", "FileInfoModel", "RAW_FOLDER_PATTERN_FMT_STRING"]
+__all__ = [
+    "OCFShortName",
+    "FetcherInterface",
+    "StorageInterface",
+    "FileInfoModel",
+    "IT_FOLDER_FMTSTR",
+]
 
 from .models import (
     FetcherInterface,
     StorageInterface,
     OCFShortName,
     FileInfoModel,
-    RAW_FOLDER_PATTERN_FMT_STRING,
+    IT_FOLDER_FMTSTR,
 )

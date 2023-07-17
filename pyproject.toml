@@ -17,7 +17,6 @@ authors = [
 ]
 classifiers = ["Programming Language :: Python :: 3"]
 dependencies = [
-    "boto3 == 1.26.161",
     "cfgrib == 0.9.10.3",
     "docopt == 0.6.2",
     "eccodes == 1.5.1",
@@ -27,9 +26,10 @@ dependencies = [
     "numpy == 1.24.2",
     "ocf-blosc2 == 0.0.3",
     "pathlib == 1.0.1",
-    "requests == 2.28.2",
+    "requests == 2.31.0",
     "scitools-iris == 3.4.1",
     "structlog == 22.1.0",
+    "typeid-python == 0.2.1",
     "urllib3 == 1.26.15",
     "xarray == 2023.2.0",
     "zarr == 2.14.2"
@@ -39,7 +39,9 @@ dependencies = [
 dev = [
     "ruff == 0.0.259",
     "unittest-xml-reporting == 3.2.0",
-    "moto[s3] == 4.1.11",
+    "moto[s3,server] == 4.0.5",
+    "flask == 2.0.2",
+    "flask-cors == 4.0.0",
 ]
 
 [project.scripts]

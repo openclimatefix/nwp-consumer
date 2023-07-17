@@ -132,13 +132,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Define a "build-wheel" job that runs on main branch commits only
+  # Define a "build-wheel" job that runs on main branch commits and tags only
   # * Only runs if test job passes
   build-wheel:
     runs-on: ubuntu-latest
     container: continuumio/miniconda3:latest
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: (github.ref == 'refs/heads/main' || contains(github.ref, 'refs/tags/v')) && github.event_name != 'pull_request'
 
     steps:
       - name: Checkout repository

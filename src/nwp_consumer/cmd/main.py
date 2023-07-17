@@ -3,7 +3,7 @@
 Usage:
   nwp-consumer download --from <startDate> --to <endDate> [options]
   nwp-consumer convert --from <startDate> --to <endDate> [options]
-  nwp-consumer consume --from <startDate> --to <endDate> [options]
+  nwp-consumer consume [options]
   nwp-consumer (-h | --help)
   nwp-consumer --version
 
@@ -14,17 +14,19 @@ Options:
 
   -h --help           Show this screen.
   --version           Show version.
-  --from <startDate>  Start date in YYYY-MM-DD format
-  --to <endDate>      End date in YYYY-MM-DD format
+  --from <startDate>  Start date in YYYY-MM-DD format [default: today].
+  --to <endDate>      End date in YYYY-MM-DD format [default: today].
   --source <source>   Data source to use (ceda/metoffice) [default: ceda].
   --sink <sink>       Data sink to use (local/s3) [default: local].
   --rdir <rawdir>     Directory of raw data store [default: /tmp/raw].
   --zdir <zarrdir>    Directory of zarr data store [default: /tmp/zarr].
   --create-latest     Create a zarr of the dataset with the latest init time [default: False].
+  --verbose           Enable verbose logging [default: False].
 """
 
 import datetime as dt
 import importlib.metadata
+import pathlib
 
 import structlog
 from docopt import docopt
@@ -40,7 +42,7 @@ except importlib.metadata.PackageNotFoundError:
     # package is not installed
     pass
 
-log = structlog.stdlib.get_logger()
+log = structlog.getLogger()
 
 
 def run():
@@ -57,20 +59,14 @@ def run():
 
     match arguments['--sink']:
         case 'local':
-            storer = outputs.localfs.LocalFSClient(
-                rawDir=arguments['--rdir'],
-                zarrDir=arguments['--zdir'],
-                createDirs=True
-            )
+            storer = outputs.localfs.LocalFSClient()
         case 's3':
             s3c = config.S3Config()
             storer = outputs.s3.S3Client(
                 key=s3c.AWS_ACCESS_KEY,
                 bucket=s3c.AWS_S3_BUCKET,
                 secret=s3c.AWS_ACCESS_SECRET,
-                region=s3c.AWS_REGION,
-                rawDir=arguments['--rdir'],
-                zarrDir=arguments['--zdir'],
+                region=s3c.AWS_REGION
             )
         case _:
             raise ValueError(f"Unknown sink {arguments['--sink']}")
@@ -94,31 +90,37 @@ def run():
 
     service = NWPConsumerService(
         fetcher=fetcher,
-        storer=storer
+        storer=storer,
+        zarrdir=arguments['--zdir'],
+        rawdir=arguments['--rdir'],
     )
 
+    # Set default values for start and end dates
+    if arguments['--from'] == "today" or arguments['--from'] is None:
+        arguments['--from'] = dt.datetime.now().strftime("%Y-%m-%d")
+    if arguments['--to'] == "today" or arguments['--to'] is None:
+        arguments['--to'] = dt.datetime.now().strftime("%Y-%m-%d")
+
+    # Parse start and end dates
     startDate: dt.date = dt.datetime.strptime(arguments['--from'], "%Y-%m-%d").date()
     endDate: dt.date = dt.datetime.strptime(arguments['--to'], "%Y-%m-%d").date()
     if endDate < startDate:
         raise ValueError("Argument '--from' cannot specify date prior to '--to'")
 
-    downloaded = []
-    converted = []
-
     if arguments['download']:
-        downloaded = service.DownloadRawDataset(
+        service.DownloadRawDataset(
             start=startDate,
             end=endDate
         )
 
     if arguments['convert']:
-        converted = service.ConvertRawDatasetToZarr(
-            start=endDate,
+        service.ConvertRawDatasetToZarr(
+            start=startDate,
             end=endDate
         )
 
     if arguments['consume']:
-        converted = service.DownloadAndConvert(
+        service.DownloadAndConvert(
             start=startDate,
             end=endDate
         )
@@ -134,4 +136,7 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    try:
+        run()
+    finally:
+        _ = [p.unlink() for p in pathlib.Path("/tmp").glob("nwpc_*")]
