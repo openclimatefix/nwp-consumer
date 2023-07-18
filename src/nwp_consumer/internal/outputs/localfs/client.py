@@ -66,7 +66,7 @@ class LocalFSClient(internal.StorageInterface):
         tempPaths: list[pathlib.Path] = []
         for path in paths:
             with path.open("rb") as infile:
-                tfp: pathlib.Path = pathlib.Path(f"/tmp/{str(TypeID(prefix='nwpc'))}")
+                tfp: pathlib.Path = internal.TMP_DIR / str(TypeID(prefix='nwpc'))
                 with tfp.open("wb") as tmpfile:
                     for chunk in iter(lambda: infile.read(16 * 1024), b""):
                         tmpfile.write(chunk)

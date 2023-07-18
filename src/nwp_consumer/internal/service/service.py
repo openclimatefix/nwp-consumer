@@ -157,7 +157,7 @@ class NWPConsumerService:
 
                 # Save the dataset to a temp zarr file
                 initTime = pd.Timestamp(dataset.coords["init_time"].values[0])
-                tempZarrPath = pathlib.Path(f'/tmp/{str(TypeID(prefix="nwpc"))}')
+                tempZarrPath = internal.TMP_DIR / str(TypeID(prefix="nwpc"))
                 with zarr.ZipStore(path=tempZarrPath.as_posix(), mode='w') as store:
                     dataset.to_zarr(
                         store=store,
@@ -229,7 +229,7 @@ class NWPConsumerService:
             .compute()
 
         # Save the dataset to a temp zarr file
-        tempZarrPath = pathlib.Path(f'/tmp/{str(TypeID(prefix="nwpc"))}')
+        tempZarrPath = internal.TMP_DIR / str(TypeID(prefix="nwpc"))
         dataset.to_zarr(
             store=zarr.ZipStore(path=tempZarrPath.as_posix(), mode='w'),
             encoding={
@@ -276,7 +276,8 @@ class NWPConsumerService:
             log.info(event="HEALTH: found zarr directory", path=self.zarrdir.as_posix())
 
         # Check that the temporary directory is not approaching capacity
-        tmp_usage = shutil.disk_usage('/tmp')
+        internal.TMP_DIR.mkdir(parents=True, exist_ok=True)
+        tmp_usage = shutil.disk_usage(internal.TMP_DIR.as_posix())
         if tmp_usage.free < 1e9:
             log.error(
                 event="HEALTH: temporary directory is full",

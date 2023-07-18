@@ -79,7 +79,7 @@ class TestLocalFSClient(unittest.TestCase):
     def test_store(self):
         initTime = dt.datetime(2021, 1, 2, 0, 0, 0)
         dst = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_store.grib"
-        src = Path(f"/tmp/{str(TypeID(prefix='nwpc'))}")
+        src = internal.TMP_DIR / str(TypeID(prefix='nwpc'))
         # Create a temporary file to simulate a file to be stored
         src.write_bytes(bytes("test_file_contents", 'utf-8'))
 

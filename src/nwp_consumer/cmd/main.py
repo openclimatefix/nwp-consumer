@@ -28,12 +28,11 @@ Options:
 
 import datetime as dt
 import importlib.metadata
-import pathlib
 
 import structlog
 from docopt import docopt
 
-from nwp_consumer.internal import config, inputs, outputs, FetcherInterface, StorageInterface
+from nwp_consumer.internal import config, inputs, outputs, TMP_DIR
 from nwp_consumer.internal.service import NWPConsumerService
 
 __version__ = "local"
@@ -156,7 +155,7 @@ def main():
         log.error("nwp-consumer error", error=str(e))
         raise e
     finally:
-        _ = [p.unlink() for p in pathlib.Path("/tmp").glob("nwpc_*")]
+        _ = [p.unlink() for p in TMP_DIR.glob("nwpc_*")]
         elapsedTime = dt.datetime.now() - programStartTime
         log.info(
             "nwp-consumer finished",

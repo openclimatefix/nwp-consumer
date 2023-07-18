@@ -12,7 +12,12 @@ import xarray as xr
 # The folder pattern format string for the raw data's init time
 IT_FOLDER_FMTSTR = "%Y/%m/%d/%H%M"
 
+# The temporaray directory for storing downloaded files
+TMP_DIR = pathlib.Path("/tmp/nwpc")
+
+
 # ------- Domain models ------- #
+
 
 class OCFShortName(str, Enum):
     """Short names for the OCF parameters."""

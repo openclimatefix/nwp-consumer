@@ -4,6 +4,7 @@ __all__ = [
     "StorageInterface",
     "FileInfoModel",
     "IT_FOLDER_FMTSTR",
+    "TMP_DIR",
 ]
 
 from .models import (
@@ -12,4 +13,5 @@ from .models import (
     OCFShortName,
     FileInfoModel,
     IT_FOLDER_FMTSTR,
+    TMP_DIR
 )
