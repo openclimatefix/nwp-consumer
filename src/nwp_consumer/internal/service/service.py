@@ -158,7 +158,6 @@ class NWPConsumerService:
                 # Save the dataset to a temp zarr file
                 initTime = pd.Timestamp(dataset.coords["init_time"].values[0])
                 tempZarrPath = internal.TMP_DIR / str(TypeID(prefix="nwpc"))
-                tempZarrPath.parent.mkdir(parents=True, exist_ok=True)
                 with zarr.ZipStore(path=tempZarrPath.as_posix(), mode='w') as store:
                     dataset.to_zarr(
                         store=store,

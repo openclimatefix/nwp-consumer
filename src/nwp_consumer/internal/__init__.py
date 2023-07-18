@@ -15,3 +15,5 @@ from .models import (
     IT_FOLDER_FMTSTR,
     TMP_DIR
 )
+
+TMP_DIR.mkdir(parents=True, exist_ok=True)

@@ -80,7 +80,6 @@ class CEDAClient(internal.FetcherInterface):
 
         # Stream the filedata into a temporary file
         tfp: pathlib.Path = internal.TMP_DIR / str(TypeID(prefix='nwpc'))
-        tfp.parent.mkdir(parents=True, exist_ok=True)
         with tfp.open("wb") as f:
             for chunk in iter(lambda: response.read(16 * 1024), b''):
                 f.write(chunk)
