@@ -84,7 +84,7 @@ class S3Client(internal.StorageInterface):
         tempPaths: list[pathlib.Path] = []
         for path in paths:
             with self.__fs.open(path=path.as_posix(), mode="rb") as infile:
-                tfp: internal.TMP_DIR / str(TypeID(prefix='nwpc'))
+                tfp: pathlib.Path = internal.TMP_DIR / str(TypeID(prefix='nwpc'))
                 with tfp.open("wb") as tmpfile:
                     for chunk in iter(lambda: infile.read(16 * 1024), b""):
                         tmpfile.write(chunk)
