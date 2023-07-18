@@ -4,10 +4,12 @@ import concurrent.futures
 import datetime as dt
 import itertools
 import pathlib
+import shutil
 from concurrent.futures import ProcessPoolExecutor as PoolExecutor
 
 import dask.bag
 import pandas as pd
+import psutil
 import structlog
 import xarray as xr
 import zarr
@@ -62,12 +64,12 @@ class NWPConsumerService:
         ]
 
         if not allWantedFileInfos:
-            log.info("No new files to download",
+            log.info("no new files to download",
                      startDate=start.strftime("%Y-%m-%d %H:%M"),
                      endDate=end.strftime("%Y-%m-%d %H:%M"))
             return nbytes
         else:
-            log.info("Downloading files",
+            log.info("downloading files",
                      startDate=start.strftime("%Y-%m-%d %H:%M"),
                      endDate=end.strftime("%Y-%m-%d %H:%M"),
                      numFiles=len(allWantedFileInfos))
@@ -104,21 +106,22 @@ class NWPConsumerService:
             # Don't convert files that already exist
             if self.storer.exists(dst=self.zarrdir / it.strftime('%Y%m%d%H%M.zarr.zip')):
                 log.debug(
-                    f"Zarr for initTime {it.strftime('%Y/%m/%d %H:%M')} already exists, skipping.",
-                    initTime=it.strftime("%Y/%m/%d %H:%M")
+                    f"zarr for initTime already exists; skipping",
+                    inittime=it.strftime("%Y/%m/%d %H:%M"),
+                    path=(self.zarrdir / it.strftime('%Y%m%d%H%M.zarr.zip')).as_posix()
                 )
                 continue
             if start <= it.date() <= end:
                 desiredInitTimes.append(it)
 
         if not desiredInitTimes:
-            log.info("No new files to convert to Zarr, exiting.",
+            log.info("no new files to convert to zarr",
                      startDate=start.strftime("%Y/%m/%d %H:%M"),
                      endDate=end.strftime("%Y/%m/%d %H:%M"))
             return nbytes
         else:
             log.info(
-                event=f"Converting {len(desiredInitTimes)} init times to zarr.",
+                event=f"converting {len(desiredInitTimes)} init times to zarr.",
                 num=len(desiredInitTimes)
             )
 
@@ -132,7 +135,7 @@ class NWPConsumerService:
                 initTime, tempPaths = future.result()
 
                 log.debug(
-                    f"Creating Zarr for initTime {initTime.strftime('%Y/%m/%d %H:%M')}",
+                    f"creating zarr for initTime",
                     initTime=initTime.strftime("%Y/%m/%d %H:%M")
                 )
 
@@ -203,19 +206,20 @@ class NWPConsumerService:
         # Get the latest init time
         allInitTimes: list[dt.datetime] = self.storer.listInitTimes(prefix=self.rawdir)
         if not allInitTimes:
-            log.info(event="No init times found in raw directory")
+            log.info(event="no init times found", within=self.rawdir)
             return nbytes
         latestInitTime = allInitTimes[-1]
 
         # Check if the latest init time is already stored as a Zarr file
-        if self.storer.exists(dst=pathlib.Path('latest.zarr')):
-            self.storer.delete(p=pathlib.Path('latest.zarr'))
+        if self.storer.exists(dst=self.zarrdir / 'latest.zarr.zip'):
+            self.storer.delete(p=self.zarrdir / 'latest.zarr.zip')
 
         # Load the latest init time as a dataset
         _, tempPaths = self.storer.copyITFolderToTemp(it=latestInitTime, prefix=self.rawdir)
         log.info(
-            event=f"Creating Latest Zarr for initTime {latestInitTime.strftime('%Y/%m/%d %H:%M')}",
-            initTime=latestInitTime.strftime("%Y/%m/%d %H:%M")
+            event=f"creating latest zarr for initTime",
+            inittime=latestInitTime.strftime("%Y/%m/%d %H:%M"),
+            path=(self.zarrdir / 'latest.zarr.zip').as_posix()
         )
 
         # Create a pipeline to convert the raw files and merge them as a dataset
@@ -239,7 +243,7 @@ class NWPConsumerService:
         # Move the temp zarr file to the store
         nbytes = self.storer.store(
             src=tempZarrPath,
-            dst=pathlib.Path('latest.zarr.zip')
+            dst=self.zarrdir / 'latest.zarr.zip'
         )
 
         # Delete the temporary files
@@ -247,3 +251,72 @@ class NWPConsumerService:
             f.unlink(missing_ok=True)
 
         return nbytes
+
+    def Check(self) -> int:
+        """Perform a healthcheck on the service"""
+
+        # Check eccodes is installed
+        import eccodes
+        log.info(event="HEALTH: eccodes is installed", version=eccodes.codes_get_api_version())
+
+        # Check the raw directory exists
+        if not self.storer.exists(dst=self.rawdir):
+            log.error(event="HEALTH: raw directory does not exist", path=self.rawdir.as_posix())
+            return 1
+        else:
+            log.info(event="HEALTH: found raw directory", path=self.rawdir.as_posix())
+
+        # Check the zarr directory exists
+        if not self.storer.exists(dst=self.zarrdir):
+            log.error(event="HEALTH: zarr directory does not exist", path=self.zarrdir.as_posix())
+            return 1
+        else:
+            log.info(event="HEALTH: found zarr directory", path=self.zarrdir.as_posix())
+
+        # Check that the temporary directory is not approaching capacity
+        tmp_usage = shutil.disk_usage('/tmp')
+        if tmp_usage.free < 1e9:
+            log.error(
+                event="HEALTH: temporary directory is full",
+                free=tmp_usage.free,
+                total=tmp_usage.total,
+                used=tmp_usage.used
+            )
+            return 1
+        else:
+            log.info(
+                event="HEALTH: found temporary directory",
+                free=tmp_usage.free,
+                total=tmp_usage.total,
+                used=tmp_usage.used
+            )
+
+        # Check the ram usage
+        ram_usage = psutil.virtual_memory()
+        if ram_usage.percent > 95:
+            log.error(
+                event="HEALTH: ram usage is high",
+                available=ram_usage.available,
+                total=ram_usage.total,
+                used=ram_usage.used,
+                percent=ram_usage.percent
+            )
+            return 1
+        else:
+            log.info(
+                event="HEALTH: found ram usage",
+                free=ram_usage.free,
+                total=ram_usage.total,
+                used=ram_usage.used,
+                percent=ram_usage.percent
+            )
+
+        # Check the CPU usage
+        cpu_usage = psutil.cpu_percent()
+        if cpu_usage > 95:
+            log.error(event="HEALTH: cpu usage is high", percent=cpu_usage)
+            return 1
+        else:
+            log.info(event="HEALTH: found cpu usage", percent=cpu_usage)
+
+        return 0

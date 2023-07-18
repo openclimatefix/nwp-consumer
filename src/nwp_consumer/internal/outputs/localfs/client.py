@@ -38,11 +38,11 @@ class LocalFSClient(internal.StorageInterface):
                 # Add the initTime to the set
                 initTimes.add(ddt)
             except ValueError:
-                log.debug(f"Invalid folder name found in {prefix}: {dir}. Ignoring")
+                log.debug(f"ignoring invalid folder name", name=dir.as_posix(), within=prefix.as_posix())
 
         sortedInitTimes = sorted(initTimes)
         log.debug(
-            event=f"Found {len(initTimes)} init times in raw directory",
+            event=f"found {len(initTimes)} init times in raw directory",
             earliest=sortedInitTimes[0],
             latest=sortedInitTimes[-1]
         )
@@ -55,7 +55,7 @@ class LocalFSClient(internal.StorageInterface):
 
         if not initTimeDirPath.exists():
             raise FileNotFoundError(
-                f"Folder does not exist for init time {it} at {initTimeDirPath.as_posix()}"
+                f"folder does not exist for init time {it} at {initTimeDirPath.as_posix()}"
             )
 
         paths: list[pathlib.Path] = list(initTimeDirPath.iterdir())
@@ -76,11 +76,11 @@ class LocalFSClient(internal.StorageInterface):
 
     def delete(self, *, p: pathlib.Path) -> None:
         if not p.exists():
-            raise FileNotFoundError(f"File does not exist: {p}")
+            raise FileNotFoundError(f"file does not exist: {p}")
         if p.is_file():
             p.unlink()
         elif p.is_dir():
             shutil.rmtree(p.as_posix())
         else:
-            raise ValueError(f"Path is not a file or directory: {p}")
+            raise ValueError(f"path is not a file or directory: {p}")
         return

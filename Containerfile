@@ -3,7 +3,7 @@
 # * Update pip setuputils and wheel to support building new packages
 FROM quay.io/condaforge/miniforge3:latest AS build
 RUN conda create -p /venv python=3.10
-RUN conda install -p /venv -y cfgrib cartopy cf-units cftime numcodecs
+RUN conda install -p /venv -y cfgrib cartopy cf-units cftime numcodecs psutil
 RUN /venv/bin/pip install --upgrade pip
 
 # Install packages into the virtualenv as a separate step
@@ -23,4 +23,5 @@ RUN /venv/bin/pip install .
 FROM gcr.io/distroless/python3-debian11
 WORKDIR /app
 COPY --from=build-venv /venv /venv
+HEALTHCHECK CMD ["/venv/bin/nwp-consumer", "check"]
 ENTRYPOINT ["/venv/bin/nwp-consumer"]

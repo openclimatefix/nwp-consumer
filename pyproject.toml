@@ -26,6 +26,7 @@ dependencies = [
     "numpy == 1.24.2",
     "ocf-blosc2 == 0.0.3",
     "pathlib == 1.0.1",
+    "psutil == 5.9.5",
     "requests == 2.31.0",
     "scitools-iris == 3.4.1",
     "structlog == 22.1.0",
@@ -45,7 +46,7 @@ dev = [
 ]
 
 [project.scripts]
-nwp-consumer = "nwp_consumer.cmd.main:run" # Set the entrypoint for the CLI
+nwp-consumer = "nwp_consumer.cmd.main:main" # Set the entrypoint for the CLI
 
 [project.urls]
 repository = "https://github.com/openclimatefix/nwp-consumer"

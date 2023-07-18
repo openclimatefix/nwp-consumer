@@ -48,7 +48,7 @@ class MetOfficeClient(internal.FetcherInterface):
 
     def __init__(self, *, orderID: str, clientID: str, clientSecret: str):
         if any([value in [None, "", "unset"] for value in [clientID, clientSecret, orderID]]):
-            raise KeyError("Must provide clientID, clientSecret, and orderID")
+            raise KeyError("must provide clientID, clientSecret, and orderID")
         self.orderID: str = orderID
         self.baseurl: str = f"https://api-metoffice.apiconnect.ibmcloud.com/1.0.0/orders/{self.orderID}/latest"
         self.querystring: dict[str, str] = {"detail": "MINIMAL"}
@@ -62,7 +62,7 @@ class MetOfficeClient(internal.FetcherInterface):
     def downloadToTemp(self, *, fi: MetOfficeFileInfo) \
             -> tuple[internal.FileInfoModel, pathlib.Path]:
 
-        log.debug(f"Requesting download of {fi.fname()}", item=fi.fname())
+        log.debug(f"requesting download of file", filename=fi.fname())
         url: str = f"{self.baseurl}/{fi.fname()}/data"
         try:
             opener = urllib.request.build_opener()
@@ -73,10 +73,10 @@ class MetOfficeClient(internal.FetcherInterface):
             response = urllib.request.urlopen(url=url)
             if not response.status == 200:
                 raise ConnectionError(
-                    f"Error response code {response.status} for url {url}: {response.read()}"
+                    f"error response code {response.status} for url {url}: {response.read()}"
                 )
         except Exception as e:
-            raise ConnectionError(f"Error calling url {url} for {fi.fname()}: {e}") from e
+            raise ConnectionError(f"error calling url {url} for {fi.fname()}: {e}") from e
 
         # Stream the filedata into a temporary file
         tfp: pathlib.Path = pathlib.Path(f"/tmp/{str(TypeID(prefix='nwpc'))}")
@@ -84,14 +84,14 @@ class MetOfficeClient(internal.FetcherInterface):
             for chunk in iter(lambda: response.read(16 * 1024), b''):
                 f.write(chunk)
 
-        log.debug(f"Fetched all data from {fi.fname()}", path=url)
+        log.debug(f"fetched all data from file", filename=fi.fname(), path=url)
 
         return fi, tfp
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
 
         if it.date() != dt.datetime.utcnow().date():
-            log.warn("MetOffice API only supports fetching data for the current day")
+            log.warn("metoffice API only supports fetching data for the current day")
             return []
 
         # Fetch info for all files available on the input date
@@ -103,7 +103,7 @@ class MetOfficeClient(internal.FetcherInterface):
         )
         if not response.ok:
             raise AssertionError(
-                f"Response did not return with an ok status: {response.content}"
+                f"response did not return with an ok status: {response.content}"
             ) from None
 
         # Map the response to a MetOfficeResponse object
@@ -111,7 +111,7 @@ class MetOfficeClient(internal.FetcherInterface):
             responseObj: MetOfficeResponse = MetOfficeResponse.Schema().load(response.json())
         except Exception as e:
             raise TypeError(
-                f"Error marshalling json to MetOfficeResponse object: {e}, "
+                f"error marshalling json to MetOfficeResponse object: {e}, "
                 f"response: {response.json()}"
             )
 
@@ -156,7 +156,7 @@ class MetOfficeClient(internal.FetcherInterface):
                 parameterDataset = parameterDataset.rename({
                     x: PARAMETER_RENAME_MAP[x]})
             case _, _:
-                log.warn(f"Encountered unknown parameter {currentName}, ignoring file",
+                log.warn(f"encountered unknown parameter {currentName}; ignoring file",
                          parameterName=currentName, parameterNumber=parameterNumber)
                 return xr.Dataset()
 

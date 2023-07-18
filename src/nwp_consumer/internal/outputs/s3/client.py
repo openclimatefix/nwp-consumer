@@ -63,11 +63,11 @@ class S3Client(internal.StorageInterface):
                     ).replace(tzinfo=None)
                     initTimes.add(ddt)
                 except ValueError:
-                    log.debug(f"Invalid folder name found in raw directory: {dir}. Ignoring")
+                    log.debug(f"ignoring invalid folder name", name=dir.as_posix(), within=prefix.as_posix())
 
         sortedInitTimes = sorted(initTimes)
         log.debug(
-            event=f"Found {len(initTimes)} init times in raw directory",
+            event=f"found {len(initTimes)} init times in raw directory",
             earliest=sortedInitTimes[0],
             latest=sortedInitTimes[-1]
         )

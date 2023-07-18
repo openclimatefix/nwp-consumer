@@ -69,13 +69,13 @@ class CEDAClient(internal.FetcherInterface):
             -> tuple[internal.FileInfoModel, pathlib.Path]:
 
         anonUrl: str = f"{self.dataUrl}/{fi.initTime():%Y/%m/%d}/{fi.fname()}"
-        log.debug(f"Requesting download of {fi.fname()}", path=anonUrl)
+        log.debug(f"requesting download of file", filename=fi.fname(), path=anonUrl)
         url: str = f'{self.__ftpBase}/{anonUrl}'
         try:
             response = urllib.request.urlopen(url=url)
         except Exception as e:
             raise ConnectionError(
-                f"Error calling url {url} for {fi.fname()}: {e}"
+                f"error calling url {url} for {fi.fname()}: {e}"
             ) from e
 
         # Stream the filedata into a temporary file
@@ -84,7 +84,7 @@ class CEDAClient(internal.FetcherInterface):
             for chunk in iter(lambda: response.read(16 * 1024), b''):
                 f.write(chunk)
 
-        log.debug(f"Fetched all data from: {fi.fname()}", path=anonUrl)
+        log.debug(f"fetched all data from file", filename=fi.fname(), path=anonUrl)
 
         return fi, tfp
 
@@ -100,14 +100,15 @@ class CEDAClient(internal.FetcherInterface):
         if response.status_code == 404:
             # No data available for this init time. Fail soft
             log.warn(
-                event=f"No data available for init time {it:%Y/%m/%d %H:%M}",
+                event=f"no data available for init time",
+                init_time=f"{it:%Y/%m/%d %H:%M}",
                 url=response.url
             )
             return []
         if not response.ok:
             # Something else has gone wrong. Fail hard
             raise ConnectionError(
-                f"Error calling url {response.url}: {response.status_code}"
+                f"error calling url {response.url}: {response.status_code}"
             ) from None
 
         # Map the response to a CEDAResponse object to ensure it looks as expected
@@ -115,7 +116,7 @@ class CEDAClient(internal.FetcherInterface):
             responseObj: CEDAResponse = CEDAResponse.Schema().load(response.json())
         except Exception as e:
             raise TypeError(
-                f"Error marshalling json to CedaResponse object: {e}, response: {response.json()}"
+                f"error marshalling json to CedaResponse object: {e}, response: {response.json()}"
             ) from e
 
         # Filter the files for the desired init time
@@ -139,7 +140,7 @@ class CEDAClient(internal.FetcherInterface):
                 backend_kwargs={"indexpath": ""}
             )
         except Exception as e:
-            raise Exception(f"Error loading wholesale file as dataset: {e}") from e
+            raise Exception(f"error loading wholesale file as dataset: {e}") from e
 
         for i, ds in enumerate(datasets):
             # Rename the parameters to the OCF names
@@ -259,7 +260,7 @@ def _reshapeTo2DGrid(*, ds: xr.Dataset) -> xr.Dataset:
 
     if ds.dims['values'] != len(northing) * len(easting):
         raise ValueError(
-            f"Dataset has {ds.dims['values']} values, "
+            f"dataset has {ds.dims['values']} values, "
             f"but expected {len(northing) * len(easting)}"
         )
 
