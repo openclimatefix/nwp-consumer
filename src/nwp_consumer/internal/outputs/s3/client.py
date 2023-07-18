@@ -88,6 +88,8 @@ class S3Client(internal.StorageInterface):
                 with tfp.open("wb") as tmpfile:
                     for chunk in iter(lambda: infile.read(16 * 1024), b""):
                         tmpfile.write(chunk)
+                if tfp.stat().st_size == 0:
+                    raise ValueError(f"downloaded file {path} is empty")
                 tempPaths.append(tfp)
 
         return it, tempPaths

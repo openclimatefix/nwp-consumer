@@ -53,6 +53,8 @@ class LocalFSClient(internal.StorageInterface):
             -> tuple[dt.datetime, list[pathlib.Path]]:
         initTimeDirPath = prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
 
+        log.debug(f"copying init time folder to temp", initTime=it, path=initTimeDirPath.as_posix())
+
         if not initTimeDirPath.exists():
             raise FileNotFoundError(
                 f"folder does not exist for init time {it} at {initTimeDirPath.as_posix()}"
@@ -70,6 +72,8 @@ class LocalFSClient(internal.StorageInterface):
                 with tfp.open("wb") as tmpfile:
                     for chunk in iter(lambda: infile.read(16 * 1024), b""):
                         tmpfile.write(chunk)
+                if tfp.stat().st_size == 0:
+                    raise ValueError(f"downloaded file {path} is empty")
                 tempPaths.append(tfp)
 
         return it, tempPaths
