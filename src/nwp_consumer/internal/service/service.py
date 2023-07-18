@@ -255,6 +255,8 @@ class NWPConsumerService:
     def Check(self) -> int:
         """Perform a healthcheck on the service"""
 
+        unhealthy = False
+
         # Check eccodes is installed
         import eccodes
         log.info(event="HEALTH: eccodes is installed", version=eccodes.codes_get_api_version())
@@ -262,14 +264,14 @@ class NWPConsumerService:
         # Check the raw directory exists
         if not self.storer.exists(dst=self.rawdir):
             log.error(event="HEALTH: raw directory does not exist", path=self.rawdir.as_posix())
-            return 1
+            unhealthy = True
         else:
             log.info(event="HEALTH: found raw directory", path=self.rawdir.as_posix())
 
         # Check the zarr directory exists
         if not self.storer.exists(dst=self.zarrdir):
             log.error(event="HEALTH: zarr directory does not exist", path=self.zarrdir.as_posix())
-            return 1
+            unhealthy = True
         else:
             log.info(event="HEALTH: found zarr directory", path=self.zarrdir.as_posix())
 
@@ -282,7 +284,7 @@ class NWPConsumerService:
                 total=tmp_usage.total,
                 used=tmp_usage.used
             )
-            return 1
+            unhealthy = True
         else:
             log.info(
                 event="HEALTH: found temporary directory",
@@ -301,7 +303,7 @@ class NWPConsumerService:
                 used=ram_usage.used,
                 percent=ram_usage.percent
             )
-            return 1
+            unhealthy = True
         else:
             log.info(
                 event="HEALTH: found ram usage",
@@ -315,8 +317,11 @@ class NWPConsumerService:
         cpu_usage = psutil.cpu_percent()
         if cpu_usage > 95:
             log.error(event="HEALTH: cpu usage is high", percent=cpu_usage)
-            return 1
+            unhealthy = True
         else:
             log.info(event="HEALTH: found cpu usage", percent=cpu_usage)
+
+        if unhealthy:
+            return 1
 
         return 0
