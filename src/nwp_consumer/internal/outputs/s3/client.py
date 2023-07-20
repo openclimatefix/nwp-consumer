@@ -91,6 +91,7 @@ class S3Client(internal.StorageInterface):
                 with tfp.open("wb") as tmpfile:
                     for chunk in iter(lambda: infile.read(16 * 1024), b""):
                         tmpfile.write(chunk)
+                        tmpfile.flush()
                 tempPaths.append(tfp)
 
         log.debug(
