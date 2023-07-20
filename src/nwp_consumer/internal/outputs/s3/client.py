@@ -73,24 +73,30 @@ class S3Client(internal.StorageInterface):
         )
         return sortedInitTimes
 
-    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) \
-            -> tuple[dt.datetime, list[pathlib.Path]]:
-        initTimeDirPath = self.__bucket / prefix \
-                          / it.strftime(internal.IT_FOLDER_FMTSTR)
-        paths = [pathlib.Path(p)
-                 for p in self.__fs.ls(initTimeDirPath.as_posix())]
+    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> tuple[dt.datetime, list[pathlib.Path]]:
+        initTimeDirPath = self.__bucket / prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
+        paths = [pathlib.Path(p) for p in self.__fs.ls(initTimeDirPath.as_posix())]
 
         # Read all files into temporary files
         tempPaths: list[pathlib.Path] = []
         for path in paths:
+            if path.exists() is False or path.stat().st_size == 0:
+                log.warn(
+                    event="temporary file is empty",
+                    filepath=path.as_posix()
+                )
+                continue
             with self.__fs.open(path=path.as_posix(), mode="rb") as infile:
                 tfp: pathlib.Path = internal.TMP_DIR / str(TypeID(prefix='nwpc'))
                 with tfp.open("wb") as tmpfile:
                     for chunk in iter(lambda: infile.read(16 * 1024), b""):
                         tmpfile.write(chunk)
-                if tfp.stat().st_size == 0:
-                    raise ValueError(f"downloaded file {path} is empty")
                 tempPaths.append(tfp)
+
+        log.debug(
+            event="copied it folder to temporary files",
+            nbytes=[p.stat().st_size for p in tempPaths]
+        )
 
         return it, tempPaths
 

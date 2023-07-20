@@ -84,6 +84,8 @@ class NWPConsumerService:
             # * This deletes the temporary files
             for future in concurrent.futures.as_completed(futures):
                 fileInfo, tempFile = future.result()
+                if tempFile == pathlib.Path():
+                    continue
                 nbytes += self.storer.store(
                     src=tempFile,
                     dst=self.rawdir / fileInfo.initTime().strftime(internal.IT_FOLDER_FMTSTR) / (fileInfo.fname() + ".grib")
@@ -134,18 +136,32 @@ class NWPConsumerService:
             for future in concurrent.futures.as_completed(futures):
                 initTime, tempPaths = future.result()
 
+                if not tempPaths:
+                    log.warn(
+                        event=f"no files for initTime",
+                        initTime=initTime.strftime("%Y/%m/%d %H:%M")
+                    )
+                    continue
+
                 log.debug(
-                    f"creating zarr for initTime",
+                    event=f"creating zarr for initTime",
                     initTime=initTime.strftime("%Y/%m/%d %H:%M")
                 )
 
                 # Create a pipeline to convert the raw files and merge them as a dataset
                 bag: dask.bag.Bag = dask.bag.from_sequence(tempPaths)
-                dataset = bag.map(lambda tfp: self.fetcher.mapTemp(p=tfp)) \
-                    .fold(lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts")) \
+                dataset = bag.map(func=lambda tfp: self.fetcher.mapTemp(p=tfp)) \
+                    .fold(binop=lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts")) \
                     .compute()
 
                 # Carry out a basic data quality check
+                if dataset == xr.Dataset():
+                    log.warn(
+                        event=f"Dataset for initTime is empty",
+                        initTime=initTime.strftime("%Y/%m/%d %H:%M")
+                    )
+                    continue
+
                 for var in dataset.coords['variable'].values:
                     if True in dataset.sel(variable=var).isnull():
                         log.warn(

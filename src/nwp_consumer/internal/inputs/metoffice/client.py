@@ -59,10 +59,12 @@ class MetOfficeClient(internal.FetcherInterface):
             "X-IBM-Client-Secret": clientSecret,
         }
 
-    def downloadToTemp(self, *, fi: MetOfficeFileInfo) \
-            -> tuple[internal.FileInfoModel, pathlib.Path]:
+    def downloadToTemp(self, *, fi: MetOfficeFileInfo) -> tuple[internal.FileInfoModel, pathlib.Path]:
 
-        log.debug(f"requesting download of file", filename=fi.fname())
+        log.debug(
+            event=f"requesting download of file",
+            filename=fi.fname()
+        )
         url: str = f"{self.baseurl}/{fi.fname()}/data"
         try:
             opener = urllib.request.build_opener()
@@ -72,11 +74,20 @@ class MetOfficeClient(internal.FetcherInterface):
             urllib.request.install_opener(opener)
             response = urllib.request.urlopen(url=url)
             if not response.status == 200:
-                raise ConnectionError(
-                    f"error response code {response.status} for url {url}: {response.read()}"
+                log.warn(
+                    event="error response received for download file request",
+                    response=response.json(),
+                    url=url
                 )
+                return fi, pathlib.Path()
         except Exception as e:
-            raise ConnectionError(f"error calling url {url} for {fi.fname()}: {e}") from e
+            log.warn(
+                event="error calling url for file",
+                url=url,
+                filename=fi.fname(),
+                error=e
+            )
+            return fi, pathlib.Path()
 
         # Stream the filedata into a temporary file
         tfp: pathlib.Path = internal.TMP_DIR / str(TypeID(prefix='nwpc'))
@@ -84,12 +95,13 @@ class MetOfficeClient(internal.FetcherInterface):
             for chunk in iter(lambda: response.read(16 * 1024), b''):
                 f.write(chunk)
 
-        log.debug(f"fetched all data from file", filename=fi.fname(), path=url, tempfile=tfp.as_posix())
-
-        # Check the file is not empty
-        if tfp.stat().st_size == 0:
-            # File is empty. Fail hard
-            raise ValueError(f"downloaded file {fi.fname()} is empty")
+        log.debug(
+            event="fetched all data from file",
+            filename=fi.fname(),
+            url=url,
+            filepath=tfp.as_posix(),
+            nbytes=tfp.stat().st_size
+        )
 
         return fi, tfp
 
@@ -107,18 +119,23 @@ class MetOfficeClient(internal.FetcherInterface):
             params=self.querystring
         )
         if not response.ok:
-            raise AssertionError(
-                f"response did not return with an ok status: {response.content}"
-            ) from None
+            log.warn(
+                event="error response from filelist endpoint",
+                url=response.url,
+                response=response.json()
+            )
+            return []
 
         # Map the response to a MetOfficeResponse object
         try:
             responseObj: MetOfficeResponse = MetOfficeResponse.Schema().load(response.json())
         except Exception as e:
-            raise TypeError(
-                f"error marshalling json to MetOfficeResponse object: {e}, "
-                f"response: {response.json()}"
+            log.warn(
+                event="response from metoffice does not match expected schema",
+                error=e,
+                response=response.json()
             )
+            return []
 
         # Filter the file infos for the desired init time
         wantedFileInfos: list[MetOfficeFileInfo] = [
@@ -139,7 +156,12 @@ class MetOfficeClient(internal.FetcherInterface):
                 backend_kwargs={'read_keys': ['name', 'parameterNumber'], 'indexpath': ''}
             )
         except Exception as e:
-            raise ValueError(f"Failed to load GRIB file as a cube: {e}") from e
+            log.warn(
+                event="error loading raw file as dataset",
+                error=e,
+                filepath=p.as_posix()
+            )
+            return xr.Dataset()
 
         # Make the DataArray OCF-compliant
         # 1. Rename the parameter to the OCF short name
@@ -161,8 +183,12 @@ class MetOfficeClient(internal.FetcherInterface):
                 parameterDataset = parameterDataset.rename({
                     x: PARAMETER_RENAME_MAP[x]})
             case _, _:
-                log.warn(f"encountered unknown parameter {currentName}; ignoring file",
-                         parameterName=currentName, parameterNumber=parameterNumber)
+                log.warn(
+                    event=f"encountered unknown parameter; ignoring file",
+                    unknownparamname=currentName,
+                    unknownparamnumber=parameterNumber,
+                    filepath=p.as_posix()
+                )
                 return xr.Dataset()
 
         # 2. Remove unneeded variables

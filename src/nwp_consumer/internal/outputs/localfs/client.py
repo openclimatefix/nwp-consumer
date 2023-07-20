@@ -2,6 +2,7 @@ import datetime as dt
 import os
 import pathlib
 import shutil
+import time
 
 import structlog
 from typeid import TypeID
@@ -56,9 +57,12 @@ class LocalFSClient(internal.StorageInterface):
         log.debug(f"copying init time folder to temp", initTime=it, path=initTimeDirPath.as_posix())
 
         if not initTimeDirPath.exists():
-            raise FileNotFoundError(
-                f"folder does not exist for init time {it} at {initTimeDirPath.as_posix()}"
+            log.warn(
+                event="folder does not exist for init time",
+                inittime=f"{it:%Y%/m/%d %H:%M}",
+                directorypath=initTimeDirPath.as_posix()
             )
+            return it, []
 
         paths: list[pathlib.Path] = list(initTimeDirPath.iterdir())
 
@@ -67,14 +71,20 @@ class LocalFSClient(internal.StorageInterface):
         # Read all files into temporary files
         tempPaths: list[pathlib.Path] = []
         for path in paths:
-            with path.open("rb") as infile:
-                tfp: pathlib.Path = internal.TMP_DIR / str(TypeID(prefix='nwpc'))
-                with tfp.open("wb") as tmpfile:
-                    for chunk in iter(lambda: infile.read(16 * 1024), b""):
-                        tmpfile.write(chunk)
-                if tfp.stat().st_size == 0:
-                    raise ValueError(f"downloaded file {path} is empty")
-                tempPaths.append(tfp)
+            if path.exists() is False or path.stat().st_size == 0:
+                log.warn(
+                    event="temp file is empty",
+                    filepath=path.as_posix()
+                )
+                continue
+            tfp: pathlib.Path = internal.TMP_DIR / str(TypeID(prefix='nwpc'))
+            shutil.copy2(src=path, dst=tfp)
+            tempPaths.append(tfp)
+
+        log.debug(
+            event="copied it folder to temporary files",
+            nbytes=[p.stat().st_size for p in tempPaths]
+        )
 
         return it, tempPaths
 

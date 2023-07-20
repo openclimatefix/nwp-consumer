@@ -69,14 +69,22 @@ class CEDAClient(internal.FetcherInterface):
             -> tuple[internal.FileInfoModel, pathlib.Path]:
 
         anonUrl: str = f"{self.dataUrl}/{fi.initTime():%Y/%m/%d}/{fi.fname()}"
-        log.debug(f"requesting download of file", filename=fi.fname(), path=anonUrl)
+        log.debug(
+            event=f"requesting download of file",
+            filename=fi.fname(),
+            path=anonUrl
+        )
         url: str = f'{self.__ftpBase}/{anonUrl}'
         try:
             response = urllib.request.urlopen(url=url)
         except Exception as e:
-            raise ConnectionError(
-                f"error calling url {url} for {fi.fname()}: {e}"
-            ) from e
+            log.warn(
+                event="error calling url for file",
+                url=url,
+                filename=fi.fname(),
+                error=e
+            )
+            return fi, pathlib.Path()
 
         # Stream the filedata into a temporary file
         tfp: pathlib.Path = internal.TMP_DIR / str(TypeID(prefix='nwpc'))
@@ -84,12 +92,13 @@ class CEDAClient(internal.FetcherInterface):
             for chunk in iter(lambda: response.read(16 * 1024), b''):
                 f.write(chunk)
 
-        log.debug(f"fetched all data from file", filename=fi.fname(), path=anonUrl, tempfile=tfp.as_posix())
-
-        # Check the file is not empty
-        if tfp.stat().st_size == 0:
-            # File is empty. Fail hard
-            raise ValueError(f"downloaded file {fi.fname()} is empty")
+        log.debug(
+            event=f"fetched all data from file",
+            filename=fi.fname(),
+            url=anonUrl,
+            filepath=tfp.as_posix(),
+            nbytes=tfp.stat().st_size
+        )
 
         return fi, tfp
 
@@ -112,17 +121,23 @@ class CEDAClient(internal.FetcherInterface):
             return []
         if not response.ok:
             # Something else has gone wrong. Fail hard
-            raise ConnectionError(
-                f"error calling url {response.url}: {response.status_code}"
-            ) from None
+            log.warn(
+                event="error response from filelist endpoint",
+                url=response.url,
+                response=response.json()
+            )
+            return []
 
         # Map the response to a CEDAResponse object to ensure it looks as expected
         try:
             responseObj: CEDAResponse = CEDAResponse.Schema().load(response.json())
         except Exception as e:
-            raise TypeError(
-                f"error marshalling json to CedaResponse object: {e}, response: {response.json()}"
-            ) from e
+            log.warn(
+                event="response from ceda does not match expected schema",
+                error=e,
+                response=response.json()
+            )
+            return []
 
         # Filter the files for the desired init time
         wantedFiles: list[CEDAFileInfo] = [
@@ -145,7 +160,12 @@ class CEDAClient(internal.FetcherInterface):
                 backend_kwargs={"indexpath": ""}
             )
         except Exception as e:
-            raise Exception(f"error loading wholesale file as dataset: {e}") from e
+            log.warn(
+                event="error converting raw file to dataset",
+                filepath=p.as_posix(),
+                error=e
+            )
+            return xr.Dataset()
 
         for i, ds in enumerate(datasets):
             # Rename the parameters to the OCF names
@@ -190,9 +210,17 @@ class CEDAClient(internal.FetcherInterface):
         )
 
         # Add in x and y coordinates
-        wholesaleDataset = _reshapeTo2DGrid(
-            ds=wholesaleDataset
-        )
+        try:
+            wholesaleDataset = _reshapeTo2DGrid(
+                ds=wholesaleDataset
+            )
+        except Exception as e:
+            log.warn(
+                event="error reshaping to 2D grid",
+                filepath=p.as_posix(),
+                error=e
+            )
+            return xr.Dataset()
 
         # Create a chunked Dask Dataset from the input multi-variate Dataset.
         # *  Converts the input multivariate DataSet (with different DataArrays for
