@@ -52,41 +52,12 @@ class LocalFSClient(internal.StorageInterface):
 
     def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) \
             -> tuple[dt.datetime, list[pathlib.Path]]:
+
+        # Local FS already has access to files, so just return the paths
         initTimeDirPath = prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
-
-        log.debug(f"copying init time folder to temp", initTime=it, path=initTimeDirPath.as_posix())
-
-        if not initTimeDirPath.exists():
-            log.warn(
-                event="folder does not exist for init time",
-                inittime=f"{it:%Y%/m/%d %H:%M}",
-                directorypath=initTimeDirPath.as_posix()
-            )
-            return it, []
-
         paths: list[pathlib.Path] = list(initTimeDirPath.iterdir())
 
-        # TODO: Filter unwanted filenames
-
-        # Read all files into temporary files
-        tempPaths: list[pathlib.Path] = []
-        for path in paths:
-            if path.exists() is False or path.stat().st_size == 0:
-                log.warn(
-                    event="temp file is empty",
-                    filepath=path.as_posix()
-                )
-                continue
-            tfp: pathlib.Path = internal.TMP_DIR / str(TypeID(prefix='nwpc'))
-            shutil.copy2(src=path, dst=tfp)
-            tempPaths.append(tfp)
-
-        log.debug(
-            event="copied it folder to temporary files",
-            nbytes=[p.stat().st_size for p in tempPaths]
-        )
-
-        return it, tempPaths
+        return it, paths
 
     def delete(self, *, p: pathlib.Path) -> None:
         if not p.exists():

@@ -155,10 +155,11 @@ class NWPConsumerService:
                     .compute()
 
                 # Carry out a basic data quality check
-                if dataset == xr.Dataset():
+                if dataset == xr.Dataset() or "variable" not in dict(dataset.coords.items()).keys():
                     log.warn(
-                        event=f"Dataset for initTime is empty",
-                        initTime=initTime.strftime("%Y/%m/%d %H:%M")
+                        event=f"Dataset for initTime is empty or missing variable coord",
+                        initTime=initTime.strftime("%Y/%m/%d %H:%M"),
+                        coords=dict(dataset.coords.items())
                     )
                     continue
 
