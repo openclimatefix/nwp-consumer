@@ -21,12 +21,11 @@ log = structlog.getLogger()
 
 # Defines parameters in CEDA that are not available from MetOffice
 PARAMETER_IGNORE_LIST: typing.Sequence[str] = (
-    "unknown", "h", "hcct", "cdcb", "dpt", "prmsl",
+    "unknown", "h", "hcct", "cdcb", "dpt", "prmsl"
 )
 
-COORDINATE_IGNORE_LIST: typing.Sequence[str] = (
-    "height", "pressure", "meanSea", "level", "atmosphere", "cloudBase",
-    "heightAboveGround", "heightAboveGroundLayer", "valid_time", "surface",
+COORDINATE_ALLOW_LIST: typing.Sequence[str] = (
+    "time", "step", "x", "y"
 )
 
 # Defines the mapping from CEDA parameter names to OCF parameter names
@@ -202,7 +201,7 @@ class CEDAClient(internal.FetcherInterface):
 
             # Delete unwanted coordinates
             ds = ds.drop_vars(
-                names=COORDINATE_IGNORE_LIST,
+                names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST],
                 errors="ignore"
             )
 

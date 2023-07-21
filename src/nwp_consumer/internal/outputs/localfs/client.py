@@ -19,6 +19,9 @@ class LocalFSClient(internal.StorageInterface):
         return dst.exists()
 
     def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
+        if src == dst:
+            return os.stat(src).st_size
+
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(src=src, dst=dst)
         src.unlink(missing_ok=True)
