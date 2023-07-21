@@ -12,7 +12,7 @@ class _EnvParseMixin:
     """Mixin to parse environment variables into class fields."""
 
     def __init__(self):
-        for field, fieldType in get_type_hints(self).items():
+        for field, _ in get_type_hints(self).items():
             # Skip item if not upper case
             if not field.isupper():
                 continue
@@ -24,23 +24,10 @@ class _EnvParseMixin:
                     event=f"environment variable not set",
                     variable=field,
                 )
-                self.__setattr__(field, "")
-            # Cast env var value to expected type and raise AppConfigError on failure
-            try:
-                if fieldType == bool:
-                    value = strtobool(os.environ.get(field, default_value))
-                else:
-                    value = fieldType(os.environ.get(field, default_value))
-
-                self.__setattr__(field, value)
-            except ValueError as e:
-                log.warn(
-                    event=f"unable to cast environment variable to expected type",
-                    variable=field,
-                    type=fieldType,
-                    value=os.environ[field],
-                )
-                self.__setattr__(field, "")
+                default_value = ""
+            # Cast env var value to string
+            value = str(os.environ.get(field, default_value))
+            self.__setattr__(field, value)
 
 
 class CEDAConfig(_EnvParseMixin):
