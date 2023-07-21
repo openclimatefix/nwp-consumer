@@ -157,7 +157,8 @@ class CEDAClient(internal.FetcherInterface):
         try:
             datasets: list[xr.Dataset] = cfgrib.open_datasets(
                 path=p.as_posix(),
-                backend_kwargs={"indexpath": ""}
+                backend_kwargs={"indexpath": ""},
+
             )
         except Exception as e:
             log.warn(
@@ -240,7 +241,7 @@ class CEDAClient(internal.FetcherInterface):
             .sortby("variable") \
             .chunk({
                 "init_time": 1,
-                "step": 1,
+                "step": -1,
                 "variable": -1,
                 "y": len(wholesaleDataset.y) // 2,
                 "x": len(wholesaleDataset.x) // 2,

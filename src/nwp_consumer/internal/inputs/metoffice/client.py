@@ -153,7 +153,8 @@ class MetOfficeClient(internal.FetcherInterface):
             parameterDataset: xr.Dataset = xr.open_dataset(
                 p.as_posix(),
                 engine='cfgrib',
-                backend_kwargs={'read_keys': ['name', 'parameterNumber'], 'indexpath': ''}
+                backend_kwargs={'read_keys': ['name', 'parameterNumber'], 'indexpath': ''},
+                chunks={},
             )
         except Exception as e:
             log.warn(
@@ -212,7 +213,7 @@ class MetOfficeClient(internal.FetcherInterface):
             .sortby("variable") \
             .chunk({
                 "init_time": 1,
-                "step": 1,
+                "step": -1,
                 "variable": -1,
                 "y": len(parameterDataset.y) // 2,
                 "x": len(parameterDataset.x) // 2,
