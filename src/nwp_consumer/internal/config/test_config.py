@@ -29,17 +29,17 @@ class Test_EnvParseMixin(unittest.TestCase):
         self.assertEqual(1.0, config.TEST_FLOAT)
 
     @unittest.mock.patch.dict("os.environ", {}, clear=True)
-    def test_errorsIfRequiredFieldNotSet(self):
+    def test_emptyStringIfRequiredFieldNotSet(self):
         class TestConfig(_EnvParseMixin):
             TEST_STR: str
 
-        with self.assertRaises(EnvironmentError):
-            TestConfig()
+        cfg = TestConfig()
+        self.assertEqual("", cfg.TEST_STR)
 
     @unittest.mock.patch.dict("os.environ", {"TEST_BOOL": "not a bool"})
-    def test_errorsIfUnableToCastEnvVarToType(self):
+    def test_emptyStringIfUnableToCastEnvVarToType(self):
         class TestConfig(_EnvParseMixin):
             TEST_BOOL: bool
 
-        with self.assertRaises(EnvironmentError):
-            TestConfig()
+        cfg = TestConfig()
+        self.assertEqual("", cfg.TEST_BOOL)

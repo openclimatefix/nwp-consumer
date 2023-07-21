@@ -68,6 +68,12 @@ class CEDAClient(internal.FetcherInterface):
     def downloadToTemp(self, *, fi: internal.FileInfoModel) \
             -> tuple[internal.FileInfoModel, pathlib.Path]:
 
+        if self.__password == "" or self.__username == "":
+            log.error(
+                event="all ceda credentials not provided"
+            )
+            return fi, pathlib.Path()
+
         anonUrl: str = f"{self.dataUrl}/{fi.initTime():%Y/%m/%d}/{fi.fname()}"
         log.debug(
             event=f"requesting download of file",

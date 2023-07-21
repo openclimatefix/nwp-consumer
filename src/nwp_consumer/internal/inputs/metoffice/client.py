@@ -61,6 +61,11 @@ class MetOfficeClient(internal.FetcherInterface):
 
     def downloadToTemp(self, *, fi: MetOfficeFileInfo) -> tuple[internal.FileInfoModel, pathlib.Path]:
 
+        if self.__headers.get("X-IBM-Client-Id") is None \
+                or self.__headers.get("X-IBM-Client-Secret") is None:
+            log.error("all metoffice API credentials not provided")
+            return fi, pathlib.Path()
+
         log.debug(
             event=f"requesting download of file",
             filename=fi.fname()
@@ -106,6 +111,11 @@ class MetOfficeClient(internal.FetcherInterface):
         return fi, tfp
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
+
+        if self.__headers.get("X-IBM-Client-Id") is None \
+                or self.__headers.get("X-IBM-Client-Secret") is None:
+            log.error("all metoffice API credentials not provided")
+            return []
 
         if it.date() != dt.datetime.utcnow().date():
             log.warn("metoffice API only supports fetching data for the current day")
