@@ -11,7 +11,6 @@ import numpy as np
 import requests
 import structlog
 import xarray as xr
-from typeid import TypeID
 
 from nwp_consumer import internal
 
@@ -92,7 +91,7 @@ class CEDAClient(internal.FetcherInterface):
             return fi, pathlib.Path()
 
         # Stream the filedata into a temporary file
-        tfp: pathlib.Path = internal.TMP_DIR / str(TypeID(prefix='nwpc'))
+        tfp: pathlib.Path = internal.TMP_DIR / fi.fname()
         with tfp.open("wb") as f:
             for chunk in iter(lambda: response.read(16 * 1024), b''):
                 f.write(chunk)
@@ -157,6 +156,14 @@ class CEDAClient(internal.FetcherInterface):
 
     def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
 
+        # Check the file has the right name
+        if not any([setname in p.name.lower() for setname in ["wholesale1.grib", "wholesale2.grib"]]):
+            log.debug(
+                event="skipping file as it does not match expected name",
+                filepath=p.as_posix()
+            )
+            return xr.Dataset()
+
         # Load the wholesale file as a list of datasets
         # * cfgrib loads multiple hypercubes for a single multi-parameter grib file
         try:
@@ -174,6 +181,7 @@ class CEDAClient(internal.FetcherInterface):
             return xr.Dataset()
 
         for i, ds in enumerate(datasets):
+
             # Rename the parameters to the OCF names
             # * Only do so if they exist in the dataset
             for oldParamName, newParamName in PARAMETER_RENAME_MAP.items():

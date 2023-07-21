@@ -7,7 +7,6 @@ import urllib.request
 import requests
 import structlog.stdlib
 import xarray as xr
-from typeid import TypeID
 
 from nwp_consumer import internal
 
@@ -95,7 +94,7 @@ class MetOfficeClient(internal.FetcherInterface):
             return fi, pathlib.Path()
 
         # Stream the filedata into a temporary file
-        tfp: pathlib.Path = internal.TMP_DIR / str(TypeID(prefix='nwpc'))
+        tfp: pathlib.Path = internal.TMP_DIR / fi.fname()
         with tfp.open("wb") as f:
             for chunk in iter(lambda: response.read(16 * 1024), b''):
                 f.write(chunk)

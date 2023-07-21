@@ -5,7 +5,6 @@ import botocore.client
 import botocore.exceptions
 import s3fs
 import structlog
-from typeid import TypeID
 
 from nwp_consumer import internal
 
@@ -87,7 +86,7 @@ class S3Client(internal.StorageInterface):
                 )
                 continue
             with self.__fs.open(path=path.as_posix(), mode="rb") as infile:
-                tfp: pathlib.Path = internal.TMP_DIR / str(TypeID(prefix='nwpc'))
+                tfp: pathlib.Path = internal.TMP_DIR / path.name
                 with tfp.open("wb") as tmpfile:
                     for chunk in iter(lambda: infile.read(16 * 1024), b""):
                         tmpfile.write(chunk)
