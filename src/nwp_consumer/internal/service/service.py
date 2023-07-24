@@ -178,6 +178,7 @@ class NWPConsumerService:
                 with zarr.ZipStore(path=tempZarrPath.as_posix(), mode='w') as store:
                     dataset.to_zarr(
                         store=store,
+                        region={"init_time": [initTime]},
                         encoding={
                             "init_time": {"units": "nanoseconds since 1970-01-01"},
                             "UKV": {

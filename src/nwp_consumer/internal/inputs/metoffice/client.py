@@ -159,10 +159,12 @@ class MetOfficeClient(internal.FetcherInterface):
         # Cfgrib is built upon eccodes which needs an in-memory file to read from
         # Load the GRIB file as a cube
         try:
+            # Read the file as a dataset, also reading the values of the keys in 'read_keys'
+            # * Can also set backend_kwargs={"indexpath": ""}, to avoid the index file
             parameterDataset: xr.Dataset = xr.open_dataset(
                 p.as_posix(),
                 engine='cfgrib',
-                backend_kwargs={'read_keys': ['name', 'parameterNumber'], 'indexpath': ''},
+                backend_kwargs={'read_keys': ['name', 'parameterNumber']},
                 chunks={},
             )
         except Exception as e:

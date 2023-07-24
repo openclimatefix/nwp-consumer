@@ -166,11 +166,10 @@ class CEDAClient(internal.FetcherInterface):
 
         # Load the wholesale file as a list of datasets
         # * cfgrib loads multiple hypercubes for a single multi-parameter grib file
+        # * Can also set backend_kwargs={"indexpath": ""}, to avoid the index file
         try:
             datasets: list[xr.Dataset] = cfgrib.open_datasets(
-                path=p.as_posix(),
-                backend_kwargs={"indexpath": ""},
-
+                path=p.as_posix()
             )
         except Exception as e:
             log.warn(
