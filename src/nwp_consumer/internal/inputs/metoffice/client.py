@@ -127,11 +127,20 @@ class MetOfficeClient(internal.FetcherInterface):
             headers=self.__headers,
             params=self.querystring
         )
-        if not response.ok:
+        try:
+            rj: dict = response.json()
+        except Exception as e:
+            log.warn(
+                event="error parsing response from filelist endpoint",
+                error=e,
+                response=response.content
+            )
+            return []
+        if not response.ok or ('httpCode' in rj and int(rj['httpCode']) > 399):
             log.warn(
                 event="error response from filelist endpoint",
                 url=response.url,
-                response=response.json()
+                response=rj,
             )
             return []
 
