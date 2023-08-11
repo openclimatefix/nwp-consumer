@@ -137,6 +137,7 @@ def run():
         )
 
     if arguments['consume']:
+        service.Check()
         service.DownloadAndConvert(
             start=startDate,
             end=endDate

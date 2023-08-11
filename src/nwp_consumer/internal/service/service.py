@@ -133,7 +133,7 @@ class NWPConsumerService:
             )
 
         # For each init time, load the files from the store to temp and map them to a dataset
-        with PoolExecutor(max_workers=2) as pe:
+        with PoolExecutor(max_workers=1) as pe:
             futures: list[concurrent.futures.Future[tuple[dt.datetime, list[pathlib.Path]]]] = [
                 pe.submit(self.storer.copyITFolderToTemp, prefix=self.rawdir, it=it) for it in desiredInitTimes
             ]
