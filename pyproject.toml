@@ -28,7 +28,6 @@ dependencies = [
     "pathlib == 1.0.1",
     "psutil == 5.9.5",
     "requests == 2.31.0",
-    "scitools-iris == 3.4.1",
     "structlog == 22.1.0",
     "typeid-python == 0.2.1",
     "urllib3 == 1.26.15",

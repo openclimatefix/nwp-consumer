@@ -155,7 +155,7 @@ def main():
         log.error("nwp-consumer error", error=str(e))
         raise e
     finally:
-        _ = [p.unlink(missing_ok=True) for p in TMP_DIR.glob("nwpc_*")]
+        _ = [p.unlink(missing_ok=True) for p in TMP_DIR.glob("*")]
         elapsedTime = dt.datetime.now() - programStartTime
         log.info(
             "nwp-consumer finished",

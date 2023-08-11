@@ -37,9 +37,10 @@ class S3Client(internal.StorageInterface):
     def exists(self, *, dst: pathlib.Path) -> bool:
         return self.__fs.exists((self.__bucket / dst).as_posix())
 
-    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
+    def store(self, *, src: pathlib.Path, dst: pathlib.Path, rm_temp: bool | None = True) -> int:
         self.__fs.put(lpath=src.as_posix(), rpath=(self.__bucket / dst).as_posix(), recursive=True)
-        src.unlink()
+        if rm_temp:
+            src.unlink()
         return self.__fs.du((self.__bucket / dst).as_posix())
 
     def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:
@@ -76,17 +77,31 @@ class S3Client(internal.StorageInterface):
         initTimeDirPath = self.__bucket / prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
         paths = [pathlib.Path(p) for p in self.__fs.ls(initTimeDirPath.as_posix())]
 
+        log.debug(
+            event="copying it folder to temporary files",
+            nbytes=[p.stat().st_size for p in paths],
+            inittime=it.strftime(internal.IT_FOLDER_FMTSTR)
+        )
+
         # Read all files into temporary files
         tempPaths: list[pathlib.Path] = []
         for path in paths:
+            tfp: pathlib.Path = internal.TMP_DIR / path.name
+            if tfp.exists() and tfp.stat().st_size > 0:
+                # Don't copy the file from the store if it already exists in the temp dir
+                log.debug(
+                    event="file already exists in temporary directory, skipping",
+                    filepath=path.as_posix(),
+                    temppath=tfp.as_posix()
+                )
+                continue
             if path.exists() is False or path.stat().st_size == 0:
                 log.warn(
-                    event="temporary file is empty",
+                    event="file in store is empty",
                     filepath=path.as_posix()
                 )
                 continue
             with self.__fs.open(path=path.as_posix(), mode="rb") as infile:
-                tfp: pathlib.Path = internal.TMP_DIR / path.name
                 with tfp.open("wb") as tmpfile:
                     for chunk in iter(lambda: infile.read(16 * 1024), b""):
                         tmpfile.write(chunk)

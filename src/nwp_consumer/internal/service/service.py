@@ -81,14 +81,19 @@ class NWPConsumerService:
                 pe.submit(self.fetcher.downloadToTemp, fi=fi) for fi in allWantedFileInfos
             ]
             # Save the files to store as their downloads are completed
-            # * This deletes the temporary files
+            # * This deletes the temporary files in the case where
+            #   we are saving files to local storage, otherwise it keeps
+            #   the files in the temp directory for potential future conversion.
+            #   Files are deleted when the program exits regardless.
             for future in concurrent.futures.as_completed(futures):
                 fileInfo, tempFile = future.result()
                 if tempFile == pathlib.Path():
                     continue
+                rm_temp: bool = True if self.storer.__class__.__name__ == "LocalFSClient" else False
                 nbytes += self.storer.store(
                     src=tempFile,
-                    dst=self.rawdir / fileInfo.initTime().strftime(internal.IT_FOLDER_FMTSTR) / (fileInfo.fname() + ".grib")
+                    dst=self.rawdir / fileInfo.initTime().strftime(internal.IT_FOLDER_FMTSTR) / (fileInfo.fname() + ".grib"),
+                    rm_temp=rm_temp
                 )
 
         return nbytes
