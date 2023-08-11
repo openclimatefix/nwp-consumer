@@ -25,8 +25,9 @@ class DummyStorer(internal.StorageInterface):
             return True
         return False
 
-    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
-        src.unlink(missing_ok=True)
+    def store(self, *, src: pathlib.Path, dst: pathlib.Path, rm_temp: bool | None = True) -> int:
+        if rm_temp:
+            src.unlink(missing_ok=True)
         return len(dst.name)
 
     def listInitTimes(self, prefix: pathlib.Path) -> list[dt.datetime]:
