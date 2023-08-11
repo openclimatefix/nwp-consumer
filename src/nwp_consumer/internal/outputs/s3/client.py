@@ -37,10 +37,10 @@ class S3Client(internal.StorageInterface):
     def exists(self, *, dst: pathlib.Path) -> bool:
         return self.__fs.exists((self.__bucket / dst).as_posix())
 
-    def store(self, *, src: pathlib.Path, dst: pathlib.Path, rm_temp: bool | None = True) -> int:
+    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
         self.__fs.put(lpath=src.as_posix(), rpath=(self.__bucket / dst).as_posix(), recursive=True)
-        if rm_temp:
-            src.unlink()
+        # Don't delete temp file as user may want to do further processing locally.
+        # All temp files are deleted at the end of the program.
         return self.__fs.du((self.__bucket / dst).as_posix())
 
     def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:
@@ -74,6 +74,8 @@ class S3Client(internal.StorageInterface):
         return sortedInitTimes
 
     def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> tuple[dt.datetime, list[pathlib.Path]]:
+        log.debug(event="entered copyITFolderToTemp")  # TODO: remove
+
         initTimeDirPath = self.__bucket / prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
         paths = [pathlib.Path(p).relative_to(self.__bucket) for p in self.__fs.ls(initTimeDirPath.as_posix())]
 
@@ -88,19 +90,22 @@ class S3Client(internal.StorageInterface):
         for path in paths:
             tfp: pathlib.Path = internal.TMP_DIR / path.name
             if tfp.exists() and tfp.stat().st_size > 0:
-                # Don't copy the file from the store if it already exists in the temp dir
+                # Use existing temp file if it already exists in the temp dir
                 log.debug(
                     event="file already exists in temporary directory, skipping",
                     filepath=path.as_posix(),
                     temppath=tfp.as_posix()
                 )
+                tempPaths.append(tfp)
                 continue
             if self.exists(dst=path) is False or self.__fs.du(path=(self.__bucket / path).as_posix()) == 0:
+                # Don't copy file from the store if it is empty
                 log.warn(
                     event="file in store is empty",
                     filepath=path.as_posix(),
                 )
                 continue
+            # Copy the file from the store to a temporary file
             with self.__fs.open(path=(self.__bucket / path).as_posix(), mode="rb") as infile:
                 with tfp.open("wb") as tmpfile:
                     for chunk in iter(lambda: infile.read(16 * 1024), b""):

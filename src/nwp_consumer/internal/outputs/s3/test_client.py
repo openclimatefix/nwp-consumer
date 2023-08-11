@@ -120,14 +120,12 @@ class TestS3Client(unittest.TestCase):
         # Verify the correct number of bytes was written
         self.assertEqual(n, len(bytes(fileName, 'utf-8')))
 
-        # Verify the temp file was deleted
-        self.assertFalse(src.exists())
-
-        # Delete the created file
+        # Delete the created file and the temp file
         self.testS3.delete_object(
             Bucket=BUCKET,
             Key=dst.as_posix()
         )
+        src.unlink(missing_ok=True)
 
     def test_listInitTimes(self):
         # Create mock folders/files in the raw directory
@@ -177,7 +175,7 @@ class TestS3Client(unittest.TestCase):
                 Body=bytes("test_file_contents", 'utf-8')
             )
 
-        # Call the readBytesForInitTime method
+        # Call the copyItFolderToTemp method
         it, paths = self.client.copyITFolderToTemp(prefix=RAW, it=initTime)
 
         # Assert that the init time is correct
@@ -191,6 +189,33 @@ class TestS3Client(unittest.TestCase):
 
         # Delete the files in S3
         for f in files:
+            self.testS3.delete_object(
+                Bucket=BUCKET,
+                Key=f.as_posix()
+            )
+
+        # Make some more RAW files in the raw directory AND in the temp directory
+        initTime2 = dt.datetime(2023, 1, 1, 6)
+        files2 = [
+            RAW / f"{initTime2:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp1.grib",
+            RAW / f"{initTime2:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp2.grib",
+            RAW / f"{initTime2:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp3.grib"
+        ]
+        for f in files2:
+            self.testS3.put_object(
+                Bucket=BUCKET,
+                Key=f.as_posix(),
+                Body=bytes("test_file_contents", 'utf-8')
+            )
+            with open(internal.TMP_DIR / f.name, 'w') as f:
+                f.write("test_file_contents")
+
+        # Call the copyITFolderToTemp method again
+        _, paths = self.client.copyITFolderToTemp(prefix=RAW, it=initTime2)
+        assert len(paths) == 3
+
+        # Delete the files in S3
+        for f in files2:
             self.testS3.delete_object(
                 Bucket=BUCKET,
                 Key=f.as_posix()

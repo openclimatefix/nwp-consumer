@@ -105,12 +105,11 @@ class StorageInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def store(self, *, src: pathlib.Path, dst: pathlib.Path, rm_temp: bool | None) -> int:
-        """Move the given temp file to the store at path p, deleting the temp file by default.
+    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
+        """Move the given temp file to the store at path p.
 
         :param src: Path to temp file to move
         :param dst: Desired path in store
-        :param rm_temp: Whether to delete the temp file after moving
         :return: Number of bytes copied
         """
         pass

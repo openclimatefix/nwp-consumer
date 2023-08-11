@@ -18,14 +18,14 @@ class LocalFSClient(internal.StorageInterface):
     def exists(self, *, dst: pathlib.Path) -> bool:
         return dst.exists()
 
-    def store(self, *, src: pathlib.Path, dst: pathlib.Path, rm_temp: bool | None = True) -> int:
+    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
         if src == dst:
             return os.stat(src).st_size
 
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(src=src, dst=dst)
-        if rm_temp:
-            src.unlink(missing_ok=True)
+        # Do delete temp file here to avoid local duplication of file.
+        src.unlink(missing_ok=True)
         return os.stat(dst).st_size
 
     def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:

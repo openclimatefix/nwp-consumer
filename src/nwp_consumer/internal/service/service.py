@@ -81,20 +81,12 @@ class NWPConsumerService:
                 pe.submit(self.fetcher.downloadToTemp, fi=fi) for fi in allWantedFileInfos
             ]
             # Save the files to store as their downloads are completed
-            # * This deletes the temporary files in the case where
-            #   we are saving files to local storage, otherwise it keeps
-            #   the files in the temp directory for potential future conversion.
-            #   Files are deleted when the program exits regardless.
             for future in concurrent.futures.as_completed(futures):
                 fileInfo, tempFile = future.result()
                 if tempFile == pathlib.Path():
                     continue
-                rm_temp: bool = True if self.storer.__class__.__name__ == "LocalFSClient" else False
-                nbytes += self.storer.store(
-                    src=tempFile,
-                    dst=self.rawdir / fileInfo.initTime().strftime(internal.IT_FOLDER_FMTSTR) / (fileInfo.fname() + ".grib"),
-                    rm_temp=rm_temp
-                )
+                nbytes += self.storer.store(src=tempFile, dst=self.rawdir / fileInfo.initTime().strftime(
+                    internal.IT_FOLDER_FMTSTR) / (fileInfo.fname() + ".grib"))
 
         return nbytes
 
@@ -134,10 +126,12 @@ class NWPConsumerService:
 
         # For each init time, load the files from the store to temp and map them to a dataset
         with PoolExecutor(max_workers=1) as pe:
+            log.debug(event="entered PoolExecutor")  # TODO: remove
             futures: list[concurrent.futures.Future[tuple[dt.datetime, list[pathlib.Path]]]] = [
                 pe.submit(self.storer.copyITFolderToTemp, prefix=self.rawdir, it=it) for it in desiredInitTimes
             ]
             # Convert the files once they are read in
+            log.debug(event="entered waiting for futures")  # TODO: remove
             for future in concurrent.futures.as_completed(futures):
                 initTime, tempPaths = future.result()
 
@@ -263,10 +257,7 @@ class NWPConsumerService:
         )
 
         # Move the temp zarr file to the store
-        nbytes = self.storer.store(
-            src=tempZarrPath,
-            dst=self.zarrdir / 'latest.zarr.zip'
-        )
+        nbytes = self.storer.store(src=tempZarrPath, dst=self.zarrdir / 'latest.zarr.zip')
 
         # Delete the temporary files
         for f in tempPaths:
