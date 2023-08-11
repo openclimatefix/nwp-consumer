@@ -25,3 +25,4 @@ WORKDIR /app
 COPY --from=build-venv /venv /venv
 HEALTHCHECK CMD ["/venv/bin/nwp-consumer", "check"]
 ENTRYPOINT ["/venv/bin/nwp-consumer"]
+VOLUME /tmp/nwpc
