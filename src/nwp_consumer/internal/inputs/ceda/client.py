@@ -169,7 +169,14 @@ class CEDAClient(internal.FetcherInterface):
         # * Can also set backend_kwargs={"indexpath": ""}, to avoid the index file
         try:
             datasets: list[xr.Dataset] = cfgrib.open_datasets(
-                path=p.as_posix()
+                path=p.as_posix(),
+                chunks={
+                    "time": 1,
+                    "step": -1,
+                    "variable": -1,
+                    "x": "auto",
+                    "y": "auto"
+                },
             )
         except Exception as e:
             log.warn(

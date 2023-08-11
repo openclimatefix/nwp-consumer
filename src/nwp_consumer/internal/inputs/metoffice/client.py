@@ -174,7 +174,13 @@ class MetOfficeClient(internal.FetcherInterface):
                 p.as_posix(),
                 engine='cfgrib',
                 backend_kwargs={'read_keys': ['name', 'parameterNumber']},
-                chunks={},
+                chunks={
+                    "time": 1,
+                    "step": -1,
+                    "variable": -1,
+                    "x": "auto",
+                    "y": "auto"
+                },
             )
         except Exception as e:
             log.warn(
