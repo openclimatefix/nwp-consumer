@@ -75,12 +75,12 @@ class S3Client(internal.StorageInterface):
 
     def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> tuple[dt.datetime, list[pathlib.Path]]:
         initTimeDirPath = self.__bucket / prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
-        paths = [pathlib.Path(p) for p in self.__fs.ls(initTimeDirPath.as_posix())]
+        paths = [pathlib.Path(p).relative_to(self.__bucket) for p in self.__fs.ls(initTimeDirPath.as_posix())]
 
         log.debug(
             event="copying it folder to temporary files",
-            nbytes=[p.stat().st_size for p in paths],
-            inittime=it.strftime(internal.IT_FOLDER_FMTSTR)
+            inittime=it.strftime(internal.IT_FOLDER_FMTSTR),
+            numfiles=len(paths)
         )
 
         # Read all files into temporary files
@@ -95,13 +95,13 @@ class S3Client(internal.StorageInterface):
                     temppath=tfp.as_posix()
                 )
                 continue
-            if path.exists() is False or path.stat().st_size == 0:
+            if self.exists(dst=path) is False or self.__fs.du(path=(self.__bucket / path).as_posix()) == 0:
                 log.warn(
                     event="file in store is empty",
-                    filepath=path.as_posix()
+                    filepath=path.as_posix(),
                 )
                 continue
-            with self.__fs.open(path=path.as_posix(), mode="rb") as infile:
+            with self.__fs.open(path=(self.__bucket / path).as_posix(), mode="rb") as infile:
                 with tfp.open("wb") as tmpfile:
                     for chunk in iter(lambda: infile.read(16 * 1024), b""):
                         tmpfile.write(chunk)

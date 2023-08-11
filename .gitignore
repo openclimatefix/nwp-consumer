@@ -143,6 +143,7 @@ downloads
 raw
 zarr
 /testing
+**.idx
 
 # S3 mocking
 s3:
