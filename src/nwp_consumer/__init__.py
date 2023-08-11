@@ -3,6 +3,7 @@ import sys
 
 import structlog
 import logging
+import psutil
 
 # Ignore modules' emitted logs
 for _ in ("boto", "elasticsearch", "urllib3", "cfgrib", "xarray"):
@@ -21,6 +22,15 @@ _nameToLevel = {
     'NOTSET': logging.NOTSET,
 }
 
+
+class UsageProfiler:
+    def __call__(self, logger: structlog.types.WrappedLogger, name: str, event_dict: structlog.types.EventDict) \
+            -> structlog.types.EventDict:
+        event_dict["cpu"] = psutil.cpu_percent(1)
+        event_dict["ram"] = psutil.virtual_memory().used / 1024 / 1024
+        return event_dict
+
+
 shared_processors = [
     structlog.stdlib.PositionalArgumentsFormatter(),
     structlog.processors.CallsiteParameterAdder(
@@ -33,6 +43,7 @@ shared_processors = [
     structlog.processors.TimeStamper(fmt="iso"),
     structlog.processors.StackInfoRenderer(),
     structlog.processors.format_exc_info,
+    UsageProfiler(),
 ]
 
 if sys.stderr.isatty():
@@ -51,10 +62,8 @@ else:
         structlog.processors.JSONRenderer(sort_keys=True),
     ]
 
-
 # Add required processors and formatters to structlog
 structlog.configure(
     wrapper_class=structlog.make_filtering_bound_logger(_nameToLevel[LOGLEVEL]),
     processors=processors,
 )
-
