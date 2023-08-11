@@ -6,7 +6,6 @@ import itertools
 import pathlib
 import shutil
 from concurrent.futures import ProcessPoolExecutor as PoolExecutor
-from memory_profiler import profile
 
 import dask.bag
 import pandas as pd
@@ -34,7 +33,6 @@ class NWPConsumerService:
         self.rawdir = pathlib.Path(rawdir)
         self.zarrdir = pathlib.Path(zarrdir)
 
-    @profile
     def DownloadRawDataset(self, *, start: dt.date, end: dt.date) -> int:
         """Fetch raw data for each initTime in the given range.
 
@@ -95,7 +93,6 @@ class NWPConsumerService:
 
         return nbytes
 
-    @profile
     def ConvertRawDatasetToZarr(self, *, start: dt.date, end: dt.date) -> int:
         """Convert raw data for the given time range to Zarr.
 
@@ -311,7 +308,8 @@ class NWPConsumerService:
                 event="HEALTH: found temporary directory",
                 free=tmp_usage.free,
                 total=tmp_usage.total,
-                used=tmp_usage.used
+                used=tmp_usage.used,
+                path=internal.TMP_DIR.as_posix()
             )
 
         # Check the ram usage
