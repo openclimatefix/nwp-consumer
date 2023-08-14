@@ -73,7 +73,7 @@ class S3Client(internal.StorageInterface):
         )
         return sortedInitTimes
 
-    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> tuple[dt.datetime, list[pathlib.Path]]:
+    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         log.debug(event="entered copyITFolderToTemp")  # TODO: remove
 
         initTimeDirPath = self.__bucket / prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
@@ -118,7 +118,7 @@ class S3Client(internal.StorageInterface):
             nbytes=[p.stat().st_size for p in tempPaths]
         )
 
-        return it, tempPaths
+        return tempPaths
 
     def delete(self, *, p: pathlib.Path) -> None:
         if self.__fs.isdir((self.__bucket / p).as_posix()):

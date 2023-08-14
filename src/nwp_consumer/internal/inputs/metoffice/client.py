@@ -98,6 +98,7 @@ class MetOfficeClient(internal.FetcherInterface):
         with tfp.open("wb") as f:
             for chunk in iter(lambda: response.read(16 * 1024), b''):
                 f.write(chunk)
+                f.flush()
 
         log.debug(
             event="fetched all data from file",

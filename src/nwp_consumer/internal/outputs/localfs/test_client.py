@@ -129,10 +129,8 @@ class TestLocalFSClient(unittest.TestCase):
             f.write_bytes(bytes("test_file_contents", 'utf-8'))
 
         # Test the function
-        it, paths = self.testClient.copyITFolderToTemp(prefix=RAW, it=initTime)
+        paths = self.testClient.copyITFolderToTemp(prefix=RAW, it=initTime)
 
-        # Assert that the init time is correct
-        self.assertEqual(it, initTime)
         # Assert the contents of the temp files is correct
         for _i, path in enumerate(paths):
             self.assertEqual(path.read_bytes(), bytes("test_file_contents", 'utf-8'))

@@ -30,6 +30,7 @@ import datetime as dt
 import importlib.metadata
 
 import structlog
+from dask.distributed import Client
 from docopt import docopt
 
 from nwp_consumer.internal import config, inputs, outputs, TMP_DIR
@@ -151,6 +152,7 @@ def main():
     """Entry point for the nwp-consumer CLI."""
     programStartTime = dt.datetime.now()
     try:
+        client = Client(n_workers=2, timeout=30, address='127.0.0.1:8786')
         run()
     except Exception as e:
         log.error("nwp-consumer error", error=str(e))

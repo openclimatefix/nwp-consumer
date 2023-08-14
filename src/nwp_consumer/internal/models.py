@@ -125,12 +125,12 @@ class StorageInterface(abc.ABC):
 
     @abc.abstractmethod
     def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) \
-            -> tuple[dt.datetime, list[pathlib.Path]]:
+            -> list[pathlib.Path]:
         """Copy all files in given folder to temp files.
 
         :param prefix: Path of folder in which to find initTimes
         :param it: InitTime to copy files for
-        :return: Tuple of the initTime and list of paths to temp files
+        :return: List of paths to temp files
         """
         pass
 

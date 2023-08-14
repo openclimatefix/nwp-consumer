@@ -66,13 +66,13 @@ class LocalFSClient(internal.StorageInterface):
         return sortedInitTimes
 
     def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) \
-            -> tuple[dt.datetime, list[pathlib.Path]]:
+            -> list[pathlib.Path]:
 
         # Local FS already has access to files, so just return the paths
         initTimeDirPath = prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
         paths: list[pathlib.Path] = list(initTimeDirPath.iterdir())
 
-        return it, paths
+        return paths
 
     def delete(self, *, p: pathlib.Path) -> None:
         if not p.exists():

@@ -176,10 +176,8 @@ class TestS3Client(unittest.TestCase):
             )
 
         # Call the copyItFolderToTemp method
-        it, paths = self.client.copyITFolderToTemp(prefix=RAW, it=initTime)
+        paths = self.client.copyITFolderToTemp(prefix=RAW, it=initTime)
 
-        # Assert that the init time is correct
-        self.assertEqual(it, initTime)
         # Assert the contents of the temp files is correct
         for _i, path in enumerate(paths):
             self.assertEqual(path.read_bytes(), bytes("test_file_contents", 'utf-8'))
@@ -211,7 +209,7 @@ class TestS3Client(unittest.TestCase):
                 f.write("test_file_contents")
 
         # Call the copyITFolderToTemp method again
-        _, paths = self.client.copyITFolderToTemp(prefix=RAW, it=initTime2)
+        paths = self.client.copyITFolderToTemp(prefix=RAW, it=initTime2)
         assert len(paths) == 3
 
         # Delete the files in S3

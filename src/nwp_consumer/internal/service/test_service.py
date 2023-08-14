@@ -33,10 +33,8 @@ class DummyStorer(internal.StorageInterface):
         return testInitTimes
 
     def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) \
-            -> tuple[dt.datetime, list[pathlib.Path]]:
-        return it, [pathlib.Path(f'{it:%Y%m%d%H%M}/{f}')
-                    for f in INIT_TIME_FILES
-                    for it in testInitTimes]
+            -> list[pathlib.Path]:
+        return [pathlib.Path(f'{it:%Y%m%d%H%M}/{f}.grib') for f in INIT_TIME_FILES]
 
     def delete(self, *, dst: pathlib.Path) -> None:
         pass
@@ -115,7 +113,7 @@ class TestNWPConsumerService(unittest.TestCase):
         n = self.service.ConvertRawDatasetToZarr(start=startDate, end=endDate)
 
         # 1 Dataset per init time, all init times per day, all days
-        self.assertEqual(1 * len(INIT_HOURS) * (len(DAYS)) * len("YYYYMMDDHHMM.zarr.zip"), n)
+        self.assertEqual(1 * len(INIT_HOURS) * (len(DAYS)) * len("YYYY-MM-DDTHH:MM.zarr.zip"), n)
 
     def test_createLatestZarr(self):
 
