@@ -12,7 +12,7 @@ from . import NWPConsumerService
 # Two days, four init times per day -> 8 init times
 DAYS = [1, 2]
 INIT_HOURS = [0, 6, 12, 18]
-INIT_TIME_FILES = ["dswrf", "prate"]
+INIT_TIME_FILES = ["dswrf.grib", "prate.grib"]
 testInitTimes = [dt.datetime(2021, 1, d, h, 0, 0, tzinfo=None)
                  for h in INIT_HOURS
                  for d in DAYS]
