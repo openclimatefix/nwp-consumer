@@ -1,6 +1,5 @@
 """The service class for the NWP Consumer."""
 
-import concurrent.futures
 import datetime as dt
 import itertools
 import pathlib
@@ -92,7 +91,6 @@ class NWPConsumerService:
         :param start: The start date of the time range to convert
         :param end: The end date of the time range to convert
         """
-        nbytes = 0
 
         # Get a list of all the init times that are stored locally between the start and end dates
         desiredInitTimes: list[dt.datetime] = []
@@ -113,7 +111,7 @@ class NWPConsumerService:
             log.info("no new files to convert to zarr",
                      startDate=start.strftime("%Y/%m/%d %H:%M"),
                      endDate=end.strftime("%Y/%m/%d %H:%M"))
-            return nbytes
+            return 0
         else:
             log.info(
                 event=f"converting {len(desiredInitTimes)} init times to zarr.",
@@ -270,7 +268,8 @@ class NWPConsumerService:
 
 def saveDatasetToTempZipZarr(ds: xr.Dataset) -> tuple[dt.datetime, pathlib.Path]:
     # Save the dataset to a temp zarr file
-    tempZarrPath = internal.TMP_DIR / (str(ds.coords["init_time"].values[0])[:16] + ".zarr.zip")
+    initTime = dt.datetime.utcfromtimestamp(int(ds.coords["init_time"].values[0]) / 1e9)
+    tempZarrPath = internal.TMP_DIR / (initTime.strftime(internal.ZARR_FMTSTR) + ".zarr.zip")
     ds.to_zarr(
         store=zarr.ZipStore(path=tempZarrPath.as_posix(), mode='w'),
         encoding={

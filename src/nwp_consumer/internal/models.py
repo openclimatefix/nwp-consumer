@@ -15,6 +15,9 @@ IT_FOLDER_FMTSTR = "%Y/%m/%d/%H%M"
 # The temporaray directory for storing downloaded files
 TMP_DIR = pathlib.Path("/tmp/nwpc")
 
+# The format string for the zarr dataset
+ZARR_FMTSTR = "%Y%m%dT%H%M"
+
 
 # ------- Domain models ------- #
 

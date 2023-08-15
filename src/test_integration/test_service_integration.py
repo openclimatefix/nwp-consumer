@@ -13,6 +13,7 @@ import numpy as np
 import ocf_blosc2  # noqa: F401
 import xarray as xr
 
+import internal
 from nwp_consumer.internal import config, inputs, outputs, service
 
 
@@ -100,7 +101,7 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
             self.assertEqual({'init_time': 1, 'step': 37, 'variable': 12, 'y': 704, 'x': 548}, dict(ds.dims.items()))
             # Ensure the init time is correct
             self.assertEqual(
-                np.datetime64(dt.datetime.strptime(path.with_suffix('').stem, "%Y-%m-%dT%H:%M")),
+                np.datetime64(dt.datetime.strptime(path.with_suffix('').stem, internal.ZARR_FMTSTR)),
                 ds.coords["init_time"].values[0]
             )
 
