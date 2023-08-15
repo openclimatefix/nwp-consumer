@@ -91,7 +91,7 @@ class CEDAClient(internal.FetcherInterface):
             return fi, pathlib.Path()
 
         # Stream the filedata into a temporary file
-        tfp: pathlib.Path = internal.TMP_DIR / fi.fname()
+        tfp: pathlib.Path = internal.TMP_DIR / pathlib.Path(fi.fname()).stem
         with tfp.open("wb") as f:
             for chunk in iter(lambda: response.read(16 * 1024), b''):
                 f.write(chunk)

@@ -4,6 +4,10 @@ import sys
 import structlog
 import logging
 import psutil
+import dask
+
+# overwrite default with multiprocessing scheduler
+dask.config.set(scheduler='processes')
 
 # Ignore modules' emitted logs
 for _ in ("boto", "elasticsearch", "urllib3", "cfgrib", "xarray"):

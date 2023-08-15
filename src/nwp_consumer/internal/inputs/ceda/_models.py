@@ -29,7 +29,7 @@ class CEDAFileInfo(internal.FileInfoModel):
 
     def fname(self) -> str:
         """Return the file name."""
-        return pathlib.Path(self.name).stem
+        return self.name
 
 
 @dataclass

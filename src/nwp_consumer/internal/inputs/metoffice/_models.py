@@ -25,7 +25,7 @@ class MetOfficeFileInfo(internal.FileInfoModel):
 
     def fname(self) -> str:
         """Return the file name."""
-        return pathlib.Path(self.fileId).stem
+        return self.fileId
 
 
 @dataclass
