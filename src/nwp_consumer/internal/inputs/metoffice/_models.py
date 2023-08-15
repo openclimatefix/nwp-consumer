@@ -1,4 +1,5 @@
 import datetime as dt
+import pathlib
 from typing import ClassVar, Type
 
 from marshmallow import EXCLUDE, Schema, fields
@@ -24,7 +25,7 @@ class MetOfficeFileInfo(internal.FileInfoModel):
 
     def fname(self) -> str:
         """Return the file name."""
-        return self.fileId
+        return pathlib.Path(self.fileId).stem
 
 
 @dataclass

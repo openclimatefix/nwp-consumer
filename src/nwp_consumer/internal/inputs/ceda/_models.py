@@ -1,4 +1,5 @@
 import datetime as dt
+import pathlib
 from typing import ClassVar, Type
 
 from marshmallow import EXCLUDE, Schema, fields
@@ -28,7 +29,7 @@ class CEDAFileInfo(internal.FileInfoModel):
 
     def fname(self) -> str:
         """Return the file name."""
-        return self.name
+        return pathlib.Path(self.name).stem
 
 
 @dataclass

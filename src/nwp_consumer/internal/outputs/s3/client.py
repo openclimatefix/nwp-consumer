@@ -74,8 +74,6 @@ class S3Client(internal.StorageInterface):
         return sortedInitTimes
 
     def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
-        log.debug(event="entered copyITFolderToTemp")  # TODO: remove
-
         initTimeDirPath = self.__bucket / prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
         paths = [pathlib.Path(p).relative_to(self.__bucket) for p in self.__fs.ls(initTimeDirPath.as_posix())]
 
@@ -88,7 +86,7 @@ class S3Client(internal.StorageInterface):
         # Read all files into temporary files
         tempPaths: list[pathlib.Path] = []
         for path in paths:
-            tfp: pathlib.Path = internal.TMP_DIR / path.name
+            tfp: pathlib.Path = internal.TMP_DIR / path.stem
             if tfp.exists() and tfp.stat().st_size > 0:
                 # Use existing temp file if it already exists in the temp dir
                 log.debug(
