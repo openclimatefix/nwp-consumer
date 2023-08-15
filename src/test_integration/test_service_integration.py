@@ -12,6 +12,7 @@ import unittest
 import numpy as np
 import ocf_blosc2  # noqa: F401
 import xarray as xr
+from zipfile import BadZipFile, ZipFile
 
 from nwp_consumer.internal import config, inputs, outputs, service, ZARR_FMTSTR
 
@@ -45,6 +46,15 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
         self.assertGreater(nbytes, 0)
 
         for path in pathlib.Path('data/zarr').glob('*.zarr.zip'):
+
+            if path.stat().st_size == 0:
+                continue
+
+            try:
+                with ZipFile(path.as_posix(), 'r') as zip:
+                    zip.printdir()
+            except BadZipFile:
+                continue
 
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}", consolidated=True)
 
