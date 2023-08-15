@@ -43,12 +43,17 @@ class FileInfoModel(abc.ABC):
     """Information about a remote file."""
 
     @abc.abstractmethod
-    def fname(self) -> str:
-        """Return the file name."""
+    def filename(self) -> str:
+        """Return the file name including extension."""
         pass
 
     @abc.abstractmethod
-    def initTime(self) -> dt.datetime:
+    def filepath(self) -> str:
+        """Return the remote file path, not including protocols and TLDs."""
+        pass
+
+    @abc.abstractmethod
+    def it(self) -> dt.datetime:
         """Return the init time of the file."""
         pass
 

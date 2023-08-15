@@ -55,9 +55,9 @@ class NWPConsumerService:
         # Check which files are already downloaded
         # * If the file is already downloaded, remove it from the list of files to download
         allWantedFileInfos: list[internal.FileInfoModel] = [
-            p for p in allWantedFileInfos
+            fi for fi in allWantedFileInfos
             if not self.storer.exists(
-                dst=self.rawdir / p.initTime().strftime(internal.IT_FOLDER_FMTSTR) / (p.fname() + ".grib")
+                dst=self.rawdir / fi.it().strftime(internal.IT_FOLDER_FMTSTR) / fi.filename()
             )
         ]
 
@@ -78,7 +78,7 @@ class NWPConsumerService:
             .filter(lambda infoPathTuple: infoPathTuple[1] != pathlib.Path()) \
             .map(lambda infoPathTuple: self.storer.store(
                 src=infoPathTuple[1],
-                dst=self.rawdir / infoPathTuple[0].initTime().strftime(internal.IT_FOLDER_FMTSTR) / (infoPathTuple[0].fname() + ".grib")
+                dst=self.rawdir / infoPathTuple[0].it().strftime(internal.IT_FOLDER_FMTSTR) / (infoPathTuple[0].filename())
             )) \
             .sum() \
             .compute()
@@ -126,9 +126,9 @@ class NWPConsumerService:
             .filter(lambda temppaths: len(temppaths) != 0) \
             .map(lambda temppaths: [self.fetcher.mapTemp(p=p) for p in temppaths]) \
             .map(lambda datasets: xr.merge(objects=datasets, combine_attrs="drop_conflicts")) \
-            .filter(dataQualityFilter) \
-            .map(lambda ds: saveDatasetToTempZipZarr(ds=ds)) \
-            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.name)) \
+            .filter(_dataQualityFilter) \
+            .map(lambda ds: _saveAsTempZipZarr(ds=ds)) \
+            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.filename)) \
             .sum() \
             .compute()
 
@@ -179,7 +179,7 @@ class NWPConsumerService:
         bag: dask.bag.Bag = dask.bag.from_sequence(tempPaths)
         nbytes = bag.map(lambda tfp: self.fetcher.mapTemp(p=tfp)) \
             .fold(lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts")) \
-            .apply(lambda ds: saveDatasetToTempZipZarr(ds=ds)) \
+            .apply(lambda ds: _saveAsTempZipZarr(ds=ds)) \
             .apply(lambda path: self.storer.store(src=path, dst=self.zarrdir / 'latest.zarr.zip')) \
             .compute()
 
@@ -266,7 +266,7 @@ class NWPConsumerService:
         return 0
 
 
-def saveDatasetToTempZipZarr(ds: xr.Dataset) -> tuple[dt.datetime, pathlib.Path]:
+def _saveAsTempZipZarr(ds: xr.Dataset) -> tuple[dt.datetime, pathlib.Path]:
     # Save the dataset to a temp zarr file
     initTime = dt.datetime.utcfromtimestamp(int(ds.coords["init_time"].values[0]) / 1e9)
     tempZarrPath = internal.TMP_DIR / (initTime.strftime(internal.ZARR_FMTSTR) + ".zarr.zip")
@@ -282,7 +282,7 @@ def saveDatasetToTempZipZarr(ds: xr.Dataset) -> tuple[dt.datetime, pathlib.Path]
     return tempZarrPath
 
 
-def dataQualityFilter(ds: xr.Dataset) -> bool:
+def _dataQualityFilter(ds: xr.Dataset) -> bool:
     """Filter out data that is not of sufficient quality."""
 
     if ds == xr.Dataset():

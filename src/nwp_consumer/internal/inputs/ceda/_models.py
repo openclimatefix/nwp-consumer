@@ -19,7 +19,7 @@ class CEDAFileInfo(internal.FileInfoModel):
 
     Schema: ClassVar[Type[Schema]] = Schema  # To prevent confusing type checkers
 
-    def initTime(self) -> dt.datetime:
+    def it(self) -> dt.datetime:
         """Return the init time of the file.
 
         The init time is found the first part of the file name for CEDA files,
@@ -27,9 +27,11 @@ class CEDAFileInfo(internal.FileInfoModel):
         """
         return dt.datetime.strptime(self.name.split("_")[0], '%Y%m%d%H%M').replace(tzinfo=None)
 
-    def fname(self) -> str:
-        """Return the file name."""
+    def filename(self) -> str:
         return self.name
+
+    def filepath(self) -> str:
+        return f"badc/ukmo-nwp/data/ukv-grib/{self.it():%Y/%m/%d}/{self.name}"
 
 
 @dataclass

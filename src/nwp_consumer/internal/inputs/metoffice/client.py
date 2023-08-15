@@ -36,9 +36,6 @@ PARAMETER_RENAME_MAP: dict[str, str] = {
 class MetOfficeClient(internal.FetcherInterface):
     """Implements a client to fetch the data from the MetOffice API."""
 
-    # MetOffice API Order ID to pull data from
-    orderID: str
-
     # Base https URL for MetOffice's data endpoint
     baseurl: str
 
@@ -48,8 +45,7 @@ class MetOfficeClient(internal.FetcherInterface):
     def __init__(self, *, orderID: str, clientID: str, clientSecret: str):
         if any([value in [None, "", "unset"] for value in [clientID, clientSecret, orderID]]):
             raise KeyError("must provide clientID, clientSecret, and orderID")
-        self.orderID: str = orderID
-        self.baseurl: str = f"https://api-metoffice.apiconnect.ibmcloud.com/1.0.0/orders/{self.orderID}/latest"
+        self.baseurl: str = f"https://api-metoffice.apiconnect.ibmcloud.com/1.0.0/orders/{orderID}/latest"
         self.querystring: dict[str, str] = {"detail": "MINIMAL"}
         self.__headers: dict[str, str] = {
             "Accept": "application/json",
@@ -67,9 +63,9 @@ class MetOfficeClient(internal.FetcherInterface):
 
         log.debug(
             event=f"requesting download of file",
-            filename=fi.fname()
+            file=fi.filename(),
         )
-        url: str = f"{self.baseurl}/{fi.fname()}/data"
+        url: str = f"{self.baseurl}/{fi.filepath()}"
         try:
             opener = urllib.request.build_opener()
             opener.addheaders = list(dict(
@@ -88,13 +84,13 @@ class MetOfficeClient(internal.FetcherInterface):
             log.warn(
                 event="error calling url for file",
                 url=url,
-                filename=fi.fname(),
+                filename=fi.filename(),
                 error=e
             )
             return fi, pathlib.Path()
 
         # Stream the filedata into a temporary file
-        tfp: pathlib.Path = internal.TMP_DIR / pathlib.Path(fi.fname()).stem
+        tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
         with tfp.open("wb") as f:
             for chunk in iter(lambda: response.read(16 * 1024), b''):
                 f.write(chunk)
@@ -102,7 +98,7 @@ class MetOfficeClient(internal.FetcherInterface):
 
         log.debug(
             event="fetched all data from file",
-            filename=fi.fname(),
+            filename=fi.filename(),
             url=url,
             filepath=tfp.as_posix(),
             nbytes=tfp.stat().st_size
@@ -256,10 +252,10 @@ def _isWantedFile(*, fi: MetOfficeFileInfo, dit: dt.datetime) -> bool:
     :param dit: Desired init time
     """
     # False if item has an init_time not equal to desired init time
-    if fi.initTime().replace(tzinfo=None) != dit.replace(tzinfo=None):
+    if fi.it().replace(tzinfo=None) != dit.replace(tzinfo=None):
         return False
     # False if item is one of the ones ending in +HH
-    if "+" in fi.fname():
+    if "+" in fi.filename():
         return False
 
     return True

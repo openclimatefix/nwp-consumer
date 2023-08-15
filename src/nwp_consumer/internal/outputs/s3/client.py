@@ -86,7 +86,7 @@ class S3Client(internal.StorageInterface):
         # Read all files into temporary files
         tempPaths: list[pathlib.Path] = []
         for path in paths:
-            tfp: pathlib.Path = internal.TMP_DIR / path.stem
+            tfp: pathlib.Path = internal.TMP_DIR / path.name
             if tfp.exists() and tfp.stat().st_size > 0:
                 # Use existing temp file if it already exists in the temp dir
                 log.debug(

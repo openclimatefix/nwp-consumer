@@ -53,9 +53,7 @@ class CEDAClient(internal.FetcherInterface):
     # CEDA FTP Password
     __password: str
 
-    # API urls for CEDA data
-    dataUrl: str = "badc/ukmo-nwp/data/ukv-grib"
-    httpsBase: str = "https://data.ceda.ac.uk"
+    # FTP url for CEDA data
     __ftpBase: str
 
     def __init__(self, ftpUsername: str, ftpPassword: str):
@@ -72,26 +70,25 @@ class CEDAClient(internal.FetcherInterface):
             )
             return fi, pathlib.Path()
 
-        anonUrl: str = f"{self.dataUrl}/{fi.initTime():%Y/%m/%d}/{fi.fname()}"
         log.debug(
             event=f"requesting download of file",
-            filename=fi.fname(),
-            path=anonUrl
+            file=fi.filename(),
+            path=fi.filepath()
         )
-        url: str = f'{self.__ftpBase}/{anonUrl}'
+        url: str = f'{self.__ftpBase}/{fi.filepath()}'
         try:
             response = urllib.request.urlopen(url=url)
         except Exception as e:
             log.warn(
                 event="error calling url for file",
-                url=url,
-                filename=fi.fname(),
+                url=fi.filepath(),
+                filename=fi.filename(),
                 error=e
             )
             return fi, pathlib.Path()
 
         # Stream the filedata into a temporary file
-        tfp: pathlib.Path = internal.TMP_DIR / pathlib.Path(fi.fname()).stem
+        tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
         with tfp.open("wb") as f:
             for chunk in iter(lambda: response.read(16 * 1024), b''):
                 f.write(chunk)
@@ -99,8 +96,8 @@ class CEDAClient(internal.FetcherInterface):
 
         log.debug(
             event=f"fetched all data from file",
-            filename=fi.fname(),
-            url=anonUrl,
+            filename=fi.filename(),
+            url=fi.filepath(),
             filepath=tfp.as_posix(),
             nbytes=tfp.stat().st_size
         )
@@ -113,7 +110,7 @@ class CEDAClient(internal.FetcherInterface):
         # * CEDA has a HTTPS JSON API for this purpose
         response: requests.Response = requests.request(
             method="GET",
-            url=f"{self.httpsBase}/{self.dataUrl}/{it:%Y/%m/%d}?json"
+            url=f"https://data.ceda.ac.uk/badc/ukmo-nwp/data/ukv-grib/{it:%Y/%m/%d}?json"
         )
 
         if response.status_code == 404:
@@ -278,11 +275,11 @@ def _isWantedFile(*, fi: CEDAFileInfo, dit: dt.datetime) -> bool:
     :param fi: The File Info object describing the file to check
     :param dit: The desired init time
     """
-    if fi.initTime().date() != dit.date() or \
-            fi.initTime().time() != dit.time():
+    if fi.it().date() != dit.date() or \
+            fi.it().time() != dit.time():
         return False
     # False if item doesn't correspond to Wholesale1 or Wholesale2 files
-    if not any([setname in fi.name for setname in ["Wholesale1.grib", "Wholesale2.grib"]]):
+    if not any([setname in fi.filename() for setname in ["Wholesale1.grib", "Wholesale2.grib"]]):
         return False
 
     return True

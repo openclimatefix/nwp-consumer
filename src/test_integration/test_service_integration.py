@@ -46,11 +46,8 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
 
         for path in pathlib.Path('data/zarr').glob('*.zarr.zip'):
 
-            try:
-                ds = xr.open_zarr(store=f"zip::{path.as_posix()}", consolidated=True)
-            except Exception as e:
-                print(f"error openings zarr at {path.as_posix()}: " + str(e))
-                continue
+            print("opening zipped zarr " + path.as_posix())
+            ds = xr.open_zarr(store=f"zip::{path.as_posix()}", consolidated=True)
 
             # The number of variables in the dataset depends on the order from MetOffice
             numVars = len(ds.coords["variable"].values)

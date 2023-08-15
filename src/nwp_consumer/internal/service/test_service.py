@@ -43,13 +43,16 @@ class DummyStorer(internal.StorageInterface):
 class DummyFileInfo(internal.FileInfoModel):
     def __init__(self, fileName: str, initTime: dt.datetime):
         self.f = fileName
-        self.it = initTime
+        self.t = initTime
 
-    def fname(self) -> str:
+    def filename(self) -> str:
         return self.f
 
-    def initTime(self) -> dt.datetime:
-        return self.it
+    def it(self) -> dt.datetime:
+        return self.t
+
+    def filepath(self) -> str:
+        return self.f
 
 
 class DummyFetcher(internal.FetcherInterface):
@@ -63,7 +66,7 @@ class DummyFetcher(internal.FetcherInterface):
         return raw_files
 
     def downloadToTemp(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, pathlib.Path]:
-        return fi, pathlib.Path(f'{fi.initTime():%Y%m%d%H%M}/{fi.fname()}')
+        return fi, pathlib.Path(f'{fi.it():%Y%m%d%H%M}/{fi.filename()}')
 
     def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
         initTime = dt.datetime.strptime(p.parent.as_posix(), "%Y%m%d%H%M")
