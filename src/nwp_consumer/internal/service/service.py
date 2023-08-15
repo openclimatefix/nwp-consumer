@@ -128,7 +128,7 @@ class NWPConsumerService:
             .map(lambda datasets: xr.merge(objects=datasets, combine_attrs="drop_conflicts")) \
             .filter(_dataQualityFilter) \
             .map(lambda ds: _saveAsTempZipZarr(ds=ds)) \
-            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.filename)) \
+            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.name)) \
             .sum() \
             .compute()
 
@@ -266,10 +266,12 @@ class NWPConsumerService:
         return 0
 
 
-def _saveAsTempZipZarr(ds: xr.Dataset) -> tuple[dt.datetime, pathlib.Path]:
+def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
     # Save the dataset to a temp zarr file
     initTime = dt.datetime.utcfromtimestamp(int(ds.coords["init_time"].values[0]) / 1e9)
     tempZarrPath = internal.TMP_DIR / (initTime.strftime(internal.ZARR_FMTSTR) + ".zarr.zip")
+    if tempZarrPath.exists():
+        tempZarrPath.unlink()
     ds.to_zarr(
         store=zarr.ZipStore(path=tempZarrPath.as_posix(), mode='w'),
         encoding={
