@@ -30,7 +30,6 @@ import datetime as dt
 import importlib.metadata
 
 import structlog
-from dask.distributed import Client
 from docopt import docopt
 
 from nwp_consumer.internal import config, inputs, outputs, TMP_DIR

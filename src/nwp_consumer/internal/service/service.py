@@ -130,7 +130,7 @@ class NWPConsumerService:
             .map(lambda ds: _saveAsTempZipZarr(ds=ds)) \
             .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.name)) \
             .sum() \
-            .compute()
+            .compute(scheduler='single-threaded')
 
         return nbytes
 

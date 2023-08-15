@@ -2,10 +2,8 @@ import datetime as dt
 import os
 import pathlib
 import shutil
-import time
 
 import structlog
-from typeid import TypeID
 
 from nwp_consumer import internal
 
