@@ -18,7 +18,7 @@ authors = [
 classifiers = ["Programming Language :: Python :: 3"]
 dependencies = [
     "cfgrib == 0.9.10.3",
-    "dask == 2023.2.1",
+    "dask[distributed] == 2023.2.1",
     "docopt == 0.6.2",
     "eccodes == 1.5.1",
     "fsspec[s3] == 2023.6.0",
