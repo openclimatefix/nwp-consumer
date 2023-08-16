@@ -155,7 +155,7 @@ jobs:
   # * Only runs if test job passes
   build-wheel:
     runs-on: ubuntu-latest
-    container: continuumio/miniforge3:latest
+    container: quay.io/condaforge/miniforge3:latest
     needs: test
     if: |
       (github.ref == 'refs/heads/main' || contains(github.ref, 'refs/tags/v')) && 
