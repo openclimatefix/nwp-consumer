@@ -154,6 +154,11 @@ class CEDAClient(internal.FetcherInterface):
 
     def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
 
+        log.debug(
+            event="mapping raw file to xarray dataset",
+            filepath=p.as_posix()
+        )
+
         # Check the file has the right name
         if not any([setname in p.name.lower() for setname in ["wholesale1.grib", "wholesale2.grib"]]):
             log.debug(

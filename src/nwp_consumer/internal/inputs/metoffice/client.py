@@ -162,6 +162,11 @@ class MetOfficeClient(internal.FetcherInterface):
 
     def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
 
+        log.debug(
+            event="mapping raw file to xarray dataset",
+            filepath=p.as_posix()
+        )
+
         # Cfgrib is built upon eccodes which needs an in-memory file to read from
         # Load the GRIB file as a cube
         try:

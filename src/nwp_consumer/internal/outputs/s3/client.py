@@ -87,8 +87,9 @@ class S3Client(internal.StorageInterface):
         tempPaths: list[pathlib.Path] = []
         for path in paths:
             tfp: pathlib.Path = internal.TMP_DIR / path.name
+
+            # Use existing temp file if it already exists in the temp dir
             if tfp.exists() and tfp.stat().st_size > 0:
-                # Use existing temp file if it already exists in the temp dir
                 log.debug(
                     event="file already exists in temporary directory, skipping",
                     filepath=path.as_posix(),
@@ -96,13 +97,15 @@ class S3Client(internal.StorageInterface):
                 )
                 tempPaths.append(tfp)
                 continue
+
+            # Don't copy file from the store if it is empty
             if self.exists(dst=path) is False or self.__fs.du(path=(self.__bucket / path).as_posix()) == 0:
-                # Don't copy file from the store if it is empty
                 log.warn(
                     event="file in store is empty",
                     filepath=path.as_posix(),
                 )
                 continue
+
             # Copy the file from the store to a temporary file
             with self.__fs.open(path=(self.__bucket / path).as_posix(), mode="rb") as infile:
                 with tfp.open("wb") as tmpfile:
@@ -113,7 +116,8 @@ class S3Client(internal.StorageInterface):
 
         log.debug(
             event="copied it folder to temporary files",
-            nbytes=[p.stat().st_size for p in tempPaths]
+            nbytes=[p.stat().st_size for p in tempPaths],
+            inittime=it.strftime("%Y-%m-%d %H:%M")
         )
 
         return tempPaths

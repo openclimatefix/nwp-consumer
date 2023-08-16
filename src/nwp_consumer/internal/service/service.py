@@ -130,7 +130,7 @@ class NWPConsumerService:
             .map(lambda ds: _saveAsTempZipZarr(ds=ds)) \
             .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.name)) \
             .sum() \
-            .compute(scheduler='single-threaded')
+            .compute(num_workers=1)  # AWS ECS only has 1 CPU which amounts to half a physical core
 
         return nbytes
 

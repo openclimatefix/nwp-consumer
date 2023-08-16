@@ -47,6 +47,9 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
         for path in pathlib.Path('data/zarr').glob('*.zarr.zip'):
 
             print("opening zipped zarr " + path.as_posix())
+            print("\tsize: " + str(path.stat().st_size))
+            print("\tfirst 10 bytes: " + str(path.read_bytes()[:10]))
+
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}", consolidated=True)
 
             # The number of variables in the dataset depends on the order from MetOffice
