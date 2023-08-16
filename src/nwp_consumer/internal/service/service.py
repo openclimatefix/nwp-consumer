@@ -273,7 +273,7 @@ def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
     if tempZarrPath.exists():
         tempZarrPath.unlink()
     ds.to_zarr(
-        store=zarr.ZipStore(path=tempZarrPath.as_posix(), mode='w'),
+        store=zarr.ZipStore(path=tempZarrPath.as_posix(), mode='x'),
         encoding={
             "init_time": {"units": "nanoseconds since 1970-01-01"},
             "UKV": {

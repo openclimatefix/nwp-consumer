@@ -12,6 +12,7 @@ import unittest
 import numpy as np
 import ocf_blosc2  # noqa: F401
 import xarray as xr
+import zarr
 
 from nwp_consumer.internal import config, inputs, outputs, service, ZARR_FMTSTR
 
@@ -50,7 +51,8 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
             print("\tsize: " + str(path.stat().st_size))
             print("\tfirst 10 bytes: " + str(path.read_bytes()[:10]))
 
-            ds = xr.open_zarr(store=f"zip::{path.as_posix()}", consolidated=True)
+            with zarr.ZipStore(path=path.as_posix(), mode='r') as store:
+                ds = xr.open_zarr(store=store)
 
             # The number of variables in the dataset depends on the order from MetOffice
             numVars = len(ds.coords["variable"].values)
