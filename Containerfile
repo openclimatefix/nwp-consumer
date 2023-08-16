@@ -5,7 +5,7 @@ FROM quay.io/condaforge/miniforge3:latest AS build-venv
 RUN apt update && apt install -y build-essential
 RUN conda create -p /venv python=3.10
 RUN /venv/bin/pip install --upgrade pip wheel setuptools
-RUN conda install -p /venv -y eccodes
+RUN conda install -p /venv -y eccodes zarr
 
 # Install packages into the virtualenv as a separate step
 # * Only re-execute this step when the copied files change
