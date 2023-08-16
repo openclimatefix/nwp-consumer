@@ -103,7 +103,7 @@ class TestS3Client(unittest.TestCase):
         initTime = dt.datetime(2023, 1, 2)
         fileName = inspect.stack()[0][3] + ".grib"
         dst = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / fileName
-        src = internal.TMP_DIR / 'nwpc-' + str(uuid.uuid4())
+        src = internal.TMP_DIR / f"nwpc-{uuid.uuid4()}"
 
         # Write the data to the temporary file
         src.write_bytes(bytes(fileName, 'utf-8'))

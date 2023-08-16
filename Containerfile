@@ -4,7 +4,7 @@
 FROM quay.io/condaforge/miniforge3:latest AS build-venv
 RUN apt update && apt install -y build-essential
 RUN conda create -p /venv python=3.10
-RUN /venv/bin/pip install --upgrade pip setuptools wheel
+RUN /venv/bin/pip install --upgrade pip wheel
 RUN conda install -p /venv -y eccodes
 
 # Install packages into the virtualenv as a separate step
@@ -12,11 +12,13 @@ RUN conda install -p /venv -y eccodes
 # * This also builds the package into the virtualenv
 # * The package is versioned via setuptools_git_versioning
 #   hence the .git directory is required
+# * The README.md is required for the long description
 FROM build-venv AS build-wheels
 WORKDIR /app
 COPY src src
 COPY pyproject.toml pyproject.toml
 COPY .git .git
+COPY README.md README.md
 RUN /venv/bin/pip install .
 
 # Copy the virtualenv into a distroless image
