@@ -276,15 +276,16 @@ def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
     tempZarrPath = internal.TMP_DIR / (initTime.strftime(internal.ZARR_FMTSTR) + ".zarr.zip")
     if tempZarrPath.exists():
         tempZarrPath.unlink()
-    ds.to_zarr(
-        store=zarr.ZipStore(path=tempZarrPath.as_posix(), mode='x'),
-        encoding={
-            "init_time": {"units": "nanoseconds since 1970-01-01"},
-            "UKV": {
-                "compressor": Blosc2(cname="zstd", clevel=5),
+    with zarr.ZipStore(path=tempZarrPath.as_posix(), mode='w') as store:
+        ds.to_zarr(
+            store=store,
+            encoding={
+                "init_time": {"units": "nanoseconds since 1970-01-01"},
+                "UKV": {
+                    "compressor": Blosc2(cname="zstd", clevel=5),
+                },
             },
-        },
-    )
+        )
     return tempZarrPath
 
 

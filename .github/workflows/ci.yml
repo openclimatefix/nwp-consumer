@@ -108,7 +108,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Tag the built image according to the event type
-      # * If the event is a tag, use the tag name
+      # * If the event is a valid version tag, use the tag name
       # * If the event is a branch commit, use the commit sha
       - name: Extract metadata (tags, labels) for Container
         id: meta
@@ -116,9 +116,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,event=branch
-            type=sha,event=pr
-            type=sha,event=push
+            type=ref,event=push
             type=semver,pattern={{version}}
 
       # Build and push the Container image to the registry

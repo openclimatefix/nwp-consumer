@@ -4,10 +4,11 @@ import unittest
 
 import numpy as np
 import xarray as xr
+import zarr
 
 from .. import FileInfoModel
 from .. import models as internal
-from . import NWPConsumerService
+from .service import NWPConsumerService, _saveAsTempZipZarr
 
 # Two days, four init times per day -> 8 init times
 DAYS = [1, 2]
@@ -70,20 +71,21 @@ class DummyFetcher(internal.FetcherInterface):
 
     def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
         initTime = dt.datetime.strptime(p.parent.as_posix(), "%Y%m%d%H%M")
-        name = p.name
         return xr.Dataset(
             data_vars={
                 'UKV': (('init_time', 'variable', 'step', 'x', 'y'), np.random.rand(1, 1, 12, 100, 100)),
             },
             coords={
                 'init_time': [initTime],
-                'variable': [name],
+                'variable': [p.name],
                 'step': range(12),
                 'x': range(100),
                 'y': range(100),
             }
         )
 
+
+# ------------- Client Methods -------------- #
 
 class TestNWPConsumerService(unittest.TestCase):
 
@@ -123,3 +125,13 @@ class TestNWPConsumerService(unittest.TestCase):
 
         n = self.service.CreateLatestZarr()
         self.assertEqual(len("latest.zarr.zip"), n)
+
+
+# ------------ Static Methods ----------- #
+
+class TestSaveAsZippedZarr(unittest.TestCase):
+    def test_createsValidZipZarr(self):
+        ds = DummyFetcher().mapTemp(p=pathlib.Path("202101010000/dswrf.grib"))
+        file = _saveAsTempZipZarr(ds=ds)
+        outds = xr.open_zarr(f"zip::{file.as_posix()}")
+        self.assertEqual(ds.dims, outds.dims)
