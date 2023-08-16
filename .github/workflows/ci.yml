@@ -40,6 +40,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # The pyproject.toml hash is part of the cache key
+      # * This ensures that the cache is invalidated when it changes
       - name: Restore cached dependencies
         id: restore-cache
         uses: actions/cache/restore@v3
