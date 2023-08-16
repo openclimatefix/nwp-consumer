@@ -40,6 +40,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Restore cached dependencies, if available
+        id: restore-cache
+        uses: actions/cache/restore@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pipdev-${{ hashFiles('**/pyproject.toml') }}
+
       # Should mirror the build-venv stage in the Containerfile
       - name: Build venv
         run: |
@@ -52,12 +59,10 @@ jobs:
         run: /venv/bin/pip install -e .[dev]
 
       - name: Cache dependencies
-        uses: actions/cache@v3
+        uses: actions/cache/save@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pipdev-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pipdev-
+          key: ${{ steps.restore-cache.outputs.cache-primary-key }}
 
       # Run unittests on all branches and PRs
       # * Produce JUnit XML report
@@ -155,6 +160,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Restore cached dependencies, if available
+        id: restore-cache
+        uses: actions/cache/restore@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+
       # Building the wheel dynamically assigns the version according to git
       # * The setuptools_git_versioning package reads the git tags and assigns the version
       # * The version is then used in the wheel filename and made available in the package
@@ -167,13 +179,12 @@ jobs:
           pip install .
           pip wheel . --no-deps --wheel-dir dist
 
-      - name: Cache dependencies
-        uses: actions/cache@v3
+      - name: Cache pip dependencies
+        id: save-cache
+        uses: actions/cache/save@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          key: ${{ steps.restore-cache.outputs.cache-primary-key }}
 
       - name: Upload wheel
         uses: actions/upload-artifact@v3
