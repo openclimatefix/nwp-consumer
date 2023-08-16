@@ -40,16 +40,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install dependencies
+      # Should mirror the build-venv stage in the Containerfile
+      - name: Build venv
         run: |
-          conda install -y cfgrib cartopy cf-units cftime numcodecs
-          python -m pip install --upgrade pip
-          pip install -e .[dev]
+          apt update && apt install -y build-essential
+          conda create -p /venv python=3.10
+          /venv/bin/pip install --upgrade pip
+          conda install -p /venv -y eccodes
+
+      - name: Install dependencies
+        run: /venv/bin/pip install -e .[dev]
 
       # Run unittests on all branches and PRs
       # * Produce JUnit XML report
       - name: Run unit tests
-        run: python -m xmlrunner discover -s src/nwp_consumer -p "test_*.py" --output-file ut-report.xml
+        run: /venv/bin/python -m xmlrunner discover -s src/nwp_consumer -p "test_*.py" --output-file ut-report.xml
 
       # Run integration tests on main and PRs to it
       # * Requires secrets to be set in the repository settings
@@ -66,7 +71,7 @@ jobs:
         if:  |
           (github.ref == 'refs/heads/main' && github.event_name != 'tag') || 
           (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main')
-        run: python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
+        run: /venv/bin/python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
 
       # Create test summary to be visualised on the job summary screen on GitHub
       # * Runs even if previous steps fail

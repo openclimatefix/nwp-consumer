@@ -35,7 +35,7 @@ The program will inform you of missing env vars, but you can also check the
 ### Using Docker (recommended)
 
 This service is designed to be run as a Docker container. The `Containerfile` is the Dockerfile for the service.
-It is recommended to run it this way due to the present dependency on various external binaries, which at the moment
+It is recommended to run it this way due to the dependency on external non-python binaries, which at the moment
 cannot be easily distributed in a PyPi package. To run, pull the latest version from `ghcr.io` via:
 
 ```shell
@@ -49,14 +49,20 @@ $ docker run \
 
 Ensure the [external dependencies](#external-dependencies) are installed. Then, do one of the following:
 
+Either
+
 - Download the latest wheel from the artifacts of the desired
     [CI run](https://github.com/openclimatefix/nwp-consumer/actions/workflows/ci.yml) and install it via
     ```shell
     $ pip install nwp-consumer-<version>.whl
     ```
 
+*or*
+
 - Clone the repository and install the package via
     ```shell
+    $ git clone git@github.com:openclimatefix/nwp-consumer.git
+    $ cd nwp-consumer
     $ pip install .
     ```
 
@@ -64,6 +70,17 @@ Then run the service via
 
 ```shell
 $ ENV_VAR=<value> nwp-consumer <command...> 
+```
+
+### CLI
+
+Whether running via Docker or the Python package, available commands can be found with the command `help` or the 
+`--help` flag. For example:
+
+```shell
+$ nwp-consumer --help
+# or
+$ docker run ghcr.io/openclimatefix/nwp-consumer:latest --help
 ```
 
 ## Ubiquitous Language
@@ -74,7 +91,7 @@ The following terms are used throughout the codebase and documentation. They are
 January.
 
 - ***TargetTime*** - The time at which a predicted value is valid. For example, a forecast with InitTime 12:00 on 1st 
-January predicts that the temperature at TargetTime 12:00 on 2nd January will be 10 degrees.
+January predicts that the temperature at TargetTime 12:00 on 2nd January at position x will be 10 degrees.
 
 
 ## Repository structure

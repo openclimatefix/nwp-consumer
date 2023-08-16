@@ -195,8 +195,12 @@ class NWPConsumerService:
         unhealthy = False
 
         # Check eccodes is installed
-        import eccodes
-        log.info(event="HEALTH: eccodes is installed", version=eccodes.codes_get_api_version())
+        try:
+            from cfgrib.messages import eccodes_version
+            log.info(event="HEALTH: eccodes is installed", version=eccodes_version)
+        except Exception as e:
+            log.error(event="HEALTH: eccodes binary is not installed", error=str(e))
+            unhealthy = True
 
         # Check the raw directory exists
         if not self.storer.exists(dst=self.rawdir):
