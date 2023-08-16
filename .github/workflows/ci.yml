@@ -143,15 +143,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Define a "build-wheel" job that runs on main branch commits and tags only
+  # Define a "build-wheel" job that runs on version tags
   # * Only runs if test job passes
   build-wheel:
     runs-on: ubuntu-latest
     container: quay.io/condaforge/miniforge3:latest
     needs: test
-    if: |
-      (github.ref == 'refs/heads/main' || contains(github.ref, 'refs/tags/v')) && 
-      github.event_name != 'pull_request'
+    if: contains(github.ref, 'refs/tags/v') && github.event_name == 'push'
 
     steps:
       - name: Checkout repository
@@ -182,3 +180,9 @@ jobs:
         with:
           name: wheel
           path: dist/*.whl
+
+      - name: Publish wheel
+        uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
