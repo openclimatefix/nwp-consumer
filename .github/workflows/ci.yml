@@ -40,12 +40,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Restore cached dependencies, if available
+      - name: Restore cached dependencies
         id: restore-cache
         uses: actions/cache/restore@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pipdev-${{ hashFiles('**/pyproject.toml') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
 
       # Should mirror the build-venv stage in the Containerfile
       - name: Build venv
@@ -160,7 +160,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Restore cached dependencies, if available
+      - name: Restore cached dependencies
         id: restore-cache
         uses: actions/cache/restore@v3
         with:
@@ -178,13 +178,6 @@ jobs:
           python -m pip install --upgrade pip wheel
           pip install .
           pip wheel . --no-deps --wheel-dir dist
-
-      - name: Cache pip dependencies
-        id: save-cache
-        uses: actions/cache/save@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ steps.restore-cache.outputs.cache-primary-key }}
 
       - name: Upload wheel
         uses: actions/upload-artifact@v3
