@@ -134,16 +134,18 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
   # Define a "build-wheel" job that runs on main branch commits and tags only
   # * Only runs if test job passes
   build-wheel:
     runs-on: ubuntu-latest
-    container: continuumio/miniconda3:latest
+    container: continuumio/miniforge3:latest
     needs: test
-    if: (github.ref == 'refs/heads/main' || contains(github.ref, 'refs/tags/v')) && github.event_name != 'pull_request'
+    if: |
+      (github.ref == 'refs/heads/main' || contains(github.ref, 'refs/tags/v')) && 
+      github.event_name != 'pull_request'
 
     steps:
       - name: Checkout repository
@@ -155,7 +157,8 @@ jobs:
       # * setuptools_git_versioning is configured in pyproject.toml
       - name: Build wheel
         run: |
-          conda install -y -c conda-forge nodejs eccodes cartopy cf-units cftime numcodecs
+          apt update && apt install -y build-essential
+          conda install -y -c eccodes
           python -m pip install --upgrade pip wheel
           pip install .
           pip wheel . --no-deps --wheel-dir dist
