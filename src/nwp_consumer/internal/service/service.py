@@ -1,18 +1,17 @@
 """The service class for the NWP Consumer."""
 
-import concurrent.futures
 import datetime as dt
 import itertools
 import pathlib
-from concurrent.futures import ProcessPoolExecutor as PoolExecutor
+import shutil
 
 import dask.bag
 import pandas as pd
+import psutil
 import structlog
 import xarray as xr
 import zarr
 from ocf_blosc2 import Blosc2
-from typeid import TypeID
 
 from nwp_consumer import internal
 
@@ -25,7 +24,8 @@ class NWPConsumerService:
     Each method on the class is a business use case for the consumer
     """
 
-    def __init__(self, fetcher: internal.FetcherInterface, storer: internal.StorageInterface, rawdir: str, zarrdir: str):
+    def __init__(self, fetcher: internal.FetcherInterface, storer: internal.StorageInterface, rawdir: str,
+                 zarrdir: str):
         self.fetcher = fetcher
         self.storer = storer
         self.rawdir = pathlib.Path(rawdir)
@@ -43,7 +43,7 @@ class NWPConsumerService:
         # * This spans every hour between the start and end dates up to 11:00pm on the end date
         allInitTimes: list[dt.datetime] = pd.date_range(
             start=start,
-            end=end+dt.timedelta(days=1),
+            end=end + dt.timedelta(days=1),
             inclusive='left',
             freq='H').to_pydatetime().tolist()
 
@@ -55,37 +55,33 @@ class NWPConsumerService:
         # Check which files are already downloaded
         # * If the file is already downloaded, remove it from the list of files to download
         allWantedFileInfos: list[internal.FileInfoModel] = [
-            p for p in allWantedFileInfos
+            fi for fi in allWantedFileInfos
             if not self.storer.exists(
-                dst=self.rawdir / p.initTime().strftime(internal.IT_FOLDER_FMTSTR) / (p.fname() + ".grib")
+                dst=self.rawdir / fi.it().strftime(internal.IT_FOLDER_FMTSTR) / fi.filename()
             )
         ]
 
         if not allWantedFileInfos:
-            log.info("No new files to download",
+            log.info("no new files to download",
                      startDate=start.strftime("%Y-%m-%d %H:%M"),
                      endDate=end.strftime("%Y-%m-%d %H:%M"))
             return nbytes
         else:
-            log.info("Downloading files",
+            log.info("downloading files",
                      startDate=start.strftime("%Y-%m-%d %H:%M"),
                      endDate=end.strftime("%Y-%m-%d %H:%M"),
                      numFiles=len(allWantedFileInfos))
 
-        # Download the files to temp in parallel
-        # * CEDA has a concurrent connection limit so limit the number of workers
-        with PoolExecutor(max_workers=5) as pe:
-            futures: list[concurrent.futures.Future[tuple[internal.FileInfoModel, pathlib.Path]]] = [
-                pe.submit(self.fetcher.downloadToTemp, fi=fi) for fi in allWantedFileInfos
-            ]
-            # Save the files to store as their downloads are completed
-            # * This deletes the temporary files
-            for future in concurrent.futures.as_completed(futures):
-                fileInfo, tempFile = future.result()
-                nbytes += self.storer.store(
-                    src=tempFile,
-                    dst=self.rawdir / fileInfo.initTime().strftime(internal.IT_FOLDER_FMTSTR) / (fileInfo.fname() + ".grib")
-                )
+        # Create a dask pipeline to download the files
+        nbytes = dask.bag.from_sequence(allWantedFileInfos, npartitions=len(allWantedFileInfos)) \
+            .map(lambda fi: self.fetcher.downloadToTemp(fi=fi)) \
+            .filter(lambda infoPathTuple: infoPathTuple[1] != pathlib.Path()) \
+            .map(lambda infoPathTuple: self.storer.store(
+                src=infoPathTuple[1],
+                dst=self.rawdir / infoPathTuple[0].it().strftime(internal.IT_FOLDER_FMTSTR) / (infoPathTuple[0].filename())
+            )) \
+            .sum() \
+            .compute()
 
         return nbytes
 
@@ -95,7 +91,6 @@ class NWPConsumerService:
         :param start: The start date of the time range to convert
         :param end: The end date of the time range to convert
         """
-        nbytes = 0
 
         # Get a list of all the init times that are stored locally between the start and end dates
         desiredInitTimes: list[dt.datetime] = []
@@ -104,78 +99,38 @@ class NWPConsumerService:
             # Don't convert files that already exist
             if self.storer.exists(dst=self.zarrdir / it.strftime('%Y%m%d%H%M.zarr.zip')):
                 log.debug(
-                    f"Zarr for initTime {it.strftime('%Y/%m/%d %H:%M')} already exists, skipping.",
-                    initTime=it.strftime("%Y/%m/%d %H:%M")
+                    f"zarr for initTime already exists; skipping",
+                    inittime=it.strftime("%Y/%m/%d %H:%M"),
+                    path=(self.zarrdir / it.strftime('%Y%m%d%H%M.zarr.zip')).as_posix()
                 )
                 continue
             if start <= it.date() <= end:
                 desiredInitTimes.append(it)
 
         if not desiredInitTimes:
-            log.info("No new files to convert to Zarr, exiting.",
+            log.info("no new files to convert to zarr",
                      startDate=start.strftime("%Y/%m/%d %H:%M"),
                      endDate=end.strftime("%Y/%m/%d %H:%M"))
-            return nbytes
+            return 0
         else:
             log.info(
-                event=f"Converting {len(desiredInitTimes)} init times to zarr.",
+                event=f"converting {len(desiredInitTimes)} init times to zarr.",
                 num=len(desiredInitTimes)
             )
 
-        # For each init time, load the files from the store to temp and map them to a dataset
-        with PoolExecutor(max_workers=2) as pe:
-            futures: list[concurrent.futures.Future[tuple[dt.datetime, list[pathlib.Path]]]] = [
-                pe.submit(self.storer.copyITFolderToTemp, prefix=self.rawdir, it=it) for it in desiredInitTimes
-            ]
-            # Convert the files once they are read in
-            for future in concurrent.futures.as_completed(futures):
-                initTime, tempPaths = future.result()
-
-                log.debug(
-                    f"Creating Zarr for initTime {initTime.strftime('%Y/%m/%d %H:%M')}",
-                    initTime=initTime.strftime("%Y/%m/%d %H:%M")
-                )
-
-                # Create a pipeline to convert the raw files and merge them as a dataset
-                bag: dask.bag.Bag = dask.bag.from_sequence(tempPaths)
-                dataset = bag.map(lambda tfp: self.fetcher.mapTemp(p=tfp)) \
-                    .fold(lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts")) \
-                    .compute()
-
-                # Carry out a basic data quality check
-                for var in dataset.coords['variable'].values:
-                    if True in dataset.sel(variable=var).isnull():
-                        log.warn(
-                            event=f"Dataset for initTime {initTime.strftime('%Y/%m/%d %H:%M')}"
-                            f" has NaNs in variable {var}",
-                            initTime=initTime.strftime("%Y/%m/%d %H:%M"),
-                            variable=var
-                        )
-
-                # Save the dataset to a temp zarr file
-                initTime = pd.Timestamp(dataset.coords["init_time"].values[0])
-                tempZarrPath = pathlib.Path(f'/tmp/{str(TypeID(prefix="nwpc"))}')
-                with zarr.ZipStore(path=tempZarrPath.as_posix(), mode='w') as store:
-                    dataset.to_zarr(
-                        store=store,
-                        encoding={
-                            "init_time": {"units": "nanoseconds since 1970-01-01"},
-                            "UKV": {
-                                "compressor": Blosc2(cname="zstd", clevel=5),
-                            },
-                        },
-                        compute=True
-                    )
-
-                # Move the temp zarr file to the store
-                nbytes += self.storer.store(
-                    src=tempZarrPath,
-                    dst=self.zarrdir / initTime.strftime('%Y%m%d%H%M.zarr.zip')
-                )
-
-                # Delete the raw temporary files
-                for f in tempPaths:
-                    f.unlink(missing_ok=True)
+        # Create a pipeline to carry out the conversion
+        # * Build a bag from the sequence of init times
+        # * Partition the bag by init time
+        bag = dask.bag.from_sequence(desiredInitTimes, npartitions=len(desiredInitTimes))
+        nbytes = bag.map(lambda inittime: self.storer.copyITFolderToTemp(prefix=self.rawdir, it=inittime)) \
+            .filter(lambda temppaths: len(temppaths) != 0) \
+            .map(lambda temppaths: [self.fetcher.mapTemp(p=p) for p in temppaths]) \
+            .map(lambda datasets: xr.merge(objects=datasets, combine_attrs="drop_conflicts")) \
+            .filter(_dataQualityFilter) \
+            .map(lambda ds: _saveAsTempZipZarr(ds=ds)) \
+            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.name)) \
+            .sum() \
+            .compute(num_workers=1)  # AWS ECS only has 1 CPU which amounts to half a physical core
 
         return nbytes
 
@@ -203,31 +158,127 @@ class NWPConsumerService:
         # Get the latest init time
         allInitTimes: list[dt.datetime] = self.storer.listInitTimes(prefix=self.rawdir)
         if not allInitTimes:
-            log.info(event="No init times found in raw directory")
+            log.info(event="no init times found", within=self.rawdir)
             return nbytes
         latestInitTime = allInitTimes[-1]
 
         # Check if the latest init time is already stored as a Zarr file
-        if self.storer.exists(dst=pathlib.Path('latest.zarr')):
-            self.storer.delete(p=pathlib.Path('latest.zarr'))
+        if self.storer.exists(dst=self.zarrdir / 'latest.zarr.zip'):
+            self.storer.delete(p=self.zarrdir / 'latest.zarr.zip')
 
         # Load the latest init time as a dataset
-        _, tempPaths = self.storer.copyITFolderToTemp(it=latestInitTime, prefix=self.rawdir)
+        tempPaths = self.storer.copyITFolderToTemp(it=latestInitTime, prefix=self.rawdir)
         log.info(
-            event=f"Creating Latest Zarr for initTime {latestInitTime.strftime('%Y/%m/%d %H:%M')}",
-            initTime=latestInitTime.strftime("%Y/%m/%d %H:%M")
+            event=f"creating latest zarr for initTime",
+            inittime=latestInitTime.strftime("%Y/%m/%d %H:%M"),
+            path=(self.zarrdir / 'latest.zarr.zip').as_posix()
         )
 
         # Create a pipeline to convert the raw files and merge them as a dataset
+        # * Then save the dataset to a temp zarr file and store it in the store
         bag: dask.bag.Bag = dask.bag.from_sequence(tempPaths)
-        dataset = bag.map(lambda tfp: self.fetcher.mapTemp(p=tfp)) \
+        nbytes = bag.map(lambda tfp: self.fetcher.mapTemp(p=tfp)) \
             .fold(lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts")) \
+            .apply(lambda ds: _saveAsTempZipZarr(ds=ds)) \
+            .apply(lambda path: self.storer.store(src=path, dst=self.zarrdir / 'latest.zarr.zip')) \
             .compute()
 
-        # Save the dataset to a temp zarr file
-        tempZarrPath = pathlib.Path(f'/tmp/{str(TypeID(prefix="nwpc"))}')
-        dataset.to_zarr(
-            store=zarr.ZipStore(path=tempZarrPath.as_posix(), mode='w'),
+        # Delete the temporary files
+        for f in tempPaths:
+            f.unlink(missing_ok=True)
+
+        return nbytes
+
+    def Check(self) -> int:
+        """Perform a healthcheck on the service"""
+
+        unhealthy = False
+
+        # Check eccodes is installed
+        try:
+            from cfgrib.messages import eccodes_version
+            log.info(event="HEALTH: eccodes is installed", version=eccodes_version)
+        except Exception as e:
+            log.error(event="HEALTH: eccodes binary is not installed", error=str(e))
+            unhealthy = True
+
+        # Check the raw directory exists
+        if not self.storer.exists(dst=self.rawdir):
+            log.error(event="HEALTH: raw directory does not exist", path=self.rawdir.as_posix())
+            unhealthy = True
+        else:
+            log.info(event="HEALTH: found raw directory", path=self.rawdir.as_posix())
+
+        # Check the zarr directory exists
+        if not self.storer.exists(dst=self.zarrdir):
+            log.error(event="HEALTH: zarr directory does not exist", path=self.zarrdir.as_posix())
+            unhealthy = True
+        else:
+            log.info(event="HEALTH: found zarr directory", path=self.zarrdir.as_posix())
+
+        # Check that the temporary directory is not approaching capacity
+        internal.TMP_DIR.mkdir(parents=True, exist_ok=True)
+        tmp_usage = shutil.disk_usage(internal.TMP_DIR.as_posix())
+        if tmp_usage.free < 1e9:
+            log.error(
+                event="HEALTH: temporary directory is full",
+                free=tmp_usage.free,
+                total=tmp_usage.total,
+                used=tmp_usage.used
+            )
+            unhealthy = True
+        else:
+            log.info(
+                event="HEALTH: found temporary directory",
+                free=tmp_usage.free,
+                total=tmp_usage.total,
+                used=tmp_usage.used,
+                path=internal.TMP_DIR.as_posix()
+            )
+
+        # Check the ram usage
+        ram_usage = psutil.virtual_memory()
+        if ram_usage.percent > 95:
+            log.error(
+                event="HEALTH: ram usage is high",
+                available=ram_usage.available,
+                total=ram_usage.total,
+                used=ram_usage.used,
+                percent=ram_usage.percent
+            )
+            unhealthy = True
+        else:
+            log.info(
+                event="HEALTH: found ram usage",
+                free=ram_usage.free,
+                total=ram_usage.total,
+                used=ram_usage.used,
+                percent=ram_usage.percent
+            )
+
+        # Check the CPU usage
+        cpu_usage = psutil.cpu_percent()
+        if cpu_usage > 95:
+            log.error(event="HEALTH: cpu usage is high", percent=cpu_usage)
+            unhealthy = True
+        else:
+            log.info(event="HEALTH: found cpu usage", percent=cpu_usage)
+
+        if unhealthy:
+            return 1
+
+        return 0
+
+
+def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
+    # Save the dataset to a temp zarr file
+    initTime = dt.datetime.utcfromtimestamp(int(ds.coords["init_time"].values[0]) / 1e9)
+    tempZarrPath = internal.TMP_DIR / (initTime.strftime(internal.ZARR_FMTSTR) + ".zarr.zip")
+    if tempZarrPath.exists():
+        tempZarrPath.unlink()
+    with zarr.ZipStore(path=tempZarrPath.as_posix(), mode='w') as store:
+        ds.to_zarr(
+            store=store,
             encoding={
                 "init_time": {"units": "nanoseconds since 1970-01-01"},
                 "UKV": {
@@ -235,15 +286,30 @@ class NWPConsumerService:
                 },
             },
         )
+    return tempZarrPath
 
-        # Move the temp zarr file to the store
-        nbytes = self.storer.store(
-            src=tempZarrPath,
-            dst=pathlib.Path('latest.zarr.zip')
+
+def _dataQualityFilter(ds: xr.Dataset) -> bool:
+    """Filter out data that is not of sufficient quality."""
+
+    if ds == xr.Dataset():
+        return False
+
+    # Carry out a basic data quality check
+    if "variable" not in dict(ds.coords.items()).keys():
+        log.warn(
+            event=f"Dataset for is missing variable coord",
+            initTime=str(ds.coords['init_time'].values[0])[:16],
+            coords=dict(ds.coords.items())
         )
+        return False
 
-        # Delete the temporary files
-        for f in tempPaths:
-            f.unlink(missing_ok=True)
+    for var in ds.coords['variable'].values:
+        if True in ds.sel(variable=var).isnull():
+            log.warn(
+                event=f"Dataset has NaNs in variable {var}",
+                initTime=str(ds.coords['init_time'].values[0])[:16],
+                variable=var
+            )
 
-        return nbytes
+    return True

@@ -18,18 +18,17 @@ authors = [
 classifiers = ["Programming Language :: Python :: 3"]
 dependencies = [
     "cfgrib == 0.9.10.3",
+    "dask[distributed] == 2023.2.1",
     "docopt == 0.6.2",
-    "eccodes == 1.5.1",
     "fsspec[s3] == 2023.6.0",
     "marshmallow == 3.19.0",
     "marshmallow-dataclass == 8.5.12",
     "numpy == 1.24.2",
     "ocf-blosc2 == 0.0.3",
     "pathlib == 1.0.1",
+    "psutil == 5.9.5",
     "requests == 2.31.0",
-    "scitools-iris == 3.4.1",
     "structlog == 22.1.0",
-    "typeid-python == 0.2.1",
     "urllib3 == 1.26.15",
     "xarray == 2023.2.0",
     "zarr == 2.14.2"
@@ -45,7 +44,7 @@ dev = [
 ]
 
 [project.scripts]
-nwp-consumer = "nwp_consumer.cmd.main:run" # Set the entrypoint for the CLI
+nwp-consumer = "nwp_consumer.cmd.main:main" # Set the entrypoint for the CLI
 
 [project.urls]
 repository = "https://github.com/openclimatefix/nwp-consumer"

@@ -1,4 +1,5 @@
 import datetime as dt
+import pathlib
 from typing import ClassVar, Type
 
 from marshmallow import EXCLUDE, Schema, fields
@@ -18,13 +19,16 @@ class MetOfficeFileInfo(internal.FileInfoModel):
 
     Schema: ClassVar[Type[Schema]] = Schema  # To prevent confusing type checkers
 
-    def initTime(self) -> dt.datetime:
-        """Return the init time of the file."""
+    def it(self) -> dt.datetime:
         return self.runDateTime.replace(tzinfo=None)
 
-    def fname(self) -> str:
-        """Return the file name."""
-        return self.fileId
+    def filename(self) -> str:
+        return self.fileId + ".grib"
+
+    def filepath(self) -> str:
+        return f"{self.fileId}/data"
+
+
 
 
 @dataclass

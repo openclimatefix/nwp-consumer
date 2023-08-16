@@ -40,16 +40,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install dependencies
+      # Should mirror the build-venv stage in the Containerfile
+      - name: Build venv
         run: |
-          conda install -y cfgrib cartopy cf-units cftime numcodecs
-          python -m pip install --upgrade pip
-          pip install -e .[dev]
+          apt update && apt install -y build-essential
+          conda create -p /venv python=3.10
+          /venv/bin/pip install --upgrade pip
+          conda install -p /venv -y eccodes
+
+      - name: Install dependencies
+        run: /venv/bin/pip install -e .[dev]
 
       # Run unittests on all branches and PRs
       # * Produce JUnit XML report
       - name: Run unit tests
-        run: python -m xmlrunner discover -s src/nwp_consumer -p "test_*.py" --output-file ut-report.xml
+        run: /venv/bin/python -m xmlrunner discover -s src/nwp_consumer -p "test_*.py" --output-file ut-report.xml
 
       # Run integration tests on main and PRs to it
       # * Requires secrets to be set in the repository settings
@@ -66,7 +71,7 @@ jobs:
         if:  |
           (github.ref == 'refs/heads/main' && github.event_name != 'tag') || 
           (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main')
-        run: python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
+        run: /venv/bin/python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
 
       # Create test summary to be visualised on the job summary screen on GitHub
       # * Runs even if previous steps fail
@@ -95,6 +100,14 @@ jobs:
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v2
 
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
@@ -103,7 +116,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Tag the built image according to the event type
-      # * If the event is a tag, use the tag name
+      # * If the event is a valid version tag, use the tag name
       # * If the event is a branch commit, use the commit sha
       - name: Extract metadata (tags, labels) for Container
         id: meta
@@ -111,9 +124,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,event=branch
-            type=sha,event=pr
-            type=sha,event=push
+            type=ref,event=branch
             type=semver,pattern={{version}}
 
       # Build and push the Container image to the registry
@@ -129,16 +140,26 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      # Temp fix
+      # * https://github.com/docker/build-push-action/issues/252
+      # * https://github.com/moby/buildkit/issues/1896
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
   # Define a "build-wheel" job that runs on main branch commits and tags only
   # * Only runs if test job passes
   build-wheel:
     runs-on: ubuntu-latest
-    container: continuumio/miniconda3:latest
+    container: continuumio/miniforge3:latest
     needs: test
-    if: (github.ref == 'refs/heads/main' || contains(github.ref, 'refs/tags/v')) && github.event_name != 'pull_request'
+    if: |
+      (github.ref == 'refs/heads/main' || contains(github.ref, 'refs/tags/v')) && 
+      github.event_name != 'pull_request'
 
     steps:
       - name: Checkout repository
@@ -150,7 +171,8 @@ jobs:
       # * setuptools_git_versioning is configured in pyproject.toml
       - name: Build wheel
         run: |
-          conda install -y -c conda-forge nodejs eccodes cartopy cf-units cftime numcodecs
+          apt update && apt install -y build-essential
+          conda install -y -c eccodes
           python -m pip install --upgrade pip wheel
           pip install .
           pip wheel . --no-deps --wheel-dir dist

@@ -12,7 +12,15 @@ import xarray as xr
 # The folder pattern format string for the raw data's init time
 IT_FOLDER_FMTSTR = "%Y/%m/%d/%H%M"
 
+# The temporaray directory for storing downloaded files
+TMP_DIR = pathlib.Path("/tmp/nwpc")
+
+# The format string for the zarr dataset
+ZARR_FMTSTR = "%Y%m%dT%H%M"
+
+
 # ------- Domain models ------- #
+
 
 class OCFShortName(str, Enum):
     """Short names for the OCF parameters."""
@@ -35,12 +43,17 @@ class FileInfoModel(abc.ABC):
     """Information about a remote file."""
 
     @abc.abstractmethod
-    def fname(self) -> str:
-        """Return the file name."""
+    def filename(self) -> str:
+        """Return the file name including extension."""
         pass
 
     @abc.abstractmethod
-    def initTime(self) -> dt.datetime:
+    def filepath(self) -> str:
+        """Return the remote file path, not including protocols and TLDs."""
+        pass
+
+    @abc.abstractmethod
+    def it(self) -> dt.datetime:
         """Return the init time of the file."""
         pass
 
@@ -101,7 +114,7 @@ class StorageInterface(abc.ABC):
 
     @abc.abstractmethod
     def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
-        """Move the given temp file to the store at path p, deleting the temp file.
+        """Move the given temp file to the store at path p.
 
         :param src: Path to temp file to move
         :param dst: Desired path in store
@@ -120,12 +133,12 @@ class StorageInterface(abc.ABC):
 
     @abc.abstractmethod
     def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) \
-            -> tuple[dt.datetime, list[pathlib.Path]]:
+            -> list[pathlib.Path]:
         """Copy all files in given folder to temp files.
 
         :param prefix: Path of folder in which to find initTimes
         :param it: InitTime to copy files for
-        :return: Tuple of the initTime and list of paths to temp files
+        :return: List of paths to temp files
         """
         pass
 

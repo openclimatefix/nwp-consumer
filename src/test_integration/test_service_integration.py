@@ -12,8 +12,9 @@ import unittest
 import numpy as np
 import ocf_blosc2  # noqa: F401
 import xarray as xr
+import zarr
 
-from nwp_consumer.internal import config, inputs, outputs, service
+from nwp_consumer.internal import config, inputs, outputs, service, ZARR_FMTSTR
 
 
 class TestNWPConsumerService_MetOffice(unittest.TestCase):
@@ -46,7 +47,7 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
 
         for path in pathlib.Path('data/zarr').glob('*.zarr.zip'):
 
-            ds = xr.open_zarr(store=f"zip:///::{path.as_posix()}", consolidated=True)
+            ds = xr.open_zarr(store=f"zip::{path.as_posix()}")
 
             # The number of variables in the dataset depends on the order from MetOffice
             numVars = len(ds.coords["variable"].values)
@@ -92,17 +93,17 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
         self.assertGreater(nbytes, 0)
 
         for path in pathlib.Path('data/zarr').glob('*.zarr.zip'):
-                ds = xr.open_zarr(store=f"zip:///::{path.as_posix()}").compute()
+            ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
 
-                # Enusre the data variables are correct
-                self.assertEqual(["UKV"], list(ds.data_vars))
-                # Ensure the dimensions have the right sizes
-                self.assertEqual({'init_time': 1, 'step': 37, 'variable': 12, 'y': 704, 'x': 548}, dict(ds.dims.items()))
-                # Ensure the init time is correct
-                self.assertEqual(
-                    np.datetime64(dt.datetime.strptime(path.with_suffix('').stem, "%Y%m%d%H%M")),
-                    ds.coords["init_time"].values[0]
-                )
+            # Enusre the data variables are correct
+            self.assertEqual(["UKV"], list(ds.data_vars))
+            # Ensure the dimensions have the right sizes
+            self.assertEqual({'init_time': 1, 'step': 37, 'variable': 12, 'y': 704, 'x': 548}, dict(ds.dims.items()))
+            # Ensure the init time is correct
+            self.assertEqual(
+                np.datetime64(dt.datetime.strptime(path.with_suffix('').stem, ZARR_FMTSTR)),
+                ds.coords["init_time"].values[0]
+            )
 
     def tearDown(self) -> None:
         pass

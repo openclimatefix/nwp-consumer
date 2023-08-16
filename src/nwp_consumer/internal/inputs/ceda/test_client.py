@@ -57,7 +57,6 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
         # Ensure the correct variables are in the variable dimension
         self.assertListEqual(['dlwrf', 'dswrf', 'hcc', 'lcc', 'mcc', 'sde'], sorted(list(out.coords["variable"].values)))
 
-
 # --------- Static methods --------- #
 
 class TestIsWantedFile(unittest.TestCase):

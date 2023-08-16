@@ -1,11 +1,11 @@
 import datetime as dt
 import shutil
 import unittest
+import uuid
 from pathlib import Path
 
 import numpy as np
 import xarray as xr
-from typeid import TypeID
 
 from nwp_consumer import internal
 
@@ -79,15 +79,12 @@ class TestLocalFSClient(unittest.TestCase):
     def test_store(self):
         initTime = dt.datetime(2021, 1, 2, 0, 0, 0)
         dst = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_store.grib"
-        src = Path(f"/tmp/{str(TypeID(prefix='nwpc'))}")
+        src = internal.TMP_DIR / f"nwpc-{uuid.uuid4()}"
         # Create a temporary file to simulate a file to be stored
         src.write_bytes(bytes("test_file_contents", 'utf-8'))
 
         # Store the file using the function
-        size = self.testClient.store(
-            src=src,
-            dst=dst
-        )
+        size = self.testClient.store(src=src, dst=dst)
 
         # Assert that the file exists
         self.assertTrue(dst.exists())
@@ -132,10 +129,8 @@ class TestLocalFSClient(unittest.TestCase):
             f.write_bytes(bytes("test_file_contents", 'utf-8'))
 
         # Test the function
-        it, paths = self.testClient.copyITFolderToTemp(prefix=RAW, it=initTime)
+        paths = self.testClient.copyITFolderToTemp(prefix=RAW, it=initTime)
 
-        # Assert that the init time is correct
-        self.assertEqual(it, initTime)
         # Assert the contents of the temp files is correct
         for _i, path in enumerate(paths):
             self.assertEqual(path.read_bytes(), bytes("test_file_contents", 'utf-8'))

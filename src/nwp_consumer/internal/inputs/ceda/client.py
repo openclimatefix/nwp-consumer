@@ -11,7 +11,6 @@ import numpy as np
 import requests
 import structlog
 import xarray as xr
-from typeid import TypeID
 
 from nwp_consumer import internal
 
@@ -21,12 +20,11 @@ log = structlog.getLogger()
 
 # Defines parameters in CEDA that are not available from MetOffice
 PARAMETER_IGNORE_LIST: typing.Sequence[str] = (
-    "unknown", "h", "hcct", "cdcb", "dpt", "prmsl",
+    "unknown", "h", "hcct", "cdcb", "dpt", "prmsl"
 )
 
-COORDINATE_IGNORE_LIST: typing.Sequence[str] = (
-    "height", "pressure", "meanSea", "level", "atmosphere", "cloudBase",
-    "heightAboveGround", "heightAboveGroundLayer", "valid_time", "surface",
+COORDINATE_ALLOW_LIST: typing.Sequence[str] = (
+    "time", "step", "x", "y"
 )
 
 # Defines the mapping from CEDA parameter names to OCF parameter names
@@ -55,9 +53,7 @@ class CEDAClient(internal.FetcherInterface):
     # CEDA FTP Password
     __password: str
 
-    # API urls for CEDA data
-    dataUrl: str = "badc/ukmo-nwp/data/ukv-grib"
-    httpsBase: str = "https://data.ceda.ac.uk"
+    # FTP url for CEDA data
     __ftpBase: str
 
     def __init__(self, ftpUsername: str, ftpPassword: str):
@@ -68,23 +64,43 @@ class CEDAClient(internal.FetcherInterface):
     def downloadToTemp(self, *, fi: internal.FileInfoModel) \
             -> tuple[internal.FileInfoModel, pathlib.Path]:
 
-        anonUrl: str = f"{self.dataUrl}/{fi.initTime():%Y/%m/%d}/{fi.fname()}"
-        log.debug(f"Requesting download of {fi.fname()}", path=anonUrl)
-        url: str = f'{self.__ftpBase}/{anonUrl}'
+        if self.__password == "" or self.__username == "":
+            log.error(
+                event="all ceda credentials not provided"
+            )
+            return fi, pathlib.Path()
+
+        log.debug(
+            event=f"requesting download of file",
+            file=fi.filename(),
+            path=fi.filepath()
+        )
+        url: str = f'{self.__ftpBase}/{fi.filepath()}'
         try:
             response = urllib.request.urlopen(url=url)
         except Exception as e:
-            raise ConnectionError(
-                f"Error calling url {url} for {fi.fname()}: {e}"
-            ) from e
+            log.warn(
+                event="error calling url for file",
+                url=fi.filepath(),
+                filename=fi.filename(),
+                error=e
+            )
+            return fi, pathlib.Path()
 
         # Stream the filedata into a temporary file
-        tfp: pathlib.Path = pathlib.Path(f"/tmp/{str(TypeID(prefix='nwpc'))}")
+        tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
         with tfp.open("wb") as f:
             for chunk in iter(lambda: response.read(16 * 1024), b''):
                 f.write(chunk)
+                f.flush()
 
-        log.debug(f"Fetched all data from: {fi.fname()}", path=anonUrl)
+        log.debug(
+            event=f"fetched all data from file",
+            filename=fi.filename(),
+            url=fi.filepath(),
+            filepath=tfp.as_posix(),
+            nbytes=tfp.stat().st_size
+        )
 
         return fi, tfp
 
@@ -94,29 +110,36 @@ class CEDAClient(internal.FetcherInterface):
         # * CEDA has a HTTPS JSON API for this purpose
         response: requests.Response = requests.request(
             method="GET",
-            url=f"{self.httpsBase}/{self.dataUrl}/{it:%Y/%m/%d}?json"
+            url=f"https://data.ceda.ac.uk/badc/ukmo-nwp/data/ukv-grib/{it:%Y/%m/%d}?json"
         )
 
         if response.status_code == 404:
             # No data available for this init time. Fail soft
             log.warn(
-                event=f"No data available for init time {it:%Y/%m/%d %H:%M}",
+                event=f"no data available for init time",
+                init_time=f"{it:%Y/%m/%d %H:%M}",
                 url=response.url
             )
             return []
         if not response.ok:
             # Something else has gone wrong. Fail hard
-            raise ConnectionError(
-                f"Error calling url {response.url}: {response.status_code}"
-            ) from None
+            log.warn(
+                event="error response from filelist endpoint",
+                url=response.url,
+                response=response.json()
+            )
+            return []
 
         # Map the response to a CEDAResponse object to ensure it looks as expected
         try:
             responseObj: CEDAResponse = CEDAResponse.Schema().load(response.json())
         except Exception as e:
-            raise TypeError(
-                f"Error marshalling json to CedaResponse object: {e}, response: {response.json()}"
-            ) from e
+            log.warn(
+                event="response from ceda does not match expected schema",
+                error=e,
+                response=response.json()
+            )
+            return []
 
         # Filter the files for the desired init time
         wantedFiles: list[CEDAFileInfo] = [
@@ -131,17 +154,43 @@ class CEDAClient(internal.FetcherInterface):
 
     def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
 
+        log.debug(
+            event="mapping raw file to xarray dataset",
+            filepath=p.as_posix()
+        )
+
+        # Check the file has the right name
+        if not any([setname in p.name.lower() for setname in ["wholesale1.grib", "wholesale2.grib"]]):
+            log.debug(
+                event="skipping file as it does not match expected name",
+                filepath=p.as_posix()
+            )
+            return xr.Dataset()
+
         # Load the wholesale file as a list of datasets
         # * cfgrib loads multiple hypercubes for a single multi-parameter grib file
+        # * Can also set backend_kwargs={"indexpath": ""}, to avoid the index file
         try:
             datasets: list[xr.Dataset] = cfgrib.open_datasets(
                 path=p.as_posix(),
-                backend_kwargs={"indexpath": ""}
+                chunks={
+                    "time": 1,
+                    "step": -1,
+                    "variable": -1,
+                    "x": "auto",
+                    "y": "auto"
+                },
             )
         except Exception as e:
-            raise Exception(f"Error loading wholesale file as dataset: {e}") from e
+            log.warn(
+                event="error converting raw file to dataset",
+                filepath=p.as_posix(),
+                error=e
+            )
+            return xr.Dataset()
 
         for i, ds in enumerate(datasets):
+
             # Rename the parameters to the OCF names
             # * Only do so if they exist in the dataset
             for oldParamName, newParamName in PARAMETER_RENAME_MAP.items():
@@ -169,7 +218,7 @@ class CEDAClient(internal.FetcherInterface):
 
             # Delete unwanted coordinates
             ds = ds.drop_vars(
-                names=COORDINATE_IGNORE_LIST,
+                names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST],
                 errors="ignore"
             )
 
@@ -184,9 +233,17 @@ class CEDAClient(internal.FetcherInterface):
         )
 
         # Add in x and y coordinates
-        wholesaleDataset = _reshapeTo2DGrid(
-            ds=wholesaleDataset
-        )
+        try:
+            wholesaleDataset = _reshapeTo2DGrid(
+                ds=wholesaleDataset
+            )
+        except Exception as e:
+            log.warn(
+                event="error reshaping to 2D grid",
+                filepath=p.as_posix(),
+                error=e
+            )
+            return xr.Dataset()
 
         # Create a chunked Dask Dataset from the input multi-variate Dataset.
         # *  Converts the input multivariate DataSet (with different DataArrays for
@@ -206,7 +263,7 @@ class CEDAClient(internal.FetcherInterface):
             .sortby("variable") \
             .chunk({
                 "init_time": 1,
-                "step": 1,
+                "step": -1,
                 "variable": -1,
                 "y": len(wholesaleDataset.y) // 2,
                 "x": len(wholesaleDataset.x) // 2,
@@ -223,11 +280,11 @@ def _isWantedFile(*, fi: CEDAFileInfo, dit: dt.datetime) -> bool:
     :param fi: The File Info object describing the file to check
     :param dit: The desired init time
     """
-    if fi.initTime().date() != dit.date() or \
-            fi.initTime().time() != dit.time():
+    if fi.it().date() != dit.date() or \
+            fi.it().time() != dit.time():
         return False
     # False if item doesn't correspond to Wholesale1 or Wholesale2 files
-    if not any([setname in fi.name for setname in ["Wholesale1.grib", "Wholesale2.grib"]]):
+    if not any([setname in fi.filename() for setname in ["Wholesale1.grib", "Wholesale2.grib"]]):
         return False
 
     return True
@@ -259,7 +316,7 @@ def _reshapeTo2DGrid(*, ds: xr.Dataset) -> xr.Dataset:
 
     if ds.dims['values'] != len(northing) * len(easting):
         raise ValueError(
-            f"Dataset has {ds.dims['values']} values, "
+            f"dataset has {ds.dims['values']} values, "
             f"but expected {len(northing) * len(easting)}"
         )
 

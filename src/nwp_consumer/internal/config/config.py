@@ -3,33 +3,31 @@
 import os
 from distutils.util import strtobool
 from typing import get_type_hints
+import structlog
+
+log = structlog.getLogger()
 
 
 class _EnvParseMixin:
     """Mixin to parse environment variables into class fields."""
 
     def __init__(self):
-        for field, fieldType in get_type_hints(self).items():
+        for field, _ in get_type_hints(self).items():
             # Skip item if not upper case
             if not field.isupper():
                 continue
 
-            # Raise Error if required field not supplied
+            # Log Error if required field not supplied
             default_value = getattr(self, field, None)
             if default_value is None and os.environ.get(field) is None:
-                raise EnvironmentError(f'The {field} field is required, and is not set')
-            # Cast env var value to expected type and raise AppConfigError on failure
-            try:
-                if fieldType == bool:
-                    value = strtobool(os.environ.get(field, default_value))
-                else:
-                    value = fieldType(os.environ.get(field, default_value))
-
-                self.__setattr__(field, value)
-            except ValueError as e:
-                raise EnvironmentError(
-                    f'Unable to cast value of "{os.environ[field]}" to type '
-                    f'"{fieldType}" for "{field}" field') from e
+                log.warn(
+                    event=f"environment variable not set",
+                    variable=field,
+                )
+                default_value = ""
+            # Cast env var value to string
+            value = str(os.environ.get(field, default_value))
+            self.__setattr__(field, value)
 
 
 class CEDAConfig(_EnvParseMixin):
@@ -54,5 +52,3 @@ class S3Config(_EnvParseMixin):
     AWS_ACCESS_KEY: str
     AWS_ACCESS_SECRET: str
     AWS_REGION: str
-
-

@@ -4,7 +4,6 @@ import pathlib
 import shutil
 
 import structlog
-from typeid import TypeID
 
 from nwp_consumer import internal
 
@@ -18,8 +17,12 @@ class LocalFSClient(internal.StorageInterface):
         return dst.exists()
 
     def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
+        if src == dst:
+            return os.stat(src).st_size
+
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(src=src, dst=dst)
+        # Do delete temp file here to avoid local duplication of file.
         src.unlink(missing_ok=True)
         return os.stat(dst).st_size
 
@@ -38,11 +41,22 @@ class LocalFSClient(internal.StorageInterface):
                 # Add the initTime to the set
                 initTimes.add(ddt)
             except ValueError:
-                log.debug(f"Invalid folder name found in {prefix}: {dir}. Ignoring")
+                log.debug(
+                    event=f"ignoring invalid folder name",
+                    name=dir.as_posix(),
+                    within=prefix.as_posix()
+                )
+
+        if len(initTimes) == 0:
+            log.debug(
+                event=f"no init times found in raw directory",
+                within=prefix.as_posix()
+            )
+            return []
 
         sortedInitTimes = sorted(initTimes)
         log.debug(
-            event=f"Found {len(initTimes)} init times in raw directory",
+            event=f"found {len(initTimes)} init times in raw directory",
             earliest=sortedInitTimes[0],
             latest=sortedInitTimes[-1]
         )
@@ -50,37 +64,21 @@ class LocalFSClient(internal.StorageInterface):
         return sortedInitTimes
 
     def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) \
-            -> tuple[dt.datetime, list[pathlib.Path]]:
+            -> list[pathlib.Path]:
+
+        # Local FS already has access to files, so just return the paths
         initTimeDirPath = prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
-
-        if not initTimeDirPath.exists():
-            raise FileNotFoundError(
-                f"Folder does not exist for init time {it} at {initTimeDirPath.as_posix()}"
-            )
-
         paths: list[pathlib.Path] = list(initTimeDirPath.iterdir())
 
-        # TODO: Filter unwanted filenames
-
-        # Read all files into temporary files
-        tempPaths: list[pathlib.Path] = []
-        for path in paths:
-            with path.open("rb") as infile:
-                tfp: pathlib.Path = pathlib.Path(f"/tmp/{str(TypeID(prefix='nwpc'))}")
-                with tfp.open("wb") as tmpfile:
-                    for chunk in iter(lambda: infile.read(16 * 1024), b""):
-                        tmpfile.write(chunk)
-                tempPaths.append(tfp)
-
-        return it, tempPaths
+        return paths
 
     def delete(self, *, p: pathlib.Path) -> None:
         if not p.exists():
-            raise FileNotFoundError(f"File does not exist: {p}")
+            raise FileNotFoundError(f"file does not exist: {p}")
         if p.is_file():
             p.unlink()
         elif p.is_dir():
             shutil.rmtree(p.as_posix())
         else:
-            raise ValueError(f"Path is not a file or directory: {p}")
+            raise ValueError(f"path is not a file or directory: {p}")
         return

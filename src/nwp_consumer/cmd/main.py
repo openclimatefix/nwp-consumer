@@ -4,6 +4,7 @@ Usage:
   nwp-consumer download --from <startDate> --to <endDate> [options]
   nwp-consumer convert --from <startDate> --to <endDate> [options]
   nwp-consumer consume [options]
+  nwp-consumer check
   nwp-consumer (-h | --help)
   nwp-consumer --version
 
@@ -11,6 +12,7 @@ Options:
   download            Download raw data from source to sink
   convert             Convert raw data present in sink
   consume             Download and convert raw data from source to sink
+  check               Perform a healthcheck.py on the service
 
   -h --help           Show this screen.
   --version           Show version.
@@ -26,12 +28,11 @@ Options:
 
 import datetime as dt
 import importlib.metadata
-import pathlib
 
 import structlog
 from docopt import docopt
 
-from nwp_consumer.internal import config, inputs, outputs
+from nwp_consumer.internal import config, inputs, outputs, TMP_DIR
 from nwp_consumer.internal.service import NWPConsumerService
 
 __version__ = "local"
@@ -46,18 +47,28 @@ log = structlog.getLogger()
 
 
 def run():
-    """Entry point for the nwp-consumer CLI."""
-    programStartTime = dt.datetime.now()
-
+    """Run the CLI."""
     # Parse command line arguments from docstring
     arguments = docopt(__doc__, version=__version__)
-
-    log.info("Starting nwp-consumer", version=__version__, arguments=arguments)
 
     fetcher = None
     storer = None
 
+    if arguments['check']:
+        # Perform a healthcheck on the service
+        # * Don't care here about the source/sink
+        return NWPConsumerService(
+            fetcher=inputs.ceda.CEDAClient(
+                ftpUsername="anonymous",
+                ftpPassword="anonymous",
+            ),
+            storer=outputs.localfs.LocalFSClient(),
+            rawdir=arguments['--rdir'],
+            zarrdir=arguments['--zdir'],
+        ).Check()
+
     match arguments['--sink']:
+        # Create the storer based on the sink
         case 'local':
             storer = outputs.localfs.LocalFSClient()
         case 's3':
@@ -69,9 +80,10 @@ def run():
                 region=s3c.AWS_REGION
             )
         case _:
-            raise ValueError(f"Unknown sink {arguments['--sink']}")
+            raise ValueError(f"unknown sink {arguments['--sink']}")
 
     match arguments['--source']:
+        # Create the fetcher based on the source
         case 'ceda':
             cc = config.CEDAConfig()
             fetcher = inputs.ceda.CEDAClient(
@@ -86,8 +98,9 @@ def run():
                 clientSecret=mc.METOFFICE_CLIENT_SECRET,
             )
         case _:
-            raise ValueError(f"Unknown source {arguments['--source']}")
+            raise ValueError(f"unknown source {arguments['--source']}")
 
+    # Create the service using the fetcher and storer
     service = NWPConsumerService(
         fetcher=fetcher,
         storer=storer,
@@ -105,7 +118,11 @@ def run():
     startDate: dt.date = dt.datetime.strptime(arguments['--from'], "%Y-%m-%d").date()
     endDate: dt.date = dt.datetime.strptime(arguments['--to'], "%Y-%m-%d").date()
     if endDate < startDate:
-        raise ValueError("Argument '--from' cannot specify date prior to '--to'")
+        raise ValueError("argument '--from' cannot specify date prior to '--to'")
+
+    log.info("nwp-consumer starting", version=__version__, arguments=arguments)
+
+    # Carry out the desired function
 
     if arguments['download']:
         service.DownloadRawDataset(
@@ -120,6 +137,7 @@ def run():
         )
 
     if arguments['consume']:
+        service.Check()
         service.DownloadAndConvert(
             start=startDate,
             end=endDate
@@ -128,15 +146,24 @@ def run():
     if arguments['--create-latest']:
         service.CreateLatestZarr()
 
-    programEndTime = dt.datetime.now()
-    log.info(
-        "Finished nwp-consumer.",
-        elapsed_time=programEndTime - programStartTime,
-        version=__version__)
+
+def main():
+    """Entry point for the nwp-consumer CLI."""
+    programStartTime = dt.datetime.now()
+    try:
+        run()
+    except Exception as e:
+        log.error("nwp-consumer error", error=str(e))
+        raise e
+    finally:
+        _ = [p.unlink(missing_ok=True) for p in TMP_DIR.glob("*")]
+        elapsedTime = dt.datetime.now() - programStartTime
+        log.info(
+            "nwp-consumer finished",
+            elapsed_time=str(elapsedTime),
+            version=__version__
+        )
 
 
 if __name__ == "__main__":
-    try:
-        run()
-    finally:
-        _ = [p.unlink() for p in pathlib.Path("/tmp").glob("nwpc_*")]
+    main()

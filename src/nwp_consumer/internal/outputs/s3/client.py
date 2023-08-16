@@ -5,7 +5,6 @@ import botocore.client
 import botocore.exceptions
 import s3fs
 import structlog
-from typeid import TypeID
 
 from nwp_consumer import internal
 
@@ -40,7 +39,8 @@ class S3Client(internal.StorageInterface):
 
     def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
         self.__fs.put(lpath=src.as_posix(), rpath=(self.__bucket / dst).as_posix(), recursive=True)
-        src.unlink()
+        # Don't delete temp file as user may want to do further processing locally.
+        # All temp files are deleted at the end of the program.
         return self.__fs.du((self.__bucket / dst).as_posix())
 
     def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:
@@ -63,34 +63,64 @@ class S3Client(internal.StorageInterface):
                     ).replace(tzinfo=None)
                     initTimes.add(ddt)
                 except ValueError:
-                    log.debug(f"Invalid folder name found in raw directory: {dir}. Ignoring")
+                    log.debug(f"ignoring invalid folder name", name=dir.as_posix(), within=prefix.as_posix())
 
         sortedInitTimes = sorted(initTimes)
         log.debug(
-            event=f"Found {len(initTimes)} init times in raw directory",
+            event=f"found {len(initTimes)} init times in raw directory",
             earliest=sortedInitTimes[0],
             latest=sortedInitTimes[-1]
         )
         return sortedInitTimes
 
-    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) \
-            -> tuple[dt.datetime, list[pathlib.Path]]:
-        initTimeDirPath = self.__bucket / prefix \
-                          / it.strftime(internal.IT_FOLDER_FMTSTR)
-        paths = [pathlib.Path(p)
-                 for p in self.__fs.ls(initTimeDirPath.as_posix())]
+    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
+        initTimeDirPath = self.__bucket / prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
+        paths = [pathlib.Path(p).relative_to(self.__bucket) for p in self.__fs.ls(initTimeDirPath.as_posix())]
+
+        log.debug(
+            event="copying it folder to temporary files",
+            inittime=it.strftime(internal.IT_FOLDER_FMTSTR),
+            numfiles=len(paths)
+        )
 
         # Read all files into temporary files
         tempPaths: list[pathlib.Path] = []
         for path in paths:
-            with self.__fs.open(path=path.as_posix(), mode="rb") as infile:
-                tfp: pathlib.Path = pathlib.Path(f"/tmp/{str(TypeID(prefix='nwpc'))}")
+            tfp: pathlib.Path = internal.TMP_DIR / path.name
+
+            # Use existing temp file if it already exists in the temp dir
+            if tfp.exists() and tfp.stat().st_size > 0:
+                log.debug(
+                    event="file already exists in temporary directory, skipping",
+                    filepath=path.as_posix(),
+                    temppath=tfp.as_posix()
+                )
+                tempPaths.append(tfp)
+                continue
+
+            # Don't copy file from the store if it is empty
+            if self.exists(dst=path) is False or self.__fs.du(path=(self.__bucket / path).as_posix()) == 0:
+                log.warn(
+                    event="file in store is empty",
+                    filepath=path.as_posix(),
+                )
+                continue
+
+            # Copy the file from the store to a temporary file
+            with self.__fs.open(path=(self.__bucket / path).as_posix(), mode="rb") as infile:
                 with tfp.open("wb") as tmpfile:
                     for chunk in iter(lambda: infile.read(16 * 1024), b""):
                         tmpfile.write(chunk)
+                        tmpfile.flush()
                 tempPaths.append(tfp)
 
-        return it, tempPaths
+        log.debug(
+            event="copied it folder to temporary files",
+            nbytes=[p.stat().st_size for p in tempPaths],
+            inittime=it.strftime("%Y-%m-%d %H:%M")
+        )
+
+        return tempPaths
 
     def delete(self, *, p: pathlib.Path) -> None:
         if self.__fs.isdir((self.__bucket / p).as_posix()):
