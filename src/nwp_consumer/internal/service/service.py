@@ -302,18 +302,19 @@ def _saveAsTempZipZarr(ds: xr.Dataset) -> list[pathlib.Path]:
 
 def _saveAsTempRegularZarr(ds: xr.Dataset) -> list[pathlib.Path]:
     # Save the dataset to a temp zarr file
-    tempZarrPath = internal.TMP_DIR / "latest.zarr"
-    if tempZarrPath.exists():
-        tempZarrPath.unlink()
-        ds.to_zarr(
-            store=tempZarrPath.as_posix(),
-            encoding={
-                "init_time": {"units": "nanoseconds since 1970-01-01"},
-                "UKV": {
-                    "compressor": Blosc2(cname="zstd", clevel=5),
-                },
+    initTime = dt.datetime.utcfromtimestamp(int(ds.coords["init_time"].values[0]) / 1e9)
+    tempZarrPath = internal.TMP_DIR / (initTime.strftime(internal.ZARR_FMTSTR) + ".zarr")
+    if tempZarrPath.exists() and tempZarrPath.is_dir():
+        tempZarrPath.rmdir()
+    ds.to_zarr(
+        store=tempZarrPath.as_posix(),
+        encoding={
+            "init_time": {"units": "nanoseconds since 1970-01-01"},
+            "UKV": {
+                "compressor": Blosc2(cname="zstd", clevel=5),
             },
-        )
+        },
+    )
     return tempZarrPath
 
 
