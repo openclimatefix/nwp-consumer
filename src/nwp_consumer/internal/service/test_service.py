@@ -123,8 +123,8 @@ class TestNWPConsumerService(unittest.TestCase):
 
     def test_createLatestZarr(self):
 
-        n = self.service.CreateLatestZarr()
-        self.assertEqual(len("latest.zarr.zip"), n)
+        n1 = self.service.CreateLatestZarr()
+        self.assertEqual(len("latest.zarr.zip"), n1)
 
 
 # ------------ Static Methods ----------- #
