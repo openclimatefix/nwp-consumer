@@ -178,15 +178,20 @@ class NWPConsumerService:
         # * Then save the dataset to a temp zarr file and store it in the store
         bag: dask.bag.Bag = dask.bag.from_sequence(tempPaths)
         tempZarrs = bag.map(lambda tfp: self.fetcher.mapTemp(p=tfp)) \
-            .fold(lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts"))
+            .fold(lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts")) \
+            .compute()
+
+        datasets = dask.bag.from_sequence([tempZarrs])
 
         # Save as zipped zarr
-        nbytes1 = tempZarrs.apply(lambda ds: _saveAsTempZipZarr(ds=ds)) \
-            .apply(lambda path: self.storer.store(src=path, dst=self.zarrdir / 'latest.zarr.zip')) \
+        nbytes1 = datasets.map(lambda ds: _saveAsTempZipZarr(ds=ds)) \
+            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / 'latest.zarr.zip')) \
+            .sum() \
             .compute()
         # Save as regular zarr
-        nbytes2 = tempZarrs.apply(lambda ds: _saveAsTempRegularZarr(ds=ds)) \
-            .apply(lambda path: self.storer.store(src=path, dst=self.zarrdir / 'latest.zarr')) \
+        _ = datasets.map(lambda ds: _saveAsTempRegularZarr(ds=ds)) \
+            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / 'latest.zarr')) \
+            .sum() \
             .compute()
 
         # Delete the temporary files
@@ -297,12 +302,11 @@ def _saveAsTempZipZarr(ds: xr.Dataset) -> list[pathlib.Path]:
 
 def _saveAsTempRegularZarr(ds: xr.Dataset) -> list[pathlib.Path]:
     # Save the dataset to a temp zarr file
-    initTime = dt.datetime.utcfromtimestamp(int(ds.coords["init_time"].values[0]) / 1e9)
-    tempZarrPath = internal.TMP_DIR / (initTime.strftime(internal.ZARR_FMTSTR) + ".zarr")
+    tempZarrPath = internal.TMP_DIR / "latest.zarr"
     if tempZarrPath.exists():
         tempZarrPath.unlink()
         ds.to_zarr(
-            store=tempZarrPath.parent / "latest.zarr",
+            store=tempZarrPath.as_posix(),
             encoding={
                 "init_time": {"units": "nanoseconds since 1970-01-01"},
                 "UKV": {
