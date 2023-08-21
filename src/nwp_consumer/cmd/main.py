@@ -28,6 +28,7 @@ Options:
 
 import datetime as dt
 import importlib.metadata
+import shutil
 
 import structlog
 from docopt import docopt
@@ -156,7 +157,12 @@ def main():
         log.error("nwp-consumer error", error=str(e))
         raise e
     finally:
-        _ = [p.unlink(missing_ok=True) for p in TMP_DIR.glob("*")]
+        leftoverTempPaths = list(TMP_DIR.glob("*"))
+        for p in leftoverTempPaths:
+            if p.exists() and p.is_dir():
+                shutil.rmtree(p)
+            if p.is_file():
+                p.unlink(missing_ok=True)
         elapsedTime = dt.datetime.now() - programStartTime
         log.info(
             "nwp-consumer finished",

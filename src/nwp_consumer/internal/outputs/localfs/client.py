@@ -24,7 +24,14 @@ class LocalFSClient(internal.StorageInterface):
         shutil.move(src=src, dst=dst)
         # Do delete temp file here to avoid local duplication of file.
         src.unlink(missing_ok=True)
-        return os.stat(dst).st_size
+        nbytes = os.stat(dst).st_size
+        log.debug(
+            event="stored file in s3",
+            src=src.as_posix(),
+            dst=dst.as_posix(),
+            nbytes=nbytes
+        )
+        return nbytes
 
     def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:
         # List all the YYYY/MM/DD/INITTIME folders in the given directory
