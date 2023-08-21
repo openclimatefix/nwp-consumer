@@ -1,5 +1,6 @@
 import datetime as dt
 import pathlib
+import shutil
 import unittest
 
 import numpy as np
@@ -26,7 +27,10 @@ class DummyStorer(internal.StorageInterface):
         return False
 
     def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
-        src.unlink(missing_ok=True)
+        if src.is_dir():
+            shutil.rmtree(src.as_posix(), ignore_errors=True)
+        else:
+            src.unlink(missing_ok=True)
         return len(dst.name)
 
     def listInitTimes(self, prefix: pathlib.Path) -> list[dt.datetime]:
