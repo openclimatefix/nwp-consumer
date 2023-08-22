@@ -43,15 +43,12 @@ jobs:
       # Restore cached virtualenv, if available
       # * The pyproject.toml hash is part of the cache key, invalidating
       #   the cache if the file changes
-      # * This also creates a post-step that saves newly-created caches
       - name: Restore cached virtualenv
         id: restore-cache
-        uses: actions/cache@v3
+        uses: actions/cache/restore@v3
         with:
           path: /venv
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-venv-
 
       # Should mirror the build-venv stage in the Containerfile
       - name: Build venv
@@ -63,18 +60,21 @@ jobs:
 
       # Should mirror the build-reqs stage in the Containerfile
       # * Except this installs the dev dependencies and binaries as well
+      #   and has a less verbose output
       - name: Install all dependencies
         run: |
-          conda install -p /venv -y eccodes zarr
-          /venv/bin/pip install .[dev]
+          conda install -p /venv -q -y eccodes zarr
+          /venv/bin/pip install -q .[dev]
         if: steps.restore-cache.outputs.cache-hit != 'true'
 
-      # Save the venv for use in later jobs
-      - name: Save venv
-        uses: actions/upload-artifact@v3
+      # Cache the virtualenv for future runs
+      - name: Cached virtualenv
+        id: save-cache
+        uses: actions/cache/save@v3
         with:
-          name: venv
           path: /venv
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
+        if: steps.restore-cache.outputs.cache-hit != 'true'
 
   # Define a unittest job that runs on all branches and PRs
   test-unit:
@@ -85,12 +85,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Get the venv artifact from the dependencies job
-      - name: Download virtualenv artifact
-        uses: actions/download-artifact@v2
+      # Restore cached virtualenv
+      - name: Restore cached virtualenv
+        uses: actions/cache/restore@v3
         with:
-          name: venv
           path: /venv
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
 
       # Run unittests
       # * Produce JUnit XML report
@@ -118,12 +118,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Get the venv artifact from the dependencies job
-      - name: Download virtualenv artifact
-        uses: actions/download-artifact@v2
+      # Restore cached virtualenv
+      - name: Restore cached virtualenv
+        uses: actions/cache/restore@v3
         with:
-          name: venv
           path: /venv
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
 
       # Run integration tests
       # * Requires secrets to be set in the repository settings
@@ -212,12 +212,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Get the venv artifact from the dependencies job
-      - name: Download virtualenv artifact
-        uses: actions/download-artifact@v2
+      # Restore cached virtualenv
+      - name: Restore cached virtualenv
+        uses: actions/cache/restore@v3
         with:
-          name: venv
           path: /venv
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
 
       # Building the wheel dynamically assigns the version according to git
       # * The setuptools_git_versioning package reads the git tags and assigns the version
