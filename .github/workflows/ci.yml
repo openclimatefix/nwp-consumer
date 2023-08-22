@@ -80,6 +80,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Enable gcc
+        run: apt -qq install -y build-essential
+
       # Restore cached virtualenv
       - name: Restore cached virtualenv
         uses: actions/cache/restore@v3
