@@ -19,7 +19,6 @@ class Test_EnvParseMixin(unittest.TestCase):
 
         self.assertEqual("test", config.TEST_STR)
 
-    @unittest.mock.patch.dict("os.environ", {})
     def test_emptyStringIfRequiredFieldNotSet(self):
         class TestConfig(_EnvParseMixin):
             TEST_STR: str
