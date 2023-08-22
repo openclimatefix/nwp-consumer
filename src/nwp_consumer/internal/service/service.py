@@ -283,7 +283,7 @@ class NWPConsumerService:
         return 0
 
 
-def _saveAsTempZipZarr(ds: xr.Dataset) -> list[pathlib.Path]:
+def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
     # Save the dataset to a temp zarr file
     initTime = dt.datetime.utcfromtimestamp(int(ds.coords["init_time"].values[0]) / 1e9)
     tempZarrPath = internal.TMP_DIR / (initTime.strftime(internal.ZARR_FMTSTR) + ".zarr.zip")
@@ -302,7 +302,7 @@ def _saveAsTempZipZarr(ds: xr.Dataset) -> list[pathlib.Path]:
     return tempZarrPath
 
 
-def _saveAsTempRegularZarr(ds: xr.Dataset) -> list[pathlib.Path]:
+def _saveAsTempRegularZarr(ds: xr.Dataset) -> pathlib.Path:
     # Save the dataset to a temp zarr file
     initTime = dt.datetime.utcfromtimestamp(int(ds.coords["init_time"].values[0]) / 1e9)
     tempZarrPath = internal.TMP_DIR / (initTime.strftime(internal.ZARR_FMTSTR) + ".zarr")
