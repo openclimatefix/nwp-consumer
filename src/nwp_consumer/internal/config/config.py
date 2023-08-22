@@ -51,5 +51,5 @@ class S3Config(_EnvParseMixin):
     AWS_S3_BUCKET: str
     AWS_REGION: str
     # Optional, attempts to use default AWS credentials if not set
-    AWS_ACCESS_KEY: str | None = None
-    AWS_ACCESS_SECRET: str | None = None
+    AWS_ACCESS_KEY: str 
+    AWS_ACCESS_SECRET: str
