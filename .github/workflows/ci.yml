@@ -93,7 +93,7 @@ jobs:
       # List files in virtualenv
       - name: List files in virtualenv
         run: | 
-          ls -la ./venv
+          ls -la ./venv/share/eccodes/definitions
           ls -la ./venv/bin
 
       # Run unittests
