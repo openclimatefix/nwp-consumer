@@ -71,7 +71,7 @@ jobs:
         uses: actions/cache/save@v3
         with:
           path: ~/venv
-          key: steps.restore-cache.outputs.cache-primary-key
+          key: ${{ steps.restore-cache.outputs.cache-primary-key }}
         if: steps.restore-cache.outputs.cache-hit != 'true'
 
   # Define a unittest job that runs on all branches and PRs
