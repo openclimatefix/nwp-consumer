@@ -48,6 +48,7 @@ class NWPConsumerService:
             freq='H').to_pydatetime().tolist()
 
         # For each init time, get the list of files that need to be downloaded
+        # * Itertools chain is used to flatten the list of lists
         allWantedFileInfos: list[internal.FileInfoModel] = list(itertools.chain.from_iterable(
             [self.fetcher.listRawFilesForInitTime(it=initTime) for initTime in allInitTimes]
         ))
@@ -162,10 +163,6 @@ class NWPConsumerService:
             return nbytes
         latestInitTime = allInitTimes[-1]
 
-        # Check if the latest init time is already stored as a Zarr file
-        if self.storer.exists(dst=self.zarrdir / 'latest.zarr.zip'):
-            self.storer.delete(p=self.zarrdir / 'latest.zarr.zip')
-
         # Load the latest init time as a dataset
         tempPaths = self.storer.copyITFolderToTemp(it=latestInitTime, prefix=self.rawdir)
         log.info(
@@ -177,17 +174,33 @@ class NWPConsumerService:
         # Create a pipeline to convert the raw files and merge them as a dataset
         # * Then save the dataset to a temp zarr file and store it in the store
         bag: dask.bag.Bag = dask.bag.from_sequence(tempPaths)
-        nbytes = bag.map(lambda tfp: self.fetcher.mapTemp(p=tfp)) \
+        tempZarrs = bag.map(lambda tfp: self.fetcher.mapTemp(p=tfp)) \
             .fold(lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts")) \
-            .apply(lambda ds: _saveAsTempZipZarr(ds=ds)) \
-            .apply(lambda path: self.storer.store(src=path, dst=self.zarrdir / 'latest.zarr.zip')) \
+            .compute()
+
+        datasets = dask.bag.from_sequence([tempZarrs])
+
+        # Save as zipped zarr
+        if self.storer.exists(dst=self.zarrdir / 'latest.zarr.zip'):
+            self.storer.delete(p=self.zarrdir / 'latest.zarr.zip')
+        nbytes1 = datasets.map(lambda ds: _saveAsTempZipZarr(ds=ds)) \
+            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / 'latest.zarr.zip')) \
+            .sum() \
+            .compute()
+
+        # Save as regular zarr
+        if self.storer.exists(dst=self.zarrdir / 'latest.zarr'):
+            self.storer.delete(p=self.zarrdir / 'latest.zarr')
+        _ = datasets.map(lambda ds: _saveAsTempRegularZarr(ds=ds)) \
+            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / 'latest.zarr')) \
+            .sum() \
             .compute()
 
         # Delete the temporary files
         for f in tempPaths:
             f.unlink(missing_ok=True)
 
-        return nbytes
+        return nbytes1
 
     def Check(self) -> int:
         """Perform a healthcheck on the service"""
@@ -286,6 +299,24 @@ def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
                 },
             },
         )
+    return tempZarrPath
+
+
+def _saveAsTempRegularZarr(ds: xr.Dataset) -> pathlib.Path:
+    # Save the dataset to a temp zarr file
+    initTime = dt.datetime.utcfromtimestamp(int(ds.coords["init_time"].values[0]) / 1e9)
+    tempZarrPath = internal.TMP_DIR / (initTime.strftime(internal.ZARR_FMTSTR) + ".zarr")
+    if tempZarrPath.exists() and tempZarrPath.is_dir():
+        shutil.rmtree(tempZarrPath.as_posix())
+    ds.to_zarr(
+        store=tempZarrPath.as_posix(),
+        encoding={
+            "init_time": {"units": "nanoseconds since 1970-01-01"},
+            "UKV": {
+                "compressor": Blosc2(cname="zstd", clevel=5),
+            },
+        },
+    )
     return tempZarrPath
 
 

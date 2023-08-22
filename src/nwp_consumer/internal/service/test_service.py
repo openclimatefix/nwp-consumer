@@ -1,10 +1,10 @@
 import datetime as dt
 import pathlib
+import shutil
 import unittest
 
 import numpy as np
 import xarray as xr
-import zarr
 
 from .. import FileInfoModel
 from .. import models as internal
@@ -27,7 +27,10 @@ class DummyStorer(internal.StorageInterface):
         return False
 
     def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
-        src.unlink(missing_ok=True)
+        if src.is_dir():
+            shutil.rmtree(src.as_posix(), ignore_errors=True)
+        else:
+            src.unlink(missing_ok=True)
         return len(dst.name)
 
     def listInitTimes(self, prefix: pathlib.Path) -> list[dt.datetime]:
@@ -123,8 +126,8 @@ class TestNWPConsumerService(unittest.TestCase):
 
     def test_createLatestZarr(self):
 
-        n = self.service.CreateLatestZarr()
-        self.assertEqual(len("latest.zarr.zip"), n)
+        n1 = self.service.CreateLatestZarr()
+        self.assertEqual(len("latest.zarr.zip"), n1)
 
 
 # ------------ Static Methods ----------- #

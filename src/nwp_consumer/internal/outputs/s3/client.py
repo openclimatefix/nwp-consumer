@@ -38,10 +38,22 @@ class S3Client(internal.StorageInterface):
         return self.__fs.exists((self.__bucket / dst).as_posix())
 
     def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
+        log.debug(
+            event="storing file in s3",
+            src=src.as_posix(),
+            dst=(self.__bucket / dst).as_posix(),
+        )
         self.__fs.put(lpath=src.as_posix(), rpath=(self.__bucket / dst).as_posix(), recursive=True)
         # Don't delete temp file as user may want to do further processing locally.
         # All temp files are deleted at the end of the program.
-        return self.__fs.du((self.__bucket / dst).as_posix())
+        nbytes = self.__fs.du((self.__bucket / dst).as_posix())
+        log.debug(
+            event="stored file in s3",
+            src=src.as_posix(),
+            dst=(self.__bucket / dst).as_posix(),
+            nbytes=nbytes
+        )
+        return nbytes
 
     def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:
         """List all initTimes in the raw directory."""
