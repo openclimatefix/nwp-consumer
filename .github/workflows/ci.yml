@@ -47,15 +47,15 @@ jobs:
         id: restore-cache
         uses: actions/cache/restore@v3
         with:
-          path: /venv
+          path: ~/venv
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
 
       # Should mirror the build-venv stage in the Containerfile
       - name: Build venv
         run: |
           apt -qq update && apt -qq install -y build-essential
-          conda create -p /venv python=3.10
-          /venv/bin/pip install --upgrade -q pip wheel setuptools
+          conda create -p ~/venv python=3.10
+          ~/venv/bin/pip install --upgrade -q pip wheel setuptools
         if: steps.restore-cache.outputs.cache-hit != 'true'
 
       # Should mirror the build-reqs stage in the Containerfile
@@ -63,14 +63,14 @@ jobs:
       - name: Install all dependencies
         run: |
           conda install -p /venv -q -y eccodes zarr
-          /venv/bin/pip install -q .[dev]
+          ~/venv/bin/pip install -q .[dev]
         if: steps.restore-cache.outputs.cache-hit != 'true'
 
       # Cache the virtualenv for future runs
       - name: Cache virtualenv
         uses: actions/cache/save@v3
         with:
-          path: /venv
+          path: ~/venv
           key: steps.restore-cache.outputs.cache-primary-key
         if: steps.restore-cache.outputs.cache-hit != 'true'
 
@@ -87,14 +87,14 @@ jobs:
       - name: Restore cached virtualenv
         uses: actions/cache/restore@v3
         with:
-          path: /venv
+          path: ~/venv
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
 
       # List files in virtualenv
       - name: List files in virtualenv
         run: | 
-          ls -la /venv
-          ls -la /venv/bin
+          ls -la ~/venv
+          ls -la ~/venv/bin
 
       # Run unittests
       # * Produce JUnit XML report
@@ -126,7 +126,7 @@ jobs:
       - name: Restore cached virtualenv
         uses: actions/cache/restore@v3
         with:
-          path: /venv
+          path: ~/venv
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
 
       # Run integration tests
@@ -141,7 +141,7 @@ jobs:
           METOFFICE_CLIENT_ID: ${{ secrets.METOFFICE_CLIENT_ID }}
           METOFFICE_CLIENT_SECRET: ${{ secrets.METOFFICE_CLIENT_SECRET }}
           METOFFICE_ORDER_ID: ${{ secrets.METOFFICE_ORDER_ID }}
-        run: /venv/bin/python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
+        run: ~/venv/bin/python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
 
       # Create test summary to be visualised on the job summary screen on GitHub
       # * Runs even if previous steps fail
@@ -220,7 +220,7 @@ jobs:
       - name: Restore cached virtualenv
         uses: actions/cache/restore@v3
         with:
-          path: /venv
+          path: ~/venv
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
 
       # Building the wheel dynamically assigns the version according to git
@@ -228,7 +228,7 @@ jobs:
       # * The version is then used in the wheel filename and made available in the package
       # * setuptools_git_versioning is configured in pyproject.toml
       - name: Build wheel
-        run: /venv/bin/pip wheel . --no-deps --wheel-dir dist
+        run: ~/venv/bin/pip wheel . --no-deps --wheel-dir dist
 
       - name: Upload wheel
         uses: actions/upload-artifact@v3
