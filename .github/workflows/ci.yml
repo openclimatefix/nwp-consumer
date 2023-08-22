@@ -81,7 +81,7 @@ jobs:
 
     steps:
       - name: Enable gcc
-        run: apt -qq update && apt -qq install -y build-essential
+        run: sudo apt -qq install -y build-essential
 
       - name: Checkout repository
         uses: actions/checkout@v3
