@@ -1,8 +1,8 @@
 """nwp-consumer.
 
 Usage:
-  nwp-consumer download --from <startDate> --to <endDate> [options]
-  nwp-consumer convert --from <startDate> --to <endDate> [options]
+  nwp-consumer download [options]
+  nwp-consumer convert [options]
   nwp-consumer consume [options]
   nwp-consumer check
   nwp-consumer (-h | --help)

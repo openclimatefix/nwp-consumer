@@ -48,6 +48,7 @@ class NWPConsumerService:
             freq='H').to_pydatetime().tolist()
 
         # For each init time, get the list of files that need to be downloaded
+        # * Itertools chain is used to flatten the list of lists
         allWantedFileInfos: list[internal.FileInfoModel] = list(itertools.chain.from_iterable(
             [self.fetcher.listRawFilesForInitTime(it=initTime) for initTime in allInitTimes]
         ))
@@ -162,10 +163,6 @@ class NWPConsumerService:
             return nbytes
         latestInitTime = allInitTimes[-1]
 
-        # Check if the latest init time is already stored as a Zarr file
-        if self.storer.exists(dst=self.zarrdir / 'latest.zarr.zip'):
-            self.storer.delete(p=self.zarrdir / 'latest.zarr.zip')
-
         # Load the latest init time as a dataset
         tempPaths = self.storer.copyITFolderToTemp(it=latestInitTime, prefix=self.rawdir)
         log.info(
@@ -184,11 +181,16 @@ class NWPConsumerService:
         datasets = dask.bag.from_sequence([tempZarrs])
 
         # Save as zipped zarr
+        if self.storer.exists(dst=self.zarrdir / 'latest.zarr.zip'):
+            self.storer.delete(p=self.zarrdir / 'latest.zarr.zip')
         nbytes1 = datasets.map(lambda ds: _saveAsTempZipZarr(ds=ds)) \
             .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / 'latest.zarr.zip')) \
             .sum() \
             .compute()
+
         # Save as regular zarr
+        if self.storer.exists(dst=self.zarrdir / 'latest.zarr'):
+            self.storer.delete(p=self.zarrdir / 'latest.zarr')
         _ = datasets.map(lambda ds: _saveAsTempRegularZarr(ds=ds)) \
             .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / 'latest.zarr')) \
             .sum() \
