@@ -78,9 +78,9 @@ class NWPConsumerService:
             .map(lambda fi: self.fetcher.downloadToTemp(fi=fi)) \
             .filter(lambda infoPathTuple: infoPathTuple[1] != pathlib.Path()) \
             .map(lambda infoPathTuple: self.storer.store(
-            src=infoPathTuple[1],
-            dst=self.rawdir / infoPathTuple[0].it().strftime(internal.IT_FOLDER_FMTSTR) / (infoPathTuple[0].filename())
-        )) \
+                src=infoPathTuple[1],
+                dst=self.rawdir / infoPathTuple[0].it().strftime(internal.IT_FOLDER_FMTSTR) / (infoPathTuple[0].filename())
+            )) \
             .sum() \
             .compute()
 
