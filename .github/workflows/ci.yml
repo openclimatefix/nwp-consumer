@@ -62,7 +62,7 @@ jobs:
       # * Except this installs the dev dependencies and binaries as well
       - name: Install all dependencies
         run: |
-          conda install -p /venv -q -y eccodes zarr
+          conda install -p ~/venv -q -y eccodes zarr
           ~/venv/bin/pip install -q .[dev]
         if: steps.restore-cache.outputs.cache-hit != 'true'
 
