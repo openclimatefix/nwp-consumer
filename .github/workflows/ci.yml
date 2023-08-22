@@ -93,7 +93,7 @@ jobs:
       # List files in virtualenv
       - name: List files in virtualenv
         run: | 
-          ./venv/bin/grib_info
+          ./venv/bin/codes_info
           ls -la ./venv/share/eccodes/definitions
           ls -la ./venv/bin
 
