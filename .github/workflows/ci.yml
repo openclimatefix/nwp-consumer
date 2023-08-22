@@ -80,9 +80,6 @@ jobs:
     needs: build-venv
 
     steps:
-      - name: Enable gcc
-        run: sudo apt -qq install -y build-essential
-
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -96,6 +93,8 @@ jobs:
       # Run unittests
       # * Produce JUnit XML report
       - name: Run unit tests
+        env:
+          ECCODES_DEFINITION_PATH: ~/.venv/share/eccodes/definitions
         run: ./venv/bin/python -m xmlrunner discover -s src/nwp_consumer -p "test_*.py" --output-file ut-report.xml
 
       # Create test summary to be visualised on the job summary screen on GitHub
@@ -138,6 +137,7 @@ jobs:
           METOFFICE_CLIENT_ID: ${{ secrets.METOFFICE_CLIENT_ID }}
           METOFFICE_CLIENT_SECRET: ${{ secrets.METOFFICE_CLIENT_SECRET }}
           METOFFICE_ORDER_ID: ${{ secrets.METOFFICE_ORDER_ID }}
+          ECCODES_DEFINITION_PATH: ~/.venv/share/eccodes/definitions
         run: ./venv/bin/python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
 
       # Create test summary to be visualised on the job summary screen on GitHub
