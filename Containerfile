@@ -2,17 +2,17 @@
 # * Install required compilation tools for wheels via apt
 # * Install required non-python binaries via conda
 FROM quay.io/condaforge/miniforge3:latest AS build-venv
-RUN apt update && apt install -y build-essential
+RUN apt -qq update && apt -qq install -y build-essential
 RUN conda create -p /venv python=3.10
-RUN /venv/bin/pip install --upgrade pip wheel setuptools
+RUN /venv/bin/pip install --upgrade -q pip wheel setuptools
 
 # Install packages into the virtualenv as a separate step
 # * Only re-execute this step when the requirements files change
 FROM build-venv AS build-reqs
 WORKDIR /app
 COPY pyproject.toml pyproject.toml
-RUN conda install -p /venv -y eccodes zarr
-RUN /venv/bin/pip install . --no-cache-dir --no-binary=nwp-consumer
+RUN conda install -p /venv -q -y eccodes zarr
+RUN /venv/bin/pip install -q . --no-cache-dir --no-binary=nwp-consumer
 
 # Build binary for the package
 # * The package is versioned via setuptools_git_versioning

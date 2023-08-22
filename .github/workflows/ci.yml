@@ -53,14 +53,13 @@ jobs:
       # Should mirror the build-venv stage in the Containerfile
       - name: Build venv
         run: |
-          apt update && apt install -y build-essential
+          apt -qq update && apt -qq install -y build-essential
           conda create -p /venv python=3.10
-          /venv/bin/pip install --upgrade pip wheel setuptools
+          /venv/bin/pip install --upgrade -q pip wheel setuptools
         if: steps.restore-cache.outputs.cache-hit != 'true'
 
       # Should mirror the build-reqs stage in the Containerfile
       # * Except this installs the dev dependencies and binaries as well
-      #   and has a less verbose output
       - name: Install all dependencies
         run: |
           conda install -p /venv -q -y eccodes zarr
@@ -68,12 +67,11 @@ jobs:
         if: steps.restore-cache.outputs.cache-hit != 'true'
 
       # Cache the virtualenv for future runs
-      - name: Cached virtualenv
-        id: save-cache
+      - name: Cache virtualenv
         uses: actions/cache/save@v3
         with:
           path: /venv
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
+          key: steps.restore-cache.outputs.cache-primary-key
         if: steps.restore-cache.outputs.cache-hit != 'true'
 
   # Define a unittest job that runs on all branches and PRs
@@ -91,6 +89,12 @@ jobs:
         with:
           path: /venv
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
+
+      # List files in virtualenv
+      - name: List files in virtualenv
+        run: | 
+          ls -la /venv
+          ls -la /venv/bin
 
       # Run unittests
       # * Produce JUnit XML report
