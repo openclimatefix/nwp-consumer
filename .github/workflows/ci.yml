@@ -140,6 +140,7 @@ jobs:
           ECCODES_DEFINITION_PATH: ${{ github.workspace }}/venv/share/eccodes/definitions
         run: |
           echo "${{ github.workspace }}/venv/bin" >> $GITHUB_PATH
+          ./venv/bin/pip install --upgrade certifi
           ./venv/bin/python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
 
       # Create test summary to be visualised on the job summary screen on GitHub
