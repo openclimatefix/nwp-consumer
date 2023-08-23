@@ -17,7 +17,6 @@ import xarray as xr
 from nwp_consumer.internal import config, inputs, outputs, service, ZARR_FMTSTR
 
 
-@unittest.skipIf(os.environ.get('CI') is True, "Skip test on CI.")
 class TestNWPConsumerService_MetOffice(unittest.TestCase):
     """Integration tests for the NWPConsumerService class."""
 
@@ -37,6 +36,7 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
             zarrdir='data/zarr',
         )
 
+    @unittest.skipIf(os.environ.get('CI') is True, "Skip test on CI.")
     def test_downloadAndConvertDataset(self):
         initTime: dt.date = dt.datetime.now().date()
 
@@ -84,6 +84,7 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
             zarrdir='data/zarr',
         )
 
+    @unittest.skipIf(os.environ.get('CI') is True, "Skip test on CI.")
     def test_downloadAndConvertDataset(self):
         initTime: dt.date = dt.date(year=2022, month=1, day=1)
 
