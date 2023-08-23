@@ -138,7 +138,9 @@ jobs:
           METOFFICE_CLIENT_SECRET: ${{ secrets.METOFFICE_CLIENT_SECRET }}
           METOFFICE_ORDER_ID: ${{ secrets.METOFFICE_ORDER_ID }}
           ECCODES_DEFINITION_PATH: ${{ github.workspace }}/venv/share/eccodes/definitions
-        run: ./venv/bin/python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
+        run: |
+          echo "${{ github.workspace }}/venv/bin" >> $GITHUB_PATH
+          ./venv/bin/python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
 
       # Create test summary to be visualised on the job summary screen on GitHub
       # * Runs even if previous steps fail
