@@ -125,8 +125,6 @@ jobs:
         with:
           path: ./venv
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
-        run: |
-          conda activate -p ./venv
 
       # Run integration tests
       # * Requires secrets to be set in the repository settings
@@ -140,7 +138,9 @@ jobs:
           METOFFICE_CLIENT_ID: ${{ secrets.METOFFICE_CLIENT_ID }}
           METOFFICE_CLIENT_SECRET: ${{ secrets.METOFFICE_CLIENT_SECRET }}
           METOFFICE_ORDER_ID: ${{ secrets.METOFFICE_ORDER_ID }}
-        run: ./venv/bin/python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
+        run: |
+          conda activate -p ./venv
+          ./venv/bin/python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
 
       # Create test summary to be visualised on the job summary screen on GitHub
       # * Runs even if previous steps fail
