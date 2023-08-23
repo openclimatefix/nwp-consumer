@@ -12,7 +12,6 @@ import unittest
 import numpy as np
 import ocf_blosc2  # noqa: F401
 import xarray as xr
-import zarr
 
 from nwp_consumer.internal import config, inputs, outputs, service, ZARR_FMTSTR
 

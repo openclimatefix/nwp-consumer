@@ -30,9 +30,9 @@ permissions:
 
 jobs:
 
-  # Define a "test" job that runs on all branches and PRs
-  # * Incorporates unittests and integration tests
-  test:
+  # Define a dependencies job that runs on all branches and PRs
+  # * Installs dependencies and caches them
+  build-venv:
     runs-on: ubuntu-latest
     container: quay.io/condaforge/miniforge3:latest
 
@@ -40,38 +40,92 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # The pyproject.toml hash is part of the cache key
-      # * This ensures that the cache is invalidated when it changes
-      - name: Restore cached dependencies
+      # Restore cached virtualenv, if available
+      # * The pyproject.toml hash is part of the cache key, invalidating
+      #   the cache if the file changes
+      - name: Restore cached virtualenv
         id: restore-cache
         uses: actions/cache/restore@v3
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          path: ./venv
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
 
       # Should mirror the build-venv stage in the Containerfile
       - name: Build venv
         run: |
-          apt update && apt install -y build-essential
-          conda create -p /venv python=3.10
-          /venv/bin/pip install --upgrade pip
-          conda install -p /venv -y eccodes
+          apt -qq update && apt -qq install -y build-essential
+          conda create -p ./venv python=3.10
+          ./venv/bin/pip install --upgrade -q pip wheel setuptools
+        if: steps.restore-cache.outputs.cache-hit != 'true'
 
-      - name: Install dependencies
-        run: /venv/bin/pip install -e .[dev]
+      # Should mirror the build-reqs stage in the Containerfile
+      # * Except this installs the dev dependencies and binaries as well
+      - name: Install all dependencies
+        run: |
+          conda install -p ./venv -q -y eccodes zarr
+          ./venv/bin/pip install -q .[dev]
+        if: steps.restore-cache.outputs.cache-hit != 'true'
 
-      - name: Cache dependencies
+      # Cache the virtualenv for future runs
+      - name: Cache virtualenv
         uses: actions/cache/save@v3
         with:
-          path: ~/.cache/pip
+          path: ./venv
           key: ${{ steps.restore-cache.outputs.cache-primary-key }}
+        if: steps.restore-cache.outputs.cache-hit != 'true'
 
-      # Run unittests on all branches and PRs
+  # Define a unittest job that runs on all branches and PRs
+  test-unit:
+    runs-on: ubuntu-latest
+    container: quay.io/condaforge/miniforge3:latest
+    needs: build-venv
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Restore cached virtualenv
+      - name: Restore cached virtualenv
+        uses: actions/cache/restore@v3
+        with:
+          path: ./venv
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
+
+      # Run unittests
       # * Produce JUnit XML report
       - name: Run unit tests
-        run: /venv/bin/python -m xmlrunner discover -s src/nwp_consumer -p "test_*.py" --output-file ut-report.xml
+        env:
+          ECCODES_DEFINITION_PATH: ${{ github.workspace }}/venv/share/eccodes/definitions
+        run: ./venv/bin/python -m xmlrunner discover -s src/nwp_consumer -p "test_*.py" --output-file ut-report.xml
 
-      # Run integration tests on main and PRs to it
+      # Create test summary to be visualised on the job summary screen on GitHub
+      # * Runs even if previous steps fail
+      - name: Create test summary
+        uses: test-summary/action@v2
+        with:
+          paths: "*t-report.xml"
+          show: "fail, skip"
+        if: always()
+
+  # Define an integration test job that runs only on version on main tags
+  test-integration:
+    runs-on: ubuntu-latest
+    container: quay.io/condaforge/miniforge3:latest
+    needs: build-venv
+    if: contains(github.ref, 'refs/tags/v') && github.event_name == 'push'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Restore cached virtualenv
+      - name: Restore cached virtualenv
+        uses: actions/cache/restore@v3
+        with:
+          path: ./venv
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
+
+      # Run integration tests
       # * Requires secrets to be set in the repository settings
       # * Produce JUnit XML report
       - name: Run integration tests
@@ -83,10 +137,7 @@ jobs:
           METOFFICE_CLIENT_ID: ${{ secrets.METOFFICE_CLIENT_ID }}
           METOFFICE_CLIENT_SECRET: ${{ secrets.METOFFICE_CLIENT_SECRET }}
           METOFFICE_ORDER_ID: ${{ secrets.METOFFICE_ORDER_ID }}
-        if:  |
-          (github.ref == 'refs/heads/main' && github.event_name != 'tag') || 
-          (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main')
-        run: /venv/bin/python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
+        run: ./venv/bin/python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
 
       # Create test summary to be visualised on the job summary screen on GitHub
       # * Runs even if previous steps fail
@@ -105,7 +156,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    needs: test
+    needs: test-unit
     if: github.event_name != 'pull_request'
 
     steps:
@@ -154,32 +205,26 @@ jobs:
   # * Only runs if test job passes
   build-wheel:
     runs-on: ubuntu-latest
-    container: quay.io/condaforge/miniforge3:latest
-    needs: test
+    needs: test-integration
     if: contains(github.ref, 'refs/tags/v') && github.event_name == 'push'
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Restore cached dependencies
-        id: restore-cache
+      # Restore cached virtualenv
+      - name: Restore cached virtualenv
         uses: actions/cache/restore@v3
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          path: ./venv
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
 
       # Building the wheel dynamically assigns the version according to git
       # * The setuptools_git_versioning package reads the git tags and assigns the version
       # * The version is then used in the wheel filename and made available in the package
       # * setuptools_git_versioning is configured in pyproject.toml
       - name: Build wheel
-        run: |
-          apt update && apt install -y build-essential
-          conda install -y -c eccodes
-          python -m pip install --upgrade pip wheel
-          pip install .
-          pip wheel . --no-deps --wheel-dir dist
+        run: ./venv/bin/pip wheel . --no-deps --wheel-dir dist
 
       - name: Upload wheel
         uses: actions/upload-artifact@v3
