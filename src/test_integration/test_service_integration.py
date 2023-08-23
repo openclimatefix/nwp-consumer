@@ -5,7 +5,6 @@ Will download up to a GB of data. Costs may apply for usage of the APIs.
 """
 
 import datetime as dt
-import os
 import pathlib
 import shutil
 import unittest
@@ -36,7 +35,6 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
             zarrdir='data/zarr',
         )
 
-    @unittest.skipIf(os.environ.get('CI') is True, "Skip test on CI.")
     def test_downloadAndConvertDataset(self):
         initTime: dt.date = dt.datetime.now().date()
 
@@ -84,7 +82,6 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
             zarrdir='data/zarr',
         )
 
-    @unittest.skipIf(os.environ.get('CI') is True, "Skip test on CI.")
     def test_downloadAndConvertDataset(self):
         initTime: dt.date = dt.date(year=2022, month=1, day=1)
 

@@ -107,14 +107,12 @@ jobs:
           show: "fail, skip"
         if: always()
 
-  # Define an integration test job that runs only on main and PRs to it
+  # Define an integration test job that runs only on version on main tags
   test-integration:
     runs-on: ubuntu-latest
     container: quay.io/condaforge/miniforge3:latest
     needs: build-venv
-    if: |
-      (github.ref == 'refs/heads/main' && github.event_name != 'tag') || 
-      (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main')
+    if: contains(github.ref, 'refs/tags/v') && github.event_name == 'push'
 
     steps:
       - name: Checkout repository
