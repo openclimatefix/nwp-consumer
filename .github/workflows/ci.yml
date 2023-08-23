@@ -77,6 +77,7 @@ jobs:
   # Define a unittest job that runs on all branches and PRs
   test-unit:
     runs-on: ubuntu-latest
+    container: quay.io/condaforge/miniforge3:latest
     needs: build-venv
 
     steps:

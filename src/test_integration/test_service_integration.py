@@ -5,6 +5,7 @@ Will download up to a GB of data. Costs may apply for usage of the APIs.
 """
 
 import datetime as dt
+import os
 import pathlib
 import shutil
 import unittest
@@ -12,11 +13,11 @@ import unittest
 import numpy as np
 import ocf_blosc2  # noqa: F401
 import xarray as xr
-import zarr
 
 from nwp_consumer.internal import config, inputs, outputs, service, ZARR_FMTSTR
 
 
+@unittest.skipIf(os.environ.get('CI') is True, "Skip test on CI.")
 class TestNWPConsumerService_MetOffice(unittest.TestCase):
     """Integration tests for the NWPConsumerService class."""
 
