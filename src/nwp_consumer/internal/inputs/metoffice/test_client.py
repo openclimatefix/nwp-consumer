@@ -36,8 +36,6 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
 
         out = testClient.mapTemp(p=testFilePath)
 
-        print(out)
-
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(
             {"init_time": 1, "variable": 1, "step": 13, "y": 639, "x": 455},
