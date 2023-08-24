@@ -27,6 +27,7 @@ dependencies = [
     "ocf-blosc2 == 0.0.3",
     "pathlib == 1.0.1",
     "psutil == 5.9.5",
+    "pyproj == 3.6.0",
     "requests == 2.31.0",
     "structlog == 22.1.0",
     "urllib3 == 1.26.15",
