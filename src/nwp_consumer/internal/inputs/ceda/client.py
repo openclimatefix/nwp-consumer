@@ -56,7 +56,7 @@ class CEDAClient(internal.FetcherInterface):
     # FTP url for CEDA data
     __ftpBase: str
 
-    def __init__(self, ftpUsername: str, ftpPassword: str):
+    def __init__(self, ftpUsername: str, ftpPassword: str) -> None:
         self.__username: str = urllib.parse.quote(ftpUsername)
         self.__password: str = urllib.parse.quote(ftpPassword)
         self.__ftpBase: str = f'ftp://{self.__username}:{self.__password}@ftp.ceda.ac.uk'
@@ -71,7 +71,7 @@ class CEDAClient(internal.FetcherInterface):
             return fi, pathlib.Path()
 
         log.debug(
-            event=f"requesting download of file",
+            event="requesting download of file",
             file=fi.filename(),
             path=fi.filepath()
         )
@@ -95,7 +95,7 @@ class CEDAClient(internal.FetcherInterface):
                 f.flush()
 
         log.debug(
-            event=f"fetched all data from file",
+            event="fetched all data from file",
             filename=fi.filename(),
             url=fi.filepath(),
             filepath=tfp.as_posix(),
@@ -116,7 +116,7 @@ class CEDAClient(internal.FetcherInterface):
         if response.status_code == 404:
             # No data available for this init time. Fail soft
             log.warn(
-                event=f"no data available for init time",
+                event="no data available for init time",
                 init_time=f"{it:%Y/%m/%d %H:%M}",
                 url=response.url
             )
@@ -160,7 +160,7 @@ class CEDAClient(internal.FetcherInterface):
         )
 
         # Check the file has the right name
-        if not any([setname in p.name.lower() for setname in ["wholesale1.grib", "wholesale2.grib"]]):
+        if not any(setname in p.name.lower() for setname in ["wholesale1.grib", "wholesale2.grib"]):
             log.debug(
                 event="skipping file as it does not match expected name",
                 filepath=p.as_posix()
@@ -258,7 +258,7 @@ class CEDAClient(internal.FetcherInterface):
             .expand_dims("init_time") \
             .to_array(dim="variable", name="UKV") \
             .to_dataset() \
-            .transpose("init_time", "step", "variable", "y", "x") \
+            .transpose("variable", "init_time", "step", "y", "x") \
             .sortby("step") \
             .sortby("variable") \
             .chunk({
@@ -284,7 +284,7 @@ def _isWantedFile(*, fi: CEDAFileInfo, dit: dt.datetime) -> bool:
             fi.it().time() != dit.time():
         return False
     # False if item doesn't correspond to Wholesale1 or Wholesale2 files
-    if not any([setname in fi.filename() for setname in ["Wholesale1.grib", "Wholesale2.grib"]]):
+    if not any(setname in fi.filename() for setname in ["Wholesale1.grib", "Wholesale2.grib"]):
         return False
 
     return True

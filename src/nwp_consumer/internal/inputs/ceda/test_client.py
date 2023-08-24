@@ -39,11 +39,17 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
         out = testClient.mapTemp(p=wholesalePath)
 
         # Ensure the dimensions have the right sizes
-        self.assertDictEqual({"init_time": 1, "variable": 6, "step": 4, "y": 704, "x": 548}, dict(out.dims.items()))
+        self.assertDictEqual(
+            {"init_time": 1, "variable": 6, "step": 4, "y": 704, "x": 548},
+            dict(out.dims.items())
+        )
         # Ensure the dimensions of the variables are in the correct order
-        self.assertEqual(("init_time", "step", "variable", "y", "x"), out["UKV"].dims)
+        self.assertEqual(("variable", "init_time", "step", "y", "x"), out["UKV"].dims)
         # Ensure the correct variables are in the variable dimension
-        self.assertListEqual(['prate', 'r', 'si10', 't', 'vis', 'wdir10'], sorted(list(out.coords["variable"].values)))
+        self.assertListEqual(
+            ['prate', 'r', 'si10', 't', 'vis', 'wdir10'],
+            sorted(out.coords["variable"].values)
+        )
 
     def test_convertsWholesale2FileCorrectly(self):
         wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wholesale2.grib"
@@ -51,18 +57,26 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
         out = testClient.mapTemp(p=wholesalePath)
 
         # Ensure the dimensions have the right sizes
-        self.assertDictEqual({"init_time": 1, "variable": 6, "step": 4, "y": 704, "x": 548}, dict(out.dims.items()))
+        self.assertDictEqual(
+            {"init_time": 1, "variable": 6, "step": 4, "y": 704, "x": 548},
+            dict(out.dims.items())
+        )
         # Ensure the dimensions of the variables are in the correct order
-        self.assertEqual(("init_time", "step", "variable", "y", "x"), out["UKV"].dims)
+        self.assertEqual(("variable", "init_time", "step", "y", "x"), out["UKV"].dims)
         # Ensure the correct variables are in the variable dimension
-        self.assertListEqual(['dlwrf', 'dswrf', 'hcc', 'lcc', 'mcc', 'sde'], sorted(list(out.coords["variable"].values)))
+        self.assertListEqual(
+            ['dlwrf', 'dswrf', 'hcc', 'lcc', 'mcc', 'sde'],
+            sorted(out.coords["variable"].values)
+        )
 
 # --------- Static methods --------- #
 
 class TestIsWantedFile(unittest.TestCase):
 
     def test_correctlyFiltersCEDAFileInfos(self):
-        initTime: dt.datetime = dt.datetime(year=2021, month=1, day=1, hour=0, minute=0, tzinfo=None)
+        initTime: dt.datetime = dt.datetime(
+            year=2021, month=1, day=1, hour=0, minute=0, tzinfo=None
+        )
 
         wantedFileInfos: list[CEDAFileInfo] = [
             CEDAFileInfo(name="202101010000_u1096_ng_umqv_Wholesale1.grib"),
@@ -82,9 +96,9 @@ class TestIsWantedFile(unittest.TestCase):
         ]
 
         self.assertTrue(
-            all([_isWantedFile(fi=fo, dit=initTime) for fo in wantedFileInfos]))
+            all(_isWantedFile(fi=fo, dit=initTime) for fo in wantedFileInfos))
         self.assertFalse(
-            all([_isWantedFile(fi=fo, dit=initTime) for fo in unwantedFileInfos]))
+            all(_isWantedFile(fi=fo, dit=initTime) for fo in unwantedFileInfos))
 
 
 class TestReshapeTo2DGrid(unittest.TestCase):
