@@ -23,26 +23,22 @@ class S3Client(internal.StorageInterface):
     def __init__(self, key: str, secret: str, bucket: str, region: str,
                  endpointURL: str = None) -> None:
         """Create a new S3Client."""
-        if (key != '') and (secret != ''):
-            self.__fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
-                key=key,
-                secret=secret,
-                client_kwargs={
-                    'region_name': region,
-                    'endpoint_url': endpointURL,
-                }
+
+        (key, secret) = (None, None) if (key, secret) == ("", "") else (key, secret)
+        if key is None and secret is None:
+            log.info(
+                event="attempting AWS connection using default credentials",
             )
-        else:
-            # try without passing the key or secret.
-            # It should load the values from default AWS credentials file
-            log.debug(event="Will be loading credentials from default AWS credentials file, "
-                            "as key or secret was not passed")
-            self.__fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
-                client_kwargs={
-                    'region_name': region,
-                    'endpoint_url': endpointURL,
-                }
-            )
+
+        # S3FileSystem will attempt connection via default credentials if key and secret are None
+        self.__fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
+            key=key,
+            secret=secret,
+            client_kwargs={
+                'region_name': region,
+                'endpoint_url': endpointURL,
+            }
+        )
 
         self.__bucket = pathlib.Path(bucket)
 
