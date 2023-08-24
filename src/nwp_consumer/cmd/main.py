@@ -26,6 +26,7 @@ Options:
   --verbose           Enable verbose logging [default: False].
 """
 
+import contextlib
 import datetime as dt
 import importlib.metadata
 import shutil
@@ -33,16 +34,13 @@ import shutil
 import structlog
 from docopt import docopt
 
-from nwp_consumer.internal import config, inputs, outputs, TMP_DIR
+from nwp_consumer.internal import TMP_DIR, config, inputs, outputs
 from nwp_consumer.internal.service import NWPConsumerService
 
 __version__ = "local"
 
-try:
-    __version__ = importlib.metadata.version("nwp-consumer")
-except importlib.metadata.PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version("package-name")
 
 log = structlog.getLogger()
 
@@ -148,7 +146,7 @@ def run():
         service.CreateLatestZarr()
 
 
-def main():
+def main() -> None:
     """Entry point for the nwp-consumer CLI."""
     programStartTime = dt.datetime.now()
     try:

@@ -24,8 +24,9 @@ class NWPConsumerService:
     Each method on the class is a business use case for the consumer
     """
 
-    def __init__(self, fetcher: internal.FetcherInterface, storer: internal.StorageInterface, rawdir: str,
-                 zarrdir: str):
+    def __init__(self, fetcher: internal.FetcherInterface, storer: internal.StorageInterface,
+                 rawdir: str, zarrdir: str) -> None:
+        """Initialise the service."""
         self.fetcher = fetcher
         self.storer = storer
         self.rawdir = pathlib.Path(rawdir)
@@ -79,7 +80,7 @@ class NWPConsumerService:
             .filter(lambda infoPathTuple: infoPathTuple[1] != pathlib.Path()) \
             .map(lambda infoPathTuple: self.storer.store(
                 src=infoPathTuple[1],
-                dst=self.rawdir / infoPathTuple[0].it().strftime(internal.IT_FOLDER_FMTSTR) / (infoPathTuple[0].filename())
+                dst=self.rawdir/infoPathTuple[0].it().strftime(internal.IT_FOLDER_FMTSTR)/(infoPathTuple[0].filename())
             )) \
             .sum() \
             .compute()
@@ -92,7 +93,6 @@ class NWPConsumerService:
         :param start: The start date of the time range to convert
         :param end: The end date of the time range to convert
         """
-
         # Get a list of all the init times that are stored locally between the start and end dates
         desiredInitTimes: list[dt.datetime] = []
         allInitTimes: list[dt.datetime] = self.storer.listInitTimes(prefix=self.rawdir)
@@ -100,7 +100,7 @@ class NWPConsumerService:
             # Don't convert files that already exist
             if self.storer.exists(dst=self.zarrdir / it.strftime('%Y%m%d%H%M.zarr.zip')):
                 log.debug(
-                    f"zarr for initTime already exists; skipping",
+                    "zarr for initTime already exists; skipping",
                     inittime=it.strftime("%Y/%m/%d %H:%M"),
                     path=(self.zarrdir / it.strftime('%Y%m%d%H%M.zarr.zip')).as_posix()
                 )
@@ -123,7 +123,7 @@ class NWPConsumerService:
         # * Build a bag from the sequence of init times
         # * Partition the bag by init time
         bag = dask.bag.from_sequence(desiredInitTimes, npartitions=len(desiredInitTimes))
-        nbytes = bag.map(lambda inittime: self.storer.copyITFolderToTemp(prefix=self.rawdir, it=inittime)) \
+        nbytes = bag.map(lambda time: self.storer.copyITFolderToTemp(prefix=self.rawdir, it=time)) \
             .filter(lambda temppaths: len(temppaths) != 0) \
             .map(lambda temppaths: [self.fetcher.mapTemp(p=p) for p in temppaths]) \
             .map(lambda datasets: xr.merge(objects=datasets, combine_attrs="drop_conflicts")) \
@@ -166,7 +166,7 @@ class NWPConsumerService:
         # Load the latest init time as a dataset
         tempPaths = self.storer.copyITFolderToTemp(it=latestInitTime, prefix=self.rawdir)
         log.info(
-            event=f"creating latest zarr for initTime",
+            event="creating latest zarr for initTime",
             inittime=latestInitTime.strftime("%Y/%m/%d %H:%M"),
             path=(self.zarrdir / 'latest.zarr.zip').as_posix()
         )
@@ -203,8 +203,7 @@ class NWPConsumerService:
         return nbytes1
 
     def Check(self) -> int:
-        """Perform a healthcheck on the service"""
-
+        """Perform a healthcheck on the service."""
         unhealthy = False
 
         # Check eccodes is installed
@@ -322,14 +321,13 @@ def _saveAsTempRegularZarr(ds: xr.Dataset) -> pathlib.Path:
 
 def _dataQualityFilter(ds: xr.Dataset) -> bool:
     """Filter out data that is not of sufficient quality."""
-
     if ds == xr.Dataset():
         return False
 
     # Carry out a basic data quality check
     if "variable" not in dict(ds.coords.items()).keys():
         log.warn(
-            event=f"Dataset for is missing variable coord",
+            event="Dataset for is missing variable coord",
             initTime=str(ds.coords['init_time'].values[0])[:16],
             coords=dict(ds.coords.items())
         )

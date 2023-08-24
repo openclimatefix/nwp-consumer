@@ -55,27 +55,34 @@ enabled = true
 # --- LINTING AND TYPING CONFIGURATION --- #
 
 # MyPy configuration
+# * See https://mypy.readthedocs.io/en/stable/index.html
 [tool.mypy]
 python_version = "3.10"
 plugins = [
     'numpy.typing.mypy_plugin'
 ]
 
-# ruff configuration
+# Ruff configuration
+# * See https://beta.ruff.rs/docs/
 [tool.ruff]
 select = [
-    "E", # pycodestyle
-    "W", # newline at end of files
-    "F", # pyflakes
-    "B", # flake8-bugbear
-    "I", # isosort
-    "D", # pydocstyle
-    "S", # flake8-bandit
-    "T20", # flake8-print
+    "F",   # pyflakes
+    "E",   # pycodestyle
+    "W",   # whitespace and newlines
+    "I",   # isort
+    "UP",  # modernize
+    "ANN", # flake8 type annotations
+    "S",   # flake8 bandit
+    "B",   # flake8 bugbear
+    "C4",  # flake8 comprehensions
+    "T20", # flake8 print
+    "SIM", # flake8 simplify
+    "ARG", # flake8 unused arguments
+    "D",   # pydocstyle
 ]
 line-length = 100
-ignore = ["D203", "D213"]
+ignore = ["D203", "D213", "ANN101"]
 exclude = ["__init__.py"]
 
 [tool.ruff.per-file-ignores]
-"test*" = ["S101", "D102", "D103", "PT004", "PT012"]
+"test*" = ["D", "ANN"]

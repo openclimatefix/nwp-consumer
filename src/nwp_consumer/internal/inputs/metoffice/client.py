@@ -42,10 +42,12 @@ class MetOfficeClient(internal.FetcherInterface):
     # Query string headers to pass to the MetOffice API
     __headers: dict[str, str]
 
-    def __init__(self, *, orderID: str, clientID: str, clientSecret: str):
-        if any([value in [None, "", "unset"] for value in [clientID, clientSecret, orderID]]):
+    def __init__(self, *, orderID: str, clientID: str, clientSecret: str) -> None:
+        """Create a new MetOfficeClient."""
+        if any(value in [None, "", "unset"] for value in [clientID, clientSecret, orderID]):
             raise KeyError("must provide clientID, clientSecret, and orderID")
-        self.baseurl: str = f"https://api-metoffice.apiconnect.ibmcloud.com/1.0.0/orders/{orderID}/latest"
+        self.baseurl: str = \
+            f"https://api-metoffice.apiconnect.ibmcloud.com/1.0.0/orders/{orderID}/latest"
         self.querystring: dict[str, str] = {"detail": "MINIMAL"}
         self.__headers: dict[str, str] = {
             "Accept": "application/json",
@@ -54,7 +56,8 @@ class MetOfficeClient(internal.FetcherInterface):
             "X-IBM-Client-Secret": clientSecret,
         }
 
-    def downloadToTemp(self, *, fi: MetOfficeFileInfo) -> tuple[internal.FileInfoModel, pathlib.Path]:
+    def downloadToTemp(self, *, fi: MetOfficeFileInfo) \
+            -> tuple[internal.FileInfoModel, pathlib.Path]:
 
         if self.__headers.get("X-IBM-Client-Id") is None \
                 or self.__headers.get("X-IBM-Client-Secret") is None:
@@ -62,7 +65,7 @@ class MetOfficeClient(internal.FetcherInterface):
             return fi, pathlib.Path()
 
         log.debug(
-            event=f"requesting download of file",
+            event="requesting download of file",
             file=fi.filename(),
         )
         url: str = f"{self.baseurl}/{fi.filepath()}"
@@ -73,7 +76,7 @@ class MetOfficeClient(internal.FetcherInterface):
             ).items())
             urllib.request.install_opener(opener)
             response = urllib.request.urlopen(url=url)
-            if not response.status == 200:
+            if response.status != 200:
                 log.warn(
                     event="error response received for download file request",
                     response=response.json(),
@@ -207,13 +210,13 @@ class MetOfficeClient(internal.FetcherInterface):
                     currentName: internal.OCFShortName.WindSpeedSurfaceAdjustedAGL.value})
             case "unknown", 195:
                 parameterDataset = parameterDataset.rename({
-                    currentName: internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL.value})
-            case x, int() if x in PARAMETER_RENAME_MAP.keys():
+                    currentName: internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL.value})  # noqa
+            case x, int() if x in PARAMETER_RENAME_MAP:
                 parameterDataset = parameterDataset.rename({
                     x: PARAMETER_RENAME_MAP[x]})
             case _, _:
                 log.warn(
-                    event=f"encountered unknown parameter; ignoring file",
+                    event="encountered unknown parameter; ignoring file",
                     unknownparamname=currentName,
                     unknownparamnumber=parameterNumber,
                     filepath=p.as_posix()
@@ -230,22 +233,30 @@ class MetOfficeClient(internal.FetcherInterface):
         # * The chunking is done in such a way that each chunk is a single time step
         #     for a single variable.
         # * Transpose the Dataset so that the dimensions are correctly ordered
+        # * Reverse `latitude` so it's top-to-bottom via reindexing.
         parameterDataset = parameterDataset \
-            .drop_vars(names=["height", "pressure", "valid_time", "surface", "heightAboveGround"], errors="ignore") \
+            .drop_vars(
+                names=[
+                    "height", "pressure", "valid_time", "surface", "heightAboveGround",
+                    "atmosphere", "cloudBase", "meanSea", "heightAboveGroundLayer", "level"
+                ],
+                errors="ignore"
+            ) \
             .rename({"time": "init_time"}) \
-            .expand_dims("init_time") \
+            .expand_dims(["init_time"]) \
             .to_array(dim="variable", name="UKV") \
+            .reindex(y=parameterDataset.y.values[::-1]) \
             .to_dataset() \
-            .transpose("init_time", "step", "variable", "y", "x") \
+            .transpose("variable", "init_time", "step", "y", "x") \
             .sortby("step") \
             .sortby("variable") \
             .chunk({
+                "variable": -1,
                 "init_time": 1,
                 "step": -1,
-                "variable": -1,
                 "y": len(parameterDataset.y) // 2,
                 "x": len(parameterDataset.x) // 2,
-            })
+        })
 
         return parameterDataset
 

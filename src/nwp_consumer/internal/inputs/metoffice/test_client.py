@@ -37,11 +37,14 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
         out = testClient.mapTemp(p=testFilePath)
 
         # Ensure the dimensions have the right sizes
-        self.assertDictEqual({"init_time": 1, "variable": 1, "step": 13, "y": 639, "x": 455}, dict(out.dims.items()))
+        self.assertDictEqual(
+            {"init_time": 1, "variable": 1, "step": 13, "y": 639, "x": 455},
+            dict(out.dims.items())
+        )
         # Ensure the dimensions of the variables are in the correct order
-        self.assertEqual(("init_time", "step", "variable", "y", "x"), out["UKV"].dims)
+        self.assertEqual(("variable", "init_time", "step", "y", "x"), out["UKV"].dims)
         # Ensure the correct variables are in the variable dimension
-        self.assertListEqual(['dswrf'], sorted(list(out.coords["variable"].values)))
+        self.assertListEqual(['dswrf'], sorted(out.coords["variable"].values))
 
     def test_renamesVariables(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wrongnameparam.grib"
@@ -49,11 +52,14 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
         out = testClient.mapTemp(p=testFilePath)
 
         # Ensure the dimensions have the right sizes
-        self.assertDictEqual({"init_time": 1, "variable": 1, "step": 13, "y": 639, "x": 455}, dict(out.dims.items()))
+        self.assertDictEqual(
+            {"init_time": 1, "variable": 1, "step": 13, "y": 639, "x": 455},
+            dict(out.dims.items())
+        )
         # Ensure the dimensions of the variables are in the correct order
-        self.assertEqual(("init_time", "step", "variable", "y", "x"), out["UKV"].dims)
+        self.assertEqual(out["UKV"].dims, ("variable", "init_time", "step", "y", "x"))
         # Ensure the correct variables are in the variable dimension
-        self.assertListEqual(['prate'], sorted(list(out.coords["variable"].values)))
+        self.assertListEqual(['prate'], sorted(out.coords["variable"].values))
 
     def test_handlesUnknownsInMetOfficeData(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknownparam1.grib"
@@ -61,32 +67,42 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
         out = testClient.mapTemp(p=testFilePath)
 
         # Ensure the dimensions have the right sizes
-        self.assertDictEqual({"init_time": 1, "variable": 1, "step": 43, "y": 639, "x": 455}, dict(out.dims.items()))
+        self.assertDictEqual(
+            {"init_time": 1, "variable": 1, "step": 43, "y": 639, "x": 455},
+            dict(out.dims.items())
+        )
         # Ensure the dimensions of the variables are in the correct order
-        self.assertEqual(("init_time", "step", "variable", "y", "x"), out["UKV"].dims)
+        self.assertEqual(out["UKV"].dims, ("variable", "init_time", "step", "y", "x"))
         # Ensure the correct variables are in the variable dimension
-        self.assertListEqual(['si10'], sorted(list(out.coords["variable"].values)))
-        self.assertNotEqual(['unknown'], sorted(list(out.coords["variable"].values)))
+        self.assertListEqual(['si10'], sorted(out.coords["variable"].values))
+        self.assertNotEqual(['unknown'], sorted(out.coords["variable"].values))
 
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknownparam2.grib"
 
         out = testClient.mapTemp(p=testFilePath)
 
         # Ensure the dimensions have the right sizes
-        self.assertDictEqual({"init_time": 1, "variable": 1, "step": 10, "y": 639, "x": 455}, dict(out.dims.items()))
+        self.assertDictEqual(
+            {"init_time": 1, "variable": 1, "step": 10, "y": 639, "x": 455},
+            dict(out.dims.items())
+        )
         # Ensure the dimensions of the variables are in the correct order
-        self.assertEqual(("init_time", "step", "variable", "y", "x"), out["UKV"].dims)
+        self.assertEqual(("variable", "init_time", "step", "y", "x"), out["UKV"].dims)
         # Ensure the correct variables are in the variable dimension
-        self.assertListEqual(['wdir10'], sorted(list(out.coords["variable"].values)))
-        self.assertNotEqual(['unknown'], sorted(list(out.coords["variable"].values)))
+        self.assertListEqual(['wdir10'], sorted(out.coords["variable"].values))
+        self.assertNotEqual(['unknown'], sorted(out.coords["variable"].values))
+
 
 # --------- Static methods --------- #
+
 
 class Test_IsWantedFile(unittest.TestCase):
     """Tests for the _isWantedFile method."""
 
     def test_correctlyFiltersMetOfficeFileInfos(self):
-        initTime: dt.datetime = dt.datetime(year=2023, month=3, day=24, hour=0, minute=0, tzinfo=None)
+        initTime: dt.datetime = dt.datetime(
+            year=2023, month=3, day=24, hour=0, minute=0, tzinfo=None
+        )
 
         wantedFileInfos: list[MetOfficeFileInfo] = [
             MetOfficeFileInfo(
@@ -110,6 +126,6 @@ class Test_IsWantedFile(unittest.TestCase):
             ),
         ]
 
-        self.assertTrue(all([_isWantedFile(fi=fo, dit=initTime) for fo in wantedFileInfos]))
-        self.assertFalse(all([_isWantedFile(fi=fo, dit=initTime) for fo in unwantedFileInfos]))
+        self.assertTrue(all(_isWantedFile(fi=fo, dit=initTime) for fo in wantedFileInfos))
+        self.assertFalse(all(_isWantedFile(fi=fo, dit=initTime) for fo in unwantedFileInfos))
 
