@@ -1,12 +1,14 @@
 """Implements a client to fetch the data from the MetOffice API."""
 
 import datetime as dt
+import math
 import pathlib
 import urllib.request
 
 import requests
 import structlog.stdlib
 import xarray as xr
+import pyproj
 
 from nwp_consumer import internal
 
@@ -256,6 +258,27 @@ class MetOfficeClient(internal.FetcherInterface):
                 "step": -1,
                 "y": len(parameterDataset.y) // 2,
                 "x": len(parameterDataset.x) // 2,
+            })
+
+        # TODO: Remove this by moving this logic into ocf-datapipes and update PVNet1+2 to use that
+        # TODO: See issue #26 https://github.com/openclimatefix/nwp-consumer/issues/26
+        # 5. Create osgb x and y coordinates from the lat/lon coordinates
+        # * The lat/lon coordinates are WGS84, i.e. EPSG:4326
+        # * The OSGB coordinates are EPSG:27700
+        # * Approximate the osgb values by taking the first row and column of the
+        #   transformed x/y grids
+        latlonOsgbTransformer = pyproj.Transformer.from_crs(
+            crs_from=4326,
+            crs_to=27700,
+            always_xy=True,
+        )
+        osgbX, osgbY = latlonOsgbTransformer.transform(
+            parameterDataset.longitude.values,
+            parameterDataset.latitude.values,
+        )
+        parameterDataset = parameterDataset.assign_coords({
+            "x": osgbX[0],
+            "y": [osgbY[i][0] for i in range(len(osgbY))][::-1],
         })
 
         return parameterDataset
