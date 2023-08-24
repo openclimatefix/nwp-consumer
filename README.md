@@ -3,7 +3,7 @@ NWP CONSUMER
 <br>
 <br>
 Microservice for consuming NWP data.
-</h2>The build configuration for the service
+</h2>
 
 <div align="center">
 
