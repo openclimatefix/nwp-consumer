@@ -12,8 +12,7 @@ import unittest
 import numpy as np
 import ocf_blosc2  # noqa: F401
 import xarray as xr
-
-from nwp_consumer.internal import config, inputs, outputs, service, ZARR_FMTSTR
+from nwp_consumer.internal import ZARR_FMTSTR, config, inputs, outputs, service
 
 
 class TestNWPConsumerService_MetOffice(unittest.TestCase):
@@ -52,7 +51,10 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
             numVars = len(ds.coords["variable"].values)
 
             # Ensure the dimensions have the right sizes
-            self.assertDictEqual({"init_time": 1, "step": 13, "variable": numVars, "y": 639, "x": 455}, dict(ds.dims.items()))
+            self.assertDictEqual(
+                {"init_time": 1, "step": 13, "variable": numVars, "y": 639, "x": 455},
+                dict(ds.dims.items())
+            )
             # Ensure the dimensions of the variables are in the correct order
             self.assertEqual(("init_time", "step", "variable", "y", "x"), ds["UKV"].dims)
             # Ensure the init time is correct
@@ -97,7 +99,10 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
             # Enusre the data variables are correct
             self.assertEqual(["UKV"], list(ds.data_vars))
             # Ensure the dimensions have the right sizes
-            self.assertEqual({'init_time': 1, 'step': 37, 'variable': 12, 'y': 704, 'x': 548}, dict(ds.dims.items()))
+            self.assertEqual(
+                {'init_time': 1, 'step': 37, 'variable': 12, 'y': 704, 'x': 548},
+                dict(ds.dims.items())
+            )
             # Ensure the init time is correct
             self.assertEqual(
                 np.datetime64(dt.datetime.strptime(path.with_suffix('').stem, ZARR_FMTSTR)),

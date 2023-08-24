@@ -21,7 +21,7 @@ class S3Client(internal.StorageInterface):
     __s3: botocore.client
 
     def __init__(self, key: str, secret: str, bucket: str, region: str,
-                 endpointURL: str = None):
+                 endpointURL: str = None) -> None:
         """Create a new S3Client."""
         if (key != '') and (secret != ''):
             self.__fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
@@ -87,7 +87,7 @@ class S3Client(internal.StorageInterface):
                     ).replace(tzinfo=None)
                     initTimes.add(ddt)
                 except ValueError:
-                    log.debug(f"ignoring invalid folder name", name=dir.as_posix(), within=prefix.as_posix())
+                    log.debug("ignoring invalid folder name", name=dir.as_posix(), within=prefix.as_posix())
 
         sortedInitTimes = sorted(initTimes)
         log.debug(

@@ -1,6 +1,5 @@
 import datetime as dt
-import pathlib
-from typing import ClassVar, Type
+from typing import ClassVar
 
 from marshmallow import EXCLUDE, Schema, fields
 from marshmallow_dataclass import dataclass
@@ -17,7 +16,7 @@ class CEDAFileInfo(internal.FileInfoModel):
 
     name: str
 
-    Schema: ClassVar[Type[Schema]] = Schema  # To prevent confusing type checkers
+    Schema: ClassVar[type[Schema]] = Schema  # To prevent confusing type checkers
 
     def it(self) -> dt.datetime:
         """Return the init time of the file.
@@ -44,4 +43,4 @@ class CEDAResponse:
     path: str
     items: list[CEDAFileInfo] = fields.List(fields.Nested(CEDAFileInfo.Schema()))
 
-    Schema: ClassVar[Type[Schema]] = Schema  # To prevent confusing type checkers
+    Schema: ClassVar[type[Schema]] = Schema  # To prevent confusing type checkers

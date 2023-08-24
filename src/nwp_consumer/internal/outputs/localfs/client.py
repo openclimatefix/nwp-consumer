@@ -49,14 +49,14 @@ class LocalFSClient(internal.StorageInterface):
                 initTimes.add(ddt)
             except ValueError:
                 log.debug(
-                    event=f"ignoring invalid folder name",
+                    event="ignoring invalid folder name",
                     name=dir.as_posix(),
                     within=prefix.as_posix()
                 )
 
         if len(initTimes) == 0:
             log.debug(
-                event=f"no init times found in raw directory",
+                event="no init times found in raw directory",
                 within=prefix.as_posix()
             )
             return []

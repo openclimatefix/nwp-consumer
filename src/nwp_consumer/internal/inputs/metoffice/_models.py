@@ -1,6 +1,5 @@
 import datetime as dt
-import pathlib
-from typing import ClassVar, Type
+from typing import ClassVar
 
 from marshmallow import EXCLUDE, Schema, fields
 from marshmallow_dataclass import dataclass
@@ -17,7 +16,7 @@ class MetOfficeFileInfo(internal.FileInfoModel):
     fileId: str
     runDateTime: dt.datetime
 
-    Schema: ClassVar[Type[Schema]] = Schema  # To prevent confusing type checkers
+    Schema: ClassVar[type[Schema]] = Schema  # To prevent confusing type checkers
 
     def it(self) -> dt.datetime:
         return self.runDateTime.replace(tzinfo=None)
@@ -39,7 +38,7 @@ class MetOfficeOrderDetails:
 
     files: list[MetOfficeFileInfo] = fields.List(fields.Nested(MetOfficeFileInfo.Schema()))
 
-    Schema: ClassVar[Type[Schema]] = Schema  # To prevent confusing type checkers
+    Schema: ClassVar[type[Schema]] = Schema  # To prevent confusing type checkers
 
 
 @dataclass
@@ -47,4 +46,4 @@ class MetOfficeResponse:
 
     orderDetails: MetOfficeOrderDetails
 
-    Schema: ClassVar[Type[Schema]] = Schema  # To prevent confusing type checkers
+    Schema: ClassVar[type[Schema]] = Schema  # To prevent confusing type checkers

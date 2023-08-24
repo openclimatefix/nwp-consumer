@@ -76,7 +76,10 @@ class DummyFetcher(internal.FetcherInterface):
         initTime = dt.datetime.strptime(p.parent.as_posix(), "%Y%m%d%H%M")
         return xr.Dataset(
             data_vars={
-                'UKV': (('init_time', 'variable', 'step', 'x', 'y'), np.random.rand(1, 1, 12, 100, 100)),
+                'UKV': (
+                    ('init_time', 'variable', 'step', 'x', 'y'),
+                    np.random.rand(1, 1, 12, 100, 100)
+                ),
             },
             coords={
                 'init_time': [initTime],

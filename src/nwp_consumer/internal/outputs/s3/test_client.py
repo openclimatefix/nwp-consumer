@@ -58,7 +58,6 @@ class TestS3Client(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         # Delete all objects in bucket
-        print("Tearing down bucket")
         response = cls.testS3.list_objects_v2(
             Bucket=BUCKET,
         )
@@ -210,7 +209,7 @@ class TestS3Client(unittest.TestCase):
 
         # Call the copyITFolderToTemp method again
         paths = self.client.copyITFolderToTemp(prefix=RAW, it=initTime2)
-        assert len(paths) == 3
+        self.assertEqual(len(paths), 3)
 
         # Delete the files in S3
         for f in files2:
