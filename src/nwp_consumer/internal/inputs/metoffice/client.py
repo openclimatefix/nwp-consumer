@@ -276,6 +276,8 @@ class MetOfficeClient(internal.FetcherInterface):
             parameterDataset.longitude.values,
             parameterDataset.latitude.values,
         )
+        osgbX = osgbX.astype(int)
+        osgbY = osgbY.astype(int)
         parameterDataset = parameterDataset.assign_coords({
             "x": osgbX[0],
             "y": [osgbY[i][0] for i in range(len(osgbY))][::-1],
