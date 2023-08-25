@@ -74,7 +74,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
         # Ensure the dimensions of the variables are in the correct order
         self.assertEqual(out["UKV"].dims, ("variable", "init_time", "step", "y", "x"))
         # Ensure the correct variables are in the variable dimension
-        self.assertListEqual(['si10'], sorted(out.coords["variable"].values))
+        self.assertListEqual(['wdir10'], sorted(out.coords["variable"].values))
         self.assertNotEqual(['unknown'], sorted(out.coords["variable"].values))
 
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknownparam2.grib"
