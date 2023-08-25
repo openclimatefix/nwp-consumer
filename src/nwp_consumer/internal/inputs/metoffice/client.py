@@ -209,10 +209,10 @@ class MetOfficeClient(internal.FetcherInterface):
         match currentName, parameterNumber:
             case "unknown", 194:
                 parameterDataset = parameterDataset.rename({
-                    currentName: internal.OCFShortName.WindSpeedSurfaceAdjustedAGL.value})
+                    currentName: internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL.value})  # noqa
             case "unknown", 195:
                 parameterDataset = parameterDataset.rename({
-                    currentName: internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL.value})  # noqa
+                    currentName: internal.OCFShortName.WindSpeedSurfaceAdjustedAGL.value})
             case x, int() if x in PARAMETER_RENAME_MAP:
                 parameterDataset = parameterDataset.rename({
                     x: PARAMETER_RENAME_MAP[x]})
