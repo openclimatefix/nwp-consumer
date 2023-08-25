@@ -89,7 +89,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
         # Ensure the dimensions of the variables are in the correct order
         self.assertEqual(("variable", "init_time", "step", "y", "x"), out["UKV"].dims)
         # Ensure the correct variables are in the variable dimension
-        self.assertListEqual(['wdir10'], sorted(out.coords["variable"].values))
+        self.assertListEqual(['si10'], sorted(out.coords["variable"].values))
         self.assertNotEqual(['unknown'], sorted(out.coords["variable"].values))
 
 
