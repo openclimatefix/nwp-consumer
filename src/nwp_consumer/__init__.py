@@ -6,7 +6,7 @@ import logging
 import psutil
 
 # Ignore modules' emitted logs
-for _ in ("boto", "elasticsearch", "urllib3", "cfgrib", "xarray"):
+for _ in ("boto", "elasticsearch", "urllib3", "cfgrib", "xarray", "ecmwfapi"):
     logging.getLogger(_).setLevel(logging.CRITICAL)
 
 # Set the log level

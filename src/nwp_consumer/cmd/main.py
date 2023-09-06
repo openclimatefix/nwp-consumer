@@ -18,7 +18,7 @@ Options:
   --version           Show version.
   --from <startDate>  Start date in YYYY-MM-DD format [default: today].
   --to <endDate>      End date in YYYY-MM-DD format [default: today].
-  --source <source>   Data source to use (ceda/metoffice) [default: ceda].
+  --source <source>   Data source to use (ceda/metoffice/ecmwf-mars) [default: ceda].
   --sink <sink>       Data sink to use (local/s3) [default: local].
   --rdir <rawdir>     Directory of raw data store [default: /tmp/raw].
   --zdir <zarrdir>    Directory of zarr data store [default: /tmp/zarr].
@@ -84,17 +84,22 @@ def run():
     match arguments['--source']:
         # Create the fetcher based on the source
         case 'ceda':
-            cc = config.CEDAConfig()
+            c = config.CEDAConfig()
             fetcher = inputs.ceda.CEDAClient(
-                ftpUsername=cc.CEDA_FTP_USER,
-                ftpPassword=cc.CEDA_FTP_PASS,
+                ftpUsername=c.CEDA_FTP_USER,
+                ftpPassword=c.CEDA_FTP_PASS,
             )
         case 'metoffice':
-            mc = config.MetOfficeConfig()
+            c = config.MetOfficeConfig()
             fetcher = inputs.metoffice.MetOfficeClient(
-                orderID=mc.METOFFICE_ORDER_ID,
-                clientID=mc.METOFFICE_CLIENT_ID,
-                clientSecret=mc.METOFFICE_CLIENT_SECRET,
+                orderID=c.METOFFICE_ORDER_ID,
+                clientID=c.METOFFICE_CLIENT_ID,
+                clientSecret=c.METOFFICE_CLIENT_SECRET,
+            )
+        case 'ecmwf-mars':
+            c = config.ECMWFMARSConfig()
+            fetcher = inputs.ecmwf.ECMWFMarsClient(
+                area=c.ECMWF_AREA,
             )
         case _:
             raise ValueError(f"unknown source {arguments['--source']}")

@@ -1,0 +1,547 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+	<testsuite name="internal.config.test_config.Test_EnvParseMixin-20230710100603" tests="3" file="internal/config/test_config.py" time="0.005" timestamp="2023-07-10T10:06:03" failures="0" errors="0" skipped="0">
+		<testcase classname="internal.config.test_config.Test_EnvParseMixin" name="test_errorsIfRequiredFieldNotSet" time="0.004" timestamp="2023-07-10T10:06:03" file="src/nwp_consumer/internal/config/test_config.py" line="31"/>
+		<testcase classname="internal.config.test_config.Test_EnvParseMixin" name="test_errorsIfUnableToCastEnvVarToType" time="0.001" timestamp="2023-07-10T10:06:03" file="src/nwp_consumer/internal/config/test_config.py" line="39"/>
+		<testcase classname="internal.config.test_config.Test_EnvParseMixin" name="test_parsesEnvVarsToEachType" time="0.001" timestamp="2023-07-10T10:06:03" file="src/nwp_consumer/internal/config/test_config.py" line="11"/>
+	</testsuite>
+	<testsuite name="internal.inputs.ceda.test_client.TestClient_ConvertRawFileToDataset-20230710100603" tests="2" file="internal/inputs/ceda/test_client.py" time="2.757" timestamp="2023-07-10T10:06:05" failures="0" errors="0" skipped="0">
+		<testcase classname="internal.inputs.ceda.test_client.TestClient_ConvertRawFileToDataset" name="test_convertsWholesale1FileCorrectly" time="1.832" timestamp="2023-07-10T10:06:04" file="src/nwp_consumer/internal/inputs/ceda/test_client.py" line="36"/>
+		<testcase classname="internal.inputs.ceda.test_client.TestClient_ConvertRawFileToDataset" name="test_convertsWholesale2FileCorrectly" time="0.925" timestamp="2023-07-10T10:06:05" file="src/nwp_consumer/internal/inputs/ceda/test_client.py" line="50"/>
+	</testsuite>
+	<testsuite name="internal.inputs.ceda.test_client.TestClient_FetchRawFileBytes-20230710100603" tests="1" file="internal/inputs/ceda/test_client.py" time="0.000" timestamp="2023-07-10T10:06:05" failures="0" errors="0" skipped="0">
+		<testcase classname="internal.inputs.ceda.test_client.TestClient_FetchRawFileBytes" name="test_fetchesFileCorrectly" time="0.000" timestamp="2023-07-10T10:06:05" file="src/nwp_consumer/internal/inputs/ceda/test_client.py" line="30"/>
+	</testsuite>
+	<testsuite name="internal.inputs.ceda.test_client.TestClient_ListRawFilesForInitTime-20230710100603" tests="1" file="internal/inputs/ceda/test_client.py" time="0.000" timestamp="2023-07-10T10:06:05" failures="0" errors="0" skipped="0">
+		<testcase classname="internal.inputs.ceda.test_client.TestClient_ListRawFilesForInitTime" name="test_listsFilesCorrectly" time="0.000" timestamp="2023-07-10T10:06:05" file="src/nwp_consumer/internal/inputs/ceda/test_client.py" line="24"/>
+	</testsuite>
+	<testsuite name="internal.inputs.ceda.test_client.TestIsWantedFile-20230710100603" tests="1" file="internal/inputs/ceda/test_client.py" time="0.001" timestamp="2023-07-10T10:06:05" failures="0" errors="0" skipped="0">
+		<testcase classname="internal.inputs.ceda.test_client.TestIsWantedFile" name="test_correctlyFiltersCEDAFileInfos" time="0.001" timestamp="2023-07-10T10:06:05" file="src/nwp_consumer/internal/inputs/ceda/test_client.py" line="68"/>
+	</testsuite>
+	<testsuite name="internal.inputs.ceda.test_client.TestReshapeTo2DGrid-20230710100603" tests="2" file="internal/inputs/ceda/test_client.py" time="0.026" timestamp="2023-07-10T10:06:05" failures="0" errors="0" skipped="0">
+		<testcase classname="internal.inputs.ceda.test_client.TestReshapeTo2DGrid" name="test_correctlyReshapesData" time="0.026" timestamp="2023-07-10T10:06:05" file="src/nwp_consumer/internal/inputs/ceda/test_client.py" line="96"/>
+		<testcase classname="internal.inputs.ceda.test_client.TestReshapeTo2DGrid" name="test_raisesErrorForIncorrectNumberOfValues" time="0.001" timestamp="2023-07-10T10:06:05" file="src/nwp_consumer/internal/inputs/ceda/test_client.py" line="116"/>
+	</testsuite>
+	<testsuite name="internal.inputs.metoffice.test_client.TestClient_ConvertRawFileToDataset-20230710100603" tests="3" file="internal/inputs/metoffice/test_client.py" time="0.700" timestamp="2023-07-10T10:06:06" failures="0" errors="0" skipped="0">
+		<testcase classname="internal.inputs.metoffice.test_client.TestClient_ConvertRawFileToDataset" name="test_convertsCorrectly" time="0.130" timestamp="2023-07-10T10:06:06" file="src/nwp_consumer/internal/inputs/metoffice/test_client.py" line="36"/>
+		<testcase classname="internal.inputs.metoffice.test_client.TestClient_ConvertRawFileToDataset" name="test_handlesUnknownsInMetOfficeData" time="0.440" timestamp="2023-07-10T10:06:06" file="src/nwp_consumer/internal/inputs/metoffice/test_client.py" line="64"/>
+		<testcase classname="internal.inputs.metoffice.test_client.TestClient_ConvertRawFileToDataset" name="test_renamesVariables" time="0.130" timestamp="2023-07-10T10:06:06" file="src/nwp_consumer/internal/inputs/metoffice/test_client.py" line="50"/>
+	</testsuite>
+	<testsuite name="internal.inputs.metoffice.test_client.TestClient_Init-20230710100603" tests="1" file="internal/inputs/metoffice/test_client.py" time="0.000" timestamp="2023-07-10T10:06:06" failures="0" errors="0" skipped="0">
+		<testcase classname="internal.inputs.metoffice.test_client.TestClient_Init" name="test_errorsWhenVariablesAreNotSet" time="0.000" timestamp="2023-07-10T10:06:06" file="src/nwp_consumer/internal/inputs/metoffice/test_client.py" line="25"/>
+	</testsuite>
+	<testsuite name="internal.inputs.metoffice.test_client.Test_IsWantedFile-20230710100603" tests="1" file="internal/inputs/metoffice/test_client.py" time="0.001" timestamp="2023-07-10T10:06:06" failures="0" errors="0" skipped="0">
+		<testcase classname="internal.inputs.metoffice.test_client.Test_IsWantedFile" name="test_correctlyFiltersMetOfficeFileInfos" time="0.001" timestamp="2023-07-10T10:06:06" file="src/nwp_consumer/internal/inputs/metoffice/test_client.py" line="102"/>
+	</testsuite>
+	<testsuite name="internal.outputs.localfs.test_client.TestDeleteZarrForInitTime-20230710100603" tests="1" file="internal/outputs/localfs/test_client.py" time="0.045" timestamp="2023-07-10T10:06:06" failures="0" errors="0" skipped="0">
+		<testcase classname="internal.outputs.localfs.test_client.TestDeleteZarrForInitTime" name="test_delete_zarr_for_init_time" time="0.045" timestamp="2023-07-10T10:06:06" file="src/nwp_consumer/internal/outputs/localfs/test_client.py" line="226"/>
+	</testsuite>
+	<testsuite name="internal.outputs.localfs.test_client.TestExistsInRawDir-20230710100603" tests="2" file="internal/outputs/localfs/test_client.py" time="0.002" timestamp="2023-07-10T10:06:06" failures="0" errors="0" skipped="0">
+		<testcase classname="internal.outputs.localfs.test_client.TestExistsInRawDir" name="test_file_does_not_exist" time="0.001" timestamp="2023-07-10T10:06:06" file="src/nwp_consumer/internal/outputs/localfs/test_client.py" line="37"/>
+		<testcase classname="internal.outputs.localfs.test_client.TestExistsInRawDir" name="test_file_exists" time="0.001" timestamp="2023-07-10T10:06:06" file="src/nwp_consumer/internal/outputs/localfs/test_client.py" line="27"/>
+	</testsuite>
+	<testsuite name="internal.outputs.localfs.test_client.TestExistsInZarrDir-20230710100603" tests="2" file="internal/outputs/localfs/test_client.py" time="0.001" timestamp="2023-07-10T10:06:06" failures="0" errors="0" skipped="0">
+		<testcase classname="internal.outputs.localfs.test_client.TestExistsInZarrDir" name="test_file_does_not_exist" time="0.000" timestamp="2023-07-10T10:06:06" file="src/nwp_consumer/internal/outputs/localfs/test_client.py" line="160"/>
+		<testcase classname="internal.outputs.localfs.test_client.TestExistsInZarrDir" name="test_file_exists" time="0.000" timestamp="2023-07-10T10:06:06" file="src/nwp_consumer/internal/outputs/localfs/test_client.py" line="148"/>
+	</testsuite>
+	<testsuite name="internal.outputs.localfs.test_client.TestListInitTimesInRawDir-20230710100603" tests="1" file="internal/outputs/localfs/test_client.py" time="0.131" timestamp="2023-07-10T10:06:06" failures="0" errors="0" skipped="0">
+		<testcase classname="internal.outputs.localfs.test_client.TestListInitTimesInRawDir" name="test_list_init_times" time="0.131" timestamp="2023-07-10T10:06:06" file="src/nwp_consumer/internal/outputs/localfs/test_client.py" line="95">
+			<system-out><![CDATA[{"earliest": "datetime.datetime(2023, 1, 1, 3, 0)", "filename": "client.py", "latest": "datetime.datetime(2023, 1, 3, 9, 0)", "level": "debug", "lineno": 81, "message": "Found 3 init times in raw directory", "timestamp": "2023-07-10T09:06:06.768795Z"}
+]]></system-out>
+		</testcase>
+	</testsuite>
+	<testsuite name="internal.outputs.localfs.test_client.TestReadBytesForInitTime-20230710100603" tests="1" file="internal/outputs/localfs/test_client.py" time="0.001" timestamp="2023-07-10T10:06:06" failures="0" errors="0" skipped="0">
+		<testcase classname="internal.outputs.localfs.test_client.TestReadBytesForInitTime" name="test_read_bytes_for_init_time" time="0.001" timestamp="2023-07-10T10:06:06" file="src/nwp_consumer/internal/outputs/localfs/test_client.py" line="127"/>
+	</testsuite>
+	<testsuite name="internal.outputs.localfs.test_client.TestWriteBytesToRawDir-20230710100603" tests="1" file="internal/outputs/localfs/test_client.py" time="0.001" timestamp="2023-07-10T10:06:06" failures="0" errors="0" skipped="0">
+		<testcase classname="internal.outputs.localfs.test_client.TestWriteBytesToRawDir" name="test_write_bytes_to_raw_dir" time="0.001" timestamp="2023-07-10T10:06:06" file="src/nwp_consumer/internal/outputs/localfs/test_client.py" line="60"/>
+	</testsuite>
+	<testsuite name="internal.outputs.localfs.test_client.TestWriteDatasetToZarrDir-20230710100603" tests="1" file="internal/outputs/localfs/test_client.py" time="0.019" timestamp="2023-07-10T10:06:06" failures="0" errors="0" skipped="0">
+		<testcase classname="internal.outputs.localfs.test_client.TestWriteDatasetToZarrDir" name="test_write_dataset_to_zarr_dir" time="0.019" timestamp="2023-07-10T10:06:06" file="src/nwp_consumer/internal/outputs/localfs/test_client.py" line="193"/>
+	</testsuite>
+	<testsuite name="internal.outputs.s3.test_client.TestS3Client-20230710100603" tests="7" file="internal/outputs/s3/test_client.py" time="1.435" timestamp="2023-07-10T10:06:13" failures="0" errors="0" skipped="0">
+		<testcase classname="internal.outputs.s3.test_client.TestS3Client" name="test_deleteZarrForInitTime" time="0.695" timestamp="2023-07-10T10:06:12" file="src/nwp_consumer/internal/outputs/s3/test_client.py" line="212">
+			<system-out><![CDATA[Setting up test
+Tearing down bucket
+]]></system-out>
+			<system-err><![CDATA[127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2F.zgroup%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/UKV/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2FUKV%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/UKV/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2FUKV%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/init_time/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Finit_time%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/init_time/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Finit_time%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/variable/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fvariable%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/variable/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fvariable%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/step/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fstep%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/step/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fstep%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/x/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fx%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/x/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fx%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/y/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fy%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/y/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fy%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2F.zattrs%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/step/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fstep%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/step/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fstep%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/step/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fstep%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/step/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fstep%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fstep%2F.zarray%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/step/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/step/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fstep%2F.zattrs%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/step/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/step/0 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/init_time/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Finit_time%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/init_time/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Finit_time%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/init_time/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Finit_time%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/init_time/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Finit_time%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Finit_time%2F.zarray%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/init_time/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/init_time/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Finit_time%2F.zattrs%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/init_time/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/init_time/0 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/variable/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fvariable%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/variable/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fvariable%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/variable/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fvariable%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/variable/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fvariable%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fvariable%2F.zarray%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/variable/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/variable/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fvariable%2F.zattrs%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/variable/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/variable/0 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/y/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fy%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/y/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fy%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/y/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fy%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/y/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fy%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fy%2F.zarray%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/y/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/y/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fy%2F.zattrs%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/y/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/y/0 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/UKV/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2FUKV%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/UKV/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2FUKV%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/UKV/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2FUKV%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/UKV/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2FUKV%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2FUKV%2F.zarray%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/UKV/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/UKV/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2FUKV%2F.zattrs%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/UKV/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/UKV/0.1.0.0.0 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/UKV/0.0.0.0.0 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/x/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fx%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/x/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fx%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/x/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fx%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest.zarr/x/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fx%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fx%2F.zarray%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/x/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/x/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2Fx%2F.zattrs%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/x/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/x/0 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2F&delimiter=&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/UKV/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/UKV/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/init_time/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/init_time/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/step/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/step/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/variable/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/variable/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/x/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/x/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/y/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/y/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/latest.zarr/.zmetadata HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/latest.zarr/.zmetadata HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest.zarr%2F&delimiter=&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "POST /test-bucket?delete HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/latest HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Flatest%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&encoding-type=url HTTP/1.1" 200 -
+]]></system-err>
+		</testcase>
+		<testcase classname="internal.outputs.s3.test_client.TestS3Client" name="test_existsInRawDir" time="0.024" timestamp="2023-07-10T10:06:12" file="src/nwp_consumer/internal/outputs/s3/test_client.py" line="79">
+			<system-out><![CDATA[Setting up test
+Tearing down bucket
+]]></system-out>
+			<system-err><![CDATA[127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/raw/2023/01/01/0000/test_existsInRawDir.grib HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/raw/2023/01/01/0000/test_existsInRawDir.grib HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/raw/2023/01/01/0000/non_existent_file.grib HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=raw%2F2023%2F01%2F01%2F0000%2Fnon_existent_file.grib%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "DELETE /test-bucket/raw/2023/01/01/0000/test_existsInRawDir.grib HTTP/1.1" 204 -
+]]></system-err>
+		</testcase>
+		<testcase classname="internal.outputs.s3.test_client.TestS3Client" name="test_existsInZarrDir" time="0.013" timestamp="2023-07-10T10:06:12" file="src/nwp_consumer/internal/outputs/s3/test_client.py" line="194">
+			<system-out><![CDATA[Setting up test
+Tearing down bucket
+]]></system-out>
+			<system-err><![CDATA[127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/test_existsInZarrDir.zarr HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/test_existsInZarrDir.zarr HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "DELETE /test-bucket/zarr/test_existsInZarrDir.zarr HTTP/1.1" 204 -
+]]></system-err>
+		</testcase>
+		<testcase classname="internal.outputs.s3.test_client.TestS3Client" name="test_listInitTimesInRawDir" time="0.035" timestamp="2023-07-10T10:06:12" file="src/nwp_consumer/internal/outputs/s3/test_client.py" line="121">
+			<system-out><![CDATA[Setting up test
+{"earliest": "datetime.datetime(2023, 1, 3, 0, 0)", "filename": "client.py", "latest": "datetime.datetime(2023, 1, 4, 3, 0)", "level": "debug", "lineno": 99, "message": "Found 2 init times in raw directory", "timestamp": "2023-07-10T09:06:12.841017Z"}
+Tearing down bucket
+]]></system-out>
+			<system-err><![CDATA[127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/raw/2023/01/03/0000/test_raw_file1.grib HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/raw/2023/01/04/0300/test_raw_file2.grib HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=raw%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=raw%2F2023%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=raw%2F2023%2F01%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=raw%2F2023%2F01%2F03%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=raw%2F2023%2F01%2F04%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "DELETE /test-bucket/raw/2023/01/03/0000/test_raw_file1.grib HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "DELETE /test-bucket/raw/2023/01/04/0300/test_raw_file2.grib HTTP/1.1" 204 -
+]]></system-err>
+		</testcase>
+		<testcase classname="internal.outputs.s3.test_client.TestS3Client" name="test_readBytesForInitTime" time="0.016" timestamp="2023-07-10T10:06:12" file="src/nwp_consumer/internal/outputs/s3/test_client.py" line="144">
+			<system-out><![CDATA[Setting up test
+Tearing down bucket
+]]></system-out>
+			<system-err><![CDATA[127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/raw/2023/01/05/0000/test_readBytesForInitTime.grib HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=raw%2F2023%2F01%2F05%2F0000%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/raw/2023/01/05/0000/test_readBytesForInitTime.grib HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "DELETE /test-bucket/raw/2023/01/05/0000/test_readBytesForInitTime.grib HTTP/1.1" 204 -
+]]></system-err>
+		</testcase>
+		<testcase classname="internal.outputs.s3.test_client.TestS3Client" name="test_writeBytesToRawDir" time="0.016" timestamp="2023-07-10T10:06:12" file="src/nwp_consumer/internal/outputs/s3/test_client.py" line="108">
+			<system-out><![CDATA[Setting up test
+Tearing down bucket
+]]></system-out>
+			<system-err><![CDATA[127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/raw/2023/01/02/0000/test_writeBytesToRawDir.grib HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/raw/2023/01/02/0000/test_writeBytesToRawDir.grib HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "DELETE /test-bucket/raw/2023/01/02/0000/test_writeBytesToRawDir.grib HTTP/1.1" 204 -
+]]></system-err>
+		</testcase>
+		<testcase classname="internal.outputs.s3.test_client.TestS3Client" name="test_writeDatasetToZarrDir" time="0.636" timestamp="2023-07-10T10:06:13" file="src/nwp_consumer/internal/outputs/s3/test_client.py" line="166">
+			<system-out><![CDATA[Setting up test
+Tearing down bucket
+]]></system-out>
+			<system-err><![CDATA[127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2F.zgroup%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/UKV/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2FUKV%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/UKV/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2FUKV%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/init_time/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Finit_time%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/init_time/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Finit_time%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/variable/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fvariable%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/variable/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fvariable%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/step/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fstep%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/step/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fstep%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/x/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fx%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/x/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:12] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fx%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/y/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fy%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/y/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fy%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2F.zattrs%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/step/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fstep%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/step/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fstep%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/step/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fstep%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/step/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fstep%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fstep%2F.zarray%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/step/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/step/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fstep%2F.zattrs%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/step/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/step/0 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/init_time/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Finit_time%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/init_time/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Finit_time%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/init_time/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Finit_time%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/init_time/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Finit_time%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Finit_time%2F.zarray%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/init_time/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/init_time/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Finit_time%2F.zattrs%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/init_time/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/init_time/0 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/variable/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fvariable%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/variable/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fvariable%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/variable/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fvariable%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/variable/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fvariable%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fvariable%2F.zarray%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/variable/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/variable/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fvariable%2F.zattrs%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/variable/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/variable/0 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/y/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fy%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/y/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fy%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/y/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fy%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/y/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fy%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fy%2F.zarray%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/y/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/y/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fy%2F.zattrs%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/y/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/y/0 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/UKV/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2FUKV%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/UKV/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2FUKV%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/UKV/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2FUKV%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/UKV/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2FUKV%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2FUKV%2F.zarray%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/UKV/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/UKV/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2FUKV%2F.zattrs%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/UKV/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/UKV/0.1.0.0.0 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/UKV/0.0.0.0.0 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/x/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fx%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/x/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fx%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/x/.zarray HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fx%2F.zarray%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "HEAD /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/x/.zgroup HTTP/1.1" 404 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fx%2F.zgroup%2F&delimiter=%2F&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fx%2F.zarray%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/x/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/x/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2Fx%2F.zattrs%2F&delimiter=%2F&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/x/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/x/0 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&prefix=zarr%2Ftest_writeDatasetToZarrDir.zarr%2F&delimiter=&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zgroup HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/UKV/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/UKV/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/init_time/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/init_time/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/step/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/step/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/variable/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/variable/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/x/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/x/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/y/.zarray HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/y/.zattrs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&max-keys=1&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "PUT /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zmetadata HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zmetadata HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "GET /test-bucket?list-type=2&encoding-type=url HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zattrs HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zgroup HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/.zmetadata HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/UKV/.zarray HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/UKV/.zattrs HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/UKV/0.0.0.0.0 HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/UKV/0.1.0.0.0 HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/init_time/.zarray HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/init_time/.zattrs HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/init_time/0 HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/step/.zarray HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/step/.zattrs HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/step/0 HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/variable/.zarray HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/variable/.zattrs HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/variable/0 HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/x/.zarray HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/x/.zattrs HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/x/0 HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/y/.zarray HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/y/.zattrs HTTP/1.1" 204 -
+127.0.0.1 - - [10/Jul/2023 10:06:13] "DELETE /test-bucket/zarr/test_writeDatasetToZarrDir.zarr/y/0 HTTP/1.1" 204 -
+]]></system-err>
+		</testcase>
+	</testsuite>
+	<testsuite name="internal.service.test_service.TestNWPConsumerService-20230710100603" tests="3" file="internal/service/test_service.py" time="8.267" timestamp="2023-07-10T10:06:22" failures="0" errors="0" skipped="0">
+		<testcase classname="internal.service.test_service.TestNWPConsumerService" name="test_convertRawDataset" time="5.842" timestamp="2023-07-10T10:06:19" file="src/nwp_consumer/internal/service/test_service.py" line="116">
+			<system-out><![CDATA[{"filename": "service.py", "level": "info", "lineno": 116, "message": "Converting 8 init times to zarr.", "num": 8, "timestamp": "2023-07-10T09:06:14.023661Z"}
+{"filename": "service.py", "initTime": "2021/01/01 00:00", "level": "debug", "lineno": 131, "message": "Creating Zarr for initTime 2021/01/01 00:00", "timestamp": "2023-07-10T09:06:14.602744Z"}
+{"filename": "service.py", "initTime": "2021/01/01 06:00", "level": "debug", "lineno": 131, "message": "Creating Zarr for initTime 2021/01/01 06:00", "timestamp": "2023-07-10T09:06:15.282583Z"}
+{"filename": "service.py", "initTime": "2021/01/02 06:00", "level": "debug", "lineno": 131, "message": "Creating Zarr for initTime 2021/01/02 06:00", "timestamp": "2023-07-10T09:06:15.924058Z"}
+{"filename": "service.py", "initTime": "2021/01/01 12:00", "level": "debug", "lineno": 131, "message": "Creating Zarr for initTime 2021/01/01 12:00", "timestamp": "2023-07-10T09:06:16.582830Z"}
+{"filename": "service.py", "initTime": "2021/01/02 12:00", "level": "debug", "lineno": 131, "message": "Creating Zarr for initTime 2021/01/02 12:00", "timestamp": "2023-07-10T09:06:17.247937Z"}
+{"filename": "service.py", "initTime": "2021/01/01 18:00", "level": "debug", "lineno": 131, "message": "Creating Zarr for initTime 2021/01/01 18:00", "timestamp": "2023-07-10T09:06:17.882490Z"}
+{"filename": "service.py", "initTime": "2021/01/02 18:00", "level": "debug", "lineno": 131, "message": "Creating Zarr for initTime 2021/01/02 18:00", "timestamp": "2023-07-10T09:06:18.547464Z"}
+{"filename": "service.py", "initTime": "2021/01/02 00:00", "level": "debug", "lineno": 131, "message": "Creating Zarr for initTime 2021/01/02 00:00", "timestamp": "2023-07-10T09:06:19.143846Z"}
+]]></system-out>
+		</testcase>
+		<testcase classname="internal.service.test_service.TestNWPConsumerService" name="test_createLatestZarr" time="0.584" timestamp="2023-07-10T10:06:20" file="src/nwp_consumer/internal/service/test_service.py" line="127">
+			<system-out><![CDATA[{"filename": "service.py", "initTime": "2021/01/02 18:00", "level": "info", "lineno": 198, "message": "Creating Latest Zarr for initTime 2021/01/02 18:00", "timestamp": "2023-07-10T09:06:19.864863Z"}
+]]></system-out>
+		</testcase>
+		<testcase classname="internal.service.test_service.TestNWPConsumerService" name="test_downloadRawDataset" time="1.840" timestamp="2023-07-10T10:06:22" file="src/nwp_consumer/internal/service/test_service.py" line="105"/>
+	</testsuite>
+</testsuites>

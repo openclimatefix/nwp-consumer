@@ -52,3 +52,12 @@ class S3Config(_EnvParseMixin):
     AWS_ACCESS_KEY: str
     AWS_ACCESS_SECRET: str
     AWS_REGION: str
+
+
+class ECMWFMARSConfig(_EnvParseMixin):
+    """Config for ECMWF MARS API."""
+
+    ECMWF_API_KEY: str
+    ECMWF_API_URL: str
+    ECMWF_API_EMAIL: str
+    ECMWF_AREA: str = "uk"
