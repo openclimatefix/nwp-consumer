@@ -82,7 +82,7 @@ class MARSClient(internal.FetcherInterface):
         if area not in AREA_MAP:
             raise KeyError(f"area must be one of {list(AREA_MAP.keys())}")
 
-        self.area = AREA_MAP[area]
+        self.area = area
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
         # For the model we are pulling from, there are only files for 00:00 and 12:00
@@ -91,7 +91,7 @@ class MARSClient(internal.FetcherInterface):
         if it.hour not in [0, 12]:
             return []
 
-        with tempfile.NamedTemporaryFile(suffix=".txt") as tf:
+        with tempfile.NamedTemporaryFile(suffix=".txt", mode="w") as tf:
             try:
                 self.server.execute(
                     req=f"""
@@ -105,14 +105,14 @@ class MARSClient(internal.FetcherInterface):
                             stream   = oper,
                             time     = {it.strftime("%H")},
                             type     = fc,
-                            area     = {self.area},
+                            area     = {AREA_MAP[self.area]},
                             grid     = 0.05/0.05,
-                            target   = {tf.name}
+                            target   = off
                         """,
                     target=tf.name
                 )
             except ecmwfapi.api.APIException as e:
-                log.warn("error calling ECMWF MARS API", error=e)
+                log.warn("error listing ECMWF MARS inittime data", error=e)
                 return []
 
             if os.stat(tf.name).st_size < 100 and "0 bytes" in tf.read():
@@ -136,14 +136,14 @@ class MARSClient(internal.FetcherInterface):
                         stream   = oper,
                         time     = {fi.it().strftime("%H")},
                         type     = fc,
-                        area     = {self.area},
+                        area     = {AREA_MAP[self.area]},
                         grid     = 0.05/0.05,
-                        target   = {tfp.name}
+                        target   = off
                     """,
-                target=tfp
+                target=tfp.as_posix()
             )
         except ecmwfapi.api.APIException as e:
-            log.warn("error calling ECMWF MARS API", error=e)
+            log.warn("error fetching ECMWF MARS data", error=e)
             return fi, pathlib.Path()
 
         log.debug(

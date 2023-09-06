@@ -1,7 +1,7 @@
 import datetime as dt
 from dataclasses import dataclass
 
-import internal
+import nwp_consumer.internal as internal
 
 
 @dataclass
