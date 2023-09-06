@@ -57,11 +57,11 @@ def run() -> int:
         # Perform a healthcheck on the service
         # * Don't care here about the source/sink
         return NWPConsumerService(
-            fetcher=inputs.ceda.CEDAClient(
+            fetcher=inputs.ceda.Client(
                 ftpUsername="anonymous",
                 ftpPassword="anonymous",
             ),
-            storer=outputs.localfs.LocalFSClient(),
+            storer=outputs.localfs.Client(),
             rawdir=arguments['--rdir'],
             zarrdir=arguments['--zdir'],
         ).Check()
@@ -69,10 +69,10 @@ def run() -> int:
     match arguments['--sink']:
         # Create the storer based on the sink
         case 'local':
-            storer = outputs.localfs.LocalFSClient()
+            storer = outputs.localfs.Client()
         case 's3':
             s3c = config.S3Config()
-            storer = outputs.s3.S3Client(
+            storer = outputs.s3.Client(
                 key=s3c.AWS_ACCESS_KEY,
                 bucket=s3c.AWS_S3_BUCKET,
                 secret=s3c.AWS_ACCESS_SECRET,
@@ -85,20 +85,20 @@ def run() -> int:
         # Create the fetcher based on the source
         case 'ceda':
             c = config.CEDAConfig()
-            fetcher = inputs.ceda.CEDAClient(
+            fetcher = inputs.ceda.Client(
                 ftpUsername=c.CEDA_FTP_USER,
                 ftpPassword=c.CEDA_FTP_PASS,
             )
         case 'metoffice':
             c = config.MetOfficeConfig()
-            fetcher = inputs.metoffice.MetOfficeClient(
+            fetcher = inputs.metoffice.Client(
                 orderID=c.METOFFICE_ORDER_ID,
                 clientID=c.METOFFICE_CLIENT_ID,
                 clientSecret=c.METOFFICE_CLIENT_SECRET,
             )
         case 'ecmwf-mars':
             c = config.ECMWFMARSConfig()
-            fetcher = inputs.ecmwf.ECMWFMarsClient(
+            fetcher = inputs.ecmwf.MARSClient(
                 area=c.ECMWF_AREA,
             )
         case _:

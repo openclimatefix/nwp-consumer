@@ -18,9 +18,9 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
     """Integration tests for the NWPConsumerService class."""
 
     def setUp(self) -> None:
-        storageClient = outputs.localfs.LocalFSClient()
+        storageClient = outputs.localfs.Client()
         mc = config.MetOfficeConfig()
-        metOfficeClient = inputs.metoffice.MetOfficeClient(
+        metOfficeClient = inputs.metoffice.Client(
             orderID=mc.METOFFICE_ORDER_ID,
             clientID=mc.METOFFICE_CLIENT_ID,
             clientSecret=mc.METOFFICE_CLIENT_SECRET,
@@ -64,9 +64,9 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
     """Integration tests for the NWPConsumerService class."""
 
     def setUp(self) -> None:
-        storageClient = outputs.localfs.LocalFSClient()
+        storageClient = outputs.localfs.Client()
         cc = config.CEDAConfig()
-        cedaClient = inputs.ceda.CEDAClient(
+        cedaClient = inputs.ceda.Client(
             ftpUsername=cc.CEDA_FTP_USER,
             ftpPassword=cc.CEDA_FTP_PASS,
         )
@@ -106,9 +106,9 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
 
 class TestNWPConverterService_ECMWFMARS(unittest.testcase):
     def setUp(self):
-        storageClient = outputs.localfs.LocalFSClient()
+        storageClient = outputs.localfs.Client()
         c = config.ECMWFMARSConfig()
-        ecmwfMarsClient = inputs.ecmwf.ECMWFMarsClient(
+        ecmwfMarsClient = inputs.ecmwf.MARSClient(
             area=c.ECMWF_AREA,
         )
 

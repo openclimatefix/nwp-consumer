@@ -11,7 +11,7 @@ from nwp_consumer import internal
 log = structlog.getLogger()
 
 
-class S3Client(internal.StorageInterface):
+class Client(internal.StorageInterface):
     """Client for AWS S3."""
 
     # S3 Bucket

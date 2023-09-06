@@ -69,7 +69,7 @@ COORDINATE_ALLOW_LIST: typing.Sequence[str] = (
 )
 
 
-class ECMWFMarsClient(internal.FetcherInterface):
+class MARSClient(internal.FetcherInterface):
     """Implements a client to fetch data from ECMWF's MARS API."""
 
     server: ecmwfapi.api.ECMWFService

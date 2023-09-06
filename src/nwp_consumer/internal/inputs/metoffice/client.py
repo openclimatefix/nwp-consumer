@@ -34,7 +34,7 @@ PARAMETER_RENAME_MAP: dict[str, str] = {
 }
 
 
-class MetOfficeClient(internal.FetcherInterface):
+class Client(internal.FetcherInterface):
     """Implements a client to fetch the data from the MetOffice API."""
 
     # Base https URL for MetOffice's data endpoint

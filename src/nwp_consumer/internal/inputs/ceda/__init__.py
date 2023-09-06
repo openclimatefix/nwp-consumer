@@ -1,3 +1,3 @@
-__all__ = ['CEDAClient']
+__all__ = ['Client']
 
-from .client import CEDAClient
+from .client import Client

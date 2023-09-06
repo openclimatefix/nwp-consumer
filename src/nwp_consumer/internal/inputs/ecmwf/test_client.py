@@ -1,15 +1,16 @@
-"""Tests for the metoffice module."""
+"""Tests for the ecmwf module."""
 
 import pathlib
 import unittest.mock
 
-from .client import ECMWFMarsClient
+from .client import MARSClient
 
 # --------- Test setup --------- #
 
-testClient = ECMWFMarsClient(
+testMARSClient = MARSClient(
     area="uk"
 )
+
 
 # --------- Client methods --------- #
 
@@ -19,12 +20,12 @@ class TestECMWFMARSClient(unittest.TestCase):
 
     def test_init(self):
         with self.assertRaises(KeyError):
-            _ = ECMWFMarsClient(area="not a valid area")
+            _ = MARSClient(area="not a valid area")
 
     def test_mapTemp(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_2params.grib"
 
-        out = testClient.mapTemp(p=testFilePath)
+        out = testMARSClient.mapTemp(p=testFilePath)
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(

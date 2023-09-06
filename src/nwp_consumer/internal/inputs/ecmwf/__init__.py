@@ -1,3 +1,3 @@
-__all__ = ['ECMWFMarsClient']
+__all__ = ['MARSClient']
 
-from .client import ECMWFMarsClient
+from .client import MARSClient

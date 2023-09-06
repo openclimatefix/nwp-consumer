@@ -9,7 +9,7 @@ import xarray as xr
 
 from nwp_consumer import internal
 
-from .client import LocalFSClient
+from .client import Client
 
 RAW = Path("test_raw_dir")
 ZARR = Path("test_zarr_dir")
@@ -23,7 +23,7 @@ class TestLocalFSClient(unittest.TestCase):
         RAW.mkdir(parents=True, exist_ok=True)
         ZARR.mkdir(parents=True, exist_ok=True)
 
-        cls.testClient = LocalFSClient()
+        cls.testClient = Client()
 
     @classmethod
     def tearDownClass(cls) -> None:

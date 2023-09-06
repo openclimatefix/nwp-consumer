@@ -44,7 +44,7 @@ PARAMETER_RENAME_MAP: dict[str, str] = {
 }
 
 
-class CEDAClient(internal.FetcherInterface):
+class Client(internal.FetcherInterface):
     """Implements a client to fetch data from CEDA."""
 
     # CEDA FTP Username

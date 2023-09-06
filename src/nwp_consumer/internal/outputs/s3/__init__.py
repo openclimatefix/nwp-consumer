@@ -1,3 +1,3 @@
-__all__ = ['S3Client']
+__all__ = ['Client']
 
-from .client import S3Client
+from .client import Client

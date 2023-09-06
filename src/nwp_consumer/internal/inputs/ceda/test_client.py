@@ -7,14 +7,14 @@ import xarray as xr
 
 from ._models import CEDAFileInfo
 from .client import (
-    CEDAClient,
+    Client,
     _isWantedFile,
     _reshapeTo2DGrid,
 )
 
 # --------- Test setup --------- #
 
-testClient = CEDAClient(ftpPassword="", ftpUsername="")
+testClient = Client(ftpPassword="", ftpUsername="")
 
 
 # --------- Client methods --------- #

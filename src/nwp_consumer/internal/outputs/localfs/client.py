@@ -10,7 +10,7 @@ from nwp_consumer import internal
 log = structlog.getLogger()
 
 
-class LocalFSClient(internal.StorageInterface):
+class Client(internal.StorageInterface):
     """Client for local filesystem."""
 
     def exists(self, *, dst: pathlib.Path) -> bool:

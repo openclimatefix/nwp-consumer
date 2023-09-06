@@ -12,14 +12,14 @@ from nwp_consumer.internal.inputs.ceda._models import CEDAFileInfo
 from nwp_consumer.internal.inputs.ecmwf._models import ECMWFMarsFileInfo
 from nwp_consumer.internal.inputs.metoffice._models import MetOfficeFileInfo
 
-storageClient = outputs.localfs.LocalFSClient()
+storageClient = outputs.localfs.Client()
 
 
 class TestClient_FetchRawFileBytes(unittest.TestCase):
 
     def test_downloadsRawGribFileFromCEDA(self):
         c = config.CEDAConfig()
-        cedaClient = inputs.ceda.CEDAClient(
+        cedaClient = inputs.ceda.Client(
             ftpUsername=c.CEDA_FTP_USER,
             ftpPassword=c.CEDA_FTP_PASS,
         )
@@ -34,7 +34,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
             .replace(hour=0, minute=0, second=0, microsecond=0)
 
         c = config.MetOfficeConfig()
-        metOfficeClient = inputs.metoffice.MetOfficeClient(
+        metOfficeClient = inputs.metoffice.Client(
             orderID=c.METOFFICE_ORDER_ID,
             clientID=c.METOFFICE_CLIENT_ID,
             clientSecret=c.METOFFICE_CLIENT_SECRET,
@@ -52,7 +52,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         )
 
         c = config.ECMWFMARSConfig()
-        ecmwfMarsClient = inputs.ecmwf.ECMWFMarsClient(
+        ecmwfMarsClient = inputs.ecmwf.MARSClient(
             area=c.ECMWF_AREA,
         )
         fileInfo = ECMWFMarsFileInfo(
@@ -70,7 +70,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
             year=2022, month=1, day=1, hour=0, minute=0, tzinfo=None
         )
         c = config.CEDAConfig()
-        cedaClient = inputs.ceda.CEDAClient(
+        cedaClient = inputs.ceda.Client(
             ftpUsername=c.CEDA_FTP_USER,
             ftpPassword=c.CEDA_FTP_PASS,
         )
@@ -81,7 +81,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         metOfficeInitTime: dt.datetime = dt.datetime.now() \
             .replace(hour=0, minute=0, second=0, microsecond=0)
         c = config.MetOfficeConfig()
-        metOfficeClient = inputs.metoffice.MetOfficeClient(
+        metOfficeClient = inputs.metoffice.Client(
             orderID=c.METOFFICE_ORDER_ID,
             clientID=c.METOFFICE_CLIENT_ID,
             clientSecret=c.METOFFICE_CLIENT_SECRET,
@@ -94,7 +94,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
             year=2022, month=1, day=1, hour=0, minute=0, tzinfo=None
         )
         c = config.ECMWFMARSConfig()
-        ecmwfMarsClient = inputs.ecmwf.ECMWFMarsClient(
+        ecmwfMarsClient = inputs.ecmwf.MARSClient(
             area=c.ECMWF_AREA,
         )
         fileInfos = ecmwfMarsClient.listRawFilesForInitTime(it=ecmwfMarsInitTime)
