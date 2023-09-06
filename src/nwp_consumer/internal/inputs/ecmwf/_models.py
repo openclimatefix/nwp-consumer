@@ -1,6 +1,7 @@
-import internal
 import datetime as dt
 from dataclasses import dataclass
+
+import internal
 
 
 @dataclass

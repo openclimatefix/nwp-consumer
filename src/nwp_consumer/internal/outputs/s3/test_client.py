@@ -14,7 +14,7 @@ from . import S3Client
 ENDPOINT_URL = "http://localhost:5000"
 BUCKET = "test-bucket"
 KEY = "test-key"
-SECRET = "test-secret"
+SECRET = "test-secret"  # noqa: S105
 REGION = "us-east-1"
 
 RAW = Path("raw")

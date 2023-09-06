@@ -6,7 +6,6 @@ Will download up to a GB of data. Costs may apply for usage of the APIs.
 
 import datetime as dt
 import pathlib
-import shutil
 import unittest
 
 import numpy as np

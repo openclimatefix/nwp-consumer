@@ -1,20 +1,19 @@
-"""Implements a client to fetch data from ECMWF"""
+"""Implements a client to fetch data from ECMWF."""
+import datetime as dt
 import os
+import pathlib
 import tempfile
 import typing
 
 import cfgrib
 import ecmwfapi.api
 import structlog
-import pathlib
-import datetime as dt
-
 import xarray as xr
 from ecmwfapi import ECMWFService
 
-from ._models import ECMWFMarsFileInfo
-
 from nwp_consumer import internal
+
+from ._models import ECMWFMarsFileInfo
 
 log = structlog.getLogger()
 
@@ -76,7 +75,8 @@ class ECMWFMarsClient(internal.FetcherInterface):
     server: ecmwfapi.api.ECMWFService
     area: str
 
-    def __init__(self, area: str):
+    def __init__(self, area: str) -> None:
+        """Create a new ECMWFMarsClient."""
         self.server = ECMWFService("mars")
 
         if area not in AREA_MAP:
@@ -115,13 +115,13 @@ class ECMWFMarsClient(internal.FetcherInterface):
                 log.warn("error calling ECMWF MARS API", error=e)
                 return []
 
-            if os.stat(tf.name).st_size < 100:
-                if "0 bytes" in tf.read():
-                    return []
+            if os.stat(tf.name).st_size < 100 and "0 bytes" in tf.read():
+                return []
 
         return [ECMWFMarsFileInfo(inittime=it, area=self.area)]
 
-    def downloadToTemp(self, *, fi: internal.FileInfoModel) -> tuple[internal.FileInfoModel, pathlib.Path]:
+    def downloadToTemp(self, *, fi: internal.FileInfoModel) \
+            -> tuple[internal.FileInfoModel, pathlib.Path]:
         tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
         try:
             self.server.execute(

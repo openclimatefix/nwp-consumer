@@ -45,7 +45,7 @@ with contextlib.suppress(importlib.metadata.PackageNotFoundError):
 log = structlog.getLogger()
 
 
-def run():
+def run() -> int:
     """Run the CLI."""
     # Parse command line arguments from docstring
     arguments = docopt(__doc__, version=__version__)

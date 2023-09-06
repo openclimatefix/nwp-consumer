@@ -57,6 +57,7 @@ class CEDAClient(internal.FetcherInterface):
     __ftpBase: str
 
     def __init__(self, ftpUsername: str, ftpPassword: str) -> None:
+        """Create a new CEDAClient."""
         self.__username: str = urllib.parse.quote(ftpUsername)
         self.__password: str = urllib.parse.quote(ftpPassword)
         self.__ftpBase: str = f'ftp://{self.__username}:{self.__password}@ftp.ceda.ac.uk'

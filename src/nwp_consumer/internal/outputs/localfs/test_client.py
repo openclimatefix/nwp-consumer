@@ -59,7 +59,9 @@ class TestLocalFSClient(unittest.TestCase):
         # Create a zarr file in the zarr directory
         xr.Dataset(
             data_vars={
-                'UKV': (('init_time', 'variable', 'step', 'x', 'y'), np.random.rand(1, 2, 12, 100, 100)),
+                'UKV': (
+                    ('init_time', 'variable', 'step', 'x', 'y'),
+                    np.random.rand(1, 2, 12, 100, 100)),
             },
             coords={
                 'init_time': [dt.datetime(2023, 1, 1)],
@@ -155,7 +157,10 @@ class TestLocalFSClient(unittest.TestCase):
         path = ZARR / "test_delete.zarr"
         _ = xr.Dataset(
             data_vars={
-                'UKV': (('init_time', 'variable', 'step', 'x', 'y'), np.random.rand(1, 2, 12, 100, 100)),
+                'UKV': (
+                    ('init_time', 'variable', 'step', 'x', 'y'),
+                    np.random.rand(1, 2, 12, 100, 100)
+                ),
             },
             coords={
                 'init_time': [dt.datetime(2023, 1, 1)],

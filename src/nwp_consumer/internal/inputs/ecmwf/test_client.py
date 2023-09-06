@@ -1,6 +1,5 @@
 """Tests for the metoffice module."""
 
-import datetime as dt
 import pathlib
 import unittest.mock
 
@@ -33,7 +32,10 @@ class TestECMWFMARSClient(unittest.TestCase):
             dict(out.dims.items())
         )
         # Ensure the dimensions of the variables are in the correct order
-        self.assertEqual(("variable", "init_time", "step", "latitude", "longitude"), out["UKV"].dims)
+        self.assertEqual(
+            ("variable", "init_time", "step", "latitude", "longitude"),
+            out["UKV"].dims
+        )
         # Ensure the correct variables are in the variable dimension
         self.assertListEqual(['prate', 'sde'], sorted(out.coords["variable"].values))
 

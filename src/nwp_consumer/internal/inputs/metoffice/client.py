@@ -1,14 +1,13 @@
 """Implements a client to fetch the data from the MetOffice API."""
 
 import datetime as dt
-import math
 import pathlib
 import urllib.request
 
+import pyproj
 import requests
 import structlog.stdlib
 import xarray as xr
-import pyproj
 
 from nwp_consumer import internal
 

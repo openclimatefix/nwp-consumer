@@ -9,8 +9,8 @@ import unittest
 
 from nwp_consumer.internal import config, inputs, outputs
 from nwp_consumer.internal.inputs.ceda._models import CEDAFileInfo
-from nwp_consumer.internal.inputs.metoffice._models import MetOfficeFileInfo
 from nwp_consumer.internal.inputs.ecmwf._models import ECMWFMarsFileInfo
+from nwp_consumer.internal.inputs.metoffice._models import MetOfficeFileInfo
 
 storageClient = outputs.localfs.LocalFSClient()
 
@@ -47,7 +47,9 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         self.assertGreater(tmpPath.stat().st_size, 4000000)
 
     def test_downloadsRawGribFileFromECMWFMARS(self):
-        ecmwfMarsInitTime: dt.datetime = dt.datetime(year=2022, month=1, day=1, hour=0, minute=0, tzinfo=None)
+        ecmwfMarsInitTime: dt.datetime = dt.datetime(
+            year=2022, month=1, day=1, hour=0, minute=0, tzinfo=None
+        )
 
         c = config.ECMWFMARSConfig()
         ecmwfMarsClient = inputs.ecmwf.ECMWFMarsClient(
@@ -57,7 +59,6 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
             inittime=ecmwfMarsInitTime,
             area=c.ECMWF_AREA,
         )
-        print(fileInfo.filename())
         _, tmpPath = ecmwfMarsClient.downloadToTemp(fi=fileInfo)
         self.assertGreater(tmpPath.stat().st_size, 4000000)
 
@@ -65,7 +66,9 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
 class TestListRawFilesForInitTime(unittest.TestCase):
 
     def test_getsFileInfosFromCEDA(self):
-        cedaInitTime: dt.datetime = dt.datetime(year=2022, month=1, day=1, hour=0, minute=0, tzinfo=None)
+        cedaInitTime: dt.datetime = dt.datetime(
+            year=2022, month=1, day=1, hour=0, minute=0, tzinfo=None
+        )
         c = config.CEDAConfig()
         cedaClient = inputs.ceda.CEDAClient(
             ftpUsername=c.CEDA_FTP_USER,
@@ -87,7 +90,9 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         self.assertTrue(len(fileInfos) > 0)
 
     def test_getsFileInfosFromECMWFMARS(self):
-        ecmwfMarsInitTime: dt.datetime = dt.datetime(year=2022, month=1, day=1, hour=0, minute=0, tzinfo=None)
+        ecmwfMarsInitTime: dt.datetime = dt.datetime(
+            year=2022, month=1, day=1, hour=0, minute=0, tzinfo=None
+        )
         c = config.ECMWFMARSConfig()
         ecmwfMarsClient = inputs.ecmwf.ECMWFMarsClient(
             area=c.ECMWF_AREA,

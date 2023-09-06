@@ -13,7 +13,7 @@ import xarray as xr
 IT_FOLDER_FMTSTR = "%Y/%m/%d/%H%M"
 
 # The temporaray directory for storing downloaded files
-TMP_DIR = pathlib.Path("/tmp/nwpc")
+TMP_DIR = pathlib.Path("/tmp/nwpc")  # noqa: S108
 
 # The format string for the zarr dataset
 ZARR_FMTSTR = "%Y%m%dT%H%M"

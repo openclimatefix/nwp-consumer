@@ -23,7 +23,6 @@ class S3Client(internal.StorageInterface):
     def __init__(self, key: str, secret: str, bucket: str, region: str,
                  endpointURL: str = None) -> None:
         """Create a new S3Client."""
-
         (key, secret) = (None, None) if (key, secret) == ("", "") else (key, secret)
         if key is None and secret is None:
             log.info(
@@ -83,7 +82,11 @@ class S3Client(internal.StorageInterface):
                     ).replace(tzinfo=None)
                     initTimes.add(ddt)
                 except ValueError:
-                    log.debug("ignoring invalid folder name", name=dir.as_posix(), within=prefix.as_posix())
+                    log.debug(
+                        event="ignoring invalid folder name",
+                        name=dir.as_posix(),
+                        within=prefix.as_posix()
+                    )
 
         sortedInitTimes = sorted(initTimes)
         log.debug(
@@ -95,7 +98,10 @@ class S3Client(internal.StorageInterface):
 
     def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         initTimeDirPath = self.__bucket / prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
-        paths = [pathlib.Path(p).relative_to(self.__bucket) for p in self.__fs.ls(initTimeDirPath.as_posix())]
+        paths = [
+            pathlib.Path(p).relative_to(self.__bucket)
+            for p in self.__fs.ls(initTimeDirPath.as_posix())
+        ]
 
         log.debug(
             event="copying it folder to temporary files",
@@ -119,7 +125,8 @@ class S3Client(internal.StorageInterface):
                 continue
 
             # Don't copy file from the store if it is empty
-            if self.exists(dst=path) is False or self.__fs.du(path=(self.__bucket / path).as_posix()) == 0:
+            if self.exists(dst=path) is False \
+                    or self.__fs.du(path=(self.__bucket / path).as_posix()) == 0:
                 log.warn(
                     event="file in store is empty",
                     filepath=path.as_posix(),
