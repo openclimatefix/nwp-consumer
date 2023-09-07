@@ -38,11 +38,12 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "ruff == 0.0.259",
-    "unittest-xml-reporting == 3.2.0",
-    "moto[s3,server] == 4.0.5",
     "flask == 2.0.2",
     "flask-cors == 4.0.0",
+    "moto[s3,server] == 4.0.5",
+    "python-lsp-server == 1.7.4",
+    "ruff == 0.0.259",
+    "unittest-xml-reporting == 3.2.0",
 ]
 
 [project.scripts]
