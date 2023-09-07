@@ -89,6 +89,10 @@ class MARSClient(internal.FetcherInterface):
         # * Hence, only check requests for these times
 
         if it.hour not in [0, 12]:
+            log.debug(
+                event='ECMWF MARS archival forecast operational data is only available at 00:00 and 12:00',
+                inittime=it
+            )
             return []
 
         with tempfile.NamedTemporaryFile(suffix=".txt", mode="w") as tf:
