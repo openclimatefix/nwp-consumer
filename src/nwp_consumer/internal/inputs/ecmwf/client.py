@@ -192,12 +192,6 @@ class MARSClient(internal.FetcherInterface):
                 if oldParamName in ds:
                     ds = ds.rename({oldParamName: newParamName})
 
-            # Snow depth is in `m` from ECMWF, but OCF expects `kg m-2`.
-            # * A scaling factor of 1000 converts between the two.
-            # * See https://codes.ecmwf.int/grib/param-db/?id=141
-            if "sde" in ds:
-                ds = ds.assign(sde=ds["sde"] * 1000)
-
             # Delete unwanted coordinates
             ds = ds.drop_vars(
                 names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST],
