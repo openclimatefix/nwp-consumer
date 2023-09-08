@@ -98,11 +98,11 @@ class NWPConsumerService:
         allInitTimes: list[dt.datetime] = self.storer.listInitTimes(prefix=self.rawdir)
         for it in allInitTimes:
             # Don't convert files that already exist
-            if self.storer.exists(dst=self.zarrdir / it.strftime('%Y%m%d%H%M.zarr.zip')):
+            if self.storer.exists(dst=self.zarrdir / it.strftime(f'{internal.ZARR_FMTSTR}.zarr.zip')):
                 log.debug(
                     "zarr for initTime already exists; skipping",
                     inittime=it.strftime("%Y/%m/%d %H:%M"),
-                    path=(self.zarrdir / it.strftime('%Y%m%d%H%M.zarr.zip')).as_posix()
+                    path=(self.zarrdir / it.strftime(f'{internal.ZARR_FMTSTR}.zarr.zip')).as_posix()
                 )
                 continue
             if start <= it.date() <= end:
