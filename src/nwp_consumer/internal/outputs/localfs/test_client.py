@@ -9,7 +9,7 @@ import xarray as xr
 
 from nwp_consumer import internal
 
-from .client import LocalFSClient
+from .client import Client
 
 RAW = Path("test_raw_dir")
 ZARR = Path("test_zarr_dir")
@@ -23,7 +23,7 @@ class TestLocalFSClient(unittest.TestCase):
         RAW.mkdir(parents=True, exist_ok=True)
         ZARR.mkdir(parents=True, exist_ok=True)
 
-        cls.testClient = LocalFSClient()
+        cls.testClient = Client()
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -59,7 +59,9 @@ class TestLocalFSClient(unittest.TestCase):
         # Create a zarr file in the zarr directory
         xr.Dataset(
             data_vars={
-                'UKV': (('init_time', 'variable', 'step', 'x', 'y'), np.random.rand(1, 2, 12, 100, 100)),
+                'UKV': (
+                    ('init_time', 'variable', 'step', 'x', 'y'),
+                    np.random.rand(1, 2, 12, 100, 100)),
             },
             coords={
                 'init_time': [dt.datetime(2023, 1, 1)],
@@ -155,7 +157,10 @@ class TestLocalFSClient(unittest.TestCase):
         path = ZARR / "test_delete.zarr"
         _ = xr.Dataset(
             data_vars={
-                'UKV': (('init_time', 'variable', 'step', 'x', 'y'), np.random.rand(1, 2, 12, 100, 100)),
+                'UKV': (
+                    ('init_time', 'variable', 'step', 'x', 'y'),
+                    np.random.rand(1, 2, 12, 100, 100)
+                ),
             },
             coords={
                 'init_time': [dt.datetime(2023, 1, 1)],

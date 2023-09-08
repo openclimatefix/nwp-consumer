@@ -10,7 +10,7 @@ from nwp_consumer import internal
 log = structlog.getLogger()
 
 
-class LocalFSClient(internal.StorageInterface):
+class Client(internal.StorageInterface):
     """Client for local filesystem."""
 
     def exists(self, *, dst: pathlib.Path) -> bool:
@@ -26,7 +26,7 @@ class LocalFSClient(internal.StorageInterface):
         src.unlink(missing_ok=True)
         nbytes = os.stat(dst).st_size
         log.debug(
-            event="stored file in s3",
+            event="stored file locally",
             src=src.as_posix(),
             dst=dst.as_posix(),
             nbytes=nbytes

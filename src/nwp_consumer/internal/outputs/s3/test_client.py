@@ -9,12 +9,12 @@ from moto.server import ThreadedMotoServer
 
 from nwp_consumer import internal
 
-from . import S3Client
+from . import Client
 
 ENDPOINT_URL = "http://localhost:5000"
 BUCKET = "test-bucket"
 KEY = "test-key"
-SECRET = "test-secret"
+SECRET = "test-secret"  # noqa: S105
 REGION = "us-east-1"
 
 RAW = Path("raw")
@@ -47,7 +47,7 @@ class TestS3Client(unittest.TestCase):
         )
 
         # Create an instance of the S3Client class
-        cls.client = S3Client(
+        cls.client = Client(
             key=KEY,
             secret=SECRET,
             region=REGION,

@@ -1,3 +1,3 @@
-__all__ = ['MetOfficeClient']
+__all__ = ['Client']
 
-from .client import MetOfficeClient
+from .client import Client

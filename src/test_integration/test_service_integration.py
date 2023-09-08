@@ -6,7 +6,6 @@ Will download up to a GB of data. Costs may apply for usage of the APIs.
 
 import datetime as dt
 import pathlib
-import shutil
 import unittest
 
 import numpy as np
@@ -19,9 +18,9 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
     """Integration tests for the NWPConsumerService class."""
 
     def setUp(self) -> None:
-        storageClient = outputs.localfs.LocalFSClient()
+        storageClient = outputs.localfs.Client()
         mc = config.MetOfficeConfig()
-        metOfficeClient = inputs.metoffice.MetOfficeClient(
+        metOfficeClient = inputs.metoffice.Client(
             orderID=mc.METOFFICE_ORDER_ID,
             clientID=mc.METOFFICE_CLIENT_ID,
             clientSecret=mc.METOFFICE_CLIENT_SECRET,
@@ -60,19 +59,14 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
             # Ensure the init time is correct
             self.assertEqual(np.datetime64(initTime), ds.coords["init_time"].values[0])
 
-    def tearDown(self) -> None:
-        pass
-        shutil.rmtree('data/raw', ignore_errors=True)
-        shutil.rmtree('data/zarr', ignore_errors=True)
-
 
 class TestNWPConsumerService_CEDA(unittest.TestCase):
     """Integration tests for the NWPConsumerService class."""
 
     def setUp(self) -> None:
-        storageClient = outputs.localfs.LocalFSClient()
+        storageClient = outputs.localfs.Client()
         cc = config.CEDAConfig()
-        cedaClient = inputs.ceda.CEDAClient(
+        cedaClient = inputs.ceda.Client(
             ftpUsername=cc.CEDA_FTP_USER,
             ftpPassword=cc.CEDA_FTP_PASS,
         )
@@ -109,7 +103,43 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
                 ds.coords["init_time"].values[0]
             )
 
-    def tearDown(self) -> None:
-        pass
-        shutil.rmtree('data/raw', ignore_errors=True)
-        shutil.rmtree('data/zarr', ignore_errors=True)
+
+class TestNWPConverterService_ECMWFMARS(unittest.testcase):
+    def setUp(self):
+        storageClient = outputs.localfs.Client()
+        c = config.ECMWFMARSConfig()
+        ecmwfMarsClient = inputs.ecmwf.MARSClient(
+            area=c.ECMWF_AREA,
+        )
+
+        self.testService = service.NWPConsumerService(
+            fetcher=ecmwfMarsClient,
+            storer=storageClient,
+            rawdir='data/raw',
+            zarrdir='data/zarr',
+        )
+
+    def test_downloadAndConvertDataset(self):
+        initTime: dt.date = dt.date(year=2022, month=1, day=1)
+
+        nbytes = self.testService.DownloadRawDataset(start=initTime, end=initTime)
+        self.assertGreater(nbytes, 0)
+
+        nbytes = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
+        self.assertGreater(nbytes, 0)
+
+        for path in pathlib.Path('data/zarr').glob('*.zarr.zip'):
+            ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
+
+            # Enusre the data variables are correct
+            self.assertEqual(["UKV"], list(ds.data_vars))
+            # Ensure the dimensions have the right sizes
+            self.assertEqual(
+                {'init_time': 1, 'step': 49, 'variable': 16, 'latitude': 241, 'longitude': 301},
+                dict(ds.dims.items())
+            )
+            # Ensure the init time is correct
+            self.assertEqual(
+                np.datetime64(dt.datetime.strptime(path.with_suffix('').stem, ZARR_FMTSTR)),
+                ds.coords["init_time"].values[0]
+            )

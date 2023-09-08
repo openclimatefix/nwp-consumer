@@ -13,7 +13,7 @@ import xarray as xr
 IT_FOLDER_FMTSTR = "%Y/%m/%d/%H%M"
 
 # The temporaray directory for storing downloaded files
-TMP_DIR = pathlib.Path("/tmp/nwpc")
+TMP_DIR = pathlib.Path("/tmp/nwpc")  # noqa: S108
 
 # The format string for the zarr dataset
 ZARR_FMTSTR = "%Y%m%dT%H%M"
@@ -37,6 +37,14 @@ class OCFShortName(str, Enum):
     TemperatureAGL = "t"
     WindSpeedSurfaceAdjustedAGL = "si10"
     WindDirectionFromWhichBlowingSurfaceAdjustedAGL = "wdir10"
+    WindUComponentAGL = "u10"
+    WindVComponentAGL = "v10"
+    WindUComponent100m = "u100"
+    WindVComponent100m = "v100"
+    WindUComponent200m = "u200"
+    WindVComponent200m = "v200"
+    DirectSolarRadiation = "sr"
+    DownwardUVRadiationAtSurface = "duvrs"
 
 
 class FileInfoModel(abc.ABC):

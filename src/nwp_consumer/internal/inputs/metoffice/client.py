@@ -1,14 +1,13 @@
 """Implements a client to fetch the data from the MetOffice API."""
 
 import datetime as dt
-import math
 import pathlib
 import urllib.request
 
+import pyproj
 import requests
 import structlog.stdlib
 import xarray as xr
-import pyproj
 
 from nwp_consumer import internal
 
@@ -35,7 +34,7 @@ PARAMETER_RENAME_MAP: dict[str, str] = {
 }
 
 
-class MetOfficeClient(internal.FetcherInterface):
+class Client(internal.FetcherInterface):
     """Implements a client to fetch the data from the MetOffice API."""
 
     # Base https URL for MetOffice's data endpoint
@@ -166,6 +165,13 @@ class MetOfficeClient(internal.FetcherInterface):
         return wantedFileInfos
 
     def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
+        if p.suffix != '.grib':
+            log.warn(
+                event="cannot map non-grib file to dataset",
+                filepath=p.as_posix()
+            )
+            return xr.Dataset()
+
 
         log.debug(
             event="mapping raw file to xarray dataset",

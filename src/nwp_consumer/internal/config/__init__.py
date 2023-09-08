@@ -1,3 +1,3 @@
-__all__ = ["CEDAConfig", "MetOfficeConfig", "S3Config"]
+__all__ = ["CEDAConfig", "MetOfficeConfig", "S3Config", "ECMWFMARSConfig"]
 
-from .config import CEDAConfig, MetOfficeConfig, S3Config
+from .config import CEDAConfig, MetOfficeConfig, S3Config, ECMWFMARSConfig

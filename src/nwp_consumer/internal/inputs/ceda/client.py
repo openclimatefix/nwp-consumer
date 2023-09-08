@@ -44,7 +44,7 @@ PARAMETER_RENAME_MAP: dict[str, str] = {
 }
 
 
-class CEDAClient(internal.FetcherInterface):
+class Client(internal.FetcherInterface):
     """Implements a client to fetch data from CEDA."""
 
     # CEDA FTP Username
@@ -57,6 +57,7 @@ class CEDAClient(internal.FetcherInterface):
     __ftpBase: str
 
     def __init__(self, ftpUsername: str, ftpPassword: str) -> None:
+        """Create a new CEDAClient."""
         self.__username: str = urllib.parse.quote(ftpUsername)
         self.__password: str = urllib.parse.quote(ftpPassword)
         self.__ftpBase: str = f'ftp://{self.__username}:{self.__password}@ftp.ceda.ac.uk'
@@ -153,6 +154,13 @@ class CEDAClient(internal.FetcherInterface):
         return wantedFiles
 
     def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
+        if p.suffix != '.grib':
+            log.warn(
+                event="cannot map non-grib file to dataset",
+                filepath=p.as_posix()
+            )
+            return xr.Dataset()
+
 
         log.debug(
             event="mapping raw file to xarray dataset",

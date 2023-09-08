@@ -20,6 +20,7 @@ dependencies = [
     "cfgrib == 0.9.10.3",
     "dask[distributed] == 2023.2.1",
     "docopt == 0.6.2",
+    "ecmwf-api-client == 1.6.3",
     "fsspec[s3] == 2023.6.0",
     "marshmallow == 3.19.0",
     "marshmallow-dataclass == 8.5.12",
@@ -37,11 +38,12 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "ruff == 0.0.259",
-    "unittest-xml-reporting == 3.2.0",
-    "moto[s3,server] == 4.0.5",
     "flask == 2.0.2",
     "flask-cors == 4.0.0",
+    "moto[s3,server] == 4.0.5",
+    "python-lsp-server == 1.7.4",
+    "ruff == 0.0.259",
+    "unittest-xml-reporting == 3.2.0",
 ]
 
 [project.scripts]

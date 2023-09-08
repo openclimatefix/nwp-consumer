@@ -1,3 +1,3 @@
-__all__ = ['LocalFSClient']
+__all__ = ['Client']
 
-from .client import LocalFSClient
+from .client import Client

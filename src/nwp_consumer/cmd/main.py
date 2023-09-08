@@ -18,7 +18,7 @@ Options:
   --version           Show version.
   --from <startDate>  Start date in YYYY-MM-DD format [default: today].
   --to <endDate>      End date in YYYY-MM-DD format [default: today].
-  --source <source>   Data source to use (ceda/metoffice) [default: ceda].
+  --source <source>   Data source to use (ceda/metoffice/ecmwf-mars) [default: ceda].
   --sink <sink>       Data sink to use (local/s3) [default: local].
   --rdir <rawdir>     Directory of raw data store [default: /tmp/raw].
   --zdir <zarrdir>    Directory of zarr data store [default: /tmp/zarr].
@@ -45,7 +45,7 @@ with contextlib.suppress(importlib.metadata.PackageNotFoundError):
 log = structlog.getLogger()
 
 
-def run():
+def run() -> int:
     """Run the CLI."""
     # Parse command line arguments from docstring
     arguments = docopt(__doc__, version=__version__)
@@ -57,11 +57,11 @@ def run():
         # Perform a healthcheck on the service
         # * Don't care here about the source/sink
         return NWPConsumerService(
-            fetcher=inputs.ceda.CEDAClient(
+            fetcher=inputs.ceda.Client(
                 ftpUsername="anonymous",
                 ftpPassword="anonymous",
             ),
-            storer=outputs.localfs.LocalFSClient(),
+            storer=outputs.localfs.Client(),
             rawdir=arguments['--rdir'],
             zarrdir=arguments['--zdir'],
         ).Check()
@@ -69,10 +69,10 @@ def run():
     match arguments['--sink']:
         # Create the storer based on the sink
         case 'local':
-            storer = outputs.localfs.LocalFSClient()
+            storer = outputs.localfs.Client()
         case 's3':
             s3c = config.S3Config()
-            storer = outputs.s3.S3Client(
+            storer = outputs.s3.Client(
                 key=s3c.AWS_ACCESS_KEY,
                 bucket=s3c.AWS_S3_BUCKET,
                 secret=s3c.AWS_ACCESS_SECRET,
@@ -84,17 +84,22 @@ def run():
     match arguments['--source']:
         # Create the fetcher based on the source
         case 'ceda':
-            cc = config.CEDAConfig()
-            fetcher = inputs.ceda.CEDAClient(
-                ftpUsername=cc.CEDA_FTP_USER,
-                ftpPassword=cc.CEDA_FTP_PASS,
+            c = config.CEDAConfig()
+            fetcher = inputs.ceda.Client(
+                ftpUsername=c.CEDA_FTP_USER,
+                ftpPassword=c.CEDA_FTP_PASS,
             )
         case 'metoffice':
-            mc = config.MetOfficeConfig()
-            fetcher = inputs.metoffice.MetOfficeClient(
-                orderID=mc.METOFFICE_ORDER_ID,
-                clientID=mc.METOFFICE_CLIENT_ID,
-                clientSecret=mc.METOFFICE_CLIENT_SECRET,
+            c = config.MetOfficeConfig()
+            fetcher = inputs.metoffice.Client(
+                orderID=c.METOFFICE_ORDER_ID,
+                clientID=c.METOFFICE_CLIENT_ID,
+                clientSecret=c.METOFFICE_CLIENT_SECRET,
+            )
+        case 'ecmwf-mars':
+            c = config.ECMWFMARSConfig()
+            fetcher = inputs.ecmwf.MARSClient(
+                area=c.ECMWF_AREA,
             )
         case _:
             raise ValueError(f"unknown source {arguments['--source']}")

@@ -5,11 +5,11 @@ import pathlib
 import unittest.mock
 
 from ._models import MetOfficeFileInfo
-from .client import MetOfficeClient, _isWantedFile
+from .client import Client, _isWantedFile
 
 # --------- Test setup --------- #
 
-testClient = MetOfficeClient(
+testClient = Client(
     orderID="tmp",
     clientID="tmp",
     clientSecret="tmp"
@@ -22,7 +22,7 @@ class TestClient_Init(unittest.TestCase):
 
     def test_errorsWhenVariablesAreNotSet(self):
         with self.assertRaises(KeyError):
-            _ = MetOfficeClient(
+            _ = Client(
                 orderID="unset",
                 clientID="",
                 clientSecret="test_client_secret")

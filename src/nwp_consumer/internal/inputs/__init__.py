@@ -1,3 +1,3 @@
-__all__ = ["ceda", "metoffice"]
+__all__ = ["ceda", "metoffice", "ecmwf"]
 
-from . import ceda, metoffice
+from . import ceda, metoffice, ecmwf
