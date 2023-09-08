@@ -154,6 +154,13 @@ class Client(internal.FetcherInterface):
         return wantedFiles
 
     def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
+        if p.suffix != '.grib':
+            log.warn(
+                event="cannot map non-grib file to dataset",
+                filepath=p.as_posix()
+            )
+            return xr.Dataset()
+
 
         log.debug(
             event="mapping raw file to xarray dataset",

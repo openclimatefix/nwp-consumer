@@ -26,7 +26,7 @@ class Client(internal.StorageInterface):
         src.unlink(missing_ok=True)
         nbytes = os.stat(dst).st_size
         log.debug(
-            event="stored file in s3",
+            event="stored file locally",
             src=src.as_posix(),
             dst=dst.as_posix(),
             nbytes=nbytes

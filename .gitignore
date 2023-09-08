@@ -150,4 +150,5 @@ s3:
 
 # MacOS
 .DS_Store
+**/*.swp
 
