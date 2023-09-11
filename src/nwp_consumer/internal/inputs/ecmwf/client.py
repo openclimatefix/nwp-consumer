@@ -3,6 +3,7 @@ import datetime as dt
 import os
 import pathlib
 import tempfile
+import time
 import typing
 
 import cfgrib
@@ -146,12 +147,25 @@ class MARSClient(internal.FetcherInterface):
             log.warn("error fetching ECMWF MARS data", error=e)
             return fi, pathlib.Path()
 
-        log.debug(
-            event="fetched all data from MARS",
-            filename=fi.filename(),
-            filepath=tfp.as_posix(),
-            nbytes=tfp.stat().st_size
-        )
+        # The amount of data we're fetching should not take over 10 minutes to download
+        timeout = 0
+        while (tfp.exists() is False) and timeout < 60 * 10:
+            time.sleep(2)
+            timeout += 2
+
+        if timeout < 60 * 10:
+            log.debug(
+                event="fetched all data from MARS",
+                filename=fi.filename(),
+                filepath=tfp.as_posix(),
+                nbytes=tfp.stat().st_size
+            )
+        else:
+            log.debug(
+                event="timed out fetching data from MARS",
+                filename=fi.filename(),
+                filepath=tfp.as_posix(),
+            )
 
         return fi, tfp
 
