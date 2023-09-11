@@ -108,7 +108,7 @@ class MARSClient(internal.FetcherInterface):
                             type     = fc,
                             area     = {AREA_MAP[self.area]},
                             grid     = 0.05/0.05,
-                            target   = off
+                            target   = {tf.name}
                         """,
                     target=tf.name
                 )
@@ -139,7 +139,7 @@ class MARSClient(internal.FetcherInterface):
                         type     = fc,
                         area     = {AREA_MAP[self.area]},
                         grid     = 0.05/0.05,
-                        target   = off
+                        target   = {tfp.name}
                     """,
                 target=tfp.as_posix()
             )
