@@ -85,7 +85,8 @@ class MARSClient(internal.FetcherInterface):
 
         self.area = area
 
-    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
+    def listRawFilesForInitTime(self, *, it: dt.datetime) \
+            -> list[internal.FileInfoModel]:  # noqa: D102
         # For the model we are pulling from, there are only files for 00:00 and 12:00
         # * Hence, only check requests for these times
 
@@ -108,7 +109,7 @@ class MARSClient(internal.FetcherInterface):
                             type     = fc,
                             area     = {AREA_MAP[self.area]},
                             grid     = 0.05/0.05,
-                            target   = {tf.name}
+                            target   = {tf.name.split(sep='/')[-1]}
                         """,
                     target=tf.name
                 )
@@ -122,7 +123,7 @@ class MARSClient(internal.FetcherInterface):
         return [ECMWFMarsFileInfo(inittime=it, area=self.area)]
 
     def downloadToTemp(self, *, fi: internal.FileInfoModel) \
-            -> tuple[internal.FileInfoModel, pathlib.Path]:
+            -> tuple[internal.FileInfoModel, pathlib.Path]:  # noqa: D102
         tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
         try:
             self.server.execute(
@@ -169,7 +170,7 @@ class MARSClient(internal.FetcherInterface):
 
         return fi, tfp
 
-    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
+    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
         if p.suffix != '.grib':
             log.warn(
                 event="cannot map non-grib file to dataset",
