@@ -51,11 +51,11 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
 
             # Ensure the dimensions have the right sizes
             self.assertDictEqual(
-                {"init_time": 1, "step": 37, "variable": numVars, "y": 704, "x": 548},
+                {"variable": numVars, 'init_time': 1,  "step": 37, "y": 704, "x": 548},
                 dict(ds.dims.items())
             )
             # Ensure the dimensions of the variables are in the correct order
-            self.assertEqual(("init_time", "step", "variable", "y", "x"), ds["UKV"].dims)
+            self.assertEqual(("variable", "init_time", "step", "y", "x"), ds["UKV"].dims)
             # Ensure the init time is correct
             self.assertEqual(np.datetime64(initTime), ds.coords["init_time"].values[0])
 
@@ -94,7 +94,7 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
             self.assertEqual(["UKV"], list(ds.data_vars))
             # Ensure the dimensions have the right sizes
             self.assertEqual(
-                {'init_time': 1, 'step': 37, 'variable': 12, 'y': 704, 'x': 548},
+                {'variable': 12,  'init_time': 1, 'step': 37, 'y': 704, 'x': 548},
                 dict(ds.dims.items())
             )
             # Ensure the init time is correct
@@ -135,7 +135,7 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
             self.assertEqual(["UKV"], list(ds.data_vars))
             # Ensure the dimensions have the right sizes
             self.assertEqual(
-                {'init_time': 1, 'step': 49, 'variable': 16, 'latitude': 241, 'longitude': 301},
+                {'variable': 17, 'init_time': 1, 'step': 49, 'latitude': 241, 'longitude': 301},
                 dict(ds.dims.items())
             )
             # Ensure the init time is correct
