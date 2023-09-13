@@ -137,6 +137,9 @@ jobs:
           METOFFICE_CLIENT_ID: ${{ secrets.METOFFICE_CLIENT_ID }}
           METOFFICE_CLIENT_SECRET: ${{ secrets.METOFFICE_CLIENT_SECRET }}
           METOFFICE_ORDER_ID: ${{ secrets.METOFFICE_ORDER_ID }}
+          ECMWF_API_KEY: ${{ secrets.ECMWF_API_KEY }}
+          ECMWF_API_EMAIL: ${{ secrets.ECMWF_API_EMAIL }}
+          ECMWF_API_URL: ${{ secrets.ECMWF_API_URL }}
         run: ./venv/bin/python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
 
       # Create test summary to be visualised on the job summary screen on GitHub
