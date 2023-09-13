@@ -148,13 +148,14 @@ class MARSClient(internal.FetcherInterface):
             log.warn("error fetching ECMWF MARS data", error=e)
             return fi, pathlib.Path()
 
-        # The amount of data we're fetching should not take over 20 minutes to download
-        timeout = 0
-        while (tfp.exists() is False) and timeout < 60 * 20:
+        # The amount of data we're fetching should not take over 30 minutes to download
+        current_timeout = 0
+        timeout = 60 * 30
+        while (tfp.exists() is False) and current_timeout < timeout:
             time.sleep(2)
-            timeout += 2
+            current_timeout += 2
 
-        if timeout < 60 * 20:
+        if current_timeout < timeout:
             log.debug(
                 event="fetched all data from MARS",
                 filename=fi.filename(),
