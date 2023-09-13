@@ -3,6 +3,7 @@ import datetime as dt
 import os
 import pathlib
 import tempfile
+import time
 import typing
 
 import cfgrib
@@ -84,7 +85,8 @@ class MARSClient(internal.FetcherInterface):
 
         self.area = area
 
-    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
+    def listRawFilesForInitTime(self, *, it: dt.datetime) \
+            -> list[internal.FileInfoModel]:  # noqa: D102
         # For the model we are pulling from, there are only files for 00:00 and 12:00
         # * Hence, only check requests for these times
 
@@ -107,7 +109,7 @@ class MARSClient(internal.FetcherInterface):
                             type     = fc,
                             area     = {AREA_MAP[self.area]},
                             grid     = 0.05/0.05,
-                            target   = off
+                            target   = {tf.name.split(sep='/')[-1]}
                         """,
                     target=tf.name
                 )
@@ -121,7 +123,7 @@ class MARSClient(internal.FetcherInterface):
         return [ECMWFMarsFileInfo(inittime=it, area=self.area)]
 
     def downloadToTemp(self, *, fi: internal.FileInfoModel) \
-            -> tuple[internal.FileInfoModel, pathlib.Path]:
+            -> tuple[internal.FileInfoModel, pathlib.Path]:  # noqa: D102
         tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
         try:
             self.server.execute(
@@ -138,7 +140,7 @@ class MARSClient(internal.FetcherInterface):
                         type     = fc,
                         area     = {AREA_MAP[self.area]},
                         grid     = 0.05/0.05,
-                        target   = off
+                        target   = {tfp.name}
                     """,
                 target=tfp.as_posix()
             )
@@ -146,16 +148,30 @@ class MARSClient(internal.FetcherInterface):
             log.warn("error fetching ECMWF MARS data", error=e)
             return fi, pathlib.Path()
 
-        log.debug(
-            event="fetched all data from MARS",
-            filename=fi.filename(),
-            filepath=tfp.as_posix(),
-            nbytes=tfp.stat().st_size
-        )
+        # The amount of data we're fetching should not take over 30 minutes to download
+        current_timeout = 0
+        timeout = 60 * 30
+        while (tfp.exists() is False) and current_timeout < timeout:
+            time.sleep(2)
+            current_timeout += 2
+
+        if current_timeout < timeout:
+            log.debug(
+                event="fetched all data from MARS",
+                filename=fi.filename(),
+                filepath=tfp.as_posix(),
+                nbytes=tfp.stat().st_size
+            )
+        else:
+            log.debug(
+                event="timed out fetching data from MARS",
+                filename=fi.filename(),
+                filepath=tfp.as_posix(),
+            )
 
         return fi, tfp
 
-    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
+    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
         if p.suffix != '.grib':
             log.warn(
                 event="cannot map non-grib file to dataset",

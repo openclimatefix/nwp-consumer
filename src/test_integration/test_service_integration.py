@@ -104,7 +104,7 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
             )
 
 
-class TestNWPConverterService_ECMWFMARS(unittest.testcase):
+class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
     def setUp(self):
         storageClient = outputs.localfs.Client()
         c = config.ECMWFMARSConfig()
