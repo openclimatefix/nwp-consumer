@@ -109,8 +109,8 @@ class MARSClient(internal.FetcherInterface):
                             type     = fc,
                             area     = {AREA_MAP[self.area]},
                             grid     = 0.05/0.05,
-                            target   = {tf.name.split(sep='/')[-1]}
-                        """,
+                            target   = "{tf.name}"
+                    """,
                     target=tf.name
                 )
             except ecmwfapi.api.APIException as e:
@@ -140,8 +140,8 @@ class MARSClient(internal.FetcherInterface):
                         type     = fc,
                         area     = {AREA_MAP[self.area]},
                         grid     = 0.05/0.05,
-                        target   = {tfp.name}
-                    """,
+                        target   = "{tfp.as_posix()}"
+                """,
                 target=tfp.as_posix()
             )
         except ecmwfapi.api.APIException as e:
