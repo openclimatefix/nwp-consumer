@@ -55,7 +55,7 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
                 dict(ds.dims.items())
             )
             # Ensure the dimensions of the variables are in the correct order
-            self.assertEqual(("init_time", "step", "variable", "y", "x"), ds["UKV"].dims)
+            self.assertEqual(("variable", "init_time", "step", "y", "x"), ds["UKV"].dims)
             # Ensure the init time is correct
             self.assertEqual(np.datetime64(initTime), ds.coords["init_time"].values[0])
 
