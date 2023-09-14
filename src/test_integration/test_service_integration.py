@@ -58,6 +58,7 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
             self.assertEqual(("variable", "init_time", "step", "y", "x"), ds["UKV"].dims)
             # Ensure the init time is correct
             self.assertEqual(np.datetime64(initTime), ds.coords["init_time"].values[0])
+            path.unlink()
 
 
 class TestNWPConsumerService_CEDA(unittest.TestCase):
@@ -102,6 +103,7 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
                 np.datetime64(dt.datetime.strptime(path.with_suffix('').stem, ZARR_FMTSTR)),
                 ds.coords["init_time"].values[0]
             )
+            path.unlink()
 
 
 class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
@@ -143,3 +145,4 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
                 np.datetime64(dt.datetime.strptime(path.with_suffix('').stem, ZARR_FMTSTR)),
                 ds.coords["init_time"].values[0]
             )
+            path.unlink()
