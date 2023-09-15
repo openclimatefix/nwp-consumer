@@ -55,7 +55,7 @@ jobs:
         run: |
           apt -qq update && apt -qq install -y build-essential
           conda create -p ./venv python=3.10
-          ./venv/bin/pip install --upgrade -q pip wheel setuptools
+          ./venv/bin/python -m pip install --upgrade -q pip wheel setuptools
         if: steps.restore-cache.outputs.cache-hit != 'true'
 
       # Should mirror the build-reqs stage in the Containerfile
@@ -63,7 +63,7 @@ jobs:
       - name: Install all dependencies
         run: |
           conda install -p ./venv -q -y eccodes zarr
-          ./venv/bin/pip install -q .[dev]
+          ./venv/bin/python -m pip install -q .[dev]
         if: steps.restore-cache.outputs.cache-hit != 'true'
 
       # Cache the virtualenv for future runs
@@ -208,8 +208,8 @@ jobs:
   # * Only runs if test job passes
   build-wheel:
     runs-on: ubuntu-latest
-    needs: test-integration
-    if: contains(github.ref, 'refs/tags/v') && github.event_name == 'push'
+    needs: build-venv
+    # if: contains(github.ref, 'refs/tags/v') && github.event_name == 'push'
 
     steps:
       - name: Checkout repository
@@ -227,7 +227,7 @@ jobs:
       # * The version is then used in the wheel filename and made available in the package
       # * setuptools_git_versioning is configured in pyproject.toml
       - name: Build wheel
-        run: ./venv/bin/pip wheel . --no-deps --wheel-dir dist
+        run: ./venv/bin/python -m pip wheel . --no-deps --wheel-dir dist
 
       - name: Upload wheel
         uses: actions/upload-artifact@v3
