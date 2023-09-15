@@ -55,7 +55,7 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
 
             # Ensure the dimensions have the right sizes
             self.assertDictEqual(
-                {"variable": numVars, 'init_time': 1,  "step": 10, "y": 639, "x": 455},
+                {"variable": numVars, 'init_time': 1,  "step": 13, "y": 639, "x": 455},
                 dict(ds.dims.items())
             )
             # Ensure the dimensions of the variables are in the correct order
