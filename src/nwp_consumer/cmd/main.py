@@ -45,10 +45,8 @@ with contextlib.suppress(importlib.metadata.PackageNotFoundError):
 log = structlog.getLogger()
 
 
-def run() -> int:
+def run(arguments: dict) -> int:
     """Run the CLI."""
-    # Parse command line arguments from docstring
-    arguments = docopt(__doc__, version=__version__)
 
     fetcher = None
     storer = None
@@ -151,11 +149,11 @@ def run() -> int:
         service.CreateLatestZarr()
 
 
-def main() -> None:
+def main(arguments: dict) -> None:
     """Entry point for the nwp-consumer CLI."""
     programStartTime = dt.datetime.now()
     try:
-        run()
+        run(arguments=arguments)
     except Exception as e:
         log.error("nwp-consumer error", error=str(e))
         raise e
@@ -175,4 +173,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    # Parse command line arguments from docstring
+    arguments = docopt(__doc__, version=__version__)
+    main(arguments=arguments)
+
