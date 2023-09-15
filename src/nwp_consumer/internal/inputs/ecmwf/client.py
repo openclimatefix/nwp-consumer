@@ -70,18 +70,14 @@ COORDINATE_ALLOW_LIST: typing.Sequence[str] = (
     "time", "step", "latitude", "longitude"
 )
 
-class PrintFilter():
-    """Filter MARS API prints."""
-
-    def __init__(self) -> None:  # noqa: D107
-        self.debugSubstrings: list[str] = ["Requesting", "Transfering", "efficiency", "Done"]
-        self.errorSubstrings: list[str] = ["ERROR", "FATAL"]
-
-    def write(self, txt: str) -> None:  # noqa: D102
-        if any(map(txt.__contains__, self.debugSubstrings)):
-            log.debug(event=txt, caller="mars")
-        if any(map(txt.__contains__, self.errorSubstrings)):
-            log.warning(event=txt, caller="mars")
+def marsLogger(msg: str) -> None:
+    """Logging function to pass to the ECMWFService."""
+    debugSubstrings: list[str] = ["Requesting", "Transfering", "efficiency", "Done"]
+    errorSubstrings: list[str] = ["ERROR", "FATAL"]
+    if any(map(msg.__contains__, debugSubstrings)):
+        log.debug(event=msg, caller="mars")
+    if any(map(msg.__contains__, errorSubstrings)):
+        log.warning(event=msg, caller="mars")
 
 
 class MARSClient(internal.FetcherInterface):
@@ -92,7 +88,10 @@ class MARSClient(internal.FetcherInterface):
 
     def __init__(self, area: str) -> None:
         """Create a new ECMWFMarsClient."""
-        self.server = ECMWFService("mars")
+        self.server = ECMWFService(
+            service="mars",
+            log=marsLogger
+        )
 
         if area not in AREA_MAP:
             raise KeyError(f"area must be one of {list(AREA_MAP.keys())}")
@@ -109,25 +108,24 @@ class MARSClient(internal.FetcherInterface):
 
         with tempfile.NamedTemporaryFile(suffix=".txt", mode="w") as tf:
             try:
-                with redirect_stdout(PrintFilter()):
-                    self.server.execute(
-                        req=f"""
-                            list,
-                                class    = od,
-                                date     = {it.strftime("%Y%m%d")},
-                                expver   = 1,
-                                levtype  = sfc,
-                                param    = {'/'.join(list(PARAMETER_ECMWFCODE_MAP.keys()))},
-                                step     = 0/to/48/by/1,
-                                stream   = oper,
-                                time     = {it.strftime("%H")},
-                                type     = fc,
-                                area     = {AREA_MAP[self.area]},
-                                grid     = 0.05/0.05,
-                                target   = "{tf.name}"
-                        """,
-                        target=tf.name
-                    )
+                self.server.execute(
+                    req=f"""
+                        list,
+                            class    = od,
+                            date     = {it.strftime("%Y%m%d")},
+                            expver   = 1,
+                            levtype  = sfc,
+                            param    = {'/'.join(list(PARAMETER_ECMWFCODE_MAP.keys()))},
+                            step     = 0/to/48/by/1,
+                            stream   = oper,
+                            time     = {it.strftime("%H")},
+                            type     = fc,
+                            area     = {AREA_MAP[self.area]},
+                            grid     = 0.05/0.05,
+                            target   = "{tf.name}"
+                    """,
+                    target=tf.name
+                )
             except ecmwfapi.api.APIException as e:
                 log.warn("error listing ECMWF MARS inittime data", error=e)
                 return []
@@ -141,49 +139,38 @@ class MARSClient(internal.FetcherInterface):
             -> tuple[internal.FileInfoModel, pathlib.Path]:  # noqa: D102
         tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
         try:
-            with redirect_stdout(PrintFilter()):
-                self.server.execute(
-                    req=f"""
-                        retrieve,
-                            class    = od,
-                            date     = {fi.it().strftime("%Y%m%d")},
-                            expver   = 1,
-                            levtype  = sfc,
-                            param    = {'/'.join(list(PARAMETER_ECMWFCODE_MAP.keys()))},
-                            step     = 0/to/48/by/1,
-                            stream   = oper,
-                            time     = {fi.it().strftime("%H")},
-                            type     = fc,
-                            area     = {AREA_MAP[self.area]},
-                            grid     = 0.05/0.05,
-                            target   = "{tfp.as_posix()}"
-                    """,
-                    target=tfp.as_posix()
-                )
+            self.server.execute(
+                req=f"""
+                    retrieve,
+                        class    = od,
+                        date     = {fi.it().strftime("%Y%m%d")},
+                        expver   = 1,
+                        levtype  = sfc,
+                        param    = {'/'.join(list(PARAMETER_ECMWFCODE_MAP.keys()))},
+                        step     = 0/to/48/by/1,
+                        stream   = oper,
+                        time     = {fi.it().strftime("%H")},
+                        type     = fc,
+                        area     = {AREA_MAP[self.area]},
+                        grid     = 0.05/0.05,
+                        target   = "{tfp.as_posix()}"
+                """,
+                target=tfp.as_posix()
+            )
         except ecmwfapi.api.APIException as e:
             log.warn("error fetching ECMWF MARS data", error=e)
             return fi, pathlib.Path()
 
-        # The amount of data we're fetching should not take over 30 minutes to download
-        current_timeout = 0
-        timeout = 60 * 30
-        while (tfp.exists() is False) and current_timeout < timeout:
-            time.sleep(2)
-            current_timeout += 2
+        if tfp.exists() is False:
+            log.warn("error fetching ECMWF MARS data", error=e)
+            return fi, pathlib.Path()
 
-        if current_timeout < timeout:
-            log.debug(
-                event="fetched all data from MARS",
-                filename=fi.filename(),
-                filepath=tfp.as_posix(),
-                nbytes=tfp.stat().st_size
-            )
-        else:
-            log.debug(
-                event="timed out fetching data from MARS",
-                filename=fi.filename(),
-                filepath=tfp.as_posix(),
-            )
+        log.debug(
+            event="fetched all data from MARS",
+            filename=fi.filename(),
+            filepath=tfp.as_posix(),
+            nbytes=tfp.stat().st_size
+        )
 
         return fi, tfp
 
