@@ -1,9 +1,7 @@
 """Tests for the ecmwf module."""
 
-import datetime as dt
 import pathlib
 import unittest.mock
-import logging
 
 from .client import MARSClient
 
