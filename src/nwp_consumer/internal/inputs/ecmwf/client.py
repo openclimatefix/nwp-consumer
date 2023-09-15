@@ -2,9 +2,12 @@
 import datetime as dt
 import os
 import pathlib
+import sys
 import tempfile
 import time
 import typing
+from collections.abc import Generator
+from contextlib import contextmanager
 
 import cfgrib
 import ecmwfapi.api
@@ -69,6 +72,16 @@ COORDINATE_ALLOW_LIST: typing.Sequence[str] = (
     "time", "step", "latitude", "longitude"
 )
 
+@contextmanager
+def suppress_stdout() -> Generator:
+    """Prevent print calls in external libraries."""
+    with open(os.devnull, "w") as devnull:
+        old_stdout = sys.stdout
+        sys.stdout = devnull
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
 
 class MARSClient(internal.FetcherInterface):
     """Implements a client to fetch data from ECMWF's MARS API."""
@@ -95,24 +108,25 @@ class MARSClient(internal.FetcherInterface):
 
         with tempfile.NamedTemporaryFile(suffix=".txt", mode="w") as tf:
             try:
-                self.server.execute(
-                    req=f"""
-                        list,
-                            class    = od,
-                            date     = {it.strftime("%Y%m%d")},
-                            expver   = 1,
-                            levtype  = sfc,
-                            param    = {'/'.join(list(PARAMETER_ECMWFCODE_MAP.keys()))},
-                            step     = 0/to/48/by/1,
-                            stream   = oper,
-                            time     = {it.strftime("%H")},
-                            type     = fc,
-                            area     = {AREA_MAP[self.area]},
-                            grid     = 0.05/0.05,
-                            target   = "{tf.name}"
-                    """,
-                    target=tf.name
-                )
+                with suppress_stdout():
+                    self.server.execute(
+                        req=f"""
+                            list,
+                                class    = od,
+                                date     = {it.strftime("%Y%m%d")},
+                                expver   = 1,
+                                levtype  = sfc,
+                                param    = {'/'.join(list(PARAMETER_ECMWFCODE_MAP.keys()))},
+                                step     = 0/to/48/by/1,
+                                stream   = oper,
+                                time     = {it.strftime("%H")},
+                                type     = fc,
+                                area     = {AREA_MAP[self.area]},
+                                grid     = 0.05/0.05,
+                                target   = "{tf.name}"
+                        """,
+                        target=tf.name
+                    )
             except ecmwfapi.api.APIException as e:
                 log.warn("error listing ECMWF MARS inittime data", error=e)
                 return []
@@ -126,24 +140,25 @@ class MARSClient(internal.FetcherInterface):
             -> tuple[internal.FileInfoModel, pathlib.Path]:  # noqa: D102
         tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
         try:
-            self.server.execute(
-                req=f"""
-                    retrieve,
-                        class    = od,
-                        date     = {fi.it().strftime("%Y%m%d")},
-                        expver   = 1,
-                        levtype  = sfc,
-                        param    = {'/'.join(list(PARAMETER_ECMWFCODE_MAP.keys()))},
-                        step     = 0/to/48/by/1,
-                        stream   = oper,
-                        time     = {fi.it().strftime("%H")},
-                        type     = fc,
-                        area     = {AREA_MAP[self.area]},
-                        grid     = 0.05/0.05,
-                        target   = "{tfp.as_posix()}"
-                """,
-                target=tfp.as_posix()
-            )
+            with suppress_stdout():
+                self.server.execute(
+                    req=f"""
+                        retrieve,
+                            class    = od,
+                            date     = {fi.it().strftime("%Y%m%d")},
+                            expver   = 1,
+                            levtype  = sfc,
+                            param    = {'/'.join(list(PARAMETER_ECMWFCODE_MAP.keys()))},
+                            step     = 0/to/48/by/1,
+                            stream   = oper,
+                            time     = {fi.it().strftime("%H")},
+                            type     = fc,
+                            area     = {AREA_MAP[self.area]},
+                            grid     = 0.05/0.05,
+                            target   = "{tfp.as_posix()}"
+                    """,
+                    target=tfp.as_posix()
+                )
         except ecmwfapi.api.APIException as e:
             log.warn("error fetching ECMWF MARS data", error=e)
             return fi, pathlib.Path()
