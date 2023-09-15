@@ -2,12 +2,10 @@
 import datetime as dt
 import os
 import pathlib
-import sys
 import tempfile
 import time
 import typing
-from collections.abc import Generator
-from contextlib import contextmanager
+from contextlib import redirect_stdout
 
 import cfgrib
 import ecmwfapi.api
@@ -72,16 +70,19 @@ COORDINATE_ALLOW_LIST: typing.Sequence[str] = (
     "time", "step", "latitude", "longitude"
 )
 
-@contextmanager
-def suppress_stdout() -> Generator:
-    """Prevent print calls in external libraries."""
-    with open(os.devnull, "w") as devnull:
-        old_stdout = sys.stdout
-        sys.stdout = devnull
-        try:
-            yield
-        finally:
-            sys.stdout = old_stdout
+class PrintFilter():
+    """Filter MARS API prints."""
+
+    def __init__(self) -> None:  # noqa: D107
+        self.debugSubstrings: list[str] = ["Requesting", "Transfering", "efficiency", "Done"]
+        self.errorSubstrings: list[str] = ["ERROR", "FATAL"]
+
+    def write(self, txt: str) -> None:  # noqa: D102
+        if any(map(txt.__contains__, self.debugSubstrings)):
+            log.debug(event=txt, caller="mars")
+        if any(map(txt.__contains__, self.errorSubstrings)):
+            log.warning(event=txt, caller="mars")
+
 
 class MARSClient(internal.FetcherInterface):
     """Implements a client to fetch data from ECMWF's MARS API."""
@@ -108,7 +109,7 @@ class MARSClient(internal.FetcherInterface):
 
         with tempfile.NamedTemporaryFile(suffix=".txt", mode="w") as tf:
             try:
-                with suppress_stdout():
+                with redirect_stdout(PrintFilter()):
                     self.server.execute(
                         req=f"""
                             list,
@@ -140,7 +141,7 @@ class MARSClient(internal.FetcherInterface):
             -> tuple[internal.FileInfoModel, pathlib.Path]:  # noqa: D102
         tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
         try:
-            with suppress_stdout():
+            with redirect_stdout(PrintFilter()):
                 self.server.execute(
                     req=f"""
                         retrieve,
