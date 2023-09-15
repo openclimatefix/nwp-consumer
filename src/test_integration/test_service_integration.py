@@ -6,6 +6,7 @@ Will download up to a GB of data. Costs may apply for usage of the APIs.
 
 import datetime as dt
 import pathlib
+import shutil
 import unittest
 
 import numpy as np
@@ -26,11 +27,14 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
             clientSecret=mc.METOFFICE_CLIENT_SECRET,
         )
 
+        self.rawdir = "data/me_raw"
+        self.zarrdir = "data/me_zarr"
+
         self.testService = service.NWPConsumerService(
             fetcher=metOfficeClient,
             storer=storageClient,
-            rawdir='data/raw',
-            zarrdir='data/zarr',
+            rawdir=self.rawdir,
+            zarrdir=self.zarrdir,
         )
 
     def test_downloadAndConvertDataset(self):
@@ -42,7 +46,7 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
         nbytes = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
         self.assertGreater(nbytes, 0)
 
-        for path in pathlib.Path('data/zarr').glob('*.zarr.zip'):
+        for path in pathlib.Path(self.zarrdir).glob('*.zarr.zip'):
 
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}")
 
@@ -58,7 +62,9 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
             self.assertEqual(("variable", "init_time", "step", "y", "x"), ds["UKV"].dims)
             # Ensure the init time is correct
             self.assertEqual(np.datetime64(initTime), ds.coords["init_time"].values[0])
-            path.unlink()
+
+        shutil.rmtree(self.rawdir)
+        shutil.rmtree(self.zarrdir)
 
 
 class TestNWPConsumerService_CEDA(unittest.TestCase):
@@ -72,11 +78,14 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
             ftpPassword=cc.CEDA_FTP_PASS,
         )
 
+        self.rawdir = 'data/cd_raw'
+        self.zarrdir = 'data/cd_zarr'
+
         self.testService = service.NWPConsumerService(
             fetcher=cedaClient,
             storer=storageClient,
-            rawdir='data/raw',
-            zarrdir='data/zarr',
+            rawdir=self.rawdir,
+            zarrdir=self.zarrdir,
         )
 
     def test_downloadAndConvertDataset(self):
@@ -88,7 +97,7 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
         nbytes = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
         self.assertGreater(nbytes, 0)
 
-        for path in pathlib.Path('data/zarr').glob('*.zarr.zip'):
+        for path in pathlib.Path(self.zarrdir).glob('*.zarr.zip'):
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
 
             # Enusre the data variables are correct
@@ -103,7 +112,9 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
                 np.datetime64(dt.datetime.strptime(path.with_suffix('').stem, ZARR_FMTSTR)),
                 ds.coords["init_time"].values[0]
             )
-            path.unlink()
+
+        shutil.rmtree(self.rawdir)
+        shutil.rmtree(self.zarrdir)
 
 
 class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
@@ -114,11 +125,14 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
             area=c.ECMWF_AREA,
         )
 
+        self.rawdir = 'data/ec_raw'
+        self.zarrdir = 'data/ec_zarr'
+
         self.testService = service.NWPConsumerService(
             fetcher=ecmwfMarsClient,
             storer=storageClient,
-            rawdir='data/raw',
-            zarrdir='data/zarr',
+            rawdir=self.rawdir,
+            zarrdir=self.zarrdir,
         )
 
     def test_downloadAndConvertDataset(self):
@@ -130,7 +144,7 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
         nbytes = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
         self.assertGreater(nbytes, 0)
 
-        for path in pathlib.Path('data/zarr').glob('*.zarr.zip'):
+        for path in pathlib.Path(self.zarrdir).glob('*.zarr.zip'):
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
 
             # Enusre the data variables are correct
@@ -145,4 +159,7 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
                 np.datetime64(dt.datetime.strptime(path.with_suffix('').stem, ZARR_FMTSTR)),
                 ds.coords["init_time"].values[0]
             )
-            path.unlink()
+
+        shutil.rmtree(self.rawdir)
+        shutil.rmtree(self.zarrdir)
+
