@@ -56,14 +56,14 @@ class NWPConsumerService:
 
         # Check which files are already downloaded
         # * If the file is already downloaded, remove it from the list of files to download
-        allWantedFileInfos: list[internal.FileInfoModel] = [
+        newWantedFileInfos: list[internal.FileInfoModel] = [
             fi for fi in allWantedFileInfos
             if not self.storer.exists(
                 dst=self.rawdir / fi.it().strftime(internal.IT_FOLDER_FMTSTR) / fi.filename()
             )
         ]
 
-        if not allWantedFileInfos:
+        if not newWantedFileInfos:
             log.info("no new files to download",
                      startDate=start.strftime("%Y-%m-%d %H:%M"),
                      endDate=end.strftime("%Y-%m-%d %H:%M"))
@@ -72,10 +72,10 @@ class NWPConsumerService:
             log.info("downloading files",
                      startDate=start.strftime("%Y-%m-%d %H:%M"),
                      endDate=end.strftime("%Y-%m-%d %H:%M"),
-                     numFiles=len(allWantedFileInfos))
+                     numFiles=len(newWantedFileInfos))
 
         # Create a dask pipeline to download the files
-        nbytes = dask.bag.from_sequence(allWantedFileInfos, npartitions=len(allWantedFileInfos)) \
+        nbytes = dask.bag.from_sequence(newWantedFileInfos, npartitions=len(newWantedFileInfos)) \
             .map(lambda fi: self.fetcher.downloadToTemp(fi=fi)) \
             .filter(lambda infoPathTuple: infoPathTuple[1] != pathlib.Path()) \
             .map(lambda infoPathTuple: self.storer.store(
