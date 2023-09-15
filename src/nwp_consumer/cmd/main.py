@@ -47,7 +47,6 @@ log = structlog.getLogger()
 
 def run(arguments: dict) -> int:
     """Run the CLI."""
-
     fetcher = None
     storer = None
 
@@ -149,8 +148,11 @@ def run(arguments: dict) -> int:
         service.CreateLatestZarr()
 
 
-def main(arguments: dict) -> None:
+def main() -> None:
     """Entry point for the nwp-consumer CLI."""
+    # Parse command line arguments from docstring
+    arguments = docopt(__doc__, version=__version__)
+
     programStartTime = dt.datetime.now()
     try:
         run(arguments=arguments)
@@ -173,7 +175,5 @@ def main(arguments: dict) -> None:
 
 
 if __name__ == "__main__":
-    # Parse command line arguments from docstring
-    arguments = docopt(__doc__, version=__version__)
-    main(arguments=arguments)
+    main()
 
