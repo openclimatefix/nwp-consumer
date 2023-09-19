@@ -253,7 +253,6 @@ class Client(internal.FetcherInterface):
             .rename({"time": "init_time"}) \
             .expand_dims(["init_time"]) \
             .to_array(dim="variable", name="UKV") \
-            # .reindex(y=parameterDataset.y.values[::-1]) \
             .to_dataset() \
             .transpose("variable", "init_time", "step", "y", "x") \
             .sortby("step") \
