@@ -162,7 +162,7 @@ class MARSClient(internal.FetcherInterface):
             return fi, pathlib.Path()
 
         if tfp.exists() is False:
-            log.warn("error fetching ECMWF MARS data", error=e)
+            log.warn("ECMWF data file does not exist", filepath=tfp.as_posix())
             return fi, pathlib.Path()
 
         log.debug(
