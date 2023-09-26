@@ -9,22 +9,27 @@ Microservice for consuming NWP data.
 
 <a href="https://github.com/openclimatefix/nwp-consumer/graphs/contributors" alt="Contributors">
     <img src="https://img.shields.io/github/contributors/openclimatefix/nwp-consumer?style=for-the-badge&color=FFFFFF" /></a>
-<a href="https://github.com/openclimatefix/nwp-consumer/actions/workflows/ci.yml">
+<a href="https://github.com/openclimatefix/nwp-consumer/actions/workflows/ci.yml" alt="Workflows">
     <img alt="GitHub Workflow Status (with branch)" src="https://img.shields.io/github/actions/workflow/status/openclimatefix/nwp-consumer/ci.yml?branch=main&style=for-the-badge&color=FFD053"></a>
-<a href="https://github.com/openclimatefix/nwp-consumer/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc">
+<a href="https://github.com/openclimatefix/nwp-consumer/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc" alt="Issues">
     <img src="https://img.shields.io/github/issues/openclimatefix/nwp-consumer?style=for-the-badge&color=FFAC5F"></a>
-<a href="https://github.com/openclimatefix/nwp-consumer/tags">
+<a href="https://github.com/openclimatefix/nwp-consumer/tags" alt="Tags">
     <img alt="GitHub tag (latest SemVer pre-release)" src="https://img.shields.io/github/v/tag/openclimatefix/nwp-consumer?include_prereleases&sort=semver&style=for-the-badge&color=7BCDF3"></a>
-
+<a href="https://pypi.org/project/nwp-consumer" alt="PyPI">
+    <img alt="PyPI version" src="https://img.shields.io/pypi/v/nwp-consumer?&style=for-the-badge&color=086788"></a>
 </div>
 
 <br>
 
-A microservice for consuming NWP data from various sources and storing it in a common format. Built with inspiration 
+A microservice for multi-source consumption of NWP data, storing it in a common format. Built with inspiration 
 from the [Hexagonal Architecture](https://alistair.cockburn.us/hexagonal-architecture) pattern, the nwp-consumer is 
-currently packaged with adapters for pulling and converting `.grib` data from the 
-[MetOffice](https://gridded-data-ui.cda.api.metoffice.gov.uk) and from [CEDA](https://catalogue.ceda.ac.uk). Its modular
-nature enables straightforward extension to alternate future sources.
+currently packaged with adapters for pulling and converting `.grib` data from: 
+
+- [MetOffice Atmospheric API](https://gridded-data-ui.cda.api.metoffice.gov.uk)
+- [CEDA Atmospheric Archive](https://catalogue.ceda.ac.uk)
+- [ECMWF MARS API](https://apps.ecmwf.int/mars-catalogue)
+
+Its modular nature enables straightforward extension to alternate future sources.
 
 ## Running the service
 
@@ -32,7 +37,7 @@ Depending on the source and sink you choose to read and write data from, environ
 The program will inform you of missing env vars, but you can also check the 
 [config](src/nwp_consumer/internal/config/config.py) for the given module.
 
-### Using Docker (recommended)
+### Using Docker
 
 This service is designed to be run as a Docker container. The `Containerfile` is the Dockerfile for the service.
 It is recommended to run it this way due to the dependency on external non-python binaries, which at the moment
@@ -45,16 +50,15 @@ $ docker run \
   ghcr.io/openclimatefix/nwp-consumer:latest <command...>  
 ```
 
-### Using the Python Package (not recommended)
+### Using the Python Package
 
 Ensure the [external dependencies](#external-dependencies) are installed. Then, do one of the following:
 
 Either
 
-- Download the latest wheel from the artifacts of the desired
-    [CI run](https://github.com/openclimatefix/nwp-consumer/actions/workflows/ci.yml) and install it via
+- Install from [PyPI](https://pypi.org/project/nwp-consumer) with
     ```shell
-    $ pip install nwp-consumer-<version>.whl
+    $ pip install nwp-consumer
     ```
 
 *or*
