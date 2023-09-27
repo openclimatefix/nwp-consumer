@@ -1,35 +1,41 @@
+"""Client for HuggingFace."""
+
 import datetime as dt
 import pathlib
 
-from huggingface_hub import HfFileSystem
 import structlog
+from huggingface_hub import HfFileSystem
 
 from nwp_consumer import internal
 
 log = structlog.getLogger()
 
 
-class HuggingFaceClient(internal.StorageInterface):
+class Client(internal.StorageInterface):
     """Client for HuggingFace."""
 
     # HuggingFace Filesystem
     __fs: HfFileSystem
 
-    def __init__(self, token: str | None):
-        """Create a new HuggingFaceClient."""
-        self.__fs = HfFileSystem(token=token)
+    # Path prefix
+    datasetPath: pathlib.Path
 
-    def exists(self, *, dst: pathlib.Path) -> bool:
-        return self.__fs.exists(dst.as_posix())
+    def __init__(self, repoID: str,  token: str | None) -> None: # noqa: D107
+        self.api = HfFileSystem(token=token)
+        # See https://huggingface.co/docs/huggingface_hub/guides/hf_file_system#integrations
+        self.datasetPath = pathlib.Path(f'datasets/{repoID}')
 
-    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
-        self.__fs.put(lpath=src.as_posix(), rpath=dst.as_posix(), recursive=True)
-        return self.__fs.du(path=dst.as_posix())
+    def exists(self, *, dst: pathlib.Path) -> bool:  # noqa: D102
+        return self.__fs.exists(self.datasetPath / dst.as_posix())
 
-    def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:
+    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:  # noqa: D102
+        self.__fs.put(lpath=src.as_posix(), rpath=self.datasetPath / dst.as_posix(), recursive=True)
+        return self.__fs.du(path=self.datasetPath / dst.as_posix())
+
+    def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:  # noqa: D102
         allDirs = [
-            pathlib.Path(d).relative_to(prefix)
-            for d in self.__fs.glob(f'{prefix}/*/*/*/*')
+            pathlib.Path(d).relative_to(self.datasetPath / prefix)
+            for d in self.__fs.glob(self.datasetPath / f'{prefix}/*/*/*/*')
             if self.__fs.isdir(d)
         ]
 
@@ -45,7 +51,11 @@ class HuggingFaceClient(internal.StorageInterface):
                     ).replace(tzinfo=None)
                     initTimes.add(ddt)
                 except ValueError:
-                    log.debug(f"ignoring invalid folder name", name=dir.as_posix(), within=prefix.as_posix())
+                    log.debug(
+                        event="ignoring invalid folder name",
+                        name=dir.as_posix(),
+                        within=prefix.as_posix()
+                    )
 
         sortedInitTimes = sorted(initTimes)
         log.debug(
@@ -55,8 +65,9 @@ class HuggingFaceClient(internal.StorageInterface):
         )
         return sortedInitTimes
 
-    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
-        initTimeDirPath = prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
+    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) \
+            -> list[pathlib.Path]:  # noqa: D102
+        initTimeDirPath = self.datasetPath / prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
         paths = [pathlib.Path(p) for p in self.__fs.ls(initTimeDirPath.as_posix())]
 
         log.debug(
@@ -104,8 +115,9 @@ class HuggingFaceClient(internal.StorageInterface):
 
         return tempPaths
 
-    def delete(self, *, p: pathlib.Path) -> None:
-        if self.__fs.isdir(p.as_posix()):
-            self.__fs.rm(p.as_posix(), recursive=True)
+    def delete(self, *, p: pathlib.Path) -> None:  # noqa: D102
+        if self.__fs.isdir(self.datasetPath / p.as_posix()):
+            self.__fs.rm(self.datasetPath / p.as_posix(), recursive=True)
         else:
-            self.__fs.rm(p.as_posix())
+            self.__fs.rm(self.datasetPath / p.as_posix())
+

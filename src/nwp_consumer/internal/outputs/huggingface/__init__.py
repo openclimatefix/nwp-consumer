@@ -1,3 +1,4 @@
-__all__ = ['HuggingFaceClient']
+__all__ = ['Client']
 
-from .client import HuggingFaceClient
+from .client import Client
+
