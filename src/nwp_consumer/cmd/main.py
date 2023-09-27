@@ -34,7 +34,14 @@ import shutil
 import structlog
 from docopt import docopt
 
-from nwp_consumer.internal import TMP_DIR, config, inputs, outputs
+from nwp_consumer.internal import (
+    TMP_DIR,
+    FetcherInterface,
+    StorageInterface,
+    config,
+    inputs,
+    outputs,
+)
 from nwp_consumer.internal.service import NWPConsumerService
 
 __version__ = "local"
@@ -44,21 +51,20 @@ with contextlib.suppress(importlib.metadata.PackageNotFoundError):
 
 log = structlog.getLogger()
 
-
 def run(arguments: dict) -> int:
     """Run the CLI."""
-    fetcher = None
-    storer = None
+    fetcher: FetcherInterface = inputs.ceda.Client(
+        ftpUsername="anonymous",
+        ftpPassword="anonymous",
+    )
+    storer: StorageInterface = outputs.localfs.Client()
 
     if arguments['check']:
         # Perform a healthcheck on the service
         # * Don't care here about the source/sink
         return NWPConsumerService(
-            fetcher=inputs.ceda.Client(
-                ftpUsername="anonymous",
-                ftpPassword="anonymous",
-            ),
-            storer=outputs.localfs.Client(),
+            fetcher=fetcher,
+            storer=storer,
             rawdir=arguments['--rdir'],
             zarrdir=arguments['--zdir'],
         ).Check()
@@ -81,22 +87,22 @@ def run(arguments: dict) -> int:
     match arguments['--source']:
         # Create the fetcher based on the source
         case 'ceda':
-            c = config.CEDAConfig()
+            cc = config.CEDAConfig()
             fetcher = inputs.ceda.Client(
-                ftpUsername=c.CEDA_FTP_USER,
-                ftpPassword=c.CEDA_FTP_PASS,
+                ftpUsername=cc.CEDA_FTP_USER,
+                ftpPassword=cc.CEDA_FTP_PASS,
             )
         case 'metoffice':
-            c = config.MetOfficeConfig()
+            mc = config.MetOfficeConfig()
             fetcher = inputs.metoffice.Client(
-                orderID=c.METOFFICE_ORDER_ID,
-                clientID=c.METOFFICE_CLIENT_ID,
-                clientSecret=c.METOFFICE_CLIENT_SECRET,
+                orderID=mc.METOFFICE_ORDER_ID,
+                clientID=mc.METOFFICE_CLIENT_ID,
+                clientSecret=mc.METOFFICE_CLIENT_SECRET,
             )
         case 'ecmwf-mars':
-            c = config.ECMWFMARSConfig()
+            ec = config.ECMWFMARSConfig()
             fetcher = inputs.ecmwf.MARSClient(
-                area=c.ECMWF_AREA,
+                area=ec.ECMWF_AREA,
             )
         case _:
             raise ValueError(f"unknown source {arguments['--source']}")
