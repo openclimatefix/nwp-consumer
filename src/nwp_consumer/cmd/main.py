@@ -50,6 +50,8 @@ log = structlog.getLogger()
 
 def run(arguments: dict) -> int:
     """Run the CLI."""
+    # --- Map arguments to service configuration --- #
+
     # Defaults for the fetcher, storer and env parser
     fetcher: internal.FetcherInterface = inputs.ceda.Client(
         ftpUsername="na",
@@ -122,7 +124,7 @@ def run(arguments: dict) -> int:
         rawdir=arguments['--rdir'],
     )
 
-    # Carry out the desired function
+    # --- Run the service with the desired command --- #
 
     # Logic for the "check" command
     if arguments['check']:
@@ -130,6 +132,7 @@ def run(arguments: dict) -> int:
 
     # Logic for the env command
     if arguments['env']:
+        # Missing env vars are printed during mapping of source/sink args
         return 0
 
     log.info("nwp-consumer starting", version=__version__, arguments=arguments)

@@ -20,11 +20,11 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
 
     def setUp(self) -> None:
         storageClient = outputs.localfs.Client()
-        mc = config.MetOfficeConfig()
+        env = config.MetOfficeEnv()
         metOfficeClient = inputs.metoffice.Client(
-            orderID=mc.METOFFICE_ORDER_ID,
-            clientID=mc.METOFFICE_CLIENT_ID,
-            clientSecret=mc.METOFFICE_CLIENT_SECRET,
+            orderID=env.METOFFICE_ORDER_ID,
+            clientID=env.METOFFICE_CLIENT_ID,
+            clientSecret=env.METOFFICE_CLIENT_SECRET,
         )
 
         self.rawdir = "data/me_raw"
@@ -72,10 +72,10 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
 
     def setUp(self) -> None:
         storageClient = outputs.localfs.Client()
-        cc = config.CEDAConfig()
+        env = config.CEDAEnv()
         cedaClient = inputs.ceda.Client(
-            ftpUsername=cc.CEDA_FTP_USER,
-            ftpPassword=cc.CEDA_FTP_PASS,
+            ftpUsername=env.CEDA_FTP_USER,
+            ftpPassword=env.CEDA_FTP_PASS,
         )
 
         self.rawdir = 'data/cd_raw'
@@ -120,9 +120,9 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
 class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
     def setUp(self):
         storageClient = outputs.localfs.Client()
-        c = config.ECMWFMARSConfig()
+        env = config.ECMWFMARSEnv()
         ecmwfMarsClient = inputs.ecmwf.MARSClient(
-            area=c.ECMWF_AREA,
+            area=env.ECMWF_AREA,
         )
 
         self.rawdir = 'data/ec_raw'
