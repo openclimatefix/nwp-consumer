@@ -20,8 +20,9 @@ class Client(internal.StorageInterface):
     # Path prefix
     datasetPath: pathlib.Path
 
-    def __init__(self, repoID: str,  token: str | None) -> None: # noqa: D107
-        self.api = HfFileSystem(token=token)
+    def __init__(self, repoID: str,  token: str | None = None, endpoint: str | None = None) \
+            -> None: # noqa: D107
+        self.__fs = HfFileSystem(token=token, endpoint=endpoint)
         # See https://huggingface.co/docs/huggingface_hub/guides/hf_file_system#integrations
         self.datasetPath = pathlib.Path(f'datasets/{repoID}')
 
@@ -29,8 +30,12 @@ class Client(internal.StorageInterface):
         return self.__fs.exists(self.datasetPath / dst.as_posix())
 
     def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:  # noqa: D102
-        self.__fs.put(lpath=src.as_posix(), rpath=self.datasetPath / dst.as_posix(), recursive=True)
-        return self.__fs.du(path=self.datasetPath / dst.as_posix())
+        self.__fs.put(
+            lpath=src.as_posix(),
+            rpath=(self.datasetPath / dst).as_posix(),
+            recursive=True
+        )
+        return self.__fs.du(path=(self.datasetPath / dst).as_posix())
 
     def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:  # noqa: D102
         allDirs = [
