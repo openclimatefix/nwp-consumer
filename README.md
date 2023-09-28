@@ -29,12 +29,21 @@ currently packaged with adapters for pulling and converting `.grib` data from:
 - [CEDA Atmospheric Archive](https://catalogue.ceda.ac.uk)
 - [ECMWF MARS API](https://apps.ecmwf.int/mars-catalogue)
 
+Similarly, the service can write to multiple sinks:
+
+- Local filesystem
+- [AWS S3](https://aws.amazon.com/s3/)
+- [HuggingFace Datasets](https://huggingface.co/docs/datasets/index)
+
 Its modular nature enables straightforward extension to alternate future sources.
 
 ## Running the service
 
-Depending on the source and sink you choose to read and write data from, environment variables will need to be set.
-The program will inform you of missing env vars, but you can also check the 
+### Environment variables
+
+The service uses environment variables to configure sources and sinks in accordance with
+the [Twelve-Factor App methodology](https://12factor.net/config).
+The program will inform you of missing env vars when using an adaptor, but you can also check the 
 [config](src/nwp_consumer/internal/config/config.py) for the given module.
 
 ### Using Docker

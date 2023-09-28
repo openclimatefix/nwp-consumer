@@ -19,7 +19,7 @@ Options:
   --from <startDate>  Start date in YYYY-MM-DD format [default: today].
   --to <endDate>      End date in YYYY-MM-DD format [default: today].
   --source <source>   Data source to use (ceda/metoffice/ecmwf-mars) [default: ceda].
-  --sink <sink>       Data sink to use (local/s3/huggingface) [default: local].
+  --sink <sink>       Data sink to use (local/s3) [default: local].
   --rdir <rawdir>     Directory of raw data store [default: /tmp/raw].
   --zdir <zarrdir>    Directory of zarr data store [default: /tmp/zarr].
   --create-latest     Create a zarr of the dataset with the latest init time [default: False].
@@ -34,14 +34,7 @@ import shutil
 import structlog
 from docopt import docopt
 
-from nwp_consumer.internal import (
-    TMP_DIR,
-    FetcherInterface,
-    StorageInterface,
-    config,
-    inputs,
-    outputs,
-)
+from nwp_consumer.internal import TMP_DIR, config, inputs, outputs
 from nwp_consumer.internal.service import NWPConsumerService
 
 __version__ = "local"
@@ -51,43 +44,36 @@ with contextlib.suppress(importlib.metadata.PackageNotFoundError):
 
 log = structlog.getLogger()
 
+
 def run(arguments: dict) -> int:
     """Run the CLI."""
-    fetcher: FetcherInterface = inputs.ceda.Client(
-        ftpUsername="anonymous",
-        ftpPassword="anonymous",
-    )
-    storer: StorageInterface = outputs.localfs.Client()
-    env: config.EnvParser = config.EnvParser()
+    fetcher = None
+    storer = None
 
     if arguments['check']:
         # Perform a healthcheck on the service
         # * Don't care here about the source/sink
         return NWPConsumerService(
-            fetcher=fetcher,
-            storer=storer,
+            fetcher=inputs.ceda.Client(
+                ftpUsername="anonymous",
+                ftpPassword="anonymous",
+            ),
+            storer=outputs.localfs.Client(),
             rawdir=arguments['--rdir'],
             zarrdir=arguments['--zdir'],
         ).Check()
-
 
     match arguments['--sink']:
         # Create the storer based on the sink
         case 'local':
             storer = outputs.localfs.Client()
         case 's3':
-            env = config.S3Env()
+            s3c = config.S3Config()
             storer = outputs.s3.Client(
-                key=env.AWS_ACCESS_KEY,
-                bucket=env.AWS_S3_BUCKET,
-                secret=env.AWS_ACCESS_SECRET,
-                region=env.AWS_REGION
-            )
-        case 'huggingface':
-            env = config.HuggingFaceEnv()
-            storer = outputs.huggingface.Client(
-                token=env.HUGGINGFACE_TOKEN,
-                repoID=env.HUGGINGFACE_REPO_ID,
+                key=s3c.AWS_ACCESS_KEY,
+                bucket=s3c.AWS_S3_BUCKET,
+                secret=s3c.AWS_ACCESS_SECRET,
+                region=s3c.AWS_REGION
             )
         case _:
             raise ValueError(f"unknown sink {arguments['--sink']}")
@@ -95,22 +81,22 @@ def run(arguments: dict) -> int:
     match arguments['--source']:
         # Create the fetcher based on the source
         case 'ceda':
-            env = config.CEDAEnv()
+            c = config.CEDAConfig()
             fetcher = inputs.ceda.Client(
-                ftpUsername=env.CEDA_FTP_USER,
-                ftpPassword=env.CEDA_FTP_PASS,
+                ftpUsername=c.CEDA_FTP_USER,
+                ftpPassword=c.CEDA_FTP_PASS,
             )
         case 'metoffice':
-            env = config.MetOfficeEnv()
+            c = config.MetOfficeConfig()
             fetcher = inputs.metoffice.Client(
-                orderID=env.METOFFICE_ORDER_ID,
-                clientID=env.METOFFICE_CLIENT_ID,
-                clientSecret=env.METOFFICE_CLIENT_SECRET,
+                orderID=c.METOFFICE_ORDER_ID,
+                clientID=c.METOFFICE_CLIENT_ID,
+                clientSecret=c.METOFFICE_CLIENT_SECRET,
             )
         case 'ecmwf-mars':
-            env = config.ECMWFMARSEnv()
+            c = config.ECMWFMARSConfig()
             fetcher = inputs.ecmwf.MARSClient(
-                area=env.ECMWF_AREA,
+                area=c.ECMWF_AREA,
             )
         case _:
             raise ValueError(f"unknown source {arguments['--source']}")
