@@ -2,17 +2,17 @@
 
 import unittest.mock
 
-from .config import _EnvParseMixin
+from .env import EnvParser
 
 
-class Test_EnvParseMixin(unittest.TestCase):
+class Test_EnvParser(unittest.TestCase):
     """Tests for the _EnvParseMixin class."""
 
     @unittest.mock.patch.dict("os.environ", {
         "TEST_STR": "test",
     })
     def test_parsesEnvVars(self):
-        class TestConfig(_EnvParseMixin):
+        class TestConfig(EnvParser):
             TEST_STR: str
 
         config = TestConfig()
@@ -20,7 +20,7 @@ class Test_EnvParseMixin(unittest.TestCase):
         self.assertEqual("test", config.TEST_STR)
 
     def test_emptyStringIfRequiredFieldNotSet(self):
-        class TestConfig(_EnvParseMixin):
+        class TestConfig(EnvParser):
             TEST_STR: str
 
         cfg = TestConfig()
