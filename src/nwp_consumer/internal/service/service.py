@@ -24,7 +24,7 @@ class NWPConsumerService:
     Each method on the class is a business use case for the consumer
     """
 
-    def __init__(self, fetcher: internal.FetcherInterface, storer: internal.StorageInterface,
+    def __init__(self, *, fetcher: internal.FetcherInterface, storer: internal.StorageInterface,
                  rawdir: str, zarrdir: str) -> None:
         """Initialise the service."""
         self.fetcher = fetcher

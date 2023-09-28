@@ -44,7 +44,7 @@ Its modular nature enables straightforward extension to alternate future sources
 The service uses environment variables to configure sources and sinks in accordance with
 the [Twelve-Factor App methodology](https://12factor.net/config).
 The program will inform you of missing env vars when using an adaptor, but you can also check the 
-[config](src/nwp_consumer/internal/config/config.py) for the given module.
+[config](src/nwp_consumer/internal/config/config.py) for the given module, or use the `env` command.
 
 ### Using Docker
 

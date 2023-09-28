@@ -30,6 +30,9 @@ class EnvParser:
             self.__setattr__(field, value)
 
 
+# --- Inputs environment variables --- #
+
+
 class CEDAEnv(EnvParser):
     """Config for CEDA FTP server."""
 
@@ -45,6 +48,24 @@ class MetOfficeEnv(EnvParser):
     METOFFICE_CLIENT_SECRET: str
 
 
+class ECMWFMARSEnv(EnvParser):
+    """Config for ECMWF MARS API."""
+
+    ECMWF_API_KEY: str
+    ECMWF_API_URL: str
+    ECMWF_API_EMAIL: str
+    ECMWF_AREA: str = "uk"
+
+# --- Outputs environment variables --- #
+
+
+class LocalEnv(EnvParser):
+    """Config for local storage."""
+
+    # Required for EnvParser to believe it's a valid class
+    dummy_field: str = ""
+
+
 class S3Env(EnvParser):
     """Config for S3."""
 
@@ -53,14 +74,6 @@ class S3Env(EnvParser):
     AWS_ACCESS_SECRET: str
     AWS_REGION: str
 
-
-class ECMWFMARSEnv(EnvParser):
-    """Config for ECMWF MARS API."""
-
-    ECMWF_API_KEY: str
-    ECMWF_API_URL: str
-    ECMWF_API_EMAIL: str
-    ECMWF_AREA: str = "uk"
 
 class HuggingFaceEnv(EnvParser):
     """Config for HuggingFace API."""
