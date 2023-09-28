@@ -10,9 +10,9 @@ from nwp_consumer import internal
 
 from .client import Client
 
-# From https://github.com/huggingface/huggingface_hub/blob/main/tests/testing_constants.py
 USER = 'openclimatefix'
 RAW = pathlib.Path('raw')
+
 
 class TestHuggingFaceClient(unittest.TestCase):
 
@@ -77,3 +77,4 @@ class TestHuggingFaceClient(unittest.TestCase):
         dirDst = dst.parent
         self.client.delete(p=dirDst)
         self.assertTrue(self.mock_fs.rm.called_with(p=dirDst, recursive=True))
+

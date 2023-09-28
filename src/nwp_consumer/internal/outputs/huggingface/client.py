@@ -26,6 +26,15 @@ class Client(internal.StorageInterface):
         # See https://huggingface.co/docs/huggingface_hub/guides/hf_file_system#integrations
         self.datasetPath = pathlib.Path(f'datasets/{repoID}')
 
+        try:
+            self.__fs._api.dataset_info(repo_id=self.datasetPath.relative_to('datasets').as_posix())
+        except Exception as e:
+            log.warn(
+                event="failed to authenticate with huggingface for given repo",
+                repo_id=self.datasetPath.relative_to('datasets').as_posix(),
+                error=e
+            )
+
     def exists(self, *, dst: pathlib.Path) -> bool:  # noqa: D102
         return self.__fs.exists(self.datasetPath / dst.as_posix())
 

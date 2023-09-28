@@ -19,7 +19,7 @@ Options:
   --from <startDate>  Start date in YYYY-MM-DD format [default: today].
   --to <endDate>      End date in YYYY-MM-DD format [default: today].
   --source <source>   Data source to use (ceda/metoffice/ecmwf-mars) [default: ceda].
-  --sink <sink>       Data sink to use (local/s3) [default: local].
+  --sink <sink>       Data sink to use (local/s3/huggingface) [default: local].
   --rdir <rawdir>     Directory of raw data store [default: /tmp/raw].
   --zdir <zarrdir>    Directory of zarr data store [default: /tmp/zarr].
   --create-latest     Create a zarr of the dataset with the latest init time [default: False].
@@ -58,6 +58,7 @@ def run(arguments: dict) -> int:
         ftpPassword="anonymous",
     )
     storer: StorageInterface = outputs.localfs.Client()
+    env: config.EnvParser = config.EnvParser()
 
     if arguments['check']:
         # Perform a healthcheck on the service
@@ -69,17 +70,24 @@ def run(arguments: dict) -> int:
             zarrdir=arguments['--zdir'],
         ).Check()
 
+
     match arguments['--sink']:
         # Create the storer based on the sink
         case 'local':
             storer = outputs.localfs.Client()
         case 's3':
-            s3c = config.S3Config()
+            env = config.S3Env()
             storer = outputs.s3.Client(
-                key=s3c.AWS_ACCESS_KEY,
-                bucket=s3c.AWS_S3_BUCKET,
-                secret=s3c.AWS_ACCESS_SECRET,
-                region=s3c.AWS_REGION
+                key=env.AWS_ACCESS_KEY,
+                bucket=env.AWS_S3_BUCKET,
+                secret=env.AWS_ACCESS_SECRET,
+                region=env.AWS_REGION
+            )
+        case 'huggingface':
+            env = config.HuggingFaceEnv()
+            storer = outputs.huggingface.Client(
+                token=env.HUGGINGFACE_TOKEN,
+                repoID=env.HUGGINGFACE_REPO_ID,
             )
         case _:
             raise ValueError(f"unknown sink {arguments['--sink']}")
@@ -87,22 +95,22 @@ def run(arguments: dict) -> int:
     match arguments['--source']:
         # Create the fetcher based on the source
         case 'ceda':
-            cc = config.CEDAConfig()
+            env = config.CEDAEnv()
             fetcher = inputs.ceda.Client(
-                ftpUsername=cc.CEDA_FTP_USER,
-                ftpPassword=cc.CEDA_FTP_PASS,
+                ftpUsername=env.CEDA_FTP_USER,
+                ftpPassword=env.CEDA_FTP_PASS,
             )
         case 'metoffice':
-            mc = config.MetOfficeConfig()
+            env = config.MetOfficeEnv()
             fetcher = inputs.metoffice.Client(
-                orderID=mc.METOFFICE_ORDER_ID,
-                clientID=mc.METOFFICE_CLIENT_ID,
-                clientSecret=mc.METOFFICE_CLIENT_SECRET,
+                orderID=env.METOFFICE_ORDER_ID,
+                clientID=env.METOFFICE_CLIENT_ID,
+                clientSecret=env.METOFFICE_CLIENT_SECRET,
             )
         case 'ecmwf-mars':
-            ec = config.ECMWFMARSConfig()
+            env = config.ECMWFMARSEnv()
             fetcher = inputs.ecmwf.MARSClient(
-                area=ec.ECMWF_AREA,
+                area=env.ECMWF_AREA,
             )
         case _:
             raise ValueError(f"unknown source {arguments['--source']}")
