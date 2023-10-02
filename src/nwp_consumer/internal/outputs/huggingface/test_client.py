@@ -17,7 +17,7 @@ RAW = pathlib.Path('raw')
 class TestHuggingFaceClient(unittest.TestCase):
 
     @classmethod
-    @patch('nwp_consumer.internal.outputs.huggingface.client.HfFileSystem')
+    @patch('huggingface_hub.HfFileSystem')
     def setUpClass(cls, mock_patch):
         cls.repoID = f'{USER}/repo-{uuid.uuid4().hex[:6]}-{int(time.time() * 10e3)}'
 

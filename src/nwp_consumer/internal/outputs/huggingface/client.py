@@ -4,7 +4,7 @@ import datetime as dt
 import pathlib
 
 import structlog
-from huggingface_hub import HfFileSystem
+import huggingface_hub
 
 from nwp_consumer import internal
 
@@ -15,14 +15,14 @@ class Client(internal.StorageInterface):
     """Client for HuggingFace."""
 
     # HuggingFace Filesystem
-    __fs: HfFileSystem
+    __fs: huggingface_hub.HfFileSystem
 
     # Path prefix
     datasetPath: pathlib.Path
 
     def __init__(self, repoID: str,  token: str | None = None, endpoint: str | None = None) \
             -> None: # noqa: D107
-        self.__fs = HfFileSystem(token=token, endpoint=endpoint)
+        self.__fs = huggingface_hub.HfFileSystem(token=token, endpoint=endpoint)
         # See https://huggingface.co/docs/huggingface_hub/guides/hf_file_system#integrations
         self.datasetPath = pathlib.Path(f'datasets/{repoID}')
 

@@ -285,7 +285,8 @@ class NWPConsumerService:
 def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
     # Save the dataset to a temp zarr file
     initTime = dt.datetime.utcfromtimestamp(int(ds.coords["init_time"].values[0]) / 1e9)
-    tempZarrPath = internal.TMP_DIR / (initTime.strftime(internal.ZARR_FMTSTR) + ".zarr.zip")
+    tempZarrPath = internal.TMP_DIR / (initTime.strftime(internal.ZARR_FMTSTR.split("/")[-1]) \
+                                       + ".zarr.zip")
     if tempZarrPath.exists():
         tempZarrPath.unlink()
     with zarr.ZipStore(path=tempZarrPath.as_posix(), mode='w') as store:
@@ -304,7 +305,8 @@ def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
 def _saveAsTempRegularZarr(ds: xr.Dataset) -> pathlib.Path:
     # Save the dataset to a temp zarr file
     initTime = dt.datetime.utcfromtimestamp(int(ds.coords["init_time"].values[0]) / 1e9)
-    tempZarrPath = internal.TMP_DIR / (initTime.strftime(internal.ZARR_FMTSTR) + ".zarr")
+    tempZarrPath = internal.TMP_DIR / (initTime.strftime(internal.ZARR_FMTSTR.split("/")[-1]) \
+                                       + ".zarr")
     if tempZarrPath.exists() and tempZarrPath.is_dir():
         shutil.rmtree(tempZarrPath.as_posix())
     ds.to_zarr(
