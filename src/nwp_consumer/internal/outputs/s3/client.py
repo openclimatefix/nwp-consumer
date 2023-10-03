@@ -63,14 +63,14 @@ class Client(internal.StorageInterface):
     def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:
         allDirs = [
             pathlib.Path(d).relative_to(self.__bucket / prefix)
-            for d in self.__fs.glob(f'{self.__bucket}/{prefix}/*/*/*/*')
+            for d in self.__fs.glob(f'{self.__bucket}/{prefix}/{internal.IT_FOLDER_GLOBSTR}')
             if self.__fs.isdir(d)
         ]
 
         # Get the initTime from the folder pattern
         initTimes = set()
         for dir in allDirs:
-            if dir.match('*/*/*/*'):
+            if dir.match(internal.IT_FOLDER_GLOBSTR):
                 try:
                     # Try to parse the folder name as a datetime
                     ddt = dt.datetime.strptime(

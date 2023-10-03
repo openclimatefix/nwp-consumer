@@ -12,7 +12,7 @@ import xarray as xr
 # The folder pattern format string for the raw data's init time
 IT_FOLDER_FMTSTR = "%Y/%m/%d/%H%M"
 # The globstring is the format string with stars between the slashes
-RAW_GLOBSTR = "/".join(["*"] * len(IT_FOLDER_FMTSTR.split("/")))
+IT_FOLDER_GLOBSTR = "/".join(["*"] * len(IT_FOLDER_FMTSTR.split("/")))
 
 # The temporaray directory for storing downloaded files
 TMP_DIR = pathlib.Path("/tmp/nwpc")  # noqa: S108

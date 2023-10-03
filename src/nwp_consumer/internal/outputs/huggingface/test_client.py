@@ -63,7 +63,7 @@ class TestHuggingFaceClient(unittest.TestCase):
 
         self.assertEqual(len(initTimes), 1)
         self.assertEqual(initTimes[0], dt.datetime.utcnow().replace(second=0, microsecond=0))
-        self.assertTrue(self.mock_fs.glob.called_with(f"{self.repoID}/{RAW.as_posix()}/*/*/*/*"))
+        self.assertTrue(self.mock_fs.glob.called_with(f"{self.repoID}/{RAW.as_posix()}/{internal.IT_FOLDER_GLOBSTR}"))
 
     def test_delete(self):
         initTime = dt.datetime.utcnow()

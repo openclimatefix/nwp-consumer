@@ -16,7 +16,7 @@ class Client(internal.StorageInterface):
     def exists(self, *, dst: pathlib.Path) -> bool:
         return dst.exists()
 
-    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
+    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:  # noqa: D102
         if src == dst:
             return os.stat(src).st_size
 
@@ -33,9 +33,11 @@ class Client(internal.StorageInterface):
         )
         return nbytes
 
-    def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:
-        # List all the YYYY/MM/DD/INITTIME folders in the given directory
-        dirs = [f.relative_to(prefix) for f in prefix.glob('*/*/*/*') if f.suffix == ""]
+    def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:  # noqa: D102
+        # List all the inittime folders in the given directory
+        dirs = [f.relative_to(prefix)
+                for f in prefix.glob(internal.IT_FOLDER_GLOBSTR)
+                if f.suffix == ""]
 
         initTimes = set()
         for dir in dirs:

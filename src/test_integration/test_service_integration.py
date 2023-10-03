@@ -143,7 +143,7 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
         nbytes = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
         self.assertGreater(nbytes, 0)
 
-        for path in pathlib.Path(self.zarrdir).glob('*.zarr.zip'):
+        for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + '.zarr.zip'):
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
 
             # Enusre the data variables are correct
