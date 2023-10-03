@@ -16,7 +16,7 @@ IT_FOLDER_FMTSTR = "%Y/%m/%d/%H%M"
 TMP_DIR = pathlib.Path("/tmp/nwpc")  # noqa: S108
 
 # The format string for the zarr dataset
-ZARR_FMTSTR = "%Y%m%dT%H%M"
+ZARR_FMTSTR = "%Y/%m/%d/%Y%m%dT%H%M"
 
 
 # ------- Domain models ------- #

@@ -8,7 +8,7 @@ import structlog
 log = structlog.getLogger()
 
 
-class _EnvParseMixin:
+class EnvParser:
     """Mixin to parse environment variables into class fields."""
 
     def __init__(self) -> None:
@@ -30,14 +30,17 @@ class _EnvParseMixin:
             self.__setattr__(field, value)
 
 
-class CEDAConfig(_EnvParseMixin):
+# --- Inputs environment variables --- #
+
+
+class CEDAEnv(EnvParser):
     """Config for CEDA FTP server."""
 
     CEDA_FTP_USER: str
     CEDA_FTP_PASS: str
 
 
-class MetOfficeConfig(_EnvParseMixin):
+class MetOfficeEnv(EnvParser):
     """Config for Met Office API."""
 
     METOFFICE_ORDER_ID: str
@@ -45,7 +48,25 @@ class MetOfficeConfig(_EnvParseMixin):
     METOFFICE_CLIENT_SECRET: str
 
 
-class S3Config(_EnvParseMixin):
+class ECMWFMARSEnv(EnvParser):
+    """Config for ECMWF MARS API."""
+
+    ECMWF_API_KEY: str
+    ECMWF_API_URL: str
+    ECMWF_API_EMAIL: str
+    ECMWF_AREA: str = "uk"
+
+# --- Outputs environment variables --- #
+
+
+class LocalEnv(EnvParser):
+    """Config for local storage."""
+
+    # Required for EnvParser to believe it's a valid class
+    dummy_field: str = ""
+
+
+class S3Env(EnvParser):
     """Config for S3."""
 
     AWS_S3_BUCKET: str
@@ -54,10 +75,9 @@ class S3Config(_EnvParseMixin):
     AWS_REGION: str
 
 
-class ECMWFMARSConfig(_EnvParseMixin):
-    """Config for ECMWF MARS API."""
+class HuggingFaceEnv(EnvParser):
+    """Config for HuggingFace API."""
 
-    ECMWF_API_KEY: str
-    ECMWF_API_URL: str
-    ECMWF_API_EMAIL: str
-    ECMWF_AREA: str = "uk"
+    HUGGINGFACE_TOKEN: str
+    HUGGINGFACE_REPO_ID: str
+

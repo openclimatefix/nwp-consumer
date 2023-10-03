@@ -6,7 +6,10 @@ import logging
 import psutil
 
 # Ignore modules' emitted logs
-for name in ("boto", "elasticsearch", "urllib3", "cfgrib", "xarray", "ecmwfapi", "api"):
+for name in (
+        "boto", "elasticsearch", "urllib3",
+        "cfgrib", "xarray", "ecmwfapi",
+        "api", "multiprocessing"):
     logging.getLogger(name).setLevel(logging.ERROR)
 
 # Set the log level
@@ -42,7 +45,6 @@ shared_processors = [
     structlog.stdlib.add_log_level,
     structlog.processors.TimeStamper(fmt="iso"),
     structlog.processors.StackInfoRenderer(),
-    structlog.processors.format_exc_info,
     UsageProfiler(),
 ]
 

@@ -1,3 +1,21 @@
-__all__ = ["CEDAConfig", "MetOfficeConfig", "S3Config", "ECMWFMARSConfig"]
+"""Configuration for the service."""
 
-from .config import CEDAConfig, MetOfficeConfig, S3Config, ECMWFMARSConfig
+__all__ = [
+    "EnvParser",
+    "CEDAEnv",
+    "ECMWFMARSEnv",
+    "HuggingFaceEnv",
+    "MetOfficeEnv",
+    "S3Env",
+    "LocalEnv",
+]
+
+from .env import (
+    CEDAEnv,
+    ECMWFMARSEnv,
+    EnvParser,
+    HuggingFaceEnv,
+    LocalEnv,
+    MetOfficeEnv,
+    S3Env,
+)

@@ -1,8 +1,6 @@
 import datetime as dt
 import pathlib
 
-import botocore.client
-import botocore.exceptions
 import s3fs
 import structlog
 
@@ -17,8 +15,8 @@ class Client(internal.StorageInterface):
     # S3 Bucket
     __bucket: pathlib.Path
 
-    # S3 Accessor
-    __s3: botocore.client
+    # S3 Filesystem
+    __fs: s3fs.S3FileSystem
 
     def __init__(self, key: str, secret: str, bucket: str, region: str,
                  endpointURL: str = None) -> None:
@@ -63,7 +61,6 @@ class Client(internal.StorageInterface):
         return nbytes
 
     def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:
-        """List all initTimes in the raw directory."""
         allDirs = [
             pathlib.Path(d).relative_to(self.__bucket / prefix)
             for d in self.__fs.glob(f'{self.__bucket}/{prefix}/*/*/*/*')

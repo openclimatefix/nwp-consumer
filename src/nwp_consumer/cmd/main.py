@@ -1,10 +1,11 @@
 """nwp-consumer.
 
 Usage:
-  nwp-consumer download [options]
-  nwp-consumer convert [options]
-  nwp-consumer consume [options]
-  nwp-consumer check
+  nwp-consumer download --source <source> [options]
+  nwp-consumer convert --source <source> [options]
+  nwp-consumer consume --source <source> [options]
+  nwp-consumer env (--source <source> | --sink <sink>)
+  nwp-consumer check [--sink <sink> --rdir <rawdir> --zdir <zarrdir>]
   nwp-consumer (-h | --help)
   nwp-consumer --version
 
@@ -13,12 +14,13 @@ Options:
   convert             Convert raw data present in sink
   consume             Download and convert raw data from source to sink
   check               Perform a healthcheck.py on the service
+  env                 Print the unset environment variables required by the source/sink
 
   -h --help           Show this screen.
   --version           Show version.
   --from <startDate>  Start date in YYYY-MM-DD format [default: today].
   --to <endDate>      End date in YYYY-MM-DD format [default: today].
-  --source <source>   Data source to use (ceda/metoffice/ecmwf-mars) [default: ceda].
+  --source <source>   Data source to use (ceda/metoffice/ecmwf-mars).
   --sink <sink>       Data sink to use (local/s3) [default: local].
   --rdir <rawdir>     Directory of raw data store [default: /tmp/raw].
   --zdir <zarrdir>    Directory of zarr data store [default: /tmp/zarr].
@@ -34,7 +36,8 @@ import shutil
 import structlog
 from docopt import docopt
 
-from nwp_consumer.internal import TMP_DIR, config, inputs, outputs
+from nwp_consumer import internal
+from nwp_consumer.internal import config, inputs, outputs
 from nwp_consumer.internal.service import NWPConsumerService
 
 __version__ = "local"
@@ -47,59 +50,71 @@ log = structlog.getLogger()
 
 def run(arguments: dict) -> int:
     """Run the CLI."""
-    fetcher = None
-    storer = None
+    # --- Map arguments to service configuration --- #
 
-    if arguments['check']:
-        # Perform a healthcheck on the service
-        # * Don't care here about the source/sink
-        return NWPConsumerService(
-            fetcher=inputs.ceda.Client(
-                ftpUsername="anonymous",
-                ftpPassword="anonymous",
-            ),
-            storer=outputs.localfs.Client(),
-            rawdir=arguments['--rdir'],
-            zarrdir=arguments['--zdir'],
-        ).Check()
+    # Defaults for the fetcher, storer and env parser
+    fetcher: internal.FetcherInterface = inputs.ceda.Client(
+        ftpUsername="na",
+        ftpPassword="na",
+    )
+    storer: internal.StorageInterface = outputs.localfs.Client()
+    env: config.EnvParser = config.LocalEnv()
 
+    # Map sink argument to storer
     match arguments['--sink']:
-        # Create the storer based on the sink
         case 'local':
             storer = outputs.localfs.Client()
         case 's3':
-            s3c = config.S3Config()
+            env = config.S3Env()
             storer = outputs.s3.Client(
-                key=s3c.AWS_ACCESS_KEY,
-                bucket=s3c.AWS_S3_BUCKET,
-                secret=s3c.AWS_ACCESS_SECRET,
-                region=s3c.AWS_REGION
+                key=env.AWS_ACCESS_KEY,
+                bucket=env.AWS_S3_BUCKET,
+                secret=env.AWS_ACCESS_SECRET,
+                region=env.AWS_REGION
+            )
+        case 'huggingface':
+            env = config.HuggingFaceEnv()
+            storer = outputs.huggingface.Client(
+                token=env.HUGGINGFACE_TOKEN,
+                repoID=env.HUGGINGFACE_REPO_ID,
             )
         case _:
             raise ValueError(f"unknown sink {arguments['--sink']}")
 
+    # Map source argument to fetcher
     match arguments['--source']:
-        # Create the fetcher based on the source
         case 'ceda':
-            c = config.CEDAConfig()
+            env = config.CEDAEnv()
             fetcher = inputs.ceda.Client(
-                ftpUsername=c.CEDA_FTP_USER,
-                ftpPassword=c.CEDA_FTP_PASS,
+                ftpUsername=env.CEDA_FTP_USER,
+                ftpPassword=env.CEDA_FTP_PASS,
             )
         case 'metoffice':
-            c = config.MetOfficeConfig()
+            env = config.MetOfficeEnv()
             fetcher = inputs.metoffice.Client(
-                orderID=c.METOFFICE_ORDER_ID,
-                clientID=c.METOFFICE_CLIENT_ID,
-                clientSecret=c.METOFFICE_CLIENT_SECRET,
+                orderID=env.METOFFICE_ORDER_ID,
+                clientID=env.METOFFICE_CLIENT_ID,
+                clientSecret=env.METOFFICE_CLIENT_SECRET,
             )
         case 'ecmwf-mars':
-            c = config.ECMWFMARSConfig()
+            env = config.ECMWFMARSEnv()
             fetcher = inputs.ecmwf.MARSClient(
-                area=c.ECMWF_AREA,
+                area=env.ECMWF_AREA,
             )
+        case None:
+            pass
         case _:
             raise ValueError(f"unknown source {arguments['--source']}")
+
+    # Map from and to arguments to datetime objects
+    if arguments['--from'] == "today" or arguments['--from'] is None:
+        arguments['--from'] = dt.datetime.now().strftime("%Y-%m-%d")
+    if arguments['--to'] == "today" or arguments['--to'] is None:
+        arguments['--to'] = dt.datetime.now().strftime("%Y-%m-%d")
+    startDate: dt.date = dt.datetime.strptime(arguments['--from'], "%Y-%m-%d").date()
+    endDate: dt.date = dt.datetime.strptime(arguments['--to'], "%Y-%m-%d").date()
+    if endDate < startDate:
+        raise ValueError("argument '--from' cannot specify date prior to '--to'")
 
     # Create the service using the fetcher and storer
     service = NWPConsumerService(
@@ -109,21 +124,18 @@ def run(arguments: dict) -> int:
         rawdir=arguments['--rdir'],
     )
 
-    # Set default values for start and end dates
-    if arguments['--from'] == "today" or arguments['--from'] is None:
-        arguments['--from'] = dt.datetime.now().strftime("%Y-%m-%d")
-    if arguments['--to'] == "today" or arguments['--to'] is None:
-        arguments['--to'] = dt.datetime.now().strftime("%Y-%m-%d")
+    # --- Run the service with the desired command --- #
 
-    # Parse start and end dates
-    startDate: dt.date = dt.datetime.strptime(arguments['--from'], "%Y-%m-%d").date()
-    endDate: dt.date = dt.datetime.strptime(arguments['--to'], "%Y-%m-%d").date()
-    if endDate < startDate:
-        raise ValueError("argument '--from' cannot specify date prior to '--to'")
+    # Logic for the "check" command
+    if arguments['check']:
+        return service.Check()
+
+    # Logic for the env command
+    if arguments['env']:
+        # Missing env vars are printed during mapping of source/sink args
+        return 0
 
     log.info("nwp-consumer starting", version=__version__, arguments=arguments)
-
-    # Carry out the desired function
 
     if arguments['download']:
         service.DownloadRawDataset(
@@ -157,10 +169,9 @@ def main() -> None:
     try:
         run(arguments=arguments)
     except Exception as e:
-        log.error("nwp-consumer error", error=str(e))
-        raise e
+        log.error("nwp-consumer error", error=str(e), exc_info=True)
     finally:
-        leftoverTempPaths = list(TMP_DIR.glob("*"))
+        leftoverTempPaths = list(internal.TMP_DIR.glob("*"))
         for p in leftoverTempPaths:
             if p.exists() and p.is_dir():
                 shutil.rmtree(p)

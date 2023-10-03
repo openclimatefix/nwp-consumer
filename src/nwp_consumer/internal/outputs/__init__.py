@@ -1,3 +1,3 @@
-__all_ = ["localfs", "s3"]
+__all_ = ["localfs", "s3", "huggingface"]
 
-from . import localfs, s3
+from . import localfs, s3, huggingface

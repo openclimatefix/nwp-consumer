@@ -9,7 +9,7 @@ from moto.server import ThreadedMotoServer
 
 from nwp_consumer import internal
 
-from . import Client
+from .client import Client
 
 ENDPOINT_URL = "http://localhost:5000"
 BUCKET = "test-bucket"

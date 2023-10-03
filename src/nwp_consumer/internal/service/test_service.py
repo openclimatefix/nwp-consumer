@@ -124,7 +124,7 @@ class TestNWPConsumerService(unittest.TestCase):
         n = self.service.ConvertRawDatasetToZarr(start=startDate, end=endDate)
 
         # 1 Dataset per init time, all init times per day, all days
-        filesize = len(dt.datetime.now().strftime(internal.ZARR_FMTSTR) + ".zarr.zip")
+        filesize = len(dt.datetime.now().strftime(internal.ZARR_FMTSTR.split("/")[-1]) + ".zarr.zip")
         self.assertEqual(1 * len(INIT_HOURS) * (len(DAYS)) * filesize, n)
 
     def test_createLatestZarr(self):
@@ -141,3 +141,4 @@ class TestSaveAsZippedZarr(unittest.TestCase):
         file = _saveAsTempZipZarr(ds=ds)
         outds = xr.open_zarr(f"zip::{file.as_posix()}")
         self.assertEqual(ds.dims, outds.dims)
+

@@ -1,0 +1,32 @@
+version: '3'
+
+
+tasks:
+  
+  install-dependencies:
+    desc: "Install application dependencies as defined in pyproject.toml"
+    cmds:
+      - ${PYTHON_PREFIX}python -m pip install -q .
+
+  install-dev-dependencies:
+    desc: "Installs development dependencies as defined in pyproject.toml"
+    deps: [install-dependencies]
+    cmds:
+      - ${PYTHON_PREFIX}python -m pip install --upgrade -q pip wheel setuptools
+      - ${PYTHON_PREFIX}python -m pip install -q .[dev]
+
+  test-unit:
+    desc: "Run all application unittests"
+    cmds:
+      - ${PYTHON_PREFIX}python -m xmlrunner discover -s src/nwp_consumer -p "test_*.py" --output-file ut-report.xml
+
+  test-integration:
+    desc: "Run all application integration tests"
+    cmds:
+      - ${PYTHON_PREFIX}python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
+
+  build-wheel:
+    desc: "Build python wheel"
+    cmds:
+      - ${PYTHON_PREFIX}python -m pip wheel . --no-deps --wheel-dir dist
+
