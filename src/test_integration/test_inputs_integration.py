@@ -18,7 +18,7 @@ storageClient = outputs.localfs.Client()
 class TestClient_FetchRawFileBytes(unittest.TestCase):
 
     def test_downloadsRawGribFileFromCEDA(self):
-        c = config.CEDAConfig()
+        c = config.CEDAEnv()
         cedaClient = inputs.ceda.Client(
             ftpUsername=c.CEDA_FTP_USER,
             ftpPassword=c.CEDA_FTP_PASS,
@@ -33,7 +33,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         metOfficeInitTime: dt.datetime = dt.datetime.now() \
             .replace(hour=0, minute=0, second=0, microsecond=0)
 
-        c = config.MetOfficeConfig()
+        c = config.MetOfficeEnv()
         metOfficeClient = inputs.metoffice.Client(
             orderID=c.METOFFICE_ORDER_ID,
             clientID=c.METOFFICE_CLIENT_ID,
@@ -69,7 +69,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         cedaInitTime: dt.datetime = dt.datetime(
             year=2022, month=1, day=1, hour=0, minute=0, tzinfo=None
         )
-        c = config.CEDAConfig()
+        c = config.CEDAEnv()
         cedaClient = inputs.ceda.Client(
             ftpUsername=c.CEDA_FTP_USER,
             ftpPassword=c.CEDA_FTP_PASS,
@@ -80,7 +80,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
     def test_getsFileInfosFromMetOffice(self):
         metOfficeInitTime: dt.datetime = dt.datetime.now() \
             .replace(hour=0, minute=0, second=0, microsecond=0)
-        c = config.MetOfficeConfig()
+        c = config.MetOfficeEnv()
         metOfficeClient = inputs.metoffice.Client(
             orderID=c.METOFFICE_ORDER_ID,
             clientID=c.METOFFICE_CLIENT_ID,

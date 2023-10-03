@@ -24,7 +24,7 @@ dependencies = [
     "fsspec[s3] == 2023.6.0",
     "huggingface_hub == 0.16.4",
     "marshmallow == 3.19.0",
-    "marshmallow-dataclass == 8.5.12",
+    "marshmallow-dataclass == 8.6.0",
     "numpy == 1.24.2",
     "ocf-blosc2 == 0.0.3",
     "pathlib == 1.0.1",

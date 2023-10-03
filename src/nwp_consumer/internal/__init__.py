@@ -4,18 +4,22 @@ __all__ = [
     "StorageInterface",
     "FileInfoModel",
     "IT_FOLDER_FMTSTR",
+    "IT_FOLDER_GLOBSTR",
     "TMP_DIR",
-    "ZARR_FMTSTR"
+    "ZARR_FMTSTR",
+    "ZARR_GLOBSTR"
 ]
 
 from .models import (
-    FetcherInterface,
-    StorageInterface,
-    OCFShortName,
-    FileInfoModel,
     IT_FOLDER_FMTSTR,
+    IT_FOLDER_GLOBSTR,
     TMP_DIR,
-    ZARR_FMTSTR
+    ZARR_FMTSTR,
+    ZARR_GLOBSTR,
+    FetcherInterface,
+    FileInfoModel,
+    OCFShortName,
+    StorageInterface,
 )
 
 TMP_DIR.mkdir(parents=True, exist_ok=True)

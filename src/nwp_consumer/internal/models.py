@@ -11,12 +11,16 @@ import xarray as xr
 
 # The folder pattern format string for the raw data's init time
 IT_FOLDER_FMTSTR = "%Y/%m/%d/%H%M"
+# The globstring is the format string with stars between the slashes
+IT_FOLDER_GLOBSTR = "/".join(["*"] * len(IT_FOLDER_FMTSTR.split("/")))
 
 # The temporaray directory for storing downloaded files
 TMP_DIR = pathlib.Path("/tmp/nwpc")  # noqa: S108
 
 # The format string for the zarr dataset
 ZARR_FMTSTR = "%Y/%m/%d/%Y%m%dT%H%M"
+# The zarr globstring is the format string with stars between the slashes
+ZARR_GLOBSTR = "/".join(["*"] * len(ZARR_FMTSTR.split("/")))
 
 
 # ------- Domain models ------- #
