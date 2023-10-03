@@ -1,4 +1,3 @@
-__all__ = ['MARSClient']
+__all__ = ['mars']
 
-from .client import MARSClient
-
+from . import mars

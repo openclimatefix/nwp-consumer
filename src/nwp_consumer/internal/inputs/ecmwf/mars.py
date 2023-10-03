@@ -80,7 +80,7 @@ def marsLogger(msg: str) -> None:
         log.warning(event=msg, caller="mars")
 
 
-class MARSClient(internal.FetcherInterface):
+class Client(internal.FetcherInterface):
     """Implements a client to fetch data from ECMWF's MARS API."""
 
     server: ecmwfapi.api.ECMWFService
