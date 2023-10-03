@@ -62,6 +62,7 @@ PARAMETER_ECMWFCODE_MAP: dict[str, str] = {
 
 AREA_MAP: dict[str, str] = {
     "uk": "60/-12/48/3",
+    "nw-india": "31/68/20/79",
     "eu": "E",
     "global": "G",
 }
@@ -80,7 +81,7 @@ def marsLogger(msg: str) -> None:
         log.warning(event=msg, caller="mars")
 
 
-class MARSClient(internal.FetcherInterface):
+class Client(internal.FetcherInterface):
     """Implements a client to fetch data from ECMWF's MARS API."""
 
     server: ecmwfapi.api.ECMWFService

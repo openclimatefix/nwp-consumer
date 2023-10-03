@@ -3,11 +3,11 @@
 import pathlib
 import unittest.mock
 
-from .client import MARSClient
+from .mars import Client
 
 # --------- Test setup --------- #
 
-testMARSClient = MARSClient(
+testMARSClient = Client(
     area="uk"
 )
 
@@ -20,7 +20,7 @@ class TestECMWFMARSClient(unittest.TestCase):
 
     def test_init(self):
         with self.assertRaises(KeyError):
-            _ = MARSClient(area="not a valid area")
+            _ = Client(area="not a valid area")
 
     def test_mapTemp(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_2params.grib"

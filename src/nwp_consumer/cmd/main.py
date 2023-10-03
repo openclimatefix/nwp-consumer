@@ -98,7 +98,7 @@ def run(arguments: dict) -> int:
             )
         case 'ecmwf-mars':
             env = config.ECMWFMARSEnv()
-            fetcher = inputs.ecmwf.MARSClient(
+            fetcher = inputs.ecmwf.mars.Client(
                 area=env.ECMWF_AREA,
             )
         case None:
