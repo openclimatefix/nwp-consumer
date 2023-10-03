@@ -4,8 +4,10 @@ __all__ = [
     "StorageInterface",
     "FileInfoModel",
     "IT_FOLDER_FMTSTR",
+    "RAW_GLOBSTR",
     "TMP_DIR",
-    "ZARR_FMTSTR"
+    "ZARR_FMTSTR",
+    "ZARR_GLOBSTR"
 ]
 
 from .models import (
@@ -15,7 +17,9 @@ from .models import (
     FileInfoModel,
     IT_FOLDER_FMTSTR,
     TMP_DIR,
-    ZARR_FMTSTR
+    ZARR_FMTSTR,
+    ZARR_GLOBSTR,
+    RAW_GLOBSTR
 )
 
 TMP_DIR.mkdir(parents=True, exist_ok=True)

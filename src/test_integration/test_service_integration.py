@@ -12,7 +12,9 @@ import unittest
 import numpy as np
 import ocf_blosc2  # noqa: F401
 import xarray as xr
-from nwp_consumer.internal import ZARR_FMTSTR, config, inputs, outputs, service
+from nwp_consumer.internal import (
+    ZARR_FMTSTR, ZARR_GLOBSTR, config, inputs, outputs, service
+)
 
 
 class TestNWPConsumerService_MetOffice(unittest.TestCase):
@@ -46,7 +48,7 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
         nbytes = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
         self.assertGreater(nbytes, 0)
 
-        for path in pathlib.Path(self.zarrdir).glob('*.zarr.zip'):
+        for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + '.zarr.zip'):
 
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}")
 
@@ -97,7 +99,7 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
         nbytes = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
         self.assertGreater(nbytes, 0)
 
-        for path in pathlib.Path(self.zarrdir).glob('*.zarr.zip'):
+        for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + '.zarr.zip'):
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
 
             # Enusre the data variables are correct
@@ -108,10 +110,7 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
                 dict(ds.dims.items())
             )
             # Ensure the init time is correct
-            self.assertEqual(
-                np.datetime64(dt.datetime.strptime(path.with_suffix('').stem, ZARR_FMTSTR)),
-                ds.coords["init_time"].values[0]
-            )
+            self.assertEqual(np.datetime64(initTime), ds.coords["init_time"].values[0])
 
         shutil.rmtree(self.rawdir)
         shutil.rmtree(self.zarrdir)
@@ -155,10 +154,7 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
                 dict(ds.dims.items())
             )
             # Ensure the init time is correct
-            self.assertEqual(
-                np.datetime64(dt.datetime.strptime(path.with_suffix('').stem, ZARR_FMTSTR)),
-                ds.coords["init_time"].values[0]
-            )
+            self.assertEqual(np.datetime64(initTime), ds.coords["init_time"].values[0])
 
         shutil.rmtree(self.rawdir)
         shutil.rmtree(self.zarrdir)
