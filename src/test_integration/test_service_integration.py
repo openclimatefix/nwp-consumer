@@ -120,7 +120,7 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
     def setUp(self):
         storageClient = outputs.localfs.Client()
         env = config.ECMWFMARSEnv()
-        ecmwfMarsClient = inputs.ecmwf.MARSClient(
+        ecmwfMarsClient = inputs.ecmwf.mars.Client(
             area=env.ECMWF_AREA,
         )
 
