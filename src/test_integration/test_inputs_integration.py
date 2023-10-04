@@ -52,7 +52,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         )
 
         c = config.ECMWFMARSEnv()
-        ecmwfMarsClient = inputs.ecmwf.MARSClient(
+        ecmwfMarsClient = inputs.ecmwf.mars.Client(
             area=c.ECMWF_AREA,
         )
         fileInfo = ECMWFMarsFileInfo(
@@ -94,7 +94,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
             year=2022, month=1, day=1, hour=0, minute=0, tzinfo=None
         )
         c = config.ECMWFMARSEnv()
-        ecmwfMarsClient = inputs.ecmwf.MARSClient(
+        ecmwfMarsClient = inputs.ecmwf.mars.Client(
             area=c.ECMWF_AREA,
         )
         fileInfos = ecmwfMarsClient.listRawFilesForInitTime(it=ecmwfMarsInitTime)
