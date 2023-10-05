@@ -3,9 +3,7 @@ import datetime as dt
 import os
 import pathlib
 import tempfile
-import time
 import typing
-from contextlib import redirect_stdout
 
 import cfgrib
 import ecmwfapi.api
@@ -63,6 +61,7 @@ PARAMETER_ECMWFCODE_MAP: dict[str, str] = {
 AREA_MAP: dict[str, str] = {
     "uk": "60/-12/48/3",
     "nw-india": "31/68/20/79",
+    "malta": "37/13/35/15",
     "eu": "E",
     "global": "G",
 }
@@ -72,7 +71,12 @@ COORDINATE_ALLOW_LIST: typing.Sequence[str] = (
 )
 
 def marsLogger(msg: str) -> None:
-    """Logging function to pass to the ECMWFService."""
+    """Redirect log from ECMWF API to structlog.
+
+    Keyword Arguments:
+    -----------------
+    msg: The message to redirect.
+    """
     debugSubstrings: list[str] = ["Requesting", "Transfering", "efficiency", "Done"]
     errorSubstrings: list[str] = ["ERROR", "FATAL"]
     if any(map(msg.__contains__, debugSubstrings)):
@@ -88,7 +92,13 @@ class Client(internal.FetcherInterface):
     area: str
 
     def __init__(self, area: str) -> None:
-        """Create a new ECMWFMarsClient."""
+        """Create a new ECMWFMarsClient.
+
+        Keyword Arguments:
+        -----------------
+        area: The area to fetch data for. Can be one of:
+        ["uk", "nw-india", "malta", "eu", "global"]
+        """
         self.server = ECMWFService(
             service="mars",
             log=marsLogger
