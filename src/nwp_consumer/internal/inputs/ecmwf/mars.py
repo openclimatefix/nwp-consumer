@@ -130,7 +130,7 @@ class Client(internal.FetcherInterface):
                             stream   = oper,
                             time     = {it.strftime("%H")},
                             type     = fc,
-                            area     = {self.area}
+                            area     = {AREA_MAP[self.area]},
                             grid     = 0.05/0.05,
                             target   = "{tf.name}"
                     """,
