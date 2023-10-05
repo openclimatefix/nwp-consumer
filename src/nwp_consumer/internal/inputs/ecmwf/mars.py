@@ -109,7 +109,6 @@ class Client(internal.FetcherInterface):
 
         self.area = area
 
-
     def listRawFilesForInitTime(self, *, it: dt.datetime) \
             -> list[internal.FileInfoModel]:  # noqa: D102
         # For the model we are pulling from, there are only files for 00:00 and 12:00
