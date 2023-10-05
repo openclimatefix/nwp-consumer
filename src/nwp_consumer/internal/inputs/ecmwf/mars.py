@@ -107,6 +107,8 @@ class Client(internal.FetcherInterface):
         if area not in AREA_MAP:
             raise KeyError(f"area must be one of {list(AREA_MAP.keys())}")
 
+        self.area = area
+
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) \
             -> list[internal.FileInfoModel]:  # noqa: D102
