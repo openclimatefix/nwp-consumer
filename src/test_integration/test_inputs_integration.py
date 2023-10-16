@@ -96,6 +96,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         c = config.ECMWFMARSEnv()
         ecmwfMarsClient = inputs.ecmwf.mars.Client(
             area=c.ECMWF_AREA,
+            hours=c.ECMWF_HOURS,
         )
         fileInfos = ecmwfMarsClient.listRawFilesForInitTime(it=ecmwfMarsInitTime)
         self.assertTrue(len(fileInfos) > 0)
