@@ -100,6 +100,7 @@ def run(arguments: dict) -> int:
             env = config.ECMWFMARSEnv()
             fetcher = inputs.ecmwf.mars.Client(
                 area=env.ECMWF_AREA,
+                hours=env.ECMWF_HOURS,
             )
         case None:
             pass

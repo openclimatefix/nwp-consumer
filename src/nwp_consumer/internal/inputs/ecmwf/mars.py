@@ -91,13 +91,14 @@ class Client(internal.FetcherInterface):
     server: ecmwfapi.api.ECMWFService
     area: str
 
-    def __init__(self, area: str) -> None:
+    def __init__(self, area: str, hours: str) -> None:
         """Create a new ECMWFMarsClient.
 
         Keyword Arguments:
         -----------------
         area: The area to fetch data for. Can be one of:
         ["uk", "nw-india", "malta", "eu", "global"]
+        hours: The number of hours to fetch data for. Must be less than 90.
         """
         self.server = ECMWFService(
             service="mars",
@@ -106,8 +107,14 @@ class Client(internal.FetcherInterface):
 
         if area not in AREA_MAP:
             raise KeyError(f"area must be one of {list(AREA_MAP.keys())}")
-
         self.area = area
+
+        try:
+            self.hours = int(hours)
+        except ValueError:
+            raise KeyError("ECMWF hours must be an integer")
+        if self.hours > 90:
+            raise KeyError("ECMWF operational archive only goes out to 90 hours in hourly increments")
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) \
             -> list[internal.FileInfoModel]:  # noqa: D102
@@ -127,7 +134,7 @@ class Client(internal.FetcherInterface):
                             expver   = 1,
                             levtype  = sfc,
                             param    = {'/'.join(list(PARAMETER_ECMWFCODE_MAP.keys()))},
-                            step     = 0/to/48/by/1,
+                            step     = 0/to/{self.hours}/by/1,
                             stream   = oper,
                             time     = {it.strftime("%H")},
                             type     = fc,
@@ -158,7 +165,7 @@ class Client(internal.FetcherInterface):
                         expver   = 1,
                         levtype  = sfc,
                         param    = {'/'.join(list(PARAMETER_ECMWFCODE_MAP.keys()))},
-                        step     = 0/to/48/by/1,
+                        step     = 0/to/{self.hours}/by/1,
                         stream   = oper,
                         time     = {fi.it().strftime("%H")},
                         type     = fc,
