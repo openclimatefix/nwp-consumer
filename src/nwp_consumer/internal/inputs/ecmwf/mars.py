@@ -112,9 +112,9 @@ class Client(internal.FetcherInterface):
         try:
             self.hours = int(hours)
         except ValueError:
-            raise ValueError("ECMWF hours must be an integer")
+            raise KeyError("ECMWF hours must be an integer")
         if self.hours > 90:
-            raise ValueError("ECMWF operational archive only goes out to 90 hours in hourly increments")
+            raise KeyError("ECMWF operational archive only goes out to 90 hours in hourly increments")
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) \
             -> list[internal.FileInfoModel]:  # noqa: D102

@@ -21,7 +21,11 @@ class TestECMWFMARSClient(unittest.TestCase):
 
     def test_init(self):
         with self.assertRaises(KeyError):
-            _ = Client(area="not a valid area")
+            _ = Client(area="not a valid area", hours="48")
+        with self.assertRaises(KeyError):
+            _ = Client(area="uk", hours="not a valid hours")
+        with self.assertRaises(KeyError):
+            _ = Client(area="uk", hours="100")
 
     def test_mapTemp(self):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_2params.grib"
