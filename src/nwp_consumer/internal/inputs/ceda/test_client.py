@@ -57,6 +57,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
         out = testClient.mapTemp(p=wholesalePath)
 
         # Ensure the dimensions have the right sizes
+        print(sorted(out.coords["variable"].values))
         self.assertDictEqual(
             {"init_time": 1, "variable": 6, "step": 4, "y": 704, "x": 548},
             dict(out.dims.items())
