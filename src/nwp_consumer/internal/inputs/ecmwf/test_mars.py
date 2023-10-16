@@ -8,7 +8,8 @@ from .mars import Client
 # --------- Test setup --------- #
 
 testMARSClient = Client(
-    area="uk"
+    area="uk",
+    hours="48",
 )
 
 
