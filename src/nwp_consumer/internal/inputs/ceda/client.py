@@ -20,7 +20,7 @@ log = structlog.getLogger()
 
 # Defines parameters in CEDA that are not available from MetOffice
 PARAMETER_IGNORE_LIST: typing.Sequence[str] = (
-    "unknown", "h", "hcct", "cdcb", "dpt", "prmsl"
+    "unknown", "h", "hcct", "cdcb", "dpt", "prmsl", "cbh"
 )
 
 COORDINATE_ALLOW_LIST: typing.Sequence[str] = (
