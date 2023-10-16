@@ -122,6 +122,7 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
         env = config.ECMWFMARSEnv()
         ecmwfMarsClient = inputs.ecmwf.mars.Client(
             area=env.ECMWF_AREA,
+            hours=env.ECMWF_HOURS,
         )
 
         self.rawdir = 'data/ec_raw'
