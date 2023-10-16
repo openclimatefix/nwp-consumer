@@ -54,6 +54,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         c = config.ECMWFMARSEnv()
         ecmwfMarsClient = inputs.ecmwf.mars.Client(
             area=c.ECMWF_AREA,
+            hours=c.ECMWF_HOURS,
         )
         fileInfo = ECMWFMarsFileInfo(
             inittime=ecmwfMarsInitTime,
