@@ -55,6 +55,7 @@ class ECMWFMARSEnv(EnvParser):
     ECMWF_API_URL: str
     ECMWF_API_EMAIL: str
     ECMWF_AREA: str = "uk"
+    ECMWF_HOURS: str = "48"
 
 # --- Outputs environment variables --- #
 
