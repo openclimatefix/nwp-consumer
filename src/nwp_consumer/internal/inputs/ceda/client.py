@@ -63,7 +63,7 @@ class Client(internal.FetcherInterface):
         self.__ftpBase: str = f'ftp://{self.__username}:{self.__password}@ftp.ceda.ac.uk'
 
     def downloadToTemp(self, *, fi: internal.FileInfoModel) \
-            -> tuple[internal.FileInfoModel, pathlib.Path]:
+            -> tuple[internal.FileInfoModel, pathlib.Path]:  # noqa: D102
 
         if self.__password == "" or self.__username == "":
             log.error(
@@ -105,7 +105,7 @@ class Client(internal.FetcherInterface):
 
         return fi, tfp
 
-    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
+    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
 
         # Fetch info for all files available on the input date
         # * CEDA has a HTTPS JSON API for this purpose
@@ -153,7 +153,7 @@ class Client(internal.FetcherInterface):
 
         return wantedFiles
 
-    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
+    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
         if p.suffix != '.grib':
             log.warn(
                 event="cannot map non-grib file to dataset",

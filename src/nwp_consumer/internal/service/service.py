@@ -289,12 +289,13 @@ def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
                                        + ".zarr.zip")
     if tempZarrPath.exists():
         tempZarrPath.unlink()
+    dataVar: str = list(ds.data_vars.keys())[0]
     with zarr.ZipStore(path=tempZarrPath.as_posix(), mode='w') as store:
         ds.to_zarr(
             store=store,
             encoding={
                 "init_time": {"units": "nanoseconds since 1970-01-01"},
-                "UKV": {
+                dataVar: {
                     "compressor": Blosc2(cname="zstd", clevel=5),
                 },
             },
@@ -309,11 +310,12 @@ def _saveAsTempRegularZarr(ds: xr.Dataset) -> pathlib.Path:
                                        + ".zarr")
     if tempZarrPath.exists() and tempZarrPath.is_dir():
         shutil.rmtree(tempZarrPath.as_posix())
+    dataVar: str = list(ds.data_vars.keys())[0]
     ds.to_zarr(
         store=tempZarrPath.as_posix(),
         encoding={
             "init_time": {"units": "nanoseconds since 1970-01-01"},
-            "UKV": {
+            dataVar: {
                 "compressor": Blosc2(cname="zstd", clevel=5),
             },
         },
