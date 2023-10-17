@@ -148,7 +148,7 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
 
             # Enusre the data variables are correct
-            self.assertEqual(["UKV"], list(ds.data_vars))
+            self.assertEqual(["ECMWF_UK"], list(ds.data_vars))
             # Ensure the dimensions have the right sizes
             self.assertEqual(
                 {'variable': 17, 'init_time': 1, 'step': 49, 'latitude': 241, 'longitude': 301},

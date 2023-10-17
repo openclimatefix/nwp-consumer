@@ -111,8 +111,8 @@ class Client(internal.FetcherInterface):
 
         try:
             self.hours = int(hours)
-        except ValueError:
-            raise KeyError("ECMWF hours must be an integer")
+        except ValueError as e:
+            raise KeyError("ECMWF hours must be an integer") from e
         if self.hours > 90:
             raise KeyError("ECMWF operational archive only goes out to 90 hours in hourly increments")
 
@@ -263,7 +263,7 @@ class Client(internal.FetcherInterface):
         wholesaleDataset = wholesaleDataset \
             .rename({"time": "init_time"}) \
             .expand_dims("init_time") \
-            .to_array(dim="variable", name="UKV") \
+            .to_array(dim="variable", name=f"ECMWF_{self.area}".upper()) \
             .to_dataset() \
             .transpose("variable", "init_time", "step", "latitude", "longitude") \
             .sortby("step") \

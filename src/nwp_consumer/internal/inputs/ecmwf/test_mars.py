@@ -40,7 +40,7 @@ class TestECMWFMARSClient(unittest.TestCase):
         # Ensure the dimensions of the variables are in the correct order
         self.assertEqual(
             ("variable", "init_time", "step", "latitude", "longitude"),
-            out["UKV"].dims
+            out[list(out.data_vars.keys())[0]].dims
         )
         # Ensure the correct variables are in the variable dimension
         self.assertListEqual(['prate', 'sde'], sorted(out.coords["variable"].values))
