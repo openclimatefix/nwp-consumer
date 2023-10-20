@@ -124,7 +124,7 @@ file=fi.filename(),
             path=fi.filepath()
         )
         try:
-            response = urllib.urlopen(url=fi.filepath())
+            response = urllib.request.urlopen(url=fi.filepath())
         except Exception as e:
             log.warn(
                 event="error calling url for file",

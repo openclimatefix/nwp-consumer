@@ -20,7 +20,7 @@ Options:
   --version           Show version.
   --from <startDate>  Start date in YYYY-MM-DD format [default: today].
   --to <endDate>      End date in YYYY-MM-DD format [default: today].
-  --source <source>   Data source to use (ceda/metoffice/ecmwf-mars).
+  --source <source>   Data source to use (ceda/metoffice/ecmwf-mars/icon).
   --sink <sink>       Data sink to use (local/s3) [default: local].
   --rdir <rawdir>     Directory of raw data store [default: /tmp/raw].
   --zdir <zarrdir>    Directory of zarr data store [default: /tmp/zarr].
@@ -102,6 +102,8 @@ def run(arguments: dict) -> int:
                 area=env.ECMWF_AREA,
                 hours=env.ECMWF_HOURS,
             )
+        case 'icon':
+            fetcher = inputs.icon.Client()
         case None:
             pass
         case _:
