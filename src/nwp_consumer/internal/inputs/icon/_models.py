@@ -7,7 +7,7 @@ from nwp_consumer import internal
 class IconFileInfo(internal.FileInfoModel):
     def __init__(self, it: dt.datetime, filename: str, currentURL: str):
         self._it = it
-        self._filename = filename
+        self._filename = filename.replace(".bz2", "")
         self._url = currentURL
 
 
@@ -15,7 +15,7 @@ class IconFileInfo(internal.FileInfoModel):
         return self._filename
 
     def filepath(self) -> str:
-        return self._url + "/" + self._filename
+        return self._url + "/" + self._filename + ".bz2"
 
     def it(self) -> dt.datetime:
         return self._it

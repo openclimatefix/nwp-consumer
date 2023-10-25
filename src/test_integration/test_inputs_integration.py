@@ -77,6 +77,8 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
             currentURL="https://opendata.dwd.de/weather/nwp/icon/grib/00/clcl"
         )
         _, tmpPath = iconClient.downloadToTemp(fi=fileInfo)
+        self.assertFalse(tmpPath.name.endswith(".bz2"))
+        self.assertLess(len(list(tmpPath.parent.glob("*.bz2"))), 1)
         self.assertGreater(tmpPath.stat().st_size, 40000)
 
         iconClient = inputs.icon.Client(

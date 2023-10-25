@@ -1,10 +1,10 @@
 """Implements a client to fetch ICON data from DWD."""
-
 import bz2
 import datetime as dt
 import pathlib
 import re
 import typing
+import urllib.request
 
 import requests
 import structlog
@@ -240,7 +240,7 @@ class Client(internal.FetcherInterface):
             path=fi.filepath()
         )
         try:
-            r = requests.get(stream=True, url=fi.filepath(), timeout=30)
+            response = urllib.request.urlopen(fi.filepath())
         except Exception as e:
             log.warn(
                 event="error calling url for file",
@@ -250,24 +250,26 @@ class Client(internal.FetcherInterface):
             )
             return fi, pathlib.Path()
 
-        if r.status_code != 200:
+        if response.status != 200:
             log.warn(
                 event="error downloading file",
-                status=r.status_code,
+                status=response.status,
                 url=fi.filepath(),
                 filename=fi.filename()
             )
             return fi, pathlib.Path()
 
         # Extract the bz2 file when downloading
-        tfp: pathlib.Path = internal.TMP_DIR / fi.filename().replace(".bz2", "")
+        tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
         with open(tfp, "wb") as f:
-            f.write(bz2.decompress(r.raw.read()))
-            f.flush()
+            dec = bz2.BZ2Decompressor()
+            for chunk in iter(lambda: response.read(16 * 1024), b''):
+                f.write(dec.decompress(chunk))
+                f.flush()
 
         log.debug(
             event="fetched all data from file",
-            filename=fi.filename().replace(".bz2", ""),
+            filename=fi.filename(),
             url=fi.filepath(),
             filepath=tfp.as_posix(),
             nbytes=tfp.stat().st_size
