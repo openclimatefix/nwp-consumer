@@ -31,7 +31,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         pass
 
 
-class TestClient_ConvertRawFileToDataset(unittest.TestCase):
+class TestClient_MapTemp(unittest.TestCase):
 
     def test_convertsWholesale1FileCorrectly(self):
         wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wholesale1.grib"
