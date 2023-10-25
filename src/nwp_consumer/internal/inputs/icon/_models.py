@@ -7,6 +7,8 @@ from nwp_consumer import internal
 class IconFileInfo(internal.FileInfoModel):
     def __init__(self, it: dt.datetime, filename: str, currentURL: str):
         self._it = it
+        # The name of the file when stored by the storer. We decompress from bz2
+        # at download time, so we don't want that extension on the filename.
         self._filename = filename.replace(".bz2", "")
         self._url = currentURL
 
@@ -15,6 +17,8 @@ class IconFileInfo(internal.FileInfoModel):
         return self._filename
 
     def filepath(self) -> str:
+        # The filename in the fuly-qualified filepath still has the .bz2 extension
+        # so add it back in
         return self._url + "/" + self._filename + ".bz2"
 
     def it(self) -> dt.datetime:

@@ -28,6 +28,7 @@ currently packaged with adapters for pulling and converting `.grib` data from:
 - [MetOffice Atmospheric API](https://gridded-data-ui.cda.api.metoffice.gov.uk)
 - [CEDA Atmospheric Archive](https://catalogue.ceda.ac.uk)
 - [ECMWF MARS API](https://apps.ecmwf.int/mars-catalogue)
+- [DWD's ICON Model from the Opendata API](https://opendata.dwd.de)
 
 Similarly, the service can write to multiple sinks:
 
