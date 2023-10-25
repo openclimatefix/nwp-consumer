@@ -103,7 +103,10 @@ def run(arguments: dict) -> int:
                 hours=env.ECMWF_HOURS,
             )
         case 'icon':
-            fetcher = inputs.icon.Client()
+            env = config.ICONEnv()
+            fetcher = inputs.icon.Client(
+                model = env.ICON_MODEL,
+            )
         case None:
             pass
         case _:
@@ -161,6 +164,8 @@ def run(arguments: dict) -> int:
 
     if arguments['--create-latest']:
         service.CreateLatestZarr()
+
+    return 0
 
 
 def main() -> None:
