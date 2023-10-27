@@ -160,3 +160,48 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
         shutil.rmtree(self.rawdir)
         shutil.rmtree(self.zarrdir)
 
+
+class TestNWPConsumerService_ICON(unittest.TestCase):
+    """Integration tests for the NWPConsumerService class."""
+
+    def setUp(self) -> None:
+        storageClient = outputs.localfs.Client()
+        env = config.ICONEnv()
+        iconClient = inputs.icon.Client(
+            model="global",
+        )
+
+        self.rawdir = 'data/ic_raw'
+        self.zarrdir = 'data/ic_zarr'
+
+        self.testService = service.NWPConsumerService(
+            fetcher=iconClient,
+            storer=storageClient,
+            rawdir=self.rawdir,
+            zarrdir=self.zarrdir,
+        )
+
+    def test_downloadAndConvertDataset(self):
+        initTime: dt.date = dt.datetime.now().date()
+
+        nbytes = self.testService.DownloadRawDataset(start=initTime, end=initTime)
+        self.assertGreater(nbytes, 0)
+
+        nbytes = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
+        self.assertGreater(nbytes, 0)
+
+        for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + '.zarr.zip'):
+            ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
+
+            # Enusre the data variables are correct
+            self.assertEqual(["ICON_GLOBAL"], list(ds.data_vars))
+            # Ensure the dimensions have the right sizes
+            self.assertEqual(
+                {'variable': 10, 'init_time': 1, 'step': 37, 'values': 2200999},
+                dict(ds.dims.items())
+            )
+            # Ensure the init time is correct
+            self.assertEqual(np.datetime64(initTime), ds.coords["init_time"].values[0])
+
+        shutil.rmtree(self.rawdir)
+        shutil.rmtree(self.zarrdir)

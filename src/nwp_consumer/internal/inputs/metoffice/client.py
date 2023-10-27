@@ -57,8 +57,8 @@ class Client(internal.FetcherInterface):
             "X-IBM-Client-Secret": clientSecret,
         }
 
-    def downloadToTemp(self, *, fi: MetOfficeFileInfo) \
-            -> tuple[internal.FileInfoModel, pathlib.Path]:
+    def downloadToTemp(self, *, fi: internal.FileInfoModel) \
+            -> tuple[internal.FileInfoModel, pathlib.Path]:  # noqa: D102
 
         if self.__headers.get("X-IBM-Client-Id") is None \
                 or self.__headers.get("X-IBM-Client-Secret") is None:

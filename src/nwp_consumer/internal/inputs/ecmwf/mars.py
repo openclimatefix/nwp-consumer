@@ -120,7 +120,6 @@ class Client(internal.FetcherInterface):
             -> list[internal.FileInfoModel]:  # noqa: D102
         # For the model we are pulling from, there are only files for 00:00 and 12:00
         # * Hence, only check requests for these times
-
         if it.hour not in [0, 12]:
             return []
 

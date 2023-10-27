@@ -57,6 +57,12 @@ class ECMWFMARSEnv(EnvParser):
     ECMWF_AREA: str = "uk"
     ECMWF_HOURS: str = "48"
 
+class ICONEnv(EnvParser):
+    """Config for ICON API."""
+
+    ICON_MODEL: str = "europe"
+
+
 # --- Outputs environment variables --- #
 
 

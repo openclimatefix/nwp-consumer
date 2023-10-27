@@ -11,6 +11,7 @@ from nwp_consumer.internal import config, inputs, outputs
 from nwp_consumer.internal.inputs.ceda._models import CEDAFileInfo
 from nwp_consumer.internal.inputs.ecmwf._models import ECMWFMarsFileInfo
 from nwp_consumer.internal.inputs.metoffice._models import MetOfficeFileInfo
+from nwp_consumer.internal.inputs.icon._models import IconFileInfo
 
 storageClient = outputs.localfs.Client()
 
@@ -63,6 +64,33 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         _, tmpPath = ecmwfMarsClient.downloadToTemp(fi=fileInfo)
         self.assertGreater(tmpPath.stat().st_size, 4000000)
 
+    def test_downloadsRawGribFileFromICON(self):
+        iconInitTime: dt.datetime = dt.datetime.now() \
+            .replace(hour=0, minute=0, second=0, microsecond=0)
+
+        iconClient = inputs.icon.Client(
+            model="global",
+        )
+        fileInfo = IconFileInfo(
+            it=iconInitTime,
+            filename=f"icon_global_icosahedral_single-level_{iconInitTime.strftime('%Y%m%d%H')}_001_CLCL.grib2.bz2",
+            currentURL="https://opendata.dwd.de/weather/nwp/icon/grib/00/clcl"
+        )
+        _, tmpPath = iconClient.downloadToTemp(fi=fileInfo)
+        self.assertFalse(tmpPath.name.endswith(".bz2"))
+        self.assertLess(len(list(tmpPath.parent.glob("*.bz2"))), 1)
+        self.assertGreater(tmpPath.stat().st_size, 40000)
+
+        iconClient = inputs.icon.Client(
+            model="europe"
+        )
+        fileInfo = IconFileInfo(
+            it=iconInitTime,
+            filename=f"icon-eu_europe_regular-lat-lon_single-level_{iconInitTime.strftime('%Y%m%d%H')}_001_CLCL.grib2.bz2",
+            currentURL="https://opendata.dwd.de/weather/nwp/icon-eu/grib/00/clcl"
+        )
+        _, tmpPath = iconClient.downloadToTemp(fi=fileInfo)
+        self.assertGreater(tmpPath.stat().st_size, 40000)
 
 class TestListRawFilesForInitTime(unittest.TestCase):
 
@@ -101,6 +129,23 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         )
         fileInfos = ecmwfMarsClient.listRawFilesForInitTime(it=ecmwfMarsInitTime)
         self.assertTrue(len(fileInfos) > 0)
+
+    def test_getsFileInfosFromICON(self):
+        iconInitTime: dt.datetime = dt.datetime.now() \
+            .replace(hour=0, minute=0, second=0, microsecond=0)
+        iconClient = inputs.icon.Client(
+            model="global",
+        )
+        fileInfos = iconClient.listRawFilesForInitTime(it=iconInitTime)
+        self.assertTrue(len(fileInfos) > 0)
+
+        iconClient = inputs.icon.Client(
+            model="europe"
+        )
+        euFileInfos = iconClient.listRawFilesForInitTime(it=iconInitTime)
+        self.assertTrue(len(euFileInfos) > 0)
+
+        self.assertNotEqual(fileInfos, euFileInfos)
 
 
 if __name__ == '__main__':
