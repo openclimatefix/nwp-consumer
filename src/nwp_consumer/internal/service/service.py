@@ -135,6 +135,9 @@ class NWPConsumerService:
             .flatten() \
             .compute(num_workers=1)  # AWS ECS only has 1 CPU which amounts to half a physical core
 
+        if not isinstance(storedfiles, list):
+            storedfiles = [storedfiles]
+
         return storedfiles
 
     def DownloadAndConvert(self, *, start: dt.date, end: dt.date) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
