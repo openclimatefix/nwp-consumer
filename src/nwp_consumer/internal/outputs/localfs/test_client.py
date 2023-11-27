@@ -86,12 +86,12 @@ class TestLocalFSClient(unittest.TestCase):
         src.write_bytes(bytes("test_file_contents", 'utf-8'))
 
         # Store the file using the function
-        size = self.testClient.store(src=src, dst=dst)
+        out = self.testClient.store(src=src, dst=dst)
 
         # Assert that the file exists
         self.assertTrue(dst.exists())
         # Assert that the file has the correct size
-        self.assertEqual(size, 18)
+        self.assertEqual(out, dst)
         # Assert that the temporary file has been deleted
         self.assertFalse(src.exists())
 

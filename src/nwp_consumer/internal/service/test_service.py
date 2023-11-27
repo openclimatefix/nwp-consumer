@@ -26,12 +26,12 @@ class DummyStorer(internal.StorageInterface):
             return True
         return False
 
-    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
+    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:
         if src.is_dir():
             shutil.rmtree(src.as_posix(), ignore_errors=True)
         else:
             src.unlink(missing_ok=True)
-        return len(dst.name)
+        return dst
 
     def listInitTimes(self, prefix: pathlib.Path) -> list[dt.datetime]:
         return testInitTimes
@@ -40,7 +40,7 @@ class DummyStorer(internal.StorageInterface):
             -> list[pathlib.Path]:
         return [pathlib.Path(f'{it:%Y%m%d%H%M}/{f}.grib') for f in INIT_TIME_FILES]
 
-    def delete(self, *, dst: pathlib.Path) -> None:
+    def delete(self, *, p: pathlib.Path) -> None:
         pass
 
 
@@ -95,6 +95,8 @@ class DummyFetcher(internal.FetcherInterface):
 
 class TestNWPConsumerService(unittest.TestCase):
 
+    service: NWPConsumerService
+
     @classmethod
     def setUpClass(cls) -> None:
         testStorer = DummyStorer()
@@ -112,25 +114,25 @@ class TestNWPConsumerService(unittest.TestCase):
         startDate = testInitTimes[0].date()
         endDate = testInitTimes[-1].date()
 
-        n = self.service.DownloadRawDataset(start=startDate, end=endDate)
+        files = self.service.DownloadRawDataset(start=startDate, end=endDate)
 
         # 2 files per init time, all init times
-        self.assertEqual(2 * len(INIT_HOURS) * (len(DAYS)) * len("xxxxx.grib"), n)
+        self.assertEqual(2 * len(INIT_HOURS) * (len(DAYS)), len(files))
 
     def test_convertRawDataset(self):
         startDate = testInitTimes[0].date()
         endDate = testInitTimes[-1].date()
 
-        n = self.service.ConvertRawDatasetToZarr(start=startDate, end=endDate)
+        files = self.service.ConvertRawDatasetToZarr(start=startDate, end=endDate)
 
         # 1 Dataset per init time, all init times per day, all days
         filesize = len(dt.datetime.now().strftime(internal.ZARR_FMTSTR.split("/")[-1]) + ".zarr.zip")
-        self.assertEqual(1 * len(INIT_HOURS) * (len(DAYS)) * filesize, n)
+        self.assertEqual(1 * len(INIT_HOURS) * (len(DAYS)), len(files))
 
     def test_createLatestZarr(self):
 
-        n1 = self.service.CreateLatestZarr()
-        self.assertEqual(len("latest.zarr.zip"), n1)
+        files = self.service.CreateLatestZarr()
+        self.assertEqual(["latest.zarr.zip"], files)
 
 
 # ------------ Static Methods ----------- #

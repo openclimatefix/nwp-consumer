@@ -44,8 +44,8 @@ class TestHuggingFaceClient(unittest.TestCase):
         src = internal.TMP_DIR / f'nwpc-{uuid.uuid4()}'
         src.write_bytes(bytes(filename, 'utf-8'))
 
-        n = self.client.store(src=src, dst=dst)
-        self.assertEqual(n, 30)
+        out = self.client.store(src=src, dst=dst)
+        self.assertEqual(out, dst)
         self.assertTrue(self.mock_fs.put.called_with(src, dst))
         self.assertTrue(self.mock_fs.du.called_with(dst))
 
