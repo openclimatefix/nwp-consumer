@@ -172,12 +172,14 @@ def main() -> None:
     """Entry point for the nwp-consumer CLI."""
     # Parse command line arguments from docstring
     arguments = docopt(__doc__, version=__version__)
+    erred = False
 
     programStartTime = dt.datetime.now()
     try:
         run(arguments=arguments)
     except Exception as e:
-        log.error("nwp-consumer error", error=str(e), exc_info=True)
+        log.error("encountered error running nwp-consumer", error=str(e), exc_info=False)
+        erred = True
     finally:
         leftoverTempPaths = list(internal.TMP_DIR.glob("*"))
         for p in leftoverTempPaths:
@@ -191,6 +193,8 @@ def main() -> None:
             elapsed_time=str(elapsedTime),
             version=__version__
         )
+        if erred:
+            exit(1)
 
 
 if __name__ == "__main__":

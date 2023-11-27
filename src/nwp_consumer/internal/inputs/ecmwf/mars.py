@@ -123,6 +123,12 @@ class Client(internal.FetcherInterface):
         if it.hour not in [0, 12]:
             return []
 
+        # MARS requests can only ask for data that is more than 24 hours old: see
+        # https://confluence.ecmwf.int/display/UDOC/MARS+access+restrictions
+        if it > dt.datetime.utcnow() - dt.timedelta(hours=24):
+            raise ValueError("ECMWF MARS requests can only ask for data that is more than 24 hours old")
+            return []
+
         with tempfile.NamedTemporaryFile(suffix=".txt", mode="r+") as tf:
 
             marsReq: str = f"""
