@@ -178,7 +178,7 @@ def main() -> None:
     try:
         run(arguments=arguments)
     except Exception as e:
-        log.error("encountered error running nwp-consumer", error=str(e), exc_info=False)
+        log.error("encountered error running nwp-consumer", error=str(e), exc_info=True)
         erred = True
     finally:
         leftoverTempPaths = list(internal.TMP_DIR.glob("*"))
