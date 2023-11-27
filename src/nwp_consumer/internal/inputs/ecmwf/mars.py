@@ -123,31 +123,40 @@ class Client(internal.FetcherInterface):
         if it.hour not in [0, 12]:
             return []
 
-        with tempfile.NamedTemporaryFile(suffix=".txt", mode="w") as tf:
+        with tempfile.NamedTemporaryFile(suffix=".txt", mode="r+") as tf:
+
+            marsReq: str = f"""
+                list,
+                    class    = od,
+                    date     = {it.strftime("%Y%m%d")},
+                    expver   = 1,
+                    levtype  = sfc,
+                    param    = {'/'.join(list(PARAMETER_ECMWFCODE_MAP.keys()))},
+                    step     = 0/to/{self.hours}/by/1,
+                    stream   = oper,
+                    time     = {it.strftime("%H")},
+                    type     = fc,
+                    area     = {AREA_MAP[self.area]},
+                    grid     = 0.05/0.05,
+                    target   = "{tf.name}"
+            """
+
+            log.debug(
+                event="listing ECMWF MARS inittime data",
+                request=marsReq,
+                inittime=it
+            )
+
             try:
                 self.server.execute(
-                    req=f"""
-                        list,
-                            class    = od,
-                            date     = {it.strftime("%Y%m%d")},
-                            expver   = 1,
-                            levtype  = sfc,
-                            param    = {'/'.join(list(PARAMETER_ECMWFCODE_MAP.keys()))},
-                            step     = 0/to/{self.hours}/by/1,
-                            stream   = oper,
-                            time     = {it.strftime("%H")},
-                            type     = fc,
-                            area     = {AREA_MAP[self.area]},
-                            grid     = 0.05/0.05,
-                            target   = "{tf.name}"
-                    """,
+                    req=marsReq,
                     target=tf.name
                 )
             except ecmwfapi.api.APIException as e:
                 log.warn("error listing ECMWF MARS inittime data", error=e)
                 return []
 
-            if os.stat(tf.name).st_size < 100 and "0 bytes" in tf.read():
+            if (not tf.readable()) or (os.stat(tf.name).st_size < 100 and "0 bytes" in tf.read()):
                 return []
 
         return [ECMWFMarsFileInfo(inittime=it, area=self.area)]
@@ -155,23 +164,33 @@ class Client(internal.FetcherInterface):
     def downloadToTemp(self, *, fi: internal.FileInfoModel) \
             -> tuple[internal.FileInfoModel, pathlib.Path]:  # noqa: D102
         tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
+
+        marsReq=f"""
+            retrieve,
+                class    = od,
+                date     = {fi.it().strftime("%Y%m%d")},
+                expver   = 1,
+                levtype  = sfc,
+                param    = {'/'.join(list(PARAMETER_ECMWFCODE_MAP.keys()))},
+                step     = 0/to/{self.hours}/by/1,
+                stream   = oper,
+                time     = {fi.it().strftime("%H")},
+                type     = fc,
+                area     = {AREA_MAP[self.area]},
+                grid     = 0.05/0.05,
+                target   = "{tfp.as_posix()}"
+        """
+
+        log.debug(
+            event="fetching ECMWF MARS data",
+            request=marsReq,
+            inittime=fi.it(),
+            filename=fi.filename()
+        )
+
         try:
             self.server.execute(
-                req=f"""
-                    retrieve,
-                        class    = od,
-                        date     = {fi.it().strftime("%Y%m%d")},
-                        expver   = 1,
-                        levtype  = sfc,
-                        param    = {'/'.join(list(PARAMETER_ECMWFCODE_MAP.keys()))},
-                        step     = 0/to/{self.hours}/by/1,
-                        stream   = oper,
-                        time     = {fi.it().strftime("%H")},
-                        type     = fc,
-                        area     = {AREA_MAP[self.area]},
-                        grid     = 0.05/0.05,
-                        target   = "{tfp.as_posix()}"
-                """,
+                req=marsReq,
                 target=tfp.as_posix()
             )
         except ecmwfapi.api.APIException as e:
