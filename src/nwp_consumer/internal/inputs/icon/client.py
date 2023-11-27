@@ -57,11 +57,7 @@ class Client(internal.FetcherInterface):
         # ICON data is only available for today's date. If data hasn't been uploaded for that init
         # time yet, then yesterday's data will still be present on the server.
         if it.date() != dt.datetime.now(dt.timezone.utc).date():
-            log.warn(
-                event="ICON data is only available on today's date",
-                attempteddate=it.strftime("%Y-%m-%d"),
-                currentdate=dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d"),
-            )
+            raise ValueError("ICON data is only available on today's date")
             return []
 
         # The ICON model only runs on the hours [00, 06, 12, 18]
