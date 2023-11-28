@@ -136,12 +136,12 @@ def run(arguments: dict) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
     # Logic for the "check" command
     if arguments['check']:
         _ = service.Check()
-        return []
+        return ([], [])
 
     # Logic for the env command
     if arguments['env']:
         # Missing env vars are printed during mapping of source/sink args
-        return []
+        return ([], [])
 
     log.info("nwp-consumer service starting", version=__version__, arguments=arguments)
 
@@ -184,6 +184,11 @@ def main() -> None:
     programStartTime = dt.datetime.now()
     try:
         files: tuple[list[pathlib.Path], list[pathlib.Path]] = run(arguments=arguments)
+        log.info(
+            event="processed files",
+            raw_files=len(files[0]),
+            processed_files=len(files[1]),
+        )
     except Exception as e:
         log.error("encountered error running nwp-consumer", error=str(e), exc_info=True)
         erred = True
@@ -196,11 +201,8 @@ def main() -> None:
                 p.unlink(missing_ok=True)
         elapsedTime = dt.datetime.now() - programStartTime
         log.info(
-            "nwp-consumer finished",
+            event="nwp-consumer finished",
             elapsed_time=str(elapsedTime),
-            num_raw_files=len(files[0]),
-            num_processed_files=len(files[1]),
-            files_per_minute=(len(files[0]) + len(files[1])) / elapsedTime.total_seconds() * 60,
             version=__version__
         )
         if erred:
