@@ -16,6 +16,8 @@ from ocf_blosc2 import Blosc2
 from nwp_consumer import internal
 
 log = structlog.getLogger()
+# Enable dask to split large chunks
+dask.config.set({"array.slicing.split_large_chunks": True})
 
 
 class NWPConsumerService:
