@@ -50,7 +50,7 @@ class Client(internal.FetcherInterface):
         match model:
             case "europe": self.baseurl += "/icon-eu/grib"
             case "global": self.baseurl += "/icon/grib"
-            case _: raise ValueError(f"unknown icon model {model}. Valid models are 'eu' and 'global'")
+            case _: raise ValueError(f"unknown icon model {model}. Valid models are 'europe' and 'global'")
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
 
@@ -69,13 +69,14 @@ class Client(internal.FetcherInterface):
         # Files are split per parameter, level, and step, with a webpage per parameter
         for param, _ in PARAMETER_RENAME_MAP.items():
 
+            if self.model == "europe" and (param == "clat" or param == "clon"):
+                # The latitude and longitude files are not available for the EU model
+                continue
+
             # Fetch DWD webpage detailing the available files for the parameter
             response = requests.get(f"{self.baseurl}/{it.strftime('%H')}/{param}/", timeout=3)
 
             if response.status_code != 200:
-                if self.model == "eu" and param == "clat":
-                    # The latitude and longitude files are not available for the EU model
-                    continue
                 log.warn(
                     event="error fetching filelisting webpage for parameter",
                     status=response.status_code,
