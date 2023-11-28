@@ -19,10 +19,10 @@ class Client(internal.StorageInterface):
     __fs: s3fs.S3FileSystem
 
     def __init__(self, key: str, secret: str, bucket: str, region: str,
-                 endpointURL: str = None) -> None:
+                 endpointURL: str | None = None) -> None:
         """Create a new S3Client."""
-        (key, secret) = (None, None) if (key, secret) == ("", "") else (key, secret)
-        if key is None and secret is None:
+        (_key, _secret) = (None, None) if (key, secret) == ("", "") else (key, secret)
+        if _key is None and _secret is None:
             log.info(
                 event="attempting AWS connection using default credentials",
             )
@@ -39,10 +39,10 @@ class Client(internal.StorageInterface):
 
         self.__bucket = pathlib.Path(bucket)
 
-    def exists(self, *, dst: pathlib.Path) -> bool:
+    def exists(self, *, dst: pathlib.Path) -> bool:  # noqa: D102
         return self.__fs.exists((self.__bucket / dst).as_posix())
 
-    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
+    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:  # noqa: D102
         log.debug(
             event="storing file in s3",
             src=src.as_posix(),
@@ -52,15 +52,24 @@ class Client(internal.StorageInterface):
         # Don't delete temp file as user may want to do further processing locally.
         # All temp files are deleted at the end of the program.
         nbytes = self.__fs.du((self.__bucket / dst).as_posix())
-        log.debug(
-            event="stored file in s3",
-            src=src.as_posix(),
-            dst=(self.__bucket / dst).as_posix(),
-            nbytes=nbytes
-        )
-        return nbytes
+        if nbytes != src.stat().st_size:
+            log.warn(
+                event="file size mismatch",
+                src=src.as_posix(),
+                dst=(self.__bucket / dst).as_posix(),
+                srcsize=src.stat().st_size,
+                dstsize=nbytes
+            )
+        else:
+            log.debug(
+                event="stored file in s3",
+                src=src.as_posix(),
+                dst=(self.__bucket / dst).as_posix(),
+                nbytes=nbytes
+            )
+        return dst
 
-    def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:
+    def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:  # noqa: D102
         allDirs = [
             pathlib.Path(d).relative_to(self.__bucket / prefix)
             for d in self.__fs.glob(f'{self.__bucket}/{prefix}/{internal.IT_FOLDER_GLOBSTR}')

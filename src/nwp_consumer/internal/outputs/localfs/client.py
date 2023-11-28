@@ -13,25 +13,34 @@ log = structlog.getLogger()
 class Client(internal.StorageInterface):
     """Client for local filesystem."""
 
-    def exists(self, *, dst: pathlib.Path) -> bool:
+    def exists(self, *, dst: pathlib.Path) -> bool:  # noqa: D102
         return dst.exists()
 
-    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:  # noqa: D102
+    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:  # noqa: D102
         if src == dst:
-            return os.stat(src).st_size
+            return dst
 
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(src=src, dst=dst)
         # Do delete temp file here to avoid local duplication of file.
         src.unlink(missing_ok=True)
         nbytes = os.stat(dst).st_size
-        log.debug(
-            event="stored file locally",
-            src=src.as_posix(),
-            dst=dst.as_posix(),
-            nbytes=nbytes
-        )
-        return nbytes
+        if nbytes != dst.stat().st_size:
+            log.warn(
+                event="file size mismatch",
+                src=src.as_posix(),
+                dst=dst.as_posix(),
+                srcbytes=src.stat().st_size,
+                dstbytes=nbytes
+            )
+        else:
+            log.debug(
+                event="stored file locally",
+                src=src.as_posix(),
+                dst=dst.as_posix(),
+                nbytes=nbytes
+            )
+        return dst
 
     def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:  # noqa: D102
         # List all the inittime folders in the given directory

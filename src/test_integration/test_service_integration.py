@@ -42,11 +42,11 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
     def test_downloadAndConvertDataset(self):
         initTime: dt.date = dt.datetime.now().date()
 
-        nbytes = self.testService.DownloadRawDataset(start=initTime, end=initTime)
-        self.assertGreater(nbytes, 0)
+        out = self.testService.DownloadRawDataset(start=initTime, end=initTime)
+        self.assertGreater(len(out), 0)
 
-        nbytes = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
-        self.assertGreater(nbytes, 0)
+        out = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
+        self.assertGreater(len(out), 0)
 
         for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + '.zarr.zip'):
 
@@ -93,11 +93,11 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
     def test_downloadAndConvertDataset(self):
         initTime: dt.date = dt.date(year=2022, month=1, day=1)
 
-        nbytes = self.testService.DownloadRawDataset(start=initTime, end=initTime)
-        self.assertGreater(nbytes, 0)
+        out = self.testService.DownloadRawDataset(start=initTime, end=initTime)
+        self.assertGreater(len(out), 0)
 
-        nbytes = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
-        self.assertGreater(nbytes, 0)
+        out = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
+        self.assertGreater(len(out), 0)
 
         for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + '.zarr.zip'):
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
@@ -138,11 +138,11 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
     def test_downloadAndConvertDataset(self):
         initTime: dt.date = dt.date(year=2022, month=1, day=1)
 
-        nbytes = self.testService.DownloadRawDataset(start=initTime, end=initTime)
-        self.assertGreater(nbytes, 0)
+        out = self.testService.DownloadRawDataset(start=initTime, end=initTime)
+        self.assertGreater(len(out), 0)
 
-        nbytes = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
-        self.assertGreater(nbytes, 0)
+        out = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
+        self.assertGreater(len(out), 0)
 
         for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + '.zarr.zip'):
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
@@ -168,7 +168,7 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
         storageClient = outputs.localfs.Client()
         env = config.ICONEnv()
         iconClient = inputs.icon.Client(
-            model="global",
+            model="globallen(out)
         )
 
         self.rawdir = 'data/ic_raw'
@@ -184,11 +184,11 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
     def test_downloadAndConvertDataset(self):
         initTime: dt.date = dt.datetime.now().date()
 
-        nbytes = self.testService.DownloadRawDataset(start=initTime, end=initTime)
-        self.assertGreater(nbytes, 0)
+        out = self.testService.DownloadRawDataset(start=initTime, end=initTime)
+        self.assertGreater(len(out), 0)
 
-        nbytes = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
-        self.assertGreater(nbytes, 0)
+        out = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
+        self.assertGreater(len(out), 0)
 
         for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + '.zarr.zip'):
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
@@ -205,3 +205,4 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
 
         shutil.rmtree(self.rawdir)
         shutil.rmtree(self.zarrdir)
+

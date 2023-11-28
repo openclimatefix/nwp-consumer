@@ -107,7 +107,7 @@ class TestS3Client(unittest.TestCase):
         # Write the data to the temporary file
         src.write_bytes(bytes(fileName, 'utf-8'))
 
-        n = self.client.store(src=src, dst=dst)
+        name = self.client.store(src=src, dst=dst)
 
         # Verify the written file in the raw directory
         response = self.testS3.get_object(
@@ -117,7 +117,7 @@ class TestS3Client(unittest.TestCase):
         self.assertEqual(response["Body"].read(), bytes(fileName, 'utf-8'))
 
         # Verify the correct number of bytes was written
-        self.assertEqual(n, len(bytes(fileName, 'utf-8')))
+        self.assertEqual(name, dst)
 
         # Delete the created file and the temp file
         self.testS3.delete_object(

@@ -125,7 +125,7 @@ class StorageInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:
+    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:
         """Move the given temp file to the store at path p.
 
         :param src: Path to temp file to move

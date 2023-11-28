@@ -35,6 +35,7 @@ import shutil
 
 import structlog
 from docopt import docopt
+import pathlib
 
 from nwp_consumer import internal
 from nwp_consumer.internal import config, inputs, outputs
@@ -48,7 +49,7 @@ with contextlib.suppress(importlib.metadata.PackageNotFoundError):
 log = structlog.getLogger()
 
 
-def run(arguments: dict) -> int:
+def run(arguments: dict) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
     """Run the CLI."""
     # --- Map arguments to service configuration --- #
 
@@ -134,38 +135,44 @@ def run(arguments: dict) -> int:
 
     # Logic for the "check" command
     if arguments['check']:
-        return service.Check()
+        _ = service.Check()
+        return ([], [])
 
     # Logic for the env command
     if arguments['env']:
         # Missing env vars are printed during mapping of source/sink args
-        return 0
+        return ([], [])
 
-    log.info("nwp-consumer starting", version=__version__, arguments=arguments)
+    log.info("nwp-consumer service starting", version=__version__, arguments=arguments)
+
+    rawFiles: list[pathlib.Path] = []
+    processedFiles: list[pathlib.Path] = []
 
     if arguments['download']:
-        service.DownloadRawDataset(
+        rawFiles += service.DownloadRawDataset(
             start=startDate,
             end=endDate
         )
 
     if arguments['convert']:
-        service.ConvertRawDatasetToZarr(
+        processedFiles += service.ConvertRawDatasetToZarr(
             start=startDate,
             end=endDate
         )
 
     if arguments['consume']:
         service.Check()
-        service.DownloadAndConvert(
+        r, p = service.DownloadAndConvert(
             start=startDate,
             end=endDate
         )
+        rawFiles += r
+        processedFiles += p
 
     if arguments['--create-latest']:
-        service.CreateLatestZarr()
+        processedFiles += service.CreateLatestZarr()
 
-    return 0
+    return rawFiles, processedFiles
 
 
 def main() -> None:
@@ -176,7 +183,12 @@ def main() -> None:
 
     programStartTime = dt.datetime.now()
     try:
-        run(arguments=arguments)
+        files: tuple[list[pathlib.Path], list[pathlib.Path]] = run(arguments=arguments)
+        log.info(
+            event="processed files",
+            raw_files=len(files[0]),
+            processed_files=len(files[1]),
+        )
     except Exception as e:
         log.error("encountered error running nwp-consumer", error=str(e), exc_info=True)
         erred = True
@@ -189,7 +201,7 @@ def main() -> None:
                 p.unlink(missing_ok=True)
         elapsedTime = dt.datetime.now() - programStartTime
         log.info(
-            "nwp-consumer finished",
+            event="nwp-consumer finished",
             elapsed_time=str(elapsedTime),
             version=__version__
         )

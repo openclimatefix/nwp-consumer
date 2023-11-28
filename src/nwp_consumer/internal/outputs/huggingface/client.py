@@ -38,13 +38,28 @@ class Client(internal.StorageInterface):
     def exists(self, *, dst: pathlib.Path) -> bool:  # noqa: D102
         return self.__fs.exists(self.datasetPath / dst.as_posix())
 
-    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> int:  # noqa: D102
+    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:  # noqa: D102
         self.__fs.put(
             lpath=src.as_posix(),
             rpath=(self.datasetPath / dst).as_posix(),
             recursive=True
         )
-        return self.__fs.du(path=(self.datasetPath / dst).as_posix())
+        nbytes = self.__fs.du(path=(self.datasetPath / dst).as_posix())
+        if nbytes != src.stat().st_size:
+            log.warn(
+                event="stored file size does not match source file size",
+                src=src.as_posix(),
+                dst=dst.as_posix(),
+                srcsize=src.stat().st_size,
+                dstsize=nbytes
+            )
+        else:
+            log.debug(
+                event="stored file",
+                filepath=dst.as_posix(),
+                nbytes=nbytes
+            )
+        return dst
 
     def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:  # noqa: D102
         allDirs = [
