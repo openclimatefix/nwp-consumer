@@ -84,7 +84,6 @@ class NWPConsumerService:
                 src=infoPathTuple[1],
                 dst=self.rawdir/infoPathTuple[0].it().strftime(internal.IT_FOLDER_FMTSTR)/(infoPathTuple[0].filename())
             )) \
-            .flatten() \
             .compute()
 
         return storedFiles
@@ -132,7 +131,6 @@ class NWPConsumerService:
             .filter(_dataQualityFilter) \
             .map(lambda ds: _saveAsTempZipZarr(ds=ds)) \
             .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.name)) \
-            .flatten() \
             .compute(num_workers=1)  # AWS ECS only has 1 CPU which amounts to half a physical core
 
         if not isinstance(storedfiles, list):
@@ -189,7 +187,6 @@ class NWPConsumerService:
             self.storer.delete(p=self.zarrdir / 'latest.zarr.zip')
         storedFiles = datasets.map(lambda ds: _saveAsTempZipZarr(ds=ds)) \
             .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / 'latest.zarr.zip')) \
-            .flatten() \
             .compute()
 
         # Save as regular zarr
@@ -197,7 +194,6 @@ class NWPConsumerService:
             self.storer.delete(p=self.zarrdir / 'latest.zarr')
         storedFiles += datasets.map(lambda ds: _saveAsTempRegularZarr(ds=ds)) \
             .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / 'latest.zarr')) \
-            .flatten() \
             .compute()
 
         # Delete the temporary files

@@ -27,10 +27,11 @@ class DummyStorer(internal.StorageInterface):
         return False
 
     def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:
-        if src.is_dir():
-            shutil.rmtree(src.as_posix(), ignore_errors=True)
-        else:
-            src.unlink(missing_ok=True)
+        if src.exists():
+            if src.is_dir():
+                shutil.rmtree(src.as_posix(), ignore_errors=True)
+            else:
+                src.unlink(missing_ok=True)
         return dst
 
     def listInitTimes(self, prefix: pathlib.Path) -> list[dt.datetime]:
@@ -41,7 +42,11 @@ class DummyStorer(internal.StorageInterface):
         return [pathlib.Path(f'{it:%Y%m%d%H%M}/{f}.grib') for f in INIT_TIME_FILES]
 
     def delete(self, *, p: pathlib.Path) -> None:
-        pass
+        if p.exists():
+            if p.is_dir():
+                shutil.rmtree(p.as_posix(), ignore_errors=True)
+            else:
+                p.unlink(missing_ok=True)
 
 
 class DummyFileInfo(internal.FileInfoModel):

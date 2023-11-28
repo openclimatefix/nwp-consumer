@@ -11,6 +11,7 @@ on:
     branches: []
     paths-ignore:
       - 'README.md'
+  workflow_dispatch:
 
 # Specify concurrency such that only one workflow can run at a time
 # * Different workflow files are not affected
@@ -112,7 +113,9 @@ jobs:
     runs-on: ubuntu-latest
     container: quay.io/condaforge/miniforge3:latest
     needs: build-venv
-    if: contains(github.ref, 'refs/tags/v') && github.event_name == 'push'
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (contains(github.ref, 'refs/tags/v') && github.event_name == 'push')
 
     steps:
       - name: Checkout repository
