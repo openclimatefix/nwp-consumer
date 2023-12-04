@@ -50,7 +50,7 @@ class Client(internal.FetcherInterface):
         Parameters
         ----------
         model: The model to fetch data for. Valid models are "europe" and "global".
-        param_group: The set of parameters to fetch. Valid groups are "default" and "full".
+        param_group: The set of parameters to fetch. Valid groups are "default", "full", and "basic".
         """
 
         self.baseurl = "https://opendata.dwd.de/weather/nwp"
@@ -68,7 +68,10 @@ class Client(internal.FetcherInterface):
 
         match (param_group, model):
             case ("default", _):
-                self.parameters = [k for k, _ in PARAMETER_RENAME_MAP.items()]
+                self.parameters = list(PARAMETER_RENAME_MAP.keys())
+                self.conform = True
+            case ("basic", _):
+                self.parameters = ["asob_s", "clcl", "clon", "clat"]
                 self.conform = True
             case ("full", "europe"):
                 self.parameters = EU_SL_VARS + EU_ML_VARS
@@ -78,7 +81,7 @@ class Client(internal.FetcherInterface):
                 self.conform = False
             case (_, _):
                 raise ValueError(
-                    f"unknown parameter group {param_group}. Valid groups are 'default' and 'full'"
+                    f"unknown parameter group {param_group}. Valid groups are 'default', 'full', 'basic'"
                 )
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102

@@ -102,6 +102,7 @@ def run(arguments: dict) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
             fetcher = inputs.ecmwf.mars.Client(
                 area=env.ECMWF_AREA,
                 hours=env.ECMWF_HOURS,
+                param_group=env.ECMWF_PARAMETER_GROUP,
             )
         case "icon":
             env = config.ICONEnv()

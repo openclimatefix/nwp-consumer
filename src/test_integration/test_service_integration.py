@@ -119,10 +119,12 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
 class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
     def setUp(self):
         storageClient = outputs.localfs.Client()
-        env = config.ECMWFMARSEnv()
+
+        # Test downloading the basic parameter set for the UK model
         ecmwfMarsClient = inputs.ecmwf.mars.Client(
-            area=env.ECMWF_AREA,
-            hours=env.ECMWF_HOURS,
+            area="uk",
+            hours="4",
+            param_group="basic",
         )
 
         self.rawdir = 'data/ec_raw'
@@ -151,7 +153,7 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
             self.assertEqual(["ECMWF_UK"], list(ds.data_vars))
             # Ensure the dimensions have the right sizes
             self.assertEqual(
-                {'variable': 17, 'init_time': 1, 'step': 49, 'latitude': 241, 'longitude': 301},
+                {'variable': 2, 'init_time': 1, 'step': 5, 'latitude': 241, 'longitude': 301},
                 dict(ds.dims.items())
             )
             # Ensure the init time is correct
@@ -166,9 +168,11 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
 
     def setUp(self) -> None:
         storageClient = outputs.localfs.Client()
-        env = config.ICONEnv()
+
+        # Test downloading the basic parameter set for the global model
         iconClient = inputs.icon.Client(
-            model="globallen(out)
+            model="global",
+            param_group="basic",
         )
 
         self.rawdir = 'data/ic_raw'
@@ -197,7 +201,7 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
             self.assertEqual(["ICON_GLOBAL"], list(ds.data_vars))
             # Ensure the dimensions have the right sizes
             self.assertEqual(
-                {'variable': 10, 'init_time': 1, 'step': 37, 'values': 2200999},
+                {'variable': 2, 'init_time': 1, 'step': 49, 'values': 2200999},
                 dict(ds.dims.items())
             )
             # Ensure the init time is correct
