@@ -56,6 +56,7 @@ class ECMWFMARSEnv(EnvParser):
     ECMWF_API_EMAIL: str
     ECMWF_AREA: str = "uk"
     ECMWF_HOURS: str = "48"
+    ECMWF_PARAMETER_GROUP: str = "default"
 
 class ICONEnv(EnvParser):
     """Config for ICON API."""

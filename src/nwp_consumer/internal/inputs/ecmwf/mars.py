@@ -50,8 +50,8 @@ PARAMETER_ECMWFCODE_MAP: dict[str, str] = {
     "164.128": "clt",  # Cloud area fraction
     "169.128": "ssrd",  # Surface shortwave radiation downward
     "175.128": "strd",  # Surface longwave radiation downward
-    "260048": "tprate", # Total precipitation rate
-    "141.128": "sd",    # Snow depth, m
+    "260048": "tprate",  # Total precipitation rate
+    "141.128": "sd",  # Snow depth, m
     "246.228": "u100",  # 100 metre U component of wind
     "247.228": "v100",  # 100 metre V component of wind
     "239.228": "u200",  # 200 metre U component of wind
@@ -66,9 +66,8 @@ AREA_MAP: dict[str, str] = {
     "global": "G",
 }
 
-COORDINATE_ALLOW_LIST: typing.Sequence[str] = (
-    "time", "step", "latitude", "longitude"
-)
+COORDINATE_ALLOW_LIST: typing.Sequence[str] = ("time", "step", "latitude", "longitude")
+
 
 def marsLogger(msg: str) -> None:
     """Redirect log from ECMWF API to structlog.
@@ -90,20 +89,25 @@ class Client(internal.FetcherInterface):
 
     server: ecmwfapi.api.ECMWFService
     area: str
+    parameters: list[str]
 
-    def __init__(self, area: str, hours: str) -> None:
-        """Create a new ECMWFMarsClient.
+    def __init__(
+        self,
+        area: str | None = "uk",
+        hours: str | None = "48",
+        param_group: str | None = "default",
+    ) -> "Client":
+        """Create a new Client.
 
-        Keyword Arguments:
+        Parameters:
         -----------------
         area: The area to fetch data for. Can be one of:
         ["uk", "nw-india", "malta", "eu", "global"]
         hours: The number of hours to fetch data for. Must be less than 90.
+        param_group: The parameter group to fetch data for. Can be one of:
+        ["default", "basic"]
         """
-        self.server = ECMWFService(
-            service="mars",
-            log=marsLogger
-        )
+        self.server = ECMWFService(service="mars", log=marsLogger)
 
         if area not in AREA_MAP:
             raise KeyError(f"area must be one of {list(AREA_MAP.keys())}")
@@ -112,12 +116,19 @@ class Client(internal.FetcherInterface):
         try:
             self.hours = int(hours)
         except ValueError as e:
-            raise KeyError("ECMWF hours must be an integer") from e
+            raise KeyError("ECMWF hours must be a valid integer") from e
         if self.hours > 90:
-            raise KeyError("ECMWF operational archive only goes out to 90 hours in hourly increments")
+            raise KeyError(
+                "ECMWF operational archive only goes out to 90 hours in hourly increments"
+            )
 
-    def listRawFilesForInitTime(self, *, it: dt.datetime) \
-            -> list[internal.FileInfoModel]:  # noqa: D102
+        match param_group:
+            case "basic":
+                self.parameters = ["lcc", "uvb"]
+            case _:
+                self.parameters = list(PARAMETER_ECMWFCODE_MAP.keys())
+
+    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
         # For the model we are pulling from, there are only files for 00:00 and 12:00
         # * Hence, only check requests for these times
         if it.hour not in [0, 12]:
@@ -126,18 +137,19 @@ class Client(internal.FetcherInterface):
         # MARS requests can only ask for data that is more than 24 hours old: see
         # https://confluence.ecmwf.int/display/UDOC/MARS+access+restrictions
         if it > dt.datetime.utcnow() - dt.timedelta(hours=24):
-            raise ValueError("ECMWF MARS requests can only ask for data that is more than 24 hours old")
+            raise ValueError(
+                "ECMWF MARS requests can only ask for data that is more than 24 hours old"
+            )
             return []
 
         with tempfile.NamedTemporaryFile(suffix=".txt", mode="r+") as tf:
-
             marsReq: str = f"""
                 list,
                     class    = od,
                     date     = {it.strftime("%Y%m%d")},
                     expver   = 1,
                     levtype  = sfc,
-                    param    = {'/'.join(list(PARAMETER_ECMWFCODE_MAP.keys()))},
+                    param    = {'/'.join(self.parameters)},
                     step     = 0/to/{self.hours}/by/1,
                     stream   = oper,
                     time     = {it.strftime("%H")},
@@ -147,17 +159,10 @@ class Client(internal.FetcherInterface):
                     target   = "{tf.name}"
             """
 
-            log.debug(
-                event="listing ECMWF MARS inittime data",
-                request=marsReq,
-                inittime=it
-            )
+            log.debug(event="listing ECMWF MARS inittime data", request=marsReq, inittime=it)
 
             try:
-                self.server.execute(
-                    req=marsReq,
-                    target=tf.name
-                )
+                self.server.execute(req=marsReq, target=tf.name)
             except ecmwfapi.api.APIException as e:
                 log.warn("error listing ECMWF MARS inittime data", error=e)
                 return []
@@ -167,17 +172,18 @@ class Client(internal.FetcherInterface):
 
         return [ECMWFMarsFileInfo(inittime=it, area=self.area)]
 
-    def downloadToTemp(self, *, fi: internal.FileInfoModel) \
-            -> tuple[internal.FileInfoModel, pathlib.Path]:  # noqa: D102
+    def downloadToTemp(
+        self, *, fi: internal.FileInfoModel
+    ) -> tuple[internal.FileInfoModel, pathlib.Path]:  # noqa: D102
         tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
 
-        marsReq=f"""
+        marsReq = f"""
             retrieve,
                 class    = od,
                 date     = {fi.it().strftime("%Y%m%d")},
                 expver   = 1,
                 levtype  = sfc,
-                param    = {'/'.join(list(PARAMETER_ECMWFCODE_MAP.keys()))},
+                param    = {'/'.join(self.parameters)},
                 step     = 0/to/{self.hours}/by/1,
                 stream   = oper,
                 time     = {fi.it().strftime("%H")},
@@ -191,14 +197,11 @@ class Client(internal.FetcherInterface):
             event="fetching ECMWF MARS data",
             request=marsReq,
             inittime=fi.it(),
-            filename=fi.filename()
+            filename=fi.filename(),
         )
 
         try:
-            self.server.execute(
-                req=marsReq,
-                target=tfp.as_posix()
-            )
+            self.server.execute(req=marsReq, target=tfp.as_posix())
         except ecmwfapi.api.APIException as e:
             log.warn("error fetching ECMWF MARS data", error=e)
             return fi, pathlib.Path()
@@ -211,23 +214,17 @@ class Client(internal.FetcherInterface):
             event="fetched all data from MARS",
             filename=fi.filename(),
             filepath=tfp.as_posix(),
-            nbytes=tfp.stat().st_size
+            nbytes=tfp.stat().st_size,
         )
 
         return fi, tfp
 
     def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
-        if p.suffix != '.grib':
-            log.warn(
-                event="cannot map non-grib file to dataset",
-                filepath=p.as_posix()
-            )
+        if p.suffix != ".grib":
+            log.warn(event="cannot map non-grib file to dataset", filepath=p.as_posix())
             return xr.Dataset()
 
-        log.debug(
-            event="mapping raw file to xarray dataset",
-            filepath=p.as_posix()
-        )
+        log.debug(event="mapping raw file to xarray dataset", filepath=p.as_posix())
 
         # Load the wholesale file as a list of datasets
         # * cfgrib loads multiple hypercubes for a single multi-parameter grib file
@@ -240,20 +237,15 @@ class Client(internal.FetcherInterface):
                     "step": -1,
                     "variable": -1,
                     "longitude": "auto",
-                    "latitude": "auto"
+                    "latitude": "auto",
                 },
-                backend_kwargs={"indexpath": ""}
+                backend_kwargs={"indexpath": ""},
             )
         except Exception as e:
-            log.warn(
-                event="error converting raw file to dataset",
-                filepath=p.as_posix(),
-                error=e
-            )
+            log.warn(event="error converting raw file to dataset", filepath=p.as_posix(), error=e)
             return xr.Dataset()
 
         for i, ds in enumerate(datasets):
-
             # Rename the parameters to the OCF names
             # * Only do so if they exist in the dataset
             for oldParamName, newParamName in PARAMETER_RENAME_MAP.items():
@@ -262,8 +254,7 @@ class Client(internal.FetcherInterface):
 
             # Delete unwanted coordinates
             ds = ds.drop_vars(
-                names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST],
-                errors="ignore"
+                names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST], errors="ignore"
             )
 
             # Put the modified dataset back in the list
@@ -271,9 +262,7 @@ class Client(internal.FetcherInterface):
 
         # Merge the datasets back into one
         wholesaleDataset = xr.merge(
-            objects=datasets,
-            compat='override',
-            combine_attrs='drop_conflicts'
+            objects=datasets, compat="override", combine_attrs="drop_conflicts"
         )
 
         # Create a chunked Dask Dataset from the input multi-variate Dataset.
@@ -284,21 +273,24 @@ class Client(internal.FetcherInterface):
         # * The chunking is done in such a way that each chunk is a single time step
         #     for a single variable.
         # * Transpose the Dataset so that the dimensions are correctly ordered
-        wholesaleDataset = wholesaleDataset \
-            .rename({"time": "init_time"}) \
-            .expand_dims("init_time") \
-            .to_array(dim="variable", name=f"ECMWF_{self.area}".upper()) \
-            .to_dataset() \
-            .transpose("variable", "init_time", "step", "latitude", "longitude") \
-            .sortby("step") \
-            .sortby("variable") \
-            .chunk({
-                "init_time": 1,
-                "step": -1,
-                "variable": -1,
-                "latitude": len(wholesaleDataset.latitude) // 2,
-                "longitude": len(wholesaleDataset.longitude) // 2,
-            })
+        wholesaleDataset = (
+            wholesaleDataset.rename({"time": "init_time"})
+            .expand_dims("init_time")
+            .to_array(dim="variable", name=f"ECMWF_{self.area}".upper())
+            .to_dataset()
+            .transpose("variable", "init_time", "step", "latitude", "longitude")
+            .sortby("step")
+            .sortby("variable")
+            .chunk(
+                {
+                    "init_time": 1,
+                    "step": -1,
+                    "variable": -1,
+                    "latitude": len(wholesaleDataset.latitude) // 2,
+                    "longitude": len(wholesaleDataset.longitude) // 2,
+                }
+            )
+        )
 
         del datasets
 
