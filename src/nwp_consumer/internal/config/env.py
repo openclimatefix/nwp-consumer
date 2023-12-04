@@ -61,6 +61,7 @@ class ICONEnv(EnvParser):
     """Config for ICON API."""
 
     ICON_MODEL: str = "europe"
+    ICON_PARAMETER_GROUP: str = "default"
 
 
 # --- Outputs environment variables --- #
