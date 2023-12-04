@@ -74,7 +74,8 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         fileInfo = IconFileInfo(
             it=iconInitTime,
             filename=f"icon_global_icosahedral_single-level_{iconInitTime.strftime('%Y%m%d%H')}_001_CLCL.grib2.bz2",
-            currentURL="https://opendata.dwd.de/weather/nwp/icon/grib/00/clcl"
+            currentURL="https://opendata.dwd.de/weather/nwp/icon/grib/00/clcl",
+            step=1
         )
         _, tmpPath = iconClient.downloadToTemp(fi=fileInfo)
         self.assertFalse(tmpPath.name.endswith(".bz2"))
@@ -87,7 +88,8 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         fileInfo = IconFileInfo(
             it=iconInitTime,
             filename=f"icon-eu_europe_regular-lat-lon_single-level_{iconInitTime.strftime('%Y%m%d%H')}_001_CLCL.grib2.bz2",
-            currentURL="https://opendata.dwd.de/weather/nwp/icon-eu/grib/00/clcl"
+            currentURL="https://opendata.dwd.de/weather/nwp/icon-eu/grib/00/clcl",
+            step=1
         )
         _, tmpPath = iconClient.downloadToTemp(fi=fileInfo)
         self.assertGreater(tmpPath.stat().st_size, 40000)

@@ -62,18 +62,18 @@ def run(arguments: dict) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
     env: config.EnvParser = config.LocalEnv()
 
     # Map sink argument to storer
-    match arguments['--sink']:
-        case 'local':
+    match arguments["--sink"]:
+        case "local":
             storer = outputs.localfs.Client()
-        case 's3':
+        case "s3":
             env = config.S3Env()
             storer = outputs.s3.Client(
                 key=env.AWS_ACCESS_KEY,
                 bucket=env.AWS_S3_BUCKET,
                 secret=env.AWS_ACCESS_SECRET,
-                region=env.AWS_REGION
+                region=env.AWS_REGION,
             )
-        case 'huggingface':
+        case "huggingface":
             env = config.HuggingFaceEnv()
             storer = outputs.huggingface.Client(
                 token=env.HUGGINGFACE_TOKEN,
@@ -83,30 +83,31 @@ def run(arguments: dict) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
             raise ValueError(f"unknown sink {arguments['--sink']}")
 
     # Map source argument to fetcher
-    match arguments['--source']:
-        case 'ceda':
+    match arguments["--source"]:
+        case "ceda":
             env = config.CEDAEnv()
             fetcher = inputs.ceda.Client(
                 ftpUsername=env.CEDA_FTP_USER,
                 ftpPassword=env.CEDA_FTP_PASS,
             )
-        case 'metoffice':
+        case "metoffice":
             env = config.MetOfficeEnv()
             fetcher = inputs.metoffice.Client(
                 orderID=env.METOFFICE_ORDER_ID,
                 clientID=env.METOFFICE_CLIENT_ID,
                 clientSecret=env.METOFFICE_CLIENT_SECRET,
             )
-        case 'ecmwf-mars':
+        case "ecmwf-mars":
             env = config.ECMWFMARSEnv()
             fetcher = inputs.ecmwf.mars.Client(
                 area=env.ECMWF_AREA,
                 hours=env.ECMWF_HOURS,
             )
-        case 'icon':
+        case "icon":
             env = config.ICONEnv()
             fetcher = inputs.icon.Client(
-                model = env.ICON_MODEL,
+                model=env.ICON_MODEL,
+                param_group=env.ICON_PARAMETER_GROUP,
             )
         case None:
             pass
@@ -114,12 +115,12 @@ def run(arguments: dict) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
             raise ValueError(f"unknown source {arguments['--source']}")
 
     # Map from and to arguments to datetime objects
-    if arguments['--from'] == "today" or arguments['--from'] is None:
-        arguments['--from'] = dt.datetime.now().strftime("%Y-%m-%d")
-    if arguments['--to'] == "today" or arguments['--to'] is None:
-        arguments['--to'] = dt.datetime.now().strftime("%Y-%m-%d")
-    startDate: dt.date = dt.datetime.strptime(arguments['--from'], "%Y-%m-%d").date()
-    endDate: dt.date = dt.datetime.strptime(arguments['--to'], "%Y-%m-%d").date()
+    if arguments["--from"] == "today" or arguments["--from"] is None:
+        arguments["--from"] = dt.datetime.now().strftime("%Y-%m-%d")
+    if arguments["--to"] == "today" or arguments["--to"] is None:
+        arguments["--to"] = dt.datetime.now().strftime("%Y-%m-%d")
+    startDate: dt.date = dt.datetime.strptime(arguments["--from"], "%Y-%m-%d").date()
+    endDate: dt.date = dt.datetime.strptime(arguments["--to"], "%Y-%m-%d").date()
     if endDate < startDate:
         raise ValueError("argument '--from' cannot specify date prior to '--to'")
 
@@ -127,19 +128,19 @@ def run(arguments: dict) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
     service = NWPConsumerService(
         fetcher=fetcher,
         storer=storer,
-        zarrdir=arguments['--zdir'],
-        rawdir=arguments['--rdir'],
+        zarrdir=arguments["--zdir"],
+        rawdir=arguments["--rdir"],
     )
 
     # --- Run the service with the desired command --- #
 
     # Logic for the "check" command
-    if arguments['check']:
+    if arguments["check"]:
         _ = service.Check()
         return ([], [])
 
     # Logic for the env command
-    if arguments['env']:
+    if arguments["env"]:
         # Missing env vars are printed during mapping of source/sink args
         return ([], [])
 
@@ -148,28 +149,19 @@ def run(arguments: dict) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
     rawFiles: list[pathlib.Path] = []
     processedFiles: list[pathlib.Path] = []
 
-    if arguments['download']:
-        rawFiles += service.DownloadRawDataset(
-            start=startDate,
-            end=endDate
-        )
+    if arguments["download"]:
+        rawFiles += service.DownloadRawDataset(start=startDate, end=endDate)
 
-    if arguments['convert']:
-        processedFiles += service.ConvertRawDatasetToZarr(
-            start=startDate,
-            end=endDate
-        )
+    if arguments["convert"]:
+        processedFiles += service.ConvertRawDatasetToZarr(start=startDate, end=endDate)
 
-    if arguments['consume']:
+    if arguments["consume"]:
         service.Check()
-        r, p = service.DownloadAndConvert(
-            start=startDate,
-            end=endDate
-        )
+        r, p = service.DownloadAndConvert(start=startDate, end=endDate)
         rawFiles += r
         processedFiles += p
 
-    if arguments['--create-latest']:
+    if arguments["--create-latest"]:
         processedFiles += service.CreateLatestZarr()
 
     return rawFiles, processedFiles
@@ -200,15 +192,10 @@ def main() -> None:
             if p.is_file():
                 p.unlink(missing_ok=True)
         elapsedTime = dt.datetime.now() - programStartTime
-        log.info(
-            event="nwp-consumer finished",
-            elapsed_time=str(elapsedTime),
-            version=__version__
-        )
+        log.info(event="nwp-consumer finished", elapsed_time=str(elapsedTime), version=__version__)
         if erred:
             exit(1)
 
 
 if __name__ == "__main__":
     main()
-
