@@ -133,6 +133,7 @@ jobs:
       # * Produce JUnit XML report
       - name: Run integration tests
         env:
+          LOGLEVEL: "debug"
           RAW_DIR: "/tmp/raw"
           ZARR_DIR: "/tmp/zarr"
           CEDA_FTP_PASS: ${{ secrets.CEDA_FTP_PASS }}
