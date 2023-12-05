@@ -150,7 +150,8 @@ class Client(internal.FetcherInterface):
                 numfiles=len(parameterFiles),
             )
 
-            files.append(parameterFiles)
+            # Add the files for the parameter to the list of all files
+            files.extend(parameterFiles)
 
         return files
 

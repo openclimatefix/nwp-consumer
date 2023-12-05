@@ -1,12 +1,12 @@
 """The service class for the NWP Consumer."""
 
 import datetime as dt
-import itertools
 import pathlib
 import shutil
 from typing import TYPE_CHECKING
 
 import dask.bag
+import numpy as np
 import pandas as pd
 import psutil
 import structlog
@@ -65,10 +65,11 @@ class NWPConsumerService:
 
         # For each init time, get the list of files that need to be downloaded
         # * Itertools chain is used to flatten the list of lists
-        allWantedFileInfos: list[internal.FileInfoModel] = list(
-            itertools.chain.from_iterable(
-                [self.fetcher.listRawFilesForInitTime(it=initTime) for initTime in allInitTimes],
-            ),
+        allWantedFileInfos: list[internal.FileInfoModel] = (
+            dask.bag.from_sequence(allInitTimes, npartitions=len(allInitTimes))
+            .map(lambda it: self.fetcher.listRawFilesForInitTime(it=it))
+            .flatten()
+            .compute()
         )
 
         # Check which files are already downloaded
