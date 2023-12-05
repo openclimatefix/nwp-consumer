@@ -15,7 +15,7 @@ DAYS = [1, 2]
 INIT_HOURS = [0, 6, 12, 18]
 INIT_TIME_FILES = ["dswrf.grib", "prate.grib"]
 testInitTimes = [
-    dt.datetime(2021, 1, d, h, 0, 0, tzinfo=dt.datetime.utc) for h in INIT_HOURS for d in DAYS
+    dt.datetime(2021, 1, d, h, 0, 0, tzinfo=dt.timezone.utc) for h in INIT_HOURS for d in DAYS
 ]
 
 
