@@ -16,7 +16,6 @@ ZARR = Path("test_zarr_dir")
 
 
 class TestLocalFSClient(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls) -> None:
         # Make test directories
@@ -61,10 +60,11 @@ class TestLocalFSClient(unittest.TestCase):
             data_vars={
                 "UKV": (
                     ("init_time", "variable", "step", "x", "y"),
-                    np.random.rand(1, 2, 12, 100, 100)),
+                    np.random.rand(1, 2, 12, 100, 100),
+                ),
             },
             coords={
-                "init_time": [dt.datetime(2023, 1, 1, tzinfo=dt.timezone.utc)],
+                "init_time": [np.datetime64(initTime, "s")],
                 "variable": ["t", "r"],
                 "step": range(12),
                 "x": range(100),
@@ -165,7 +165,7 @@ class TestLocalFSClient(unittest.TestCase):
                 ),
             },
             coords={
-                "init_time": [dt.datetime(2023, 1, 1, tzinfo=dt.timezone.utc)],
+                "init_time": [np.datetime64(initTime, "s")],
                 "variable": ["t", "r"],
                 "step": range(12),
                 "x": range(100),

@@ -50,8 +50,6 @@ class NWPConsumerService:
         :param start: The start date of the time range to download
         :param end: The end date of the time range to download
         """
-        nbytes = 0
-
         # Get the list of init times as datetime objects
         # * This spans every hour between the start and end dates up to 11:00pm on the end date
         allInitTimes: list[dt.datetime] = (
@@ -84,7 +82,7 @@ class NWPConsumerService:
                 startDate=start.strftime("%Y-%m-%d %H:%M"),
                 endDate=end.strftime("%Y-%m-%d %H:%M"),
             )
-            return nbytes
+            return []
         else:
             log.info(
                 event="downloading files",

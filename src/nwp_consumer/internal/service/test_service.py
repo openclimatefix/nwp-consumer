@@ -87,7 +87,7 @@ class DummyFetcher(internal.FetcherInterface):
                 ),
             },
             coords={
-                "init_time": [np.datetime64(initTime)],
+                "init_time": [np.datetime64(initTime, "s")],
                 "variable": [p.name],
                 "step": range(12),
                 "x": range(100),
