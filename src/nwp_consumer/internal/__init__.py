@@ -1,3 +1,5 @@
+"""The internal package contains code not intended for external import."""
+
 __all__ = [
     "OCFShortName",
     "FetcherInterface",
@@ -7,7 +9,7 @@ __all__ = [
     "IT_FOLDER_GLOBSTR",
     "TMP_DIR",
     "ZARR_FMTSTR",
-    "ZARR_GLOBSTR"
+    "ZARR_GLOBSTR",
 ]
 
 from .models import (
