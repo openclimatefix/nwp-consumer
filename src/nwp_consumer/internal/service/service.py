@@ -52,10 +52,11 @@ class NWPConsumerService:
         """
         # Get the list of init times as datetime objects
         # * This spans every hour between the start and end dates up to 11:00pm on the end date
-        allInitTimes: list[dt.datetime] = (
-            pd.date_range(start=start, end=end + dt.timedelta(days=1), inclusive="left", freq="H")
-            .to_pydatetime()
-            .tolist()
+        allInitTimes: list[dt.datetime] = pd.to_datetime(
+            utc=True,
+            arg=pd.date_range(
+                start=start, end=end + dt.timedelta(days=1), inclusive="left", freq="H",
+            ).tolist(),
         )
 
         # For each init time, get the list of files that need to be downloaded
