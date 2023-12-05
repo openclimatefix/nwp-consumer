@@ -35,7 +35,7 @@ class Client(internal.StorageInterface):
             )
 
     def exists(self, *, dst: pathlib.Path) -> bool:  # noqa: D102
-        return self.__fs.exists(self.datasetPath / dst.as_posix())
+        return self.__fs.exists(path=self.datasetPath / dst.as_posix())
 
     def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:  # noqa: D102
         self.__fs.put(
@@ -63,8 +63,10 @@ class Client(internal.StorageInterface):
     def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:  # noqa: D102
         allDirs = [
             pathlib.Path(d).relative_to(self.datasetPath / prefix)
-            for d in self.__fs.glob(self.datasetPath / f"{prefix}/{internal.IT_FOLDER_GLOBSTR}")
-            if self.__fs.isdir(d)
+            for d in self.__fs.glob(
+                path=self.datasetPath / f"{prefix}/{internal.IT_FOLDER_GLOBSTR}",
+            )
+            if self.__fs.isdir(path=d)
         ]
 
         # Get the initTime from the folder pattern
@@ -95,7 +97,7 @@ class Client(internal.StorageInterface):
 
     def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:  # noqa: D102
         initTimeDirPath = self.datasetPath / prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
-        paths = [pathlib.Path(p) for p in self.__fs.ls(initTimeDirPath.as_posix())]
+        paths = [pathlib.Path(p) for p in self.__fs.ls(path=initTimeDirPath.as_posix())]
 
         log.debug(
             event="copying it folder to temporary files",
@@ -143,7 +145,7 @@ class Client(internal.StorageInterface):
         return tempPaths
 
     def delete(self, *, p: pathlib.Path) -> None:  # noqa: D102
-        if self.__fs.isdir(self.datasetPath / p.as_posix()):
-            self.__fs.rm(self.datasetPath / p.as_posix(), recursive=True)
+        if self.__fs.isdir(path=self.datasetPath / p.as_posix()):
+            self.__fs.rm(path=self.datasetPath / p.as_posix(), recursive=True)
         else:
-            self.__fs.rm(self.datasetPath / p.as_posix())
+            self.__fs.rm(path=self.datasetPath / p.as_posix())
