@@ -56,7 +56,9 @@ class TestHuggingFaceClient(unittest.TestCase):
         out = self.client.store(src=src, dst=dst)
         self.assertEqual(out, dst)
         self.mock_fs.put.assert_called_with(
-            lpath=src.as_posix(), rpath=(self.datasetPath / dst).as_posix(), recursive=True,
+            lpath=src.as_posix(),
+            rpath=(self.datasetPath / dst).as_posix(),
+            recursive=True,
         )
         self.mock_fs.du.assert_called_with(path=(self.datasetPath / dst).as_posix())
 
@@ -78,7 +80,7 @@ class TestHuggingFaceClient(unittest.TestCase):
             dt.datetime.now(tz=dt.timezone.utc).replace(second=0, microsecond=0),
         )
         self.mock_fs.glob.assert_called_with(
-            path=self.datasetPath / RAW / internal.IT_FOLDER_GLOBSTR
+            path=self.datasetPath / RAW / internal.IT_FOLDER_GLOBSTR,
         )
 
     def test_delete(self) -> None:
