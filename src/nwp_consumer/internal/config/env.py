@@ -12,6 +12,7 @@ class EnvParser:
     """Mixin to parse environment variables into class fields."""
 
     def __init__(self) -> None:
+        """Parse environment variables into class fields."""
         for field, _ in get_type_hints(self).items():
             # Skip item if not upper case
             if not field.isupper():
@@ -58,6 +59,7 @@ class ECMWFMARSEnv(EnvParser):
     ECMWF_HOURS: str = "48"
     ECMWF_PARAMETER_GROUP: str = "default"
 
+
 class ICONEnv(EnvParser):
     """Config for ICON API."""
 
@@ -89,4 +91,3 @@ class HuggingFaceEnv(EnvParser):
 
     HUGGINGFACE_TOKEN: str
     HUGGINGFACE_REPO_ID: str
-

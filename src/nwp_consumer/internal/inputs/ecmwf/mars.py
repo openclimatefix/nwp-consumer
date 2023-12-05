@@ -99,13 +99,12 @@ class Client(internal.FetcherInterface):
     ) -> "Client":
         """Create a new Client.
 
-        Parameters:
-        -----------------
-        area: The area to fetch data for. Can be one of:
-        ["uk", "nw-india", "malta", "eu", "global"]
-        hours: The number of hours to fetch data for. Must be less than 90.
-        param_group: The parameter group to fetch data for. Can be one of:
-        ["default", "basic"]
+        Args:
+            area: The area to fetch data for. Can be one of:
+                ["uk", "nw-india", "malta", "eu", "global"]
+            hours: The number of hours to fetch data for. Must be less than 90.
+            param_group: The parameter group to fetch data for. Can be one of:
+                ["default", "basic"]
         """
         self.server = ECMWFService(service="mars", log=marsLogger)
 
@@ -119,7 +118,7 @@ class Client(internal.FetcherInterface):
             raise KeyError("ECMWF hours must be a valid integer") from e
         if self.hours > 90:
             raise KeyError(
-                "ECMWF operational archive only goes out to 90 hours in hourly increments"
+                "ECMWF operational archive only goes out to 90 hours in hourly increments",
             )
 
         match param_group:
@@ -136,9 +135,9 @@ class Client(internal.FetcherInterface):
 
         # MARS requests can only ask for data that is more than 24 hours old: see
         # https://confluence.ecmwf.int/display/UDOC/MARS+access+restrictions
-        if it > dt.datetime.utcnow() - dt.timedelta(hours=24):
+        if it > dt.datetime.now(tz=dt.timezone.utc) - dt.timedelta(hours=24):
             raise ValueError(
-                "ECMWF MARS requests can only ask for data that is more than 24 hours old"
+                "ECMWF MARS requests can only ask for data that is more than 24 hours old",
             )
             return []
 
@@ -172,9 +171,9 @@ class Client(internal.FetcherInterface):
 
         return [ECMWFMarsFileInfo(inittime=it, area=self.area)]
 
-    def downloadToTemp(
-        self, *, fi: internal.FileInfoModel
-    ) -> tuple[internal.FileInfoModel, pathlib.Path]:  # noqa: D102
+    def downloadToTemp(  # noqa: D102
+        self, *, fi: internal.FileInfoModel,
+    ) -> tuple[internal.FileInfoModel, pathlib.Path]:
         tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
 
         marsReq = f"""
@@ -254,7 +253,7 @@ class Client(internal.FetcherInterface):
 
             # Delete unwanted coordinates
             ds = ds.drop_vars(
-                names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST], errors="ignore"
+                names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST], errors="ignore",
             )
 
             # Put the modified dataset back in the list
@@ -262,7 +261,7 @@ class Client(internal.FetcherInterface):
 
         # Merge the datasets back into one
         wholesaleDataset = xr.merge(
-            objects=datasets, compat="override", combine_attrs="drop_conflicts"
+            objects=datasets, compat="override", combine_attrs="drop_conflicts",
         )
 
         # Create a chunked Dask Dataset from the input multi-variate Dataset.
@@ -288,7 +287,7 @@ class Client(internal.FetcherInterface):
                     "variable": -1,
                     "latitude": len(wholesaleDataset.latitude) // 2,
                     "longitude": len(wholesaleDataset.longitude) // 2,
-                }
+                },
             )
         )
 

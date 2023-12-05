@@ -1,3 +1,5 @@
+"""Client for local filesystem."""
+
 import datetime as dt
 import os
 import pathlib
@@ -31,22 +33,22 @@ class Client(internal.StorageInterface):
                 src=src.as_posix(),
                 dst=dst.as_posix(),
                 srcbytes=src.stat().st_size,
-                dstbytes=nbytes
+                dstbytes=nbytes,
             )
         else:
             log.debug(
                 event="stored file locally",
                 src=src.as_posix(),
                 dst=dst.as_posix(),
-                nbytes=nbytes
+                nbytes=nbytes,
             )
         return dst
 
     def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:  # noqa: D102
         # List all the inittime folders in the given directory
-        dirs = [f.relative_to(prefix)
-                for f in prefix.glob(internal.IT_FOLDER_GLOBSTR)
-                if f.suffix == ""]
+        dirs = [
+            f.relative_to(prefix) for f in prefix.glob(internal.IT_FOLDER_GLOBSTR) if f.suffix == ""
+        ]
 
         initTimes = set()
         for dir in dirs:
@@ -54,21 +56,21 @@ class Client(internal.StorageInterface):
                 # Try to parse the dir as a datetime
                 ddt: dt.datetime = dt.datetime.strptime(
                     dir.as_posix(),
-                    internal.IT_FOLDER_FMTSTR
-                ).replace(tzinfo=None)
+                    internal.IT_FOLDER_FMTSTR,
+                ).replace(tzinfo=dt.timezone.utc)
                 # Add the initTime to the set
                 initTimes.add(ddt)
             except ValueError:
                 log.debug(
                     event="ignoring invalid folder name",
                     name=dir.as_posix(),
-                    within=prefix.as_posix()
+                    within=prefix.as_posix(),
                 )
 
         if len(initTimes) == 0:
             log.debug(
                 event="no init times found in raw directory",
-                within=prefix.as_posix()
+                within=prefix.as_posix(),
             )
             return []
 
@@ -76,21 +78,21 @@ class Client(internal.StorageInterface):
         log.debug(
             event=f"found {len(initTimes)} init times in raw directory",
             earliest=sortedInitTimes[0],
-            latest=sortedInitTimes[-1]
+            latest=sortedInitTimes[-1],
         )
 
         return sortedInitTimes
 
-    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) \
-            -> list[pathlib.Path]:
-
+    def copyITFolderToTemp(  # noqa: D102
+        self, *, prefix: pathlib.Path, it: dt.datetime,
+    ) -> list[pathlib.Path]:
         # Local FS already has access to files, so just return the paths
         initTimeDirPath = prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
         paths: list[pathlib.Path] = list(initTimeDirPath.iterdir())
 
         return paths
 
-    def delete(self, *, p: pathlib.Path) -> None:
+    def delete(self, *, p: pathlib.Path) -> None:  # noqa: D102
         if not p.exists():
             raise FileNotFoundError(f"file does not exist: {p}")
         if p.is_file():

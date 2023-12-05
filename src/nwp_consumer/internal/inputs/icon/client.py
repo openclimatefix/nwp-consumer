@@ -12,7 +12,7 @@ import xarray as xr
 
 from nwp_consumer import internal
 
-from ._consts import GLOBAL_ML_VARS, GLOBAL_SL_VARS, EU_ML_VARS, EU_SL_VARS
+from ._consts import EU_ML_VARS, EU_SL_VARS, GLOBAL_ML_VARS, GLOBAL_SL_VARS
 from ._models import IconFileInfo
 
 log = structlog.getLogger()
@@ -44,15 +44,14 @@ class Client(internal.FetcherInterface):
     parameters: list[str]  # The parameters to fetch
     conform: bool  # Whether to rename parameters to OCF names and clear unwanted coordinates
 
-    def __init__(self, model: str, param_group: str | None = "default") -> None:
+    def __init__(self, model: str, param_group: str | None = "default") -> "Client":
         """Create a new client.
 
-        Parameters
-        ----------
-        model: The model to fetch data for. Valid models are "europe" and "global".
-        param_group: The set of parameters to fetch. Valid groups are "default", "full", and "basic".
+        Args:
+            model: The model to fetch data for. Valid models are "europe" and "global".
+            param_group: The set of parameters to fetch.
+                Valid groups are "default", "full", and "basic".
         """
-
         self.baseurl = "https://opendata.dwd.de/weather/nwp"
         self.model = model
 
@@ -63,7 +62,7 @@ class Client(internal.FetcherInterface):
                 self.baseurl += "/icon/grib"
             case _:
                 raise ValueError(
-                    f"unknown icon model {model}. Valid models are 'europe' and 'global'"
+                    f"unknown icon model {model}. Valid models are 'europe' and 'global'",
                 )
 
         match (param_group, model):
@@ -81,7 +80,8 @@ class Client(internal.FetcherInterface):
                 self.conform = False
             case (_, _):
                 raise ValueError(
-                    f"unknown parameter group {param_group}. Valid groups are 'default', 'full', 'basic'"
+                    f"unknown parameter group {param_group}."
+                    "Valid groups are 'default', 'full', 'basic'",
                 )
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
@@ -120,10 +120,9 @@ class Client(internal.FetcherInterface):
             # The webpage's HTML <body> contains a list of <a> tags
             # * Each <a> tag has a href, most of which point to a file)
             for line in response.text.splitlines():
-
                 # Check if the line contains a href, if not, skip it
                 refmatch = re.search(pattern=r'href="(.+)">', string=line)
-                if refmatch == None:
+                if refmatch is None:
                     continue
 
                 # The href contains the name of a file - parse this into a FileInfo object
@@ -137,7 +136,7 @@ class Client(internal.FetcherInterface):
                     match_pl=not self.conform,
                 )
                 # Ignore the file if it is not for today's date or has a step > 48 (when conforming)
-                if (fi == None or fi.it() != it or (fi.step > 48 and self.conform)):
+                if fi is None or fi.it() != it or (fi.step > 48 and self.conform):
                     continue
 
                 # Add the file to the list
@@ -200,7 +199,8 @@ class Client(internal.FetcherInterface):
 
             # Delete unwanted coordinates
             ds = ds.drop_vars(
-                names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST], errors="ignore"
+                names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST],
+                errors="ignore",
             )
 
         # Inject latitude and longitude into the dataset if they are missing
@@ -254,15 +254,17 @@ class Client(internal.FetcherInterface):
                     "init_time": 1,
                     "step": -1,
                     "variable": -1,
-                }
+                },
             )
         )
 
         return ds
 
-    def downloadToTemp(
-        self, *, fi: internal.FileInfoModel
-    ) -> tuple[internal.FileInfoModel, pathlib.Path]:  # noqa: D102
+    def downloadToTemp(  # noqa: D102
+        self,
+        *,
+        fi: internal.FileInfoModel,
+    ) -> tuple[internal.FileInfoModel, pathlib.Path]:
         log.debug(event="requesting download of file", file=fi.filename(), path=fi.filepath())
         try:
             response = urllib.request.urlopen(fi.filepath())
@@ -313,17 +315,14 @@ def _parseIconFilename(
 ) -> IconFileInfo | None:
     """Parse a string of HTML into an IconFileInfo object, if it contains one.
 
-    Parameters
-    ----------
-    name: The name of the file to parse
-    baseurl: The base URL for the ICON model
-    match_sl: Whether to match single-level files
-    match_ti: Whether to match time-invariant files
-    match_ml: Whether to match model-level files
-    match_pl: Whether to match pressure-level files
+    Args:
+        name: The name of the file to parse
+        baseurl: The base URL for the ICON model
+        match_sl: Whether to match single-level files
+        match_ti: Whether to match time-invariant files
+        match_ml: Whether to match model-level files
+        match_pl: Whether to match pressure-level files
     """
-
-
     # Define the regex patterns to match the different types of file; X is step, L is level
     # * Single Level: `MODEL_single-level_YYYYDDMMHH_XXX_SOME_PARAM.grib2.bz2`
     slRegex = r"single-level_(\d{10})_(\d{3})_([A-Za-z_\d]+).grib"
@@ -342,18 +341,18 @@ def _parseIconFilename(
     mlmatch = re.search(pattern=mlRegex, string=name)
     plmatch = re.search(pattern=plRegex, string=name)
 
-    if (slmatch and match_sl):
+    if slmatch and match_sl:
         itstring, stepstring, paramstring = slmatch.groups()
-    elif (timatch and match_ti):
+    elif timatch and match_ti:
         itstring, paramstring = timatch.groups()
-    elif (mlmatch and match_ml):
+    elif mlmatch and match_ml:
         itstring, stepstring, levelstring, paramstring = mlmatch.groups()
-    elif (plmatch and match_pl):
+    elif plmatch and match_pl:
         itstring, stepstring, levelstring, paramstring = plmatch.groups()
     else:
         return None
 
-    it = dt.datetime.strptime(itstring, "%Y%m%d%H")
+    it = dt.datetime.strptime(itstring, "%Y%m%d%H").replace(tzinfo=dt.timezone.utc)
 
     return IconFileInfo(
         it=it,

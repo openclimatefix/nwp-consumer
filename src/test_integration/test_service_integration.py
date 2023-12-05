@@ -12,9 +12,7 @@ import unittest
 import numpy as np
 import ocf_blosc2  # noqa: F401
 import xarray as xr
-from nwp_consumer.internal import (
-    ZARR_FMTSTR, ZARR_GLOBSTR, config, inputs, outputs, service
-)
+from nwp_consumer.internal import ZARR_GLOBSTR, config, inputs, outputs, service
 
 
 class TestNWPConsumerService_MetOffice(unittest.TestCase):
@@ -40,7 +38,7 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
         )
 
     def test_downloadAndConvertDataset(self):
-        initTime: dt.date = dt.datetime.now().date()
+        initTime: dt.date = dt.datetime.now(tz=dt.timezone.utc).date()
 
         out = self.testService.DownloadRawDataset(start=initTime, end=initTime)
         self.assertGreater(len(out), 0)
@@ -48,8 +46,7 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
         out = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
         self.assertGreater(len(out), 0)
 
-        for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + '.zarr.zip'):
-
+        for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + ".zarr.zip"):
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}")
 
             # The number of variables in the dataset depends on the order from MetOffice
@@ -57,8 +54,8 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
 
             # Ensure the dimensions have the right sizes
             self.assertDictEqual(
-                {"variable": numVars, 'init_time': 1,  "step": 13, "y": 639, "x": 455},
-                dict(ds.dims.items())
+                {"variable": numVars, "init_time": 1, "step": 13, "y": 639, "x": 455},
+                dict(ds.dims.items()),
             )
             # Ensure the dimensions of the variables are in the correct order
             self.assertEqual(("variable", "init_time", "step", "y", "x"), ds["UKV"].dims)
@@ -80,8 +77,8 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
             ftpPassword=env.CEDA_FTP_PASS,
         )
 
-        self.rawdir = 'data/cd_raw'
-        self.zarrdir = 'data/cd_zarr'
+        self.rawdir = "data/cd_raw"
+        self.zarrdir = "data/cd_zarr"
 
         self.testService = service.NWPConsumerService(
             fetcher=cedaClient,
@@ -99,15 +96,15 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
         out = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
         self.assertGreater(len(out), 0)
 
-        for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + '.zarr.zip'):
+        for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + ".zarr.zip"):
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
 
             # Enusre the data variables are correct
             self.assertEqual(["UKV"], list(ds.data_vars))
             # Ensure the dimensions have the right sizes
             self.assertEqual(
-                {'variable': 12,  'init_time': 1, 'step': 37, 'y': 704, 'x': 548},
-                dict(ds.dims.items())
+                {"variable": 12, "init_time": 1, "step": 37, "y": 704, "x": 548},
+                dict(ds.dims.items()),
             )
             # Ensure the init time is correct
             self.assertEqual(np.datetime64(initTime), ds.coords["init_time"].values[0])
@@ -127,8 +124,8 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
             param_group="basic",
         )
 
-        self.rawdir = 'data/ec_raw'
-        self.zarrdir = 'data/ec_zarr'
+        self.rawdir = "data/ec_raw"
+        self.zarrdir = "data/ec_zarr"
 
         self.testService = service.NWPConsumerService(
             fetcher=ecmwfMarsClient,
@@ -146,15 +143,15 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
         out = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
         self.assertGreater(len(out), 0)
 
-        for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + '.zarr.zip'):
+        for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + ".zarr.zip"):
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
 
             # Enusre the data variables are correct
             self.assertEqual(["ECMWF_UK"], list(ds.data_vars))
             # Ensure the dimensions have the right sizes
             self.assertEqual(
-                {'variable': 2, 'init_time': 1, 'step': 5, 'latitude': 241, 'longitude': 301},
-                dict(ds.dims.items())
+                {"variable": 2, "init_time": 1, "step": 5, "latitude": 241, "longitude": 301},
+                dict(ds.dims.items()),
             )
             # Ensure the init time is correct
             self.assertEqual(np.datetime64(initTime), ds.coords["init_time"].values[0])
@@ -175,8 +172,8 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
             param_group="basic",
         )
 
-        self.rawdir = 'data/ic_raw'
-        self.zarrdir = 'data/ic_zarr'
+        self.rawdir = "data/ic_raw"
+        self.zarrdir = "data/ic_zarr"
 
         self.testService = service.NWPConsumerService(
             fetcher=iconClient,
@@ -186,7 +183,7 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
         )
 
     def test_downloadAndConvertDataset(self):
-        initTime: dt.date = dt.datetime.now().date()
+        initTime: dt.date = dt.datetime.now(tz=dt.timezone.utc).date()
 
         out = self.testService.DownloadRawDataset(start=initTime, end=initTime)
         self.assertGreater(len(out), 0)
@@ -194,19 +191,18 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
         out = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
         self.assertGreater(len(out), 0)
 
-        for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + '.zarr.zip'):
+        for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + ".zarr.zip"):
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
 
             # Enusre the data variables are correct
             self.assertEqual(["ICON_GLOBAL"], list(ds.data_vars))
             # Ensure the dimensions have the right sizes
             self.assertEqual(
-                {'variable': 2, 'init_time': 1, 'step': 49, 'values': 2200999},
-                dict(ds.dims.items())
+                {"variable": 2, "init_time": 1, "step": 49, "values": 2200999},
+                dict(ds.dims.items()),
             )
             # Ensure the init time is correct
             self.assertEqual(np.datetime64(initTime), ds.coords["init_time"].values[0])
 
         shutil.rmtree(self.rawdir)
         shutil.rmtree(self.zarrdir)
-

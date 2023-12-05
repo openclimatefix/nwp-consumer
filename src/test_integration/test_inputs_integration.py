@@ -10,14 +10,13 @@ import unittest
 from nwp_consumer.internal import config, inputs, outputs
 from nwp_consumer.internal.inputs.ceda._models import CEDAFileInfo
 from nwp_consumer.internal.inputs.ecmwf._models import ECMWFMarsFileInfo
-from nwp_consumer.internal.inputs.metoffice._models import MetOfficeFileInfo
 from nwp_consumer.internal.inputs.icon._models import IconFileInfo
+from nwp_consumer.internal.inputs.metoffice._models import MetOfficeFileInfo
 
 storageClient = outputs.localfs.Client()
 
 
 class TestClient_FetchRawFileBytes(unittest.TestCase):
-
     def test_downloadsRawGribFileFromCEDA(self):
         c = config.CEDAEnv()
         cedaClient = inputs.ceda.Client(
@@ -31,8 +30,9 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         self.assertGreater(tmpPath.stat().st_size, 100000000)
 
     def test_downloadsRawGribFileFromMetOffice(self):
-        metOfficeInitTime: dt.datetime = dt.datetime.now() \
-            .replace(hour=0, minute=0, second=0, microsecond=0)
+        metOfficeInitTime: dt.datetime = dt.datetime.now(dt.timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
 
         c = config.MetOfficeEnv()
         metOfficeClient = inputs.metoffice.Client(
@@ -41,15 +41,15 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
             clientSecret=c.METOFFICE_CLIENT_SECRET,
         )
         fileInfo = MetOfficeFileInfo(
-            fileId=f'agl_temperature_1.5_{dt.datetime.now().strftime("%Y%m%d")}00',
-            runDateTime=metOfficeInitTime
+            fileId=f'agl_temperature_1.5_{dt.datetime.now(tz=dt.timezone.utc).strftime("%Y%m%d")}00',
+            runDateTime=metOfficeInitTime,
         )
         _, tmpPath = metOfficeClient.downloadToTemp(fi=fileInfo)
         self.assertGreater(tmpPath.stat().st_size, 4000000)
 
     def test_downloadsRawGribFileFromECMWFMARS(self):
         ecmwfMarsInitTime: dt.datetime = dt.datetime(
-            year=2022, month=1, day=1, hour=0, minute=0, tzinfo=None
+            year=2022, month=1, day=1, hour=0, minute=0, tzinfo=dt.timezone.utc,
         )
 
         c = config.ECMWFMARSEnv()
@@ -65,8 +65,9 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         self.assertGreater(tmpPath.stat().st_size, 4000000)
 
     def test_downloadsRawGribFileFromICON(self):
-        iconInitTime: dt.datetime = dt.datetime.now() \
-            .replace(hour=0, minute=0, second=0, microsecond=0)
+        iconInitTime: dt.datetime = dt.datetime.now(tz=dt.timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
 
         iconClient = inputs.icon.Client(
             model="global",
@@ -75,30 +76,28 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
             it=iconInitTime,
             filename=f"icon_global_icosahedral_single-level_{iconInitTime.strftime('%Y%m%d%H')}_001_CLCL.grib2.bz2",
             currentURL="https://opendata.dwd.de/weather/nwp/icon/grib/00/clcl",
-            step=1
+            step=1,
         )
         _, tmpPath = iconClient.downloadToTemp(fi=fileInfo)
         self.assertFalse(tmpPath.name.endswith(".bz2"))
         self.assertLess(len(list(tmpPath.parent.glob("*.bz2"))), 1)
         self.assertGreater(tmpPath.stat().st_size, 40000)
 
-        iconClient = inputs.icon.Client(
-            model="europe"
-        )
+        iconClient = inputs.icon.Client(model="europe")
         fileInfo = IconFileInfo(
             it=iconInitTime,
             filename=f"icon-eu_europe_regular-lat-lon_single-level_{iconInitTime.strftime('%Y%m%d%H')}_001_CLCL.grib2.bz2",
             currentURL="https://opendata.dwd.de/weather/nwp/icon-eu/grib/00/clcl",
-            step=1
+            step=1,
         )
         _, tmpPath = iconClient.downloadToTemp(fi=fileInfo)
         self.assertGreater(tmpPath.stat().st_size, 40000)
 
-class TestListRawFilesForInitTime(unittest.TestCase):
 
+class TestListRawFilesForInitTime(unittest.TestCase):
     def test_getsFileInfosFromCEDA(self):
         cedaInitTime: dt.datetime = dt.datetime(
-            year=2022, month=1, day=1, hour=0, minute=0, tzinfo=None
+            year=2022, month=1, day=1, hour=0, minute=0, tzinfo=dt.timezone.utc,
         )
         c = config.CEDAEnv()
         cedaClient = inputs.ceda.Client(
@@ -109,8 +108,9 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         self.assertTrue(len(fileInfos) > 0)
 
     def test_getsFileInfosFromMetOffice(self):
-        metOfficeInitTime: dt.datetime = dt.datetime.now() \
-            .replace(hour=0, minute=0, second=0, microsecond=0)
+        metOfficeInitTime: dt.datetime = dt.datetime.now(tz=dt.timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
         c = config.MetOfficeEnv()
         metOfficeClient = inputs.metoffice.Client(
             orderID=c.METOFFICE_ORDER_ID,
@@ -122,7 +122,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
 
     def test_getsFileInfosFromECMWFMARS(self):
         ecmwfMarsInitTime: dt.datetime = dt.datetime(
-            year=2022, month=1, day=1, hour=0, minute=0, tzinfo=None
+            year=2022, month=1, day=1, hour=0, minute=0, tzinfo=dt.timezone.utc,
         )
         c = config.ECMWFMARSEnv()
         ecmwfMarsClient = inputs.ecmwf.mars.Client(
@@ -133,23 +133,21 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         self.assertTrue(len(fileInfos) > 0)
 
     def test_getsFileInfosFromICON(self):
-        iconInitTime: dt.datetime = dt.datetime.now() \
-            .replace(hour=0, minute=0, second=0, microsecond=0)
+        iconInitTime: dt.datetime = dt.datetime.now(tz=dt.timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
         iconClient = inputs.icon.Client(
             model="global",
         )
         fileInfos = iconClient.listRawFilesForInitTime(it=iconInitTime)
         self.assertTrue(len(fileInfos) > 0)
 
-        iconClient = inputs.icon.Client(
-            model="europe"
-        )
+        iconClient = inputs.icon.Client(model="europe")
         euFileInfos = iconClient.listRawFilesForInitTime(it=iconInitTime)
         self.assertTrue(len(euFileInfos) > 0)
 
         self.assertNotEqual(fileInfos, euFileInfos)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
-

@@ -31,11 +31,11 @@ Options:
 import contextlib
 import datetime as dt
 import importlib.metadata
+import pathlib
 import shutil
 
 import structlog
 from docopt import docopt
-import pathlib
 
 from nwp_consumer import internal
 from nwp_consumer.internal import config, inputs, outputs
@@ -117,11 +117,15 @@ def run(arguments: dict) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
 
     # Map from and to arguments to datetime objects
     if arguments["--from"] == "today" or arguments["--from"] is None:
-        arguments["--from"] = dt.datetime.now().strftime("%Y-%m-%d")
+        arguments["--from"] = dt.datetime.now(tz=dt.timezone.utc).strftime("%Y-%m-%d")
     if arguments["--to"] == "today" or arguments["--to"] is None:
-        arguments["--to"] = dt.datetime.now().strftime("%Y-%m-%d")
-    startDate: dt.date = dt.datetime.strptime(arguments["--from"], "%Y-%m-%d").date()
-    endDate: dt.date = dt.datetime.strptime(arguments["--to"], "%Y-%m-%d").date()
+        arguments["--to"] = dt.datetime.now(tz=dt.timezone.utc).strftime("%Y-%m-%d")
+    startDate: dt.date = (
+        dt.datetime.strptime(arguments["--from"], "%Y-%m-%d").replace(tzinfo=dt.datetime.utc).date()
+    )
+    endDate: dt.date = (
+        dt.datetime.strptime(arguments["--to"], "%Y-%m-%d").replace(tzinfo=dt.timezone.utc).date()
+    )
     if endDate < startDate:
         raise ValueError("argument '--from' cannot specify date prior to '--to'")
 
@@ -174,7 +178,7 @@ def main() -> None:
     arguments = docopt(__doc__, version=__version__)
     erred = False
 
-    programStartTime = dt.datetime.now()
+    programStartTime = dt.datetime.now(tz=dt.timezone.utc)
     try:
         files: tuple[list[pathlib.Path], list[pathlib.Path]] = run(arguments=arguments)
         log.info(
@@ -192,7 +196,7 @@ def main() -> None:
                 shutil.rmtree(p)
             if p.is_file():
                 p.unlink(missing_ok=True)
-        elapsedTime = dt.datetime.now() - programStartTime
+        elapsedTime = dt.datetime.now(tz=dt.timezone.utc) - programStartTime
         log.info(event="nwp-consumer finished", elapsed_time=str(elapsedTime), version=__version__)
         if erred:
             exit(1)

@@ -26,8 +26,14 @@ class NWPConsumerService:
     Each method on the class is a business use case for the consumer
     """
 
-    def __init__(self, *, fetcher: internal.FetcherInterface, storer: internal.StorageInterface,
-                 rawdir: str, zarrdir: str) -> None:
+    def __init__(
+        self,
+        *,
+        fetcher: internal.FetcherInterface,
+        storer: internal.StorageInterface,
+        rawdir: str,
+        zarrdir: str,
+    ) -> None:
         """Initialise the service."""
         self.fetcher = fetcher
         self.storer = storer
@@ -44,49 +50,60 @@ class NWPConsumerService:
 
         # Get the list of init times as datetime objects
         # * This spans every hour between the start and end dates up to 11:00pm on the end date
-        allInitTimes: list[dt.datetime] = pd.date_range(
-            start=start,
-            end=end + dt.timedelta(days=1),
-            inclusive='left',
-            freq='H').to_pydatetime().tolist()
+        allInitTimes: list[dt.datetime] = (
+            pd.date_range(start=start, end=end + dt.timedelta(days=1), inclusive="left", freq="H")
+            .to_pydatetime()
+            .tolist()
+        )
 
         # For each init time, get the list of files that need to be downloaded
         # * Itertools chain is used to flatten the list of lists
-        allWantedFileInfos: list[internal.FileInfoModel] = list(itertools.chain.from_iterable(
-            [self.fetcher.listRawFilesForInitTime(it=initTime) for initTime in allInitTimes]
-        ))
+        allWantedFileInfos: list[internal.FileInfoModel] = list(
+            itertools.chain.from_iterable(
+                [self.fetcher.listRawFilesForInitTime(it=initTime) for initTime in allInitTimes],
+            ),
+        )
 
         # Check which files are already downloaded
         # * If the file is already downloaded, remove it from the list of files to download
         newWantedFileInfos: list[internal.FileInfoModel] = [
-            fi for fi in allWantedFileInfos
+            fi
+            for fi in allWantedFileInfos
             if not self.storer.exists(
-                dst=self.rawdir / fi.it().strftime(internal.IT_FOLDER_FMTSTR) / fi.filename()
+                dst=self.rawdir / fi.it().strftime(internal.IT_FOLDER_FMTSTR) / fi.filename(),
             )
         ]
 
         if not newWantedFileInfos:
-            log.info("no new files to download",
-                     startDate=start.strftime("%Y-%m-%d %H:%M"),
-                     endDate=end.strftime("%Y-%m-%d %H:%M"))
+            log.info(
+                event="no new files to download",
+                startDate=start.strftime("%Y-%m-%d %H:%M"),
+                endDate=end.strftime("%Y-%m-%d %H:%M"),
+            )
             return nbytes
         else:
-            log.info("downloading files",
-                     startDate=start.strftime("%Y-%m-%d %H:%M"),
-                     endDate=end.strftime("%Y-%m-%d %H:%M"),
-                     numFiles=len(newWantedFileInfos))
+            log.info(
+                event="downloading files",
+                startDate=start.strftime("%Y-%m-%d %H:%M"),
+                endDate=end.strftime("%Y-%m-%d %H:%M"),
+                numFiles=len(newWantedFileInfos),
+            )
 
         # Create a dask pipeline to download the files
-        storedFiles = dask.bag.from_sequence(
-                seq=newWantedFileInfos,
-                npartitions=len(newWantedFileInfos)) \
-            .map(lambda fi: self.fetcher.downloadToTemp(fi=fi)) \
-            .filter(lambda infoPathTuple: infoPathTuple[1] != pathlib.Path()) \
-            .map(lambda infoPathTuple: self.storer.store(
-                src=infoPathTuple[1],
-                dst=self.rawdir/infoPathTuple[0].it().strftime(internal.IT_FOLDER_FMTSTR)/(infoPathTuple[0].filename())
-            )) \
+        storedFiles = (
+            dask.bag.from_sequence(seq=newWantedFileInfos, npartitions=len(newWantedFileInfos))
+            .map(lambda fi: self.fetcher.downloadToTemp(fi=fi))
+            .filter(lambda infoPathTuple: infoPathTuple[1] != pathlib.Path())
+            .map(
+                lambda infoPathTuple: self.storer.store(
+                    src=infoPathTuple[1],
+                    dst=self.rawdir
+                    / infoPathTuple[0].it().strftime(internal.IT_FOLDER_FMTSTR)
+                    / (infoPathTuple[0].filename()),
+                ),
+            )
             .compute()
+        )
 
         return storedFiles
 
@@ -101,65 +118,71 @@ class NWPConsumerService:
         allInitTimes: list[dt.datetime] = self.storer.listInitTimes(prefix=self.rawdir)
         for it in allInitTimes:
             # Don't convert files that already exist
-            if self.storer.exists(dst=self.zarrdir / it.strftime(f'{internal.ZARR_FMTSTR}.zarr.zip')):
+            if self.storer.exists(
+                dst=self.zarrdir / it.strftime(f"{internal.ZARR_FMTSTR}.zarr.zip"),
+            ):
                 log.debug(
                     "zarr for initTime already exists; skipping",
                     inittime=it.strftime("%Y/%m/%d %H:%M"),
-                    path=(self.zarrdir / it.strftime(f'{internal.ZARR_FMTSTR}.zarr.zip')).as_posix()
+                    path=(
+                        self.zarrdir / it.strftime(f"{internal.ZARR_FMTSTR}.zarr.zip")
+                    ).as_posix(),
                 )
                 continue
             if start <= it.date() <= end:
                 desiredInitTimes.append(it)
 
         if not desiredInitTimes:
-            log.info("no new files to convert to zarr",
-                     startDate=start.strftime("%Y/%m/%d %H:%M"),
-                     endDate=end.strftime("%Y/%m/%d %H:%M"))
+            log.info(
+                "no new files to convert to zarr",
+                startDate=start.strftime("%Y/%m/%d %H:%M"),
+                endDate=end.strftime("%Y/%m/%d %H:%M"),
+            )
             return []
         else:
             log.info(
                 event=f"converting {len(desiredInitTimes)} init times to zarr.",
-                num=len(desiredInitTimes)
+                num=len(desiredInitTimes),
             )
 
         # Create a pipeline to carry out the conversion
         # * Build a bag from the sequence of init times
         # * Partition the bag by init time
         bag = dask.bag.from_sequence(desiredInitTimes, npartitions=len(desiredInitTimes))
-        storedfiles = bag.map(lambda time: self.storer.copyITFolderToTemp(prefix=self.rawdir, it=time)) \
-            .filter(lambda temppaths: len(temppaths) != 0) \
-            .map(lambda temppaths: [self.fetcher.mapTemp(p=p) for p in temppaths]) \
-            .map(lambda datasets: xr.merge(objects=datasets, combine_attrs="drop_conflicts")) \
-            .filter(_dataQualityFilter) \
-            .map(lambda ds: _saveAsTempZipZarr(ds=ds)) \
-            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.name)) \
-            .compute(num_workers=1)  # AWS ECS only has 1 CPU which amounts to half a physical core
+        storedfiles = (
+            bag.map(lambda time: self.storer.copyITFolderToTemp(prefix=self.rawdir, it=time))
+            .filter(lambda temppaths: len(temppaths) != 0)
+            .map(lambda temppaths: [self.fetcher.mapTemp(p=p) for p in temppaths])
+            .map(lambda datasets: xr.merge(objects=datasets, combine_attrs="drop_conflicts"))
+            .filter(_dataQualityFilter)
+            .map(lambda ds: _saveAsTempZipZarr(ds=ds))
+            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.name))
+            .compute(num_workers=1)
+        )  # AWS ECS only has 1 CPU which amounts to half a physical core
 
         if not isinstance(storedfiles, list):
             storedfiles = [storedfiles]
 
         return storedfiles
 
-    def DownloadAndConvert(self, *, start: dt.date, end: dt.date) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
+    def DownloadAndConvert(
+        self,
+        *,
+        start: dt.date,
+        end: dt.date,
+    ) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
         """Fetch and save as Zarr a dataset for each initTime in the given time range.
 
         :param start: The start date of the time range to download and convert
         :param end: The end date of the time range to download and convert
         """
-        downloadedFiles = self.DownloadRawDataset(
-            start=start,
-            end=end
-        )
-        convertedFiles = self.ConvertRawDatasetToZarr(
-            start=start,
-            end=end
-        )
+        downloadedFiles = self.DownloadRawDataset(start=start, end=end)
+        convertedFiles = self.ConvertRawDatasetToZarr(start=start, end=end)
 
         return downloadedFiles, convertedFiles
 
     def CreateLatestZarr(self) -> list[pathlib.Path]:
         """Create a Zarr file for the latest init time."""
-
         # Get the latest init time
         allInitTimes: list[dt.datetime] = self.storer.listInitTimes(prefix=self.rawdir)
         if not allInitTimes:
@@ -172,31 +195,37 @@ class NWPConsumerService:
         log.info(
             event="creating latest zarr for initTime",
             inittime=latestInitTime.strftime("%Y/%m/%d %H:%M"),
-            path=(self.zarrdir / 'latest.zarr.zip').as_posix()
+            path=(self.zarrdir / "latest.zarr.zip").as_posix(),
         )
 
         # Create a pipeline to convert the raw files and merge them as a dataset
         # * Then save the dataset to a temp zarr file and store it in the store
         bag: dask.bag.Bag = dask.bag.from_sequence(tempPaths)
-        tempZarrs = bag.map(lambda tfp: self.fetcher.mapTemp(p=tfp)) \
-            .fold(lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts")) \
+        tempZarrs = (
+            bag.map(lambda tfp: self.fetcher.mapTemp(p=tfp))
+            .fold(lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts"))
             .compute()
+        )
 
         datasets = dask.bag.from_sequence([tempZarrs])
 
         # Save as zipped zarr
-        if self.storer.exists(dst=self.zarrdir / 'latest.zarr.zip'):
-            self.storer.delete(p=self.zarrdir / 'latest.zarr.zip')
-        storedFiles = datasets.map(lambda ds: _saveAsTempZipZarr(ds=ds)) \
-            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / 'latest.zarr.zip')) \
+        if self.storer.exists(dst=self.zarrdir / "latest.zarr.zip"):
+            self.storer.delete(p=self.zarrdir / "latest.zarr.zip")
+        storedFiles = (
+            datasets.map(lambda ds: _saveAsTempZipZarr(ds=ds))
+            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / "latest.zarr.zip"))
             .compute()
+        )
 
         # Save as regular zarr
-        if self.storer.exists(dst=self.zarrdir / 'latest.zarr'):
-            self.storer.delete(p=self.zarrdir / 'latest.zarr')
-        storedFiles += datasets.map(lambda ds: _saveAsTempRegularZarr(ds=ds)) \
-            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / 'latest.zarr')) \
+        if self.storer.exists(dst=self.zarrdir / "latest.zarr"):
+            self.storer.delete(p=self.zarrdir / "latest.zarr")
+        storedFiles += (
+            datasets.map(lambda ds: _saveAsTempRegularZarr(ds=ds))
+            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / "latest.zarr"))
             .compute()
+        )
 
         # Delete the temporary files
         for f in tempPaths:
@@ -211,6 +240,7 @@ class NWPConsumerService:
         # Check eccodes is installed
         try:
             from cfgrib.messages import eccodes_version
+
             log.info(event="HEALTH: eccodes is installed", version=eccodes_version)
         except Exception as e:
             log.error(event="HEALTH: eccodes binary is not installed", error=str(e))
@@ -238,7 +268,7 @@ class NWPConsumerService:
                 event="HEALTH: temporary directory is full",
                 free=tmp_usage.free,
                 total=tmp_usage.total,
-                used=tmp_usage.used
+                used=tmp_usage.used,
             )
             unhealthy = True
         else:
@@ -247,7 +277,7 @@ class NWPConsumerService:
                 free=tmp_usage.free,
                 total=tmp_usage.total,
                 used=tmp_usage.used,
-                path=internal.TMP_DIR.as_posix()
+                path=internal.TMP_DIR.as_posix(),
             )
 
         # Check the ram usage
@@ -258,7 +288,7 @@ class NWPConsumerService:
                 available=ram_usage.available,
                 total=ram_usage.total,
                 used=ram_usage.used,
-                percent=ram_usage.percent
+                percent=ram_usage.percent,
             )
             unhealthy = True
         else:
@@ -267,7 +297,7 @@ class NWPConsumerService:
                 free=ram_usage.free,
                 total=ram_usage.total,
                 used=ram_usage.used,
-                percent=ram_usage.percent
+                percent=ram_usage.percent,
             )
 
         # Check the CPU usage
@@ -286,13 +316,17 @@ class NWPConsumerService:
 
 def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
     # Save the dataset to a temp zarr file
-    initTime = dt.datetime.utcfromtimestamp(int(ds.coords["init_time"].values[0]) / 1e9)
-    tempZarrPath = internal.TMP_DIR / (initTime.strftime(internal.ZARR_FMTSTR.split("/")[-1]) \
-                                       + ".zarr.zip")
+    initTime = dt.datetime.fromtimestamp(
+        int(ds.coords["init_time"].values[0]) / 1e9,
+        tz=dt.timezone.utc,
+    )
+    tempZarrPath = internal.TMP_DIR / (
+        initTime.strftime(internal.ZARR_FMTSTR.split("/")[-1]) + ".zarr.zip"
+    )
     if tempZarrPath.exists():
         tempZarrPath.unlink()
-    dataVar: str = list(ds.data_vars.keys())[0]
-    with zarr.ZipStore(path=tempZarrPath.as_posix(), mode='w') as store:
+    dataVar: str = next(iter(ds.data_vars.keys()))
+    with zarr.ZipStore(path=tempZarrPath.as_posix(), mode="w") as store:
         ds.to_zarr(
             store=store,
             encoding={
@@ -307,12 +341,15 @@ def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
 
 def _saveAsTempRegularZarr(ds: xr.Dataset) -> pathlib.Path:
     # Save the dataset to a temp zarr file
-    initTime = dt.datetime.utcfromtimestamp(int(ds.coords["init_time"].values[0]) / 1e9)
-    tempZarrPath = internal.TMP_DIR / (initTime.strftime(internal.ZARR_FMTSTR.split("/")[-1]) \
-                                       + ".zarr")
+    initTime = dt.datetime.fromtimestamp(
+        int(ds.coords["init_time"].values[0]) / 1e9, tz=dt.timezone.utc,
+    )
+    tempZarrPath = internal.TMP_DIR / (
+        initTime.strftime(internal.ZARR_FMTSTR.split("/")[-1]) + ".zarr"
+    )
     if tempZarrPath.exists() and tempZarrPath.is_dir():
         shutil.rmtree(tempZarrPath.as_posix())
-    dataVar: str = list(ds.data_vars.keys())[0]
+    dataVar: str = next(iter(ds.data_vars.keys()))
     ds.to_zarr(
         store=tempZarrPath.as_posix(),
         encoding={
@@ -331,20 +368,20 @@ def _dataQualityFilter(ds: xr.Dataset) -> bool:
         return False
 
     # Carry out a basic data quality check
-    if "variable" not in dict(ds.coords.items()).keys():
+    if "variable" not in dict(ds.coords.items()):
         log.warn(
             event="Dataset for is missing variable coord",
-            initTime=str(ds.coords['init_time'].values[0])[:16],
-            coords=dict(ds.coords.items())
+            initTime=str(ds.coords["init_time"].values[0])[:16],
+            coords=dict(ds.coords.items()),
         )
         return False
 
-    for var in ds.coords['variable'].values:
+    for var in ds.coords["variable"].values:
         if True in ds.sel(variable=var).isnull():
             log.warn(
                 event=f"Dataset has NaNs in variable {var}",
-                initTime=str(ds.coords['init_time'].values[0])[:16],
-                variable=var
+                initTime=str(ds.coords["init_time"].values[0])[:16],
+                variable=var,
             )
 
     return True

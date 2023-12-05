@@ -32,7 +32,7 @@ class TestLocalFSClient(unittest.TestCase):
         shutil.rmtree(ZARR.as_posix())
 
     def test_exists(self):
-        initTime = dt.datetime(2021, 1, 1, 0, 0, 0)
+        initTime = dt.datetime(2021, 1, 1, 0, 0, 0, tzinfo=dt.timezone.utc)
 
         # Create a file in the raw directory
         path = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_file.grib"
@@ -50,7 +50,7 @@ class TestLocalFSClient(unittest.TestCase):
 
         # Check that the function returns false when the file does not exist
         exists = self.testClient.exists(
-            dst=RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "not_exists.grib"
+            dst=RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "not_exists.grib",
         )
 
         # Assert that the file does not exist
@@ -59,17 +59,17 @@ class TestLocalFSClient(unittest.TestCase):
         # Create a zarr file in the zarr directory
         xr.Dataset(
             data_vars={
-                'UKV': (
-                    ('init_time', 'variable', 'step', 'x', 'y'),
+                "UKV": (
+                    ("init_time", "variable", "step", "x", "y"),
                     np.random.rand(1, 2, 12, 100, 100)),
             },
             coords={
-                'init_time': [dt.datetime(2023, 1, 1)],
-                'variable': ['t', 'r'],
-                'step': range(12),
-                'x': range(100),
-                'y': range(100),
-            }
+                "init_time": [dt.datetime(2023, 1, 1, tzinfo=dt.timezone.utc)],
+                "variable": ["t", "r"],
+                "step": range(12),
+                "x": range(100),
+                "y": range(100),
+            },
         ).to_zarr(store=ZARR / "test_file.zarr")
 
         # Check if the file exists using the function
@@ -79,11 +79,11 @@ class TestLocalFSClient(unittest.TestCase):
         self.assertTrue(exists)
 
     def test_store(self):
-        initTime = dt.datetime(2021, 1, 2, 0, 0, 0)
+        initTime = dt.datetime(2021, 1, 2, 0, 0, 0, tzinfo=dt.timezone.utc)
         dst = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_store.grib"
         src = internal.TMP_DIR / f"nwpc-{uuid.uuid4()}"
         # Create a temporary file to simulate a file to be stored
-        src.write_bytes(bytes("test_file_contents", 'utf-8'))
+        src.write_bytes(bytes("test_file_contents", "utf-8"))
 
         # Store the file using the function
         out = self.testClient.store(src=src, dst=dst)
@@ -97,9 +97,9 @@ class TestLocalFSClient(unittest.TestCase):
 
     def test_listInitTimes(self):
         expectedTimes = [
-            dt.datetime(2023, 1, 1, 3, tzinfo=None),
-            dt.datetime(2023, 1, 2, 6, tzinfo=None),
-            dt.datetime(2023, 1, 3, 9, tzinfo=None)
+            dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc),
+            dt.datetime(2023, 1, 2, 6, tzinfo=dt.timezone.utc),
+            dt.datetime(2023, 1, 3, 9, tzinfo=dt.timezone.utc),
         ]
 
         # Create some files in the raw directory
@@ -120,29 +120,29 @@ class TestLocalFSClient(unittest.TestCase):
 
     def test_copyITFolderToTemp(self):
         # Make some files in the raw directory
-        initTime = dt.datetime(2023, 1, 1, 3)
+        initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc)
         files = [
             RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp1.grib",
             RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp2.grib",
-            RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp3.grib"
+            RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp3.grib",
         ]
         for f in files:
             f.parent.mkdir(parents=True, exist_ok=True)
-            f.write_bytes(bytes("test_file_contents", 'utf-8'))
+            f.write_bytes(bytes("test_file_contents", "utf-8"))
 
         # Test the function
         paths = self.testClient.copyITFolderToTemp(prefix=RAW, it=initTime)
 
         # Assert the contents of the temp files is correct
         for _i, path in enumerate(paths):
-            self.assertEqual(path.read_bytes(), bytes("test_file_contents", 'utf-8'))
+            self.assertEqual(path.read_bytes(), bytes("test_file_contents", "utf-8"))
 
         # Remove the files
         shutil.rmtree(files[0].parent)
 
     def test_delete(self):
         # Create a file in the raw directory
-        initTime = dt.datetime(2023, 1, 1, 3)
+        initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc)
         path = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_delete.grib"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch()
@@ -157,18 +157,18 @@ class TestLocalFSClient(unittest.TestCase):
         path = ZARR / "test_delete.zarr"
         _ = xr.Dataset(
             data_vars={
-                'UKV': (
-                    ('init_time', 'variable', 'step', 'x', 'y'),
-                    np.random.rand(1, 2, 12, 100, 100)
+                "UKV": (
+                    ("init_time", "variable", "step", "x", "y"),
+                    np.random.rand(1, 2, 12, 100, 100),
                 ),
             },
             coords={
-                'init_time': [dt.datetime(2023, 1, 1)],
-                'variable': ['t', 'r'],
-                'step': range(12),
-                'x': range(100),
-                'y': range(100),
-            }
+                "init_time": [dt.datetime(2023, 1, 1, tzinfo=dt.timezone.utc)],
+                "variable": ["t", "r"],
+                "step": range(12),
+                "x": range(100),
+                "y": range(100),
+            },
         ).to_zarr(store=path)
 
         # Delete the folder using the function
