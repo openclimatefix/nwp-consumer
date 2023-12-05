@@ -15,9 +15,13 @@ RAW = pathlib.Path("raw")
 
 
 class TestHuggingFaceClient(unittest.TestCase):
+    repoID: str
+    mock_fs: MagicMock
+    client: internal.StorageInterface
+
     @classmethod
     @patch("huggingface_hub.HfFileSystem")
-    def setUpClass(cls, mock_patch) -> None:
+    def setUpClass(cls, mock_patch: MagicMock) -> None:
         cls.repoID = f"{USER}/repo-{uuid.uuid4().hex[:6]}-{int(time.time() * 10e3)}"
 
         cls.mock_fs = MagicMock()
@@ -64,7 +68,8 @@ class TestHuggingFaceClient(unittest.TestCase):
 
         self.assertEqual(len(initTimes), 1)
         self.assertEqual(
-            initTimes[0], dt.datetime.now(tz=dt.timezone.utc).replace(second=0, microsecond=0),
+            initTimes[0],
+            dt.datetime.now(tz=dt.timezone.utc).replace(second=0, microsecond=0),
         )
         self.assertTrue(
             self.mock_fs.glob.called_with(
