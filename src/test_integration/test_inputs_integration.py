@@ -17,7 +17,7 @@ storageClient = outputs.localfs.Client()
 
 
 class TestClient_FetchRawFileBytes(unittest.TestCase):
-    def test_downloadsRawGribFileFromCEDA(self):
+    def test_downloadsRawGribFileFromCEDA(self) -> None:
         c = config.CEDAEnv()
         cedaClient = inputs.ceda.Client(
             ftpUsername=c.CEDA_FTP_USER,
@@ -29,7 +29,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
 
         self.assertGreater(tmpPath.stat().st_size, 100000000)
 
-    def test_downloadsRawGribFileFromMetOffice(self):
+    def test_downloadsRawGribFileFromMetOffice(self) -> None:
         metOfficeInitTime: dt.datetime = dt.datetime.now(dt.timezone.utc).replace(
             hour=0, minute=0, second=0, microsecond=0,
         )
@@ -47,7 +47,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         _, tmpPath = metOfficeClient.downloadToTemp(fi=fileInfo)
         self.assertGreater(tmpPath.stat().st_size, 4000000)
 
-    def test_downloadsRawGribFileFromECMWFMARS(self):
+    def test_downloadsRawGribFileFromECMWFMARS(self) -> None:
         ecmwfMarsInitTime: dt.datetime = dt.datetime(
             year=2022, month=1, day=1, hour=0, minute=0, tzinfo=dt.timezone.utc,
         )
@@ -64,7 +64,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         _, tmpPath = ecmwfMarsClient.downloadToTemp(fi=fileInfo)
         self.assertGreater(tmpPath.stat().st_size, 4000000)
 
-    def test_downloadsRawGribFileFromICON(self):
+    def test_downloadsRawGribFileFromICON(self) -> None:
         iconInitTime: dt.datetime = dt.datetime.now(tz=dt.timezone.utc).replace(
             hour=0, minute=0, second=0, microsecond=0,
         )
@@ -95,7 +95,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
 
 
 class TestListRawFilesForInitTime(unittest.TestCase):
-    def test_getsFileInfosFromCEDA(self):
+    def test_getsFileInfosFromCEDA(self) -> None:
         cedaInitTime: dt.datetime = dt.datetime(
             year=2022, month=1, day=1, hour=0, minute=0, tzinfo=dt.timezone.utc,
         )
@@ -107,7 +107,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         fileInfos = cedaClient.listRawFilesForInitTime(it=cedaInitTime)
         self.assertTrue(len(fileInfos) > 0)
 
-    def test_getsFileInfosFromMetOffice(self):
+    def test_getsFileInfosFromMetOffice(self) -> None:
         metOfficeInitTime: dt.datetime = dt.datetime.now(tz=dt.timezone.utc).replace(
             hour=0, minute=0, second=0, microsecond=0,
         )
@@ -120,7 +120,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         fileInfos = metOfficeClient.listRawFilesForInitTime(it=metOfficeInitTime)
         self.assertTrue(len(fileInfos) > 0)
 
-    def test_getsFileInfosFromECMWFMARS(self):
+    def test_getsFileInfosFromECMWFMARS(self) -> None:
         ecmwfMarsInitTime: dt.datetime = dt.datetime(
             year=2022, month=1, day=1, hour=0, minute=0, tzinfo=dt.timezone.utc,
         )
@@ -132,7 +132,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         fileInfos = ecmwfMarsClient.listRawFilesForInitTime(it=ecmwfMarsInitTime)
         self.assertTrue(len(fileInfos) > 0)
 
-    def test_getsFileInfosFromICON(self):
+    def test_getsFileInfosFromICON(self) -> None:
         iconInitTime: dt.datetime = dt.datetime.now(tz=dt.timezone.utc).replace(
             hour=0, minute=0, second=0, microsecond=0,
         )

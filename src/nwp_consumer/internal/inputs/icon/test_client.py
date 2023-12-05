@@ -12,7 +12,7 @@ testClient = Client(model="global")
 
 
 class TestClient(unittest.TestCase):
-    def test_mapTemp(self):
+    def test_mapTemp(self) -> None:
         # Test with global file
         testFilePath: pathlib.Path = (
             pathlib.Path(__file__).parent / "test_icon_global_001_CLCL.grib2"
@@ -51,7 +51,7 @@ class TestClient(unittest.TestCase):
 class TestParseIconFilename(unittest.TestCase):
     baseurl = "https://opendata.dwd.de/weather/nwp/icon/grib"
 
-    def test_parsesSingleLevel(self):
+    def test_parsesSingleLevel(self) -> None:
         filename: str = "icon_global_icosahedral_single-level_2020090100_000_T_HUM.grib2.bz2"
 
         out: IconFileInfo | None = _parseIconFilename(
@@ -62,7 +62,7 @@ class TestParseIconFilename(unittest.TestCase):
         self.assertEqual(out.filename(), filename.removesuffix(".bz2"))
         self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
 
-    def test_parsesTimeInvariant(self):
+    def test_parsesTimeInvariant(self) -> None:
         filename: str = "icon_global_icosahedral_time-invariant_2020090100_CLAT.grib2.bz2"
 
         out: IconFileInfo | None = _parseIconFilename(
@@ -73,7 +73,7 @@ class TestParseIconFilename(unittest.TestCase):
         self.assertEqual(out.filename(), filename.removesuffix(".bz2"))
         self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
 
-    def test_parsesModelLevel(self):
+    def test_parsesModelLevel(self) -> None:
         filename: str = "icon_global_icosahedral_model-level_2020090100_048_32_CLCL.grib2.bz2"
 
         out: IconFileInfo | None = _parseIconFilename(
@@ -92,7 +92,7 @@ class TestParseIconFilename(unittest.TestCase):
         )
         self.assertIsNone(out)
 
-    def test_parsesPressureLevel(self):
+    def test_parsesPressureLevel(self) -> None:
         filename: str = "icon_global_icosahedral_pressure-level_2020090100_048_1000_T.grib2.bz2"
 
         out: IconFileInfo | None = _parseIconFilename(

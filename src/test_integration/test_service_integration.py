@@ -37,7 +37,7 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
             zarrdir=self.zarrdir,
         )
 
-    def test_downloadAndConvertDataset(self):
+    def test_downloadAndConvertDataset(self) -> None:
         initTime: dt.date = dt.datetime.now(tz=dt.timezone.utc).date()
 
         out = self.testService.DownloadRawDataset(start=initTime, end=initTime)
@@ -87,7 +87,7 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
             zarrdir=self.zarrdir,
         )
 
-    def test_downloadAndConvertDataset(self):
+    def test_downloadAndConvertDataset(self) -> None:
         initTime: dt.date = dt.date(year=2022, month=1, day=1)
 
         out = self.testService.DownloadRawDataset(start=initTime, end=initTime)
@@ -114,7 +114,7 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
 
 
 class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         storageClient = outputs.localfs.Client()
 
         # Test downloading the basic parameter set for the UK model
@@ -134,7 +134,7 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
             zarrdir=self.zarrdir,
         )
 
-    def test_downloadAndConvertDataset(self):
+    def test_downloadAndConvertDataset(self) -> None:
         initTime: dt.date = dt.date(year=2022, month=1, day=1)
 
         out = self.testService.DownloadRawDataset(start=initTime, end=initTime)
@@ -182,7 +182,7 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
             zarrdir=self.zarrdir,
         )
 
-    def test_downloadAndConvertDataset(self):
+    def test_downloadAndConvertDataset(self) -> None:
         initTime: dt.date = dt.datetime.now(tz=dt.timezone.utc).date()
 
         out = self.testService.DownloadRawDataset(start=initTime, end=initTime)

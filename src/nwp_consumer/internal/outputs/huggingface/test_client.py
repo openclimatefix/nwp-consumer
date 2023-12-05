@@ -17,7 +17,7 @@ RAW = pathlib.Path("raw")
 class TestHuggingFaceClient(unittest.TestCase):
     @classmethod
     @patch("huggingface_hub.HfFileSystem")
-    def setUpClass(cls, mock_patch):
+    def setUpClass(cls, mock_patch) -> None:
         cls.repoID = f"{USER}/repo-{uuid.uuid4().hex[:6]}-{int(time.time() * 10e3)}"
 
         cls.mock_fs = MagicMock()
@@ -36,7 +36,7 @@ class TestHuggingFaceClient(unittest.TestCase):
             repoID=cls.repoID,
         )
 
-    def test_store(self):
+    def test_store(self) -> None:
         initTime = dt.datetime.now(tz=dt.timezone.utc)
         filename = inspect.stack()[0][3] + ".grib"
         dst = pathlib.Path(f"{initTime:{internal.IT_FOLDER_FMTSTR}}/{filename}")
@@ -50,7 +50,7 @@ class TestHuggingFaceClient(unittest.TestCase):
         self.assertTrue(self.mock_fs.put.called_with(src, dst))
         self.assertTrue(self.mock_fs.du.called_with(dst))
 
-    def test_exists(self):
+    def test_exists(self) -> None:
         initTime = dt.datetime.now(tz=dt.timezone.utc)
         filename = inspect.stack()[0][3] + ".grib"
         dst = pathlib.Path(f"{initTime:{internal.IT_FOLDER_FMTSTR}}/{filename}")
@@ -59,7 +59,7 @@ class TestHuggingFaceClient(unittest.TestCase):
         self.assertEqual(out, True)
         self.assertTrue(self.mock_fs.exists.called_with(dst))
 
-    def test_listInitTimes(self):
+    def test_listInitTimes(self) -> None:
         initTimes = self.client.listInitTimes(prefix=RAW)
 
         self.assertEqual(len(initTimes), 1)
@@ -72,7 +72,7 @@ class TestHuggingFaceClient(unittest.TestCase):
             ),
         )
 
-    def test_delete(self):
+    def test_delete(self) -> None:
         initTime = dt.datetime.now(tz=dt.timezone.utc)
         filename = inspect.stack()[0][3] + ".grib"
         dst = pathlib.Path(f"{initTime:{internal.IT_FOLDER_FMTSTR}}/{filename}")

@@ -121,7 +121,7 @@ def run(arguments: dict) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
     if arguments["--to"] == "today" or arguments["--to"] is None:
         arguments["--to"] = dt.datetime.now(tz=dt.timezone.utc).strftime("%Y-%m-%d")
     startDate: dt.date = (
-        dt.datetime.strptime(arguments["--from"], "%Y-%m-%d").replace(tzinfo=dt.datetime.utc).date()
+        dt.datetime.strptime(arguments["--from"], "%Y-%m-%d").replace(tzinfo=dt.timezone.utc).date()
     )
     endDate: dt.date = (
         dt.datetime.strptime(arguments["--to"], "%Y-%m-%d").replace(tzinfo=dt.timezone.utc).date()

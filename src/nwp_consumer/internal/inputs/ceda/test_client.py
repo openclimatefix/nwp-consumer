@@ -21,19 +21,19 @@ testClient = Client(ftpPassword="", ftpUsername="")
 
 class TestClient_ListRawFilesForInitTime(unittest.TestCase):
 
-    def test_listsFilesCorrectly(self):
+    def test_listsFilesCorrectly(self) -> None:
         pass
 
 
 class TestClient_FetchRawFileBytes(unittest.TestCase):
 
-    def test_fetchesFileCorrectly(self):
+    def test_fetchesFileCorrectly(self) -> None:
         pass
 
 
 class TestClient_MapTemp(unittest.TestCase):
 
-    def test_convertsWholesale1FileCorrectly(self):
+    def test_convertsWholesale1FileCorrectly(self) -> None:
         wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wholesale1.grib"
 
         out = testClient.mapTemp(p=wholesalePath)
@@ -51,7 +51,7 @@ class TestClient_MapTemp(unittest.TestCase):
             sorted(out.coords["variable"].values),
         )
 
-    def test_convertsWholesale2FileCorrectly(self):
+    def test_convertsWholesale2FileCorrectly(self) -> None:
         wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wholesale2.grib"
 
         out = testClient.mapTemp(p=wholesalePath)
@@ -73,7 +73,7 @@ class TestClient_MapTemp(unittest.TestCase):
 
 class TestIsWantedFile(unittest.TestCase):
 
-    def test_correctlyFiltersCEDAFileInfos(self):
+    def test_correctlyFiltersCEDAFileInfos(self) -> None:
         initTime: dt.datetime = dt.datetime(
             year=2021, month=1, day=1, hour=0, minute=0, tzinfo=dt.timezone.utc,
         )
@@ -103,7 +103,7 @@ class TestIsWantedFile(unittest.TestCase):
 
 class TestReshapeTo2DGrid(unittest.TestCase):
 
-    def test_correctlyReshapesData(self):
+    def test_correctlyReshapesData(self) -> None:
         dataset = xr.Dataset(
             data_vars={
                 "wdir10": (("step", "values"), np.random.rand(4, 385792)),
@@ -121,7 +121,7 @@ class TestReshapeTo2DGrid(unittest.TestCase):
         with self.assertRaises(KeyError):
             _ = reshapedDataset["values"]
 
-    def test_raisesErrorForIncorrectNumberOfValues(self):
+    def test_raisesErrorForIncorrectNumberOfValues(self) -> None:
         ds1 = xr.Dataset(
             data_vars={
                 "wdir10": (("step", "values"), [[1, 2, 3, 4], [5, 6, 7, 8]]),

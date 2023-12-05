@@ -19,7 +19,7 @@ testMARSClient = Client(
 class TestECMWFMARSClient(unittest.TestCase):
     """Tests for the ECMWFMARSClient method."""
 
-    def test_init(self):
+    def test_init(self) -> None:
         with self.assertRaises(KeyError):
             _ = Client(area="not a valid area", hours="48")
         with self.assertRaises(KeyError):
@@ -27,7 +27,7 @@ class TestECMWFMARSClient(unittest.TestCase):
         with self.assertRaises(KeyError):
             _ = Client(area="uk", hours="100")
 
-    def test_mapTemp(self):
+    def test_mapTemp(self) -> None:
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_2params.grib"
 
         out = testMARSClient.mapTemp(p=testFilePath)

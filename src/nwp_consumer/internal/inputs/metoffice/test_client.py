@@ -21,7 +21,7 @@ testClient = Client(
 class TestClient_Init(unittest.TestCase):
     """Tests for the MetOfficeClient.__init__ method."""
 
-    def test_errorsWhenVariablesAreNotSet(self):
+    def test_errorsWhenVariablesAreNotSet(self) -> None:
         with self.assertRaises(KeyError):
             _ = Client(orderID="unset", clientID="", clientSecret="test_client_secret")
 
@@ -29,7 +29,7 @@ class TestClient_Init(unittest.TestCase):
 class TestClient_ConvertRawFileToDataset(unittest.TestCase):
     """Tests for the MetOfficeClient.convertRawFileToDataset method."""
 
-    def test_convertsCorrectly(self):
+    def test_convertsCorrectly(self) -> None:
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_knownparam.grib"
 
         out = testClient.mapTemp(p=testFilePath)
@@ -44,7 +44,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
         # Ensure the correct variables are in the variable dimension
         self.assertListEqual(["dswrf"], sorted(out.coords["variable"].values))
 
-    def test_renamesVariables(self):
+    def test_renamesVariables(self) -> None:
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wrongnameparam.grib"
 
         out = testClient.mapTemp(p=testFilePath)
@@ -59,7 +59,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
         # Ensure the correct variables are in the variable dimension
         self.assertListEqual(["prate"], sorted(out.coords["variable"].values))
 
-    def test_handlesUnknownsInMetOfficeData(self):
+    def test_handlesUnknownsInMetOfficeData(self) -> None:
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknownparam1.grib"
 
         out = testClient.mapTemp(p=testFilePath)
@@ -97,7 +97,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
 class Test_IsWantedFile(unittest.TestCase):
     """Tests for the _isWantedFile method."""
 
-    def test_correctlyFiltersMetOfficeFileInfos(self):
+    def test_correctlyFiltersMetOfficeFileInfos(self) -> None:
         initTime: dt.datetime = dt.datetime(
             year=2023,
             month=3,

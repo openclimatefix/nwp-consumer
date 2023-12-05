@@ -27,7 +27,7 @@ class TestS3Client(unittest.TestCase):
     server = None
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         # Start a local S3 server
         cls.server = ThreadedMotoServer()
         cls.server.start()
@@ -56,7 +56,7 @@ class TestS3Client(unittest.TestCase):
         )
 
     @classmethod
-    def tearDownClass(cls):
+    def tearDownClass(cls) -> None:
         # Delete all objects in bucket
         response = cls.testS3.list_objects_v2(
             Bucket=BUCKET,
@@ -69,7 +69,7 @@ class TestS3Client(unittest.TestCase):
                 )
         cls.server.stop()
 
-    def test_exists(self):
+    def test_exists(self) -> None:
         # Create a mock file in the raw directory
         initTime = dt.datetime(2023, 1, 1, tzinfo=dt.timezone.utc)
         fileName = inspect.stack()[0][3] + ".grib"
@@ -96,7 +96,7 @@ class TestS3Client(unittest.TestCase):
             Key=filePath.as_posix(),
         )
 
-    def test_store(self):
+    def test_store(self) -> None:
         initTime = dt.datetime(2023, 1, 2, tzinfo=dt.timezone.utc)
         fileName = inspect.stack()[0][3] + ".grib"
         dst = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / fileName
@@ -118,7 +118,7 @@ class TestS3Client(unittest.TestCase):
         self.testS3.delete_object(Bucket=BUCKET, Key=dst.as_posix())
         src.unlink(missing_ok=True)
 
-    def test_listInitTimes(self):
+    def test_listInitTimes(self) -> None:
         # Create mock folders/files in the raw directory
         self.testS3.put_object(
             Bucket=BUCKET, Key=f"{RAW}/2023/01/03/0000/test_raw_file1.grib", Body=b"test_data",
@@ -147,7 +147,7 @@ class TestS3Client(unittest.TestCase):
             Key=f"{RAW}/2023/01/04/0300/test_raw_file2.grib",
         )
 
-    def test_copyITFolderToTemp(self):
+    def test_copyITFolderToTemp(self) -> None:
         # Make some files in the raw directory
         initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc)
         files = [
@@ -197,7 +197,7 @@ class TestS3Client(unittest.TestCase):
             self.testS3.delete_object(Bucket=BUCKET, Key=f.as_posix())
 
     @unittest.skip("Broken on github ci")
-    def test_delete(self):
+    def test_delete(self) -> None:
         # Create a file in the raw directory
         initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc)
         path = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_delete.grib"

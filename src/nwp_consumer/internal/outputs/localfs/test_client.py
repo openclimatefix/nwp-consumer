@@ -30,7 +30,7 @@ class TestLocalFSClient(unittest.TestCase):
         shutil.rmtree(RAW.as_posix())
         shutil.rmtree(ZARR.as_posix())
 
-    def test_exists(self):
+    def test_exists(self) -> None:
         initTime = dt.datetime(2021, 1, 1, 0, 0, 0, tzinfo=dt.timezone.utc)
 
         # Create a file in the raw directory
@@ -80,7 +80,7 @@ class TestLocalFSClient(unittest.TestCase):
         # Assert that the file exists
         self.assertTrue(exists)
 
-    def test_store(self):
+    def test_store(self) -> None:
         initTime = dt.datetime(2021, 1, 2, 0, 0, 0, tzinfo=dt.timezone.utc)
         dst = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_store.grib"
         src = internal.TMP_DIR / f"nwpc-{uuid.uuid4()}"
@@ -97,7 +97,7 @@ class TestLocalFSClient(unittest.TestCase):
         # Assert that the temporary file has been deleted
         self.assertFalse(src.exists())
 
-    def test_listInitTimes(self):
+    def test_listInitTimes(self) -> None:
         expectedTimes = [
             dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc),
             dt.datetime(2023, 1, 2, 6, tzinfo=dt.timezone.utc),
@@ -120,7 +120,7 @@ class TestLocalFSClient(unittest.TestCase):
         for d in dirs:
             shutil.rmtree(d)
 
-    def test_copyITFolderToTemp(self):
+    def test_copyITFolderToTemp(self) -> None:
         # Make some files in the raw directory
         initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc)
         files = [
@@ -142,7 +142,7 @@ class TestLocalFSClient(unittest.TestCase):
         # Remove the files
         shutil.rmtree(files[0].parent)
 
-    def test_delete(self):
+    def test_delete(self) -> None:
         # Create a file in the raw directory
         initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc)
         path = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_delete.grib"
