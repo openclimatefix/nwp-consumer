@@ -4,6 +4,7 @@ import datetime as dt
 import itertools
 import pathlib
 import shutil
+from typing import TYPE_CHECKING
 
 import dask.bag
 import pandas as pd
@@ -12,6 +13,9 @@ import structlog
 import xarray as xr
 import zarr
 from ocf_blosc2 import Blosc2
+
+if TYPE_CHECKING:
+    import numpy as np
 
 from nwp_consumer import internal
 
@@ -316,10 +320,8 @@ class NWPConsumerService:
 
 def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
     # Save the dataset to a temp zarr file
-    initTime = dt.datetime.fromtimestamp(
-        int(ds.coords["init_time"].values[0]) / 1e9,
-        tz=dt.timezone.utc,
-    )
+    dt64: np.datetime64 = ds.coords["init_time"].values[0]
+    initTime: dt.datetime = dt.datetime.fromtimestamp(dt64.astype(int) / 1e9, tz=dt.timezone.utc)
     tempZarrPath = internal.TMP_DIR / (
         initTime.strftime(internal.ZARR_FMTSTR.split("/")[-1]) + ".zarr.zip"
     )
@@ -341,9 +343,8 @@ def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
 
 def _saveAsTempRegularZarr(ds: xr.Dataset) -> pathlib.Path:
     # Save the dataset to a temp zarr file
-    initTime = dt.datetime.fromtimestamp(
-        int(ds.coords["init_time"].values[0]) / 1e9, tz=dt.timezone.utc,
-    )
+    dt64: np.datetime64 = ds.coords["init_time"].values[0]
+    initTime: dt.datetime = dt.datetime.fromtimestamp(dt64.astype(int) / 1e9, tz=dt.timezone.utc)
     tempZarrPath = internal.TMP_DIR / (
         initTime.strftime(internal.ZARR_FMTSTR.split("/")[-1]) + ".zarr"
     )

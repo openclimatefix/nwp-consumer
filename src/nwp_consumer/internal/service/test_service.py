@@ -4,6 +4,7 @@ import shutil
 import unittest
 
 import numpy as np
+import structlog
 import xarray as xr
 
 from .. import FileInfoModel
@@ -17,6 +18,8 @@ INIT_TIME_FILES = ["dswrf.grib", "prate.grib"]
 testInitTimes = [
     dt.datetime(2021, 1, d, h, 0, 0, tzinfo=dt.timezone.utc) for h in INIT_HOURS for d in DAYS
 ]
+
+log = structlog.getLogger()
 
 
 class DummyStorer(internal.StorageInterface):
@@ -33,10 +36,12 @@ class DummyStorer(internal.StorageInterface):
                 src.unlink(missing_ok=True)
         return dst
 
-    def listInitTimes(self, _: pathlib.Path) -> list[dt.datetime]:
+    def listInitTimes(self, prefix: pathlib.Path) -> list[dt.datetime]:
+        log.info("listInitTimes", prefix=prefix)
         return testInitTimes
 
-    def copyITFolderToTemp(self, *, _: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
+    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
+        log.info("copyITFolderToTemp", prefix=prefix, it=it)
         return [pathlib.Path(f"{it:%Y%m%d%H%M}/{f}.grib") for f in INIT_TIME_FILES]
 
     def delete(self, *, p: pathlib.Path) -> None:
@@ -82,7 +87,7 @@ class DummyFetcher(internal.FetcherInterface):
                 ),
             },
             coords={
-                "init_time": [initTime],
+                "init_time": [np.datetime64(initTime)],
                 "variable": [p.name],
                 "step": range(12),
                 "x": range(100),

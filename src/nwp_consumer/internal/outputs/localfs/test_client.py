@@ -57,7 +57,7 @@ class TestLocalFSClient(unittest.TestCase):
         self.assertFalse(exists)
 
         # Create a zarr file in the zarr directory
-        xr.Dataset(
+        testDS = xr.Dataset(
             data_vars={
                 "UKV": (
                     ("init_time", "variable", "step", "x", "y"),
@@ -70,7 +70,9 @@ class TestLocalFSClient(unittest.TestCase):
                 "x": range(100),
                 "y": range(100),
             },
-        ).to_zarr(store=ZARR / "test_file.zarr")
+        )
+
+        testDS.to_zarr(store=ZARR / "test_file.zarr", compute=True)
 
         # Check if the file exists using the function
         exists = self.testClient.exists(dst=ZARR / "test_file.zarr")
@@ -155,7 +157,7 @@ class TestLocalFSClient(unittest.TestCase):
 
         # Create a zarr folder in the zarr directory
         path = ZARR / "test_delete.zarr"
-        _ = xr.Dataset(
+        testDS = xr.Dataset(
             data_vars={
                 "UKV": (
                     ("init_time", "variable", "step", "x", "y"),
@@ -169,7 +171,9 @@ class TestLocalFSClient(unittest.TestCase):
                 "x": range(100),
                 "y": range(100),
             },
-        ).to_zarr(store=path)
+        )
+
+        testDS.to_zarr(store=path, compute=True)
 
         # Delete the folder using the function
         self.testClient.delete(p=path)
