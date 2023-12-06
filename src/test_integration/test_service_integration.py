@@ -38,7 +38,7 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
         )
 
     def test_downloadAndConvertDataset(self) -> None:
-        initTime: dt.date = dt.datetime.now(tz=dt.timezone.utc).date()
+        initTime: dt.date = dt.datetime.now(tz=dt.UTC).date()
 
         out = self.testService.DownloadRawDataset(start=initTime, end=initTime)
         self.assertGreater(len(out), 0)
@@ -120,7 +120,7 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
         # Test downloading the basic parameter set for the UK model
         ecmwfMarsClient = inputs.ecmwf.mars.Client(
             area="uk",
-            hours="4",
+            hours=4,
             param_group="basic",
         )
 
@@ -184,7 +184,7 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
         )
 
     def test_downloadAndConvertDataset(self) -> None:
-        initTime: dt.date = dt.datetime.now(tz=dt.timezone.utc).date()
+        initTime: dt.date = dt.datetime.now(tz=dt.UTC).date()
 
         out = self.testService.DownloadRawDataset(start=initTime, end=initTime)
         #  self.assertGreater(len(out), 0)
@@ -204,7 +204,7 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
             )
             # Ensure the init time is correct
             dt64: np.datetime64 = ds.coords["init_time"].values[0]
-            it: dt.datetime = dt.datetime.fromtimestamp(dt64.astype(int) / 1e9, tz=dt.timezone.utc)
+            it: dt.datetime = dt.datetime.fromtimestamp(dt64.astype(int) / 1e9, tz=dt.UTC)
             self.assertEqual(initTime, it.date())
 
         shutil.rmtree(self.rawdir)

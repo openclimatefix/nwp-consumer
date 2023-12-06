@@ -1,9 +1,10 @@
 """Tests for the ecmwf module."""
 
+import datetime as dt
 import pathlib
 import unittest.mock
 
-from .mars import Client
+from .mars import Client, PARAMETER_ECMWFCODE_MAP
 
 # --------- Test setup --------- #
 
@@ -43,6 +44,56 @@ class TestECMWFMARSClient(unittest.TestCase):
         # Ensure the correct variables are in the variable dimension
         self.assertListEqual(["prate", "sde"], sorted(out.coords["variable"].values))
 
+    def test_buildMarsRequest(self) -> None:
+        testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_2params.grib"
+
+
+        # Test that the request is build correctly for the default client
+        testDefaultClient = Client()
+        out = testDefaultClient._buildMarsRequest(
+            list_only=True,
+            target=testFilePath.as_posix(),
+            it=dt.datetime(2020, 1, 1, tzinfo=dt.UTC),
+        )
+
+        out.replace(" ", "")
+        lines = out.split("\n")
+        self.assertEqual(lines[0], "list,")
+
+        d: dict = {}
+        for line in lines[1:]:
+            key, value = line.split("=")
+            d[key.strip()] = value.strip().replace(",", "")
+
+        self.assertEqual(d["param"], "/".join(PARAMETER_ECMWFCODE_MAP.keys()))
+        self.assertEqual(d["date"], "20200101")
+
+        # Test that the request is build correctly with the basic parameters
+
+        testBasicClient = Client(
+            area="uk",
+            hours=4,
+            param_group="basic",
+        )
+
+        out = testBasicClient._buildMarsRequest(
+            list_only=False,
+            target=testFilePath.as_posix(),
+            it=dt.datetime(2020, 1, 1, tzinfo=dt.UTC),
+        )
+
+        out.replace(" ", "")
+        lines = out.split("\n")
+        self.assertEqual(lines[0], "retrieve,")
+
+        d2: dict = {}
+        for line in lines[1:]:
+            key, value = line.split("=")
+            d2[key.strip()] = value.strip().replace(",", "")
+
+        self.assertEqual(d2["param"], "167.128/169.128")
+        self.assertEqual(d2["date"], "20200101")
+
+
 
 # --------- Static methods --------- #
-
