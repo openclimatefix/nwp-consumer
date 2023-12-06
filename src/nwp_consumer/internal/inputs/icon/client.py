@@ -44,8 +44,10 @@ class Client(internal.FetcherInterface):
     parameters: list[str]  # The parameters to fetch
     conform: bool  # Whether to rename parameters to OCF names and clear unwanted coordinates
 
-    def __init__(self, model: str, param_group: str | None = "default") -> "Client":
-        """Create a new client.
+    def __init__(self, model: str, hours: int = 48, param_group: str = "default") -> None:
+        """Create a new Icon Client.
+
+        Exposes a client for ICON data from DWD that conforms to the FetcherInterface.
 
         Args:
             model: The model to fetch data for. Valid models are "europe" and "global".
@@ -53,7 +55,6 @@ class Client(internal.FetcherInterface):
                 Valid groups are "default", "full", and "basic".
         """
         self.baseurl = "https://opendata.dwd.de/weather/nwp"
-        self.model = model
 
         match model:
             case "europe":
@@ -69,8 +70,11 @@ class Client(internal.FetcherInterface):
             case ("default", _):
                 self.parameters = list(PARAMETER_RENAME_MAP.keys())
                 self.conform = True
-            case ("basic", _):
-                self.parameters = ["asob_s", "clcl", "clon", "clat"]
+            case ("basic", "europe"):
+                self.parameters = ["t_2m", "asob_s"]
+                self.conform = True
+            case ("basic", "global"):
+                self.parameters = ["t_2m", "asob_s", "clat", "clon"]
                 self.conform = True
             case ("full", "europe"):
                 self.parameters = EU_SL_VARS + EU_ML_VARS
@@ -83,6 +87,9 @@ class Client(internal.FetcherInterface):
                     f"unknown parameter group {param_group}."
                     "Valid groups are 'default', 'full', 'basic'",
                 )
+
+        self.model = model
+        self.hours = hours
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
         # ICON data is only available for today's date. If data hasn't been uploaded for that init
@@ -136,7 +143,7 @@ class Client(internal.FetcherInterface):
                     match_pl=not self.conform,
                 )
                 # Ignore the file if it is not for today's date or has a step > 48 (when conforming)
-                if fi is None or fi.it() != it or (fi.step > 48 and self.conform):
+                if fi is None or fi.it() != it or (fi.step > self.hours and self.conform):
                     continue
 
                 # Add the file to the list
@@ -309,10 +316,10 @@ class Client(internal.FetcherInterface):
 def _parseIconFilename(
     name: str,
     baseurl: str,
-    match_sl: bool | None = True,
-    match_ti: bool | None = True,
-    match_ml: bool | None = False,
-    match_pl: bool | None = False,
+    match_sl: bool = True,
+    match_ti: bool = True,
+    match_ml: bool = False,
+    match_pl: bool = False,
 ) -> IconFileInfo | None:
     """Parse a string of HTML into an IconFileInfo object, if it contains one.
 

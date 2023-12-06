@@ -93,11 +93,13 @@ class Client(internal.FetcherInterface):
 
     def __init__(
         self,
-        area: str | None = "uk",
-        hours: str | None = "48",
-        param_group: str | None = "default",
-    ) -> "Client":
-        """Create a new Client.
+        area: str = "uk",
+        hours: int = 48,
+        param_group: str = "default",
+    ) -> None:
+        """Create a new ECMWF Mars Client.
+
+        Exposes a client for ECMWF's MARS API that conforms to the FetcherInterface.
 
         Args:
             area: The area to fetch data for. Can be one of:
@@ -112,14 +114,11 @@ class Client(internal.FetcherInterface):
             raise KeyError(f"area must be one of {list(AREA_MAP.keys())}")
         self.area = area
 
-        try:
-            self.hours = int(hours)
-        except ValueError as e:
-            raise KeyError("ECMWF hours must be a valid integer") from e
-        if self.hours > 90:
+        if hours > 90:
             raise KeyError(
                 "ECMWF operational archive only goes out to 90 hours in hourly increments",
             )
+        self.hours = hours
 
         match param_group:
             case "basic":

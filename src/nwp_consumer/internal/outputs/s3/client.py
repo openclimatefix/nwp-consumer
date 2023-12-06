@@ -12,7 +12,7 @@ log = structlog.getLogger()
 
 
 class Client(internal.StorageInterface):
-    """Client for AWS S3."""
+    """Storage Interface client for AWS S3."""
 
     # S3 Bucket
     __bucket: pathlib.Path
@@ -21,22 +21,38 @@ class Client(internal.StorageInterface):
     __fs: s3fs.S3FileSystem
 
     def __init__(
-        self, key: str, secret: str, bucket: str, region: str, endpointURL: str | None = None,
+        self,
+        *,
+        bucket: str,
+        region: str,
+        key: str="",
+        secret: str="",
+        endpointURL: str="",
     ) -> None:
-        """Create a new S3Client."""
-        (_key, _secret) = (None, None) if (key, secret) == ("", "") else (key, secret)
-        if _key is None and _secret is None:
+        """Create a new S3Client.
+
+        Exposes a client that conforms to the StorageInterface.
+        Provide credentials either explicitly via key and secret
+        or fallback to default credentials if not provided or empty.
+
+        Args:
+            bucket: S3 bucket name to use for storage.
+            region: S3 region the bucket is in.
+            key: Use this access key, if specified.
+            secret: Use this secret, if specified.
+            endpointURL: Use this endpoint URL, if specified.
+        """
+        if (key, secret) == ("", ""):
             log.info(
                 event="attempting AWS connection using default credentials",
             )
 
-        # S3FileSystem will attempt connection via default credentials if key and secret are None
         self.__fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
             key=key,
             secret=secret,
             client_kwargs={
                 "region_name": region,
-                "endpoint_url": endpointURL,
+                "endpoint_url": None if endpointURL == "" else endpointURL,
             },
         )
 
