@@ -60,8 +60,15 @@ class Client(internal.FetcherInterface):
     # FTP url for CEDA data
     __ftpBase: str
 
-    def __init__(self, ftpUsername: str, ftpPassword: str) -> "Client":
-        """Create a new CEDAClient."""
+    def __init__(self, ftpUsername: str, ftpPassword: str) -> None:
+        """Create a new CEDAClient.
+
+        Exposes a client for CEDA's FTP server that conforms to the FetcherInterface.
+
+        Args:
+            ftpUsername: The username to use to connect to the CEDA FTP server.
+            ftpPassword: The password to use to connect to the CEDA FTP server.
+        """
         self.__username: str = urllib.parse.quote(ftpUsername)
         self.__password: str = urllib.parse.quote(ftpPassword)
         self.__ftpBase: str = f"ftp://{self.__username}:{self.__password}@ftp.ceda.ac.uk"

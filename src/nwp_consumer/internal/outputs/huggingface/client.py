@@ -20,7 +20,16 @@ class Client(internal.StorageInterface):
     # Path prefix
     datasetPath: pathlib.Path
 
-    def __init__(self, repoID: str, token: str | None = None, endpoint: str | None = None) -> None:  # noqa: D107
+    def __init__(self, repoID: str, token: str | None = None, endpoint: str | None = None) -> None:
+        """Create a new client for HuggingFace.
+
+        Exposes a client for the HuggingFace filesystem APIthat conforms to the StorageInterface.
+
+        Args:
+            repoID: The ID of the repo to use for the dataset.
+            token: The HuggingFace authentication token.
+            endpoint: The HuggingFace endpoint to use.
+        """
         self.__fs = huggingface_hub.HfFileSystem(token=token, endpoint=endpoint)
         # See https://huggingface.co/docs/huggingface_hub/guides/hf_file_system#integrations
         self.datasetPath = pathlib.Path(f"datasets/{repoID}")
@@ -78,7 +87,7 @@ class Client(internal.StorageInterface):
                     ddt = dt.datetime.strptime(
                         dir.as_posix(),
                         internal.IT_FOLDER_FMTSTR,
-                    ).replace(tzinfo=dt.timezone.utc)
+                    ).replace(tzinfo=dt.UTC)
                     initTimes.add(ddt)
                 except ValueError:
                     log.debug(

@@ -13,7 +13,10 @@ log = structlog.getLogger()
 
 
 class Client(internal.StorageInterface):
-    """Client for local filesystem."""
+    """Client for local filesystem.
+
+    This class implements the StorageInterface for the local filesystem.
+    """
 
     def exists(self, *, dst: pathlib.Path) -> bool:  # noqa: D102
         return dst.exists()

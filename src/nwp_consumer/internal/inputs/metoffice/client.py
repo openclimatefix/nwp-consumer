@@ -43,7 +43,17 @@ class Client(internal.FetcherInterface):
     __headers: dict[str, str]
 
     def __init__(self, *, orderID: str, clientID: str, clientSecret: str) -> None:
-        """Create a new MetOfficeClient."""
+        """Create a new MetOfficeClient.
+
+        Exposes a client for the MetOffice API which conforms to the FetcherInterface.
+        MetOffice API credentials must be provided, as well as an orderID for the
+        desired dataset.
+
+        Args:
+            orderID: The orderID to fetch from the MetOffice API.
+            clientID: The clientID for the MetOffice API.
+            clientSecret: The clientSecret for the MetOffice API.
+        """
         if any(value in [None, "", "unset"] for value in [clientID, clientSecret, orderID]):
             raise KeyError("must provide clientID, clientSecret, and orderID")
         self.baseurl: str = (
@@ -125,7 +135,7 @@ class Client(internal.FetcherInterface):
             log.error("all metoffice API credentials not provided")
             return []
 
-        if it.date() != dt.datetime.now(tz=dt.timezone.utc).date():
+        if it.date() != dt.datetime.now(tz=dt.UTC).date():
             log.warn("metoffice API only supports fetching data for the current day")
             return []
 
