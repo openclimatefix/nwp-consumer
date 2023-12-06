@@ -6,7 +6,6 @@ import shutil
 from typing import TYPE_CHECKING
 
 import dask.bag
-import numpy as np
 import pandas as pd
 import psutil
 import structlog
@@ -98,7 +97,7 @@ class NWPConsumerService:
             )
 
         # Create a dask pipeline to download the files
-        storedFiles = (
+        storedFiles: list[pathlib.Path] = (
             dask.bag.from_sequence(seq=newWantedFileInfos, npartitions=len(newWantedFileInfos))
             .map(lambda fi: self.fetcher.downloadToTemp(fi=fi))
             .filter(lambda infoPathTuple: infoPathTuple[1] != pathlib.Path())
