@@ -3,8 +3,8 @@
 import datetime as dt
 import pathlib
 
-import structlog
 import huggingface_hub
+import structlog
 
 from nwp_consumer import internal
 
@@ -20,29 +20,37 @@ class Client(internal.StorageInterface):
     # Path prefix
     datasetPath: pathlib.Path
 
-    def __init__(self, repoID: str,  token: str | None = None, endpoint: str | None = None) \
-            -> None: # noqa: D107
+    def __init__(self, repoID: str, token: str | None = None, endpoint: str | None = None) -> None:
+        """Create a new client for HuggingFace.
+
+        Exposes a client for the HuggingFace filesystem APIthat conforms to the StorageInterface.
+
+        Args:
+            repoID: The ID of the repo to use for the dataset.
+            token: The HuggingFace authentication token.
+            endpoint: The HuggingFace endpoint to use.
+        """
         self.__fs = huggingface_hub.HfFileSystem(token=token, endpoint=endpoint)
         # See https://huggingface.co/docs/huggingface_hub/guides/hf_file_system#integrations
-        self.datasetPath = pathlib.Path(f'datasets/{repoID}')
+        self.datasetPath = pathlib.Path(f"datasets/{repoID}")
 
         try:
-            self.__fs._api.dataset_info(repo_id=self.datasetPath.relative_to('datasets').as_posix())
+            self.__fs._api.dataset_info(repo_id=self.datasetPath.relative_to("datasets").as_posix())
         except Exception as e:
             log.warn(
                 event="failed to authenticate with huggingface for given repo",
-                repo_id=self.datasetPath.relative_to('datasets').as_posix(),
-                error=e
+                repo_id=self.datasetPath.relative_to("datasets").as_posix(),
+                error=e,
             )
 
     def exists(self, *, dst: pathlib.Path) -> bool:  # noqa: D102
-        return self.__fs.exists(self.datasetPath / dst.as_posix())
+        return self.__fs.exists(path=self.datasetPath / dst.as_posix())
 
     def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:  # noqa: D102
         self.__fs.put(
             lpath=src.as_posix(),
             rpath=(self.datasetPath / dst).as_posix(),
-            recursive=True
+            recursive=True,
         )
         nbytes = self.__fs.du(path=(self.datasetPath / dst).as_posix())
         if nbytes != src.stat().st_size:
@@ -51,21 +59,23 @@ class Client(internal.StorageInterface):
                 src=src.as_posix(),
                 dst=dst.as_posix(),
                 srcsize=src.stat().st_size,
-                dstsize=nbytes
+                dstsize=nbytes,
             )
         else:
             log.debug(
                 event="stored file",
                 filepath=dst.as_posix(),
-                nbytes=nbytes
+                nbytes=nbytes,
             )
         return dst
 
     def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:  # noqa: D102
         allDirs = [
             pathlib.Path(d).relative_to(self.datasetPath / prefix)
-            for d in self.__fs.glob(self.datasetPath / f'{prefix}/{internal.IT_FOLDER_GLOBSTR}')
-            if self.__fs.isdir(d)
+            for d in self.__fs.glob(
+                path=self.datasetPath / f"{prefix}/{internal.IT_FOLDER_GLOBSTR}",
+            )
+            if self.__fs.isdir(path=d)
         ]
 
         # Get the initTime from the folder pattern
@@ -76,33 +86,32 @@ class Client(internal.StorageInterface):
                     # Try to parse the folder name as a datetime
                     ddt = dt.datetime.strptime(
                         dir.as_posix(),
-                        internal.IT_FOLDER_FMTSTR
-                    ).replace(tzinfo=None)
+                        internal.IT_FOLDER_FMTSTR,
+                    ).replace(tzinfo=dt.UTC)
                     initTimes.add(ddt)
                 except ValueError:
                     log.debug(
                         event="ignoring invalid folder name",
                         name=dir.as_posix(),
-                        within=prefix.as_posix()
+                        within=prefix.as_posix(),
                     )
 
         sortedInitTimes = sorted(initTimes)
         log.debug(
             event=f"found {len(initTimes)} init times in raw directory",
             earliest=sortedInitTimes[0],
-            latest=sortedInitTimes[-1]
+            latest=sortedInitTimes[-1],
         )
         return sortedInitTimes
 
-    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) \
-            -> list[pathlib.Path]:  # noqa: D102
+    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:  # noqa: D102
         initTimeDirPath = self.datasetPath / prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
-        paths = [pathlib.Path(p) for p in self.__fs.ls(initTimeDirPath.as_posix())]
+        paths = [pathlib.Path(p) for p in self.__fs.ls(path=initTimeDirPath.as_posix())]
 
         log.debug(
             event="copying it folder to temporary files",
             inittime=it.strftime(internal.IT_FOLDER_FMTSTR),
-            numfiles=len(paths)
+            numfiles=len(paths),
         )
 
         # Read all files into temporary files
@@ -115,7 +124,7 @@ class Client(internal.StorageInterface):
                 log.debug(
                     event="file already exists in temporary directory, skipping",
                     filepath=path.as_posix(),
-                    temppath=tfp.as_posix()
+                    temppath=tfp.as_posix(),
                 )
                 tempPaths.append(tfp)
                 continue
@@ -139,14 +148,13 @@ class Client(internal.StorageInterface):
         log.debug(
             event="copied it folder to temporary files",
             nbytes=[p.stat().st_size for p in tempPaths],
-            inittime=it.strftime("%Y-%m-%d %H:%M")
+            inittime=it.strftime("%Y-%m-%d %H:%M"),
         )
 
         return tempPaths
 
     def delete(self, *, p: pathlib.Path) -> None:  # noqa: D102
-        if self.__fs.isdir(self.datasetPath / p.as_posix()):
-            self.__fs.rm(self.datasetPath / p.as_posix(), recursive=True)
+        if self.__fs.isdir(path=self.datasetPath / p.as_posix()):
+            self.__fs.rm(path=self.datasetPath / p.as_posix(), recursive=True)
         else:
-            self.__fs.rm(self.datasetPath / p.as_posix())
-
+            self.__fs.rm(path=self.datasetPath / p.as_posix())

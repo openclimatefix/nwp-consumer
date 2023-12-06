@@ -20,7 +20,8 @@ EU_SL_VARS = [
 
 EU_ML_VARS = ["clc", "fi", "omega", "p", "qv", "relhum", "t", "tke", "u", "v", "w"]
 
-GLOBAL_SL_VARS = EU_SL_VARS + [
+GLOBAL_SL_VARS = [
+    *EU_SL_VARS,
     "alb_rad",
     "c_t_lk",
     "freshsnw", "fr_ice",

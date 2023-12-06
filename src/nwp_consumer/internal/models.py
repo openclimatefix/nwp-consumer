@@ -52,7 +52,17 @@ class OCFShortName(str, Enum):
 
 
 class FileInfoModel(abc.ABC):
-    """Information about a remote file."""
+    """Information about a raw file.
+
+    FileInfoModel assumes the following properties exist for all
+    raw NWP files that may be encountered in a provider's archive:
+
+    1. The file has a name
+    2. The file has a path
+    3. The file corresponds to a single forecast init time
+
+    These assumptions are reflected in the abstract methods of this class.
+    """
 
     @abc.abstractmethod
     def filename(self) -> str:

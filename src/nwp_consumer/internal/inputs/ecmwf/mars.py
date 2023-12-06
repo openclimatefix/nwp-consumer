@@ -4,6 +4,7 @@ import os
 import pathlib
 import tempfile
 import typing
+import inspect
 
 import cfgrib
 import ecmwfapi.api
@@ -93,19 +94,20 @@ class Client(internal.FetcherInterface):
 
     def __init__(
         self,
-        area: str | None = "uk",
-        hours: str | None = "48",
-        param_group: str | None = "default",
-    ) -> "Client":
-        """Create a new Client.
+        area: str = "uk",
+        hours: int = 48,
+        param_group: str = "default",
+    ) -> None:
+        """Create a new ECMWF Mars Client.
 
-        Parameters:
-        -----------------
-        area: The area to fetch data for. Can be one of:
-        ["uk", "nw-india", "malta", "eu", "global"]
-        hours: The number of hours to fetch data for. Must be less than 90.
-        param_group: The parameter group to fetch data for. Can be one of:
-        ["default", "basic"]
+        Exposes a client for ECMWF's MARS API that conforms to the FetcherInterface.
+
+        Args:
+            area: The area to fetch data for. Can be one of:
+                ["uk", "nw-india", "malta", "eu", "global"]
+            hours: The number of hours to fetch data for. Must be less than 90.
+            param_group: The parameter group to fetch data for. Can be one of:
+                ["default", "basic"]
         """
         self.server = ECMWFService(service="mars", log=marsLogger)
 
@@ -113,18 +115,15 @@ class Client(internal.FetcherInterface):
             raise KeyError(f"area must be one of {list(AREA_MAP.keys())}")
         self.area = area
 
-        try:
-            self.hours = int(hours)
-        except ValueError as e:
-            raise KeyError("ECMWF hours must be a valid integer") from e
-        if self.hours > 90:
+        if hours > 90:
             raise KeyError(
-                "ECMWF operational archive only goes out to 90 hours in hourly increments"
+                "ECMWF operational archive only goes out to 90 hours in hourly increments",
             )
+        self.hours = hours
 
         match param_group:
             case "basic":
-                self.parameters = ["lcc", "uvb"]
+                self.parameters = ["167.128/169.128"]  # 2 Metre Temperature, Dswrf
             case _:
                 self.parameters = list(PARAMETER_ECMWFCODE_MAP.keys())
 
@@ -136,33 +135,19 @@ class Client(internal.FetcherInterface):
 
         # MARS requests can only ask for data that is more than 24 hours old: see
         # https://confluence.ecmwf.int/display/UDOC/MARS+access+restrictions
-        if it > dt.datetime.utcnow() - dt.timedelta(hours=24):
+        if it > dt.datetime.now(tz=dt.UTC) - dt.timedelta(hours=24):
             raise ValueError(
-                "ECMWF MARS requests can only ask for data that is more than 24 hours old"
+                "ECMWF MARS requests can only ask for data that is more than 24 hours old",
             )
             return []
 
         with tempfile.NamedTemporaryFile(suffix=".txt", mode="r+") as tf:
-            marsReq: str = f"""
-                list,
-                    class    = od,
-                    date     = {it.strftime("%Y%m%d")},
-                    expver   = 1,
-                    levtype  = sfc,
-                    param    = {'/'.join(self.parameters)},
-                    step     = 0/to/{self.hours}/by/1,
-                    stream   = oper,
-                    time     = {it.strftime("%H")},
-                    type     = fc,
-                    area     = {AREA_MAP[self.area]},
-                    grid     = 0.05/0.05,
-                    target   = "{tf.name}"
-            """
+            req: str = self._buildMarsRequest(list_only=True, it=it, target=tf.name)
 
-            log.debug(event="listing ECMWF MARS inittime data", request=marsReq, inittime=it)
+            log.debug(event="listing ECMWF MARS inittime data", request=req, inittime=it)
 
             try:
-                self.server.execute(req=marsReq, target=tf.name)
+                self.server.execute(req=req, target=tf.name)
             except ecmwfapi.api.APIException as e:
                 log.warn("error listing ECMWF MARS inittime data", error=e)
                 return []
@@ -172,36 +157,24 @@ class Client(internal.FetcherInterface):
 
         return [ECMWFMarsFileInfo(inittime=it, area=self.area)]
 
-    def downloadToTemp(
-        self, *, fi: internal.FileInfoModel
-    ) -> tuple[internal.FileInfoModel, pathlib.Path]:  # noqa: D102
+    def downloadToTemp(  # noqa: D102
+        self,
+        *,
+        fi: internal.FileInfoModel,
+    ) -> tuple[internal.FileInfoModel, pathlib.Path]:
         tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
 
-        marsReq = f"""
-            retrieve,
-                class    = od,
-                date     = {fi.it().strftime("%Y%m%d")},
-                expver   = 1,
-                levtype  = sfc,
-                param    = {'/'.join(self.parameters)},
-                step     = 0/to/{self.hours}/by/1,
-                stream   = oper,
-                time     = {fi.it().strftime("%H")},
-                type     = fc,
-                area     = {AREA_MAP[self.area]},
-                grid     = 0.05/0.05,
-                target   = "{tfp.as_posix()}"
-        """
+        req: str = self._buildMarsRequest(list_only=False, it=fi.it(), target=tfp.as_posix())
 
         log.debug(
             event="fetching ECMWF MARS data",
-            request=marsReq,
+            request=req,
             inittime=fi.it(),
             filename=fi.filename(),
         )
 
         try:
-            self.server.execute(req=marsReq, target=tfp.as_posix())
+            self.server.execute(req=req, target=tfp.as_posix())
         except ecmwfapi.api.APIException as e:
             log.warn("error fetching ECMWF MARS data", error=e)
             return fi, pathlib.Path()
@@ -254,7 +227,8 @@ class Client(internal.FetcherInterface):
 
             # Delete unwanted coordinates
             ds = ds.drop_vars(
-                names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST], errors="ignore"
+                names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST],
+                errors="ignore",
             )
 
             # Put the modified dataset back in the list
@@ -262,7 +236,9 @@ class Client(internal.FetcherInterface):
 
         # Merge the datasets back into one
         wholesaleDataset = xr.merge(
-            objects=datasets, compat="override", combine_attrs="drop_conflicts"
+            objects=datasets,
+            compat="override",
+            combine_attrs="drop_conflicts",
         )
 
         # Create a chunked Dask Dataset from the input multi-variate Dataset.
@@ -288,10 +264,41 @@ class Client(internal.FetcherInterface):
                     "variable": -1,
                     "latitude": len(wholesaleDataset.latitude) // 2,
                     "longitude": len(wholesaleDataset.longitude) // 2,
-                }
+                },
             )
         )
 
         del datasets
 
         return wholesaleDataset
+
+    def _buildMarsRequest(self, *, list_only: bool, it: dt.datetime, target: str) -> str:
+        """Build a MARS request according to the parameters of the client.
+
+        Args:
+            list_only: Whether to build a request that only lists the files that match
+                the request, or whether to build a request that downloads the files
+                that match the request.
+            it: The initialisation time to request data for.
+            target: The path to the target file to write the data to.
+
+        Returns:
+            The MARS request.
+        """
+        marsReq: str = f"""
+            {"list" if list_only else "retrieve"},
+                class    = od,
+                date     = {it.strftime("%Y%m%d")},
+                expver   = 1,
+                levtype  = sfc,
+                param    = {'/'.join(self.parameters)},
+                step     = 0/to/{self.hours}/by/1,
+                stream   = oper,
+                time     = {it.strftime("%H")},
+                type     = fc,
+                area     = {AREA_MAP[self.area]},
+                grid     = 0.05/0.05,
+                target   = "{target}"
+        """
+
+        return inspect.cleandoc(marsReq)

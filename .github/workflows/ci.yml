@@ -55,7 +55,7 @@ jobs:
       - name: Build venv
         run: |
           apt -qq update && apt -qq install -y build-essential
-          conda create -p ./venv python=3.10
+          conda create -p ./venv python=3.12
           ./venv/bin/python -m pip install --upgrade -q pip wheel setuptools
         if: steps.restore-cache.outputs.cache-hit != 'true'
 
@@ -133,6 +133,7 @@ jobs:
       # * Produce JUnit XML report
       - name: Run integration tests
         env:
+          LOGLEVEL: "debug"
           RAW_DIR: "/tmp/raw"
           ZARR_DIR: "/tmp/zarr"
           CEDA_FTP_PASS: ${{ secrets.CEDA_FTP_PASS }}

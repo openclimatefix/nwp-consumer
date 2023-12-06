@@ -5,23 +5,50 @@ import unittest.mock
 from .env import EnvParser
 
 
+class TestConfig(EnvParser):
+    """Test config class."""
+
+    REQUIRED_STR: str
+    REQUIRED_BOOL: bool
+    REQUIRED_INT: int
+    OPTIONAL_STR: str = "default"
+    OPTIONAL_BOOL: bool = True
+    OPTIONAL_INT: int = 4
+
+
 class Test_EnvParser(unittest.TestCase):
     """Tests for the _EnvParseMixin class."""
 
-    @unittest.mock.patch.dict("os.environ", {
-        "TEST_STR": "test",
-    })
-    def test_parsesEnvVars(self):
-        class TestConfig(EnvParser):
-            TEST_STR: str
+    @unittest.mock.patch.dict(
+        "os.environ",
+        {
+            "REQUIRED_STR": "required_str",
+            "REQUIRED_BOOL": "false",
+            "REQUIRED_INT": "5",
+        },
+    )
+    def test_parsesEnvVars(self) -> None:
+        tc = TestConfig()
 
-        config = TestConfig()
+        self.assertEqual("required_str", tc.REQUIRED_STR)
+        self.assertFalse(tc.REQUIRED_BOOL)
+        self.assertEqual(5, tc.REQUIRED_INT)
+        self.assertEqual("default", tc.OPTIONAL_STR)
+        self.assertTrue(tc.OPTIONAL_BOOL)
+        self.assertEqual(4, tc.OPTIONAL_INT)
 
-        self.assertEqual("test", config.TEST_STR)
+    @unittest.mock.patch.dict(
+        "os.environ",
+        {
+            "REQUIRED_STR": "required_str",
+            "REQUIRED_BOOL": "not a bool",
+            "REQUIRED_INT": "5.7",
+        },
+    )
+    def test_errorsIfCantCastType(self) -> None:
+        with self.assertRaises(ValueError):
+            TestConfig()
 
-    def test_emptyStringIfRequiredFieldNotSet(self):
-        class TestConfig(EnvParser):
-            TEST_STR: str
-
-        cfg = TestConfig()
-        self.assertEqual("", cfg.TEST_STR)
+    def test_errorsIfRequiredFieldNotSet(self) -> None:
+        with self.assertRaises(OSError):
+            TestConfig()

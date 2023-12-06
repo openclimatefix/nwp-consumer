@@ -19,8 +19,7 @@ log = structlog.getLogger()
 PARAMETER_RENAME_MAP: dict[str, str] = {
     "t2m": internal.OCFShortName.TemperatureAGL.value,
     "si10": internal.OCFShortName.WindSpeedSurfaceAdjustedAGL.value,
-    "wdir10":
-        internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL.value,
+    "wdir10": internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL.value,
     "hcc": internal.OCFShortName.HighCloudCover.value,
     "mcc": internal.OCFShortName.MediumCloudCover.value,
     "lcc": internal.OCFShortName.LowCloudCover.value,
@@ -44,11 +43,22 @@ class Client(internal.FetcherInterface):
     __headers: dict[str, str]
 
     def __init__(self, *, orderID: str, clientID: str, clientSecret: str) -> None:
-        """Create a new MetOfficeClient."""
+        """Create a new MetOfficeClient.
+
+        Exposes a client for the MetOffice API which conforms to the FetcherInterface.
+        MetOffice API credentials must be provided, as well as an orderID for the
+        desired dataset.
+
+        Args:
+            orderID: The orderID to fetch from the MetOffice API.
+            clientID: The clientID for the MetOffice API.
+            clientSecret: The clientSecret for the MetOffice API.
+        """
         if any(value in [None, "", "unset"] for value in [clientID, clientSecret, orderID]):
             raise KeyError("must provide clientID, clientSecret, and orderID")
-        self.baseurl: str = \
+        self.baseurl: str = (
             f"https://api-metoffice.apiconnect.ibmcloud.com/1.0.0/orders/{orderID}/latest"
+        )
         self.querystring: dict[str, str] = {"detail": "MINIMAL"}
         self.__headers: dict[str, str] = {
             "Accept": "application/json",
@@ -57,11 +67,15 @@ class Client(internal.FetcherInterface):
             "X-IBM-Client-Secret": clientSecret,
         }
 
-    def downloadToTemp(self, *, fi: internal.FileInfoModel) \
-            -> tuple[internal.FileInfoModel, pathlib.Path]:  # noqa: D102
-
-        if self.__headers.get("X-IBM-Client-Id") is None \
-                or self.__headers.get("X-IBM-Client-Secret") is None:
+    def downloadToTemp(  # noqa: D102
+        self,
+        *,
+        fi: internal.FileInfoModel,
+    ) -> tuple[internal.FileInfoModel, pathlib.Path]:
+        if (
+            self.__headers.get("X-IBM-Client-Id") is None
+            or self.__headers.get("X-IBM-Client-Secret") is None
+        ):
             log.error("all metoffice API credentials not provided")
             return fi, pathlib.Path()
 
@@ -72,16 +86,19 @@ class Client(internal.FetcherInterface):
         url: str = f"{self.baseurl}/{fi.filepath()}"
         try:
             opener = urllib.request.build_opener()
-            opener.addheaders = list(dict(
-                self.__headers, **{"Accept": "application/x-grib"}
-            ).items())
+            opener.addheaders = list(
+                dict(
+                    self.__headers,
+                    **{"Accept": "application/x-grib"},
+                ).items(),
+            )
             urllib.request.install_opener(opener)
             response = urllib.request.urlopen(url=url)
             if response.status != 200:
                 log.warn(
                     event="error response received for download file request",
                     response=response.json(),
-                    url=url
+                    url=url,
                 )
                 return fi, pathlib.Path()
         except Exception as e:
@@ -89,14 +106,14 @@ class Client(internal.FetcherInterface):
                 event="error calling url for file",
                 url=url,
                 filename=fi.filename(),
-                error=e
+                error=e,
             )
             return fi, pathlib.Path()
 
         # Stream the filedata into a temporary file
         tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
         with tfp.open("wb") as f:
-            for chunk in iter(lambda: response.read(16 * 1024), b''):
+            for chunk in iter(lambda: response.read(16 * 1024), b""):
                 f.write(chunk)
                 f.flush()
 
@@ -105,19 +122,20 @@ class Client(internal.FetcherInterface):
             filename=fi.filename(),
             url=url,
             filepath=tfp.as_posix(),
-            nbytes=tfp.stat().st_size
+            nbytes=tfp.stat().st_size,
         )
 
         return fi, tfp
 
-    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
-
-        if self.__headers.get("X-IBM-Client-Id") is None \
-                or self.__headers.get("X-IBM-Client-Secret") is None:
+    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
+        if (
+            self.__headers.get("X-IBM-Client-Id") is None
+            or self.__headers.get("X-IBM-Client-Secret") is None
+        ):
             log.error("all metoffice API credentials not provided")
             return []
 
-        if it.date() != dt.datetime.utcnow().date():
+        if it.date() != dt.datetime.now(tz=dt.UTC).date():
             log.warn("metoffice API only supports fetching data for the current day")
             return []
 
@@ -126,7 +144,7 @@ class Client(internal.FetcherInterface):
             method="GET",
             url=self.baseurl,
             headers=self.__headers,
-            params=self.querystring
+            params=self.querystring,
         )
         try:
             rj: dict = response.json()
@@ -134,10 +152,10 @@ class Client(internal.FetcherInterface):
             log.warn(
                 event="error parsing response from filelist endpoint",
                 error=e,
-                response=response.content
+                response=response.content,
             )
             return []
-        if not response.ok or ('httpCode' in rj and int(rj['httpCode']) > 399):
+        if not response.ok or ("httpCode" in rj and int(rj["httpCode"]) > 399):
             log.warn(
                 event="error response from filelist endpoint",
                 url=response.url,
@@ -152,30 +170,28 @@ class Client(internal.FetcherInterface):
             log.warn(
                 event="response from metoffice does not match expected schema",
                 error=e,
-                response=response.json()
+                response=response.json(),
             )
             return []
 
         # Filter the file infos for the desired init time
         wantedFileInfos: list[MetOfficeFileInfo] = [
-            fo for fo in responseObj.orderDetails.files
-            if _isWantedFile(fi=fo, dit=it)
+            fo for fo in responseObj.orderDetails.files if _isWantedFile(fi=fo, dit=it)
         ]
 
         return wantedFileInfos
 
-    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
-        if p.suffix != '.grib':
+    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
+        if p.suffix != ".grib":
             log.warn(
                 event="cannot map non-grib file to dataset",
-                filepath=p.as_posix()
+                filepath=p.as_posix(),
             )
             return xr.Dataset()
 
-
         log.debug(
             event="mapping raw file to xarray dataset",
-            filepath=p.as_posix()
+            filepath=p.as_posix(),
         )
 
         # Cfgrib is built upon eccodes which needs an in-memory file to read from
@@ -185,27 +201,27 @@ class Client(internal.FetcherInterface):
             # * Can also set backend_kwargs={"indexpath": ""}, to avoid the index file
             parameterDataset: xr.Dataset = xr.open_dataset(
                 p.as_posix(),
-                engine='cfgrib',
-                backend_kwargs={'read_keys': ['name', 'parameterNumber']},
+                engine="cfgrib",
+                backend_kwargs={"read_keys": ["name", "parameterNumber"]},
                 chunks={
                     "time": 1,
                     "step": -1,
                     "variable": -1,
                     "x": "auto",
-                    "y": "auto"
+                    "y": "auto",
                 },
             )
         except Exception as e:
             log.warn(
                 event="error loading raw file as dataset",
                 error=e,
-                filepath=p.as_posix()
+                filepath=p.as_posix(),
             )
             return xr.Dataset()
 
         # Make the DataArray OCF-compliant
         # 1. Rename the parameter to the OCF short name
-        currentName = list(parameterDataset.data_vars)[0]
+        currentName = next(iter(parameterDataset.data_vars))
         parameterNumber = parameterDataset[currentName].attrs["GRIB_parameterNumber"]
 
         # The two wind dirs are the only parameters read in as "unknown"
@@ -214,20 +230,23 @@ class Client(internal.FetcherInterface):
         #   https://gridded-data-ui.cda.api.metoffice.gov.uk/glossary?groups=Wind&sortOrder=GRIB2_CODE
         match currentName, parameterNumber:
             case "unknown", 194:
-                parameterDataset = parameterDataset.rename({
-                    currentName: internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL.value})  # noqa
+                parameterDataset = parameterDataset.rename(
+                    {
+                        currentName: internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL.value,
+                    },
+                )
             case "unknown", 195:
-                parameterDataset = parameterDataset.rename({
-                    currentName: internal.OCFShortName.WindSpeedSurfaceAdjustedAGL.value})
+                parameterDataset = parameterDataset.rename(
+                    {currentName: internal.OCFShortName.WindSpeedSurfaceAdjustedAGL.value},
+                )
             case x, int() if x in PARAMETER_RENAME_MAP:
-                parameterDataset = parameterDataset.rename({
-                    x: PARAMETER_RENAME_MAP[x]})
+                parameterDataset = parameterDataset.rename({x: PARAMETER_RENAME_MAP[x]})
             case _, _:
                 log.warn(
                     event="encountered unknown parameter; ignoring file",
                     unknownparamname=currentName,
                     unknownparamnumber=parameterNumber,
-                    filepath=p.as_posix()
+                    filepath=p.as_posix(),
                 )
                 return xr.Dataset()
 
@@ -242,29 +261,40 @@ class Client(internal.FetcherInterface):
         #     for a single variable.
         # * Transpose the Dataset so that the dimensions are correctly ordered
         # * Reverse `latitude` so it's top-to-bottom via reindexing.
-        parameterDataset = parameterDataset \
-            .drop_vars(
+        parameterDataset = (
+            parameterDataset.drop_vars(
                 names=[
-                    "height", "pressure", "valid_time", "surface", "heightAboveGround",
-                    "atmosphere", "cloudBase", "meanSea", "heightAboveGroundLayer", "level"
+                    "height",
+                    "pressure",
+                    "valid_time",
+                    "surface",
+                    "heightAboveGround",
+                    "atmosphere",
+                    "cloudBase",
+                    "meanSea",
+                    "heightAboveGroundLayer",
+                    "level",
                 ],
-                errors="ignore"
-            ) \
-            .rename({"time": "init_time"}) \
-            .expand_dims(["init_time"]) \
-            .to_array(dim="variable", name="UKV") \
-            .sortby("y", ascending=False) \
-            .to_dataset() \
-            .transpose("variable", "init_time", "step", "y", "x") \
-            .sortby("step") \
-            .sortby("variable") \
-            .chunk({
-                "variable": -1,
-                "init_time": 1,
-                "step": -1,
-                "y": len(parameterDataset.y) // 2,
-                "x": len(parameterDataset.x) // 2,
-            })
+                errors="ignore",
+            )
+            .rename({"time": "init_time"})
+            .expand_dims(["init_time"])
+            .to_array(dim="variable", name="UKV")
+            .sortby("y", ascending=False)
+            .to_dataset()
+            .transpose("variable", "init_time", "step", "y", "x")
+            .sortby("step")
+            .sortby("variable")
+            .chunk(
+                {
+                    "variable": -1,
+                    "init_time": 1,
+                    "step": -1,
+                    "y": len(parameterDataset.y) // 2,
+                    "x": len(parameterDataset.x) // 2,
+                },
+            )
+        )
 
         # TODO: Remove this by moving this logic into ocf-datapipes and update PVNet1+2 to use that
         # TODO: See issue #26 https://github.com/openclimatefix/nwp-consumer/issues/26
@@ -284,10 +314,12 @@ class Client(internal.FetcherInterface):
         )
         osgbX = osgbX.astype(int)
         osgbY = osgbY.astype(int)
-        parameterDataset = parameterDataset.assign_coords({
-            "x": osgbX[0],
-            "y": [osgbY[i][0] for i in range(len(osgbY))],
-        })
+        parameterDataset = parameterDataset.assign_coords(
+            {
+                "x": osgbX[0],
+                "y": [osgbY[i][0] for i in range(len(osgbY))],
+            },
+        )
 
         return parameterDataset
 

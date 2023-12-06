@@ -1,3 +1,5 @@
+"""Client for AWS S3."""
+
 import datetime as dt
 import pathlib
 
@@ -10,7 +12,7 @@ log = structlog.getLogger()
 
 
 class Client(internal.StorageInterface):
-    """Client for AWS S3."""
+    """Storage Interface client for AWS S3."""
 
     # S3 Bucket
     __bucket: pathlib.Path
@@ -18,23 +20,40 @@ class Client(internal.StorageInterface):
     # S3 Filesystem
     __fs: s3fs.S3FileSystem
 
-    def __init__(self, key: str, secret: str, bucket: str, region: str,
-                 endpointURL: str | None = None) -> None:
-        """Create a new S3Client."""
-        (_key, _secret) = (None, None) if (key, secret) == ("", "") else (key, secret)
-        if _key is None and _secret is None:
+    def __init__(
+        self,
+        *,
+        bucket: str,
+        region: str,
+        key: str="",
+        secret: str="",
+        endpointURL: str="",
+    ) -> None:
+        """Create a new S3Client.
+
+        Exposes a client that conforms to the StorageInterface.
+        Provide credentials either explicitly via key and secret
+        or fallback to default credentials if not provided or empty.
+
+        Args:
+            bucket: S3 bucket name to use for storage.
+            region: S3 region the bucket is in.
+            key: Use this access key, if specified.
+            secret: Use this secret, if specified.
+            endpointURL: Use this endpoint URL, if specified.
+        """
+        if (key, secret) == ("", ""):
             log.info(
                 event="attempting AWS connection using default credentials",
             )
 
-        # S3FileSystem will attempt connection via default credentials if key and secret are None
         self.__fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
             key=key,
             secret=secret,
             client_kwargs={
-                'region_name': region,
-                'endpoint_url': endpointURL,
-            }
+                "region_name": region,
+                "endpoint_url": None if endpointURL == "" else endpointURL,
+            },
         )
 
         self.__bucket = pathlib.Path(bucket)
@@ -58,21 +77,21 @@ class Client(internal.StorageInterface):
                 src=src.as_posix(),
                 dst=(self.__bucket / dst).as_posix(),
                 srcsize=src.stat().st_size,
-                dstsize=nbytes
+                dstsize=nbytes,
             )
         else:
             log.debug(
                 event="stored file in s3",
                 src=src.as_posix(),
                 dst=(self.__bucket / dst).as_posix(),
-                nbytes=nbytes
+                nbytes=nbytes,
             )
         return dst
 
     def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:  # noqa: D102
         allDirs = [
             pathlib.Path(d).relative_to(self.__bucket / prefix)
-            for d in self.__fs.glob(f'{self.__bucket}/{prefix}/{internal.IT_FOLDER_GLOBSTR}')
+            for d in self.__fs.glob(f"{self.__bucket}/{prefix}/{internal.IT_FOLDER_GLOBSTR}")
             if self.__fs.isdir(d)
         ]
 
@@ -82,27 +101,26 @@ class Client(internal.StorageInterface):
             if dir.match(internal.IT_FOLDER_GLOBSTR):
                 try:
                     # Try to parse the folder name as a datetime
-                    ddt = dt.datetime.strptime(
-                        dir.as_posix(),
-                        internal.IT_FOLDER_FMTSTR
-                    ).replace(tzinfo=None)
+                    ddt = dt.datetime.strptime(dir.as_posix(), internal.IT_FOLDER_FMTSTR).replace(
+                        tzinfo=dt.timezone.utc,
+                    )
                     initTimes.add(ddt)
                 except ValueError:
                     log.debug(
                         event="ignoring invalid folder name",
                         name=dir.as_posix(),
-                        within=prefix.as_posix()
+                        within=prefix.as_posix(),
                     )
 
         sortedInitTimes = sorted(initTimes)
         log.debug(
             event=f"found {len(initTimes)} init times in raw directory",
             earliest=sortedInitTimes[0],
-            latest=sortedInitTimes[-1]
+            latest=sortedInitTimes[-1],
         )
         return sortedInitTimes
 
-    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
+    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:  # noqa: D102
         initTimeDirPath = self.__bucket / prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
         paths = [
             pathlib.Path(p).relative_to(self.__bucket)
@@ -112,7 +130,7 @@ class Client(internal.StorageInterface):
         log.debug(
             event="copying it folder to temporary files",
             inittime=it.strftime(internal.IT_FOLDER_FMTSTR),
-            numfiles=len(paths)
+            numfiles=len(paths),
         )
 
         # Read all files into temporary files
@@ -125,14 +143,16 @@ class Client(internal.StorageInterface):
                 log.debug(
                     event="file already exists in temporary directory, skipping",
                     filepath=path.as_posix(),
-                    temppath=tfp.as_posix()
+                    temppath=tfp.as_posix(),
                 )
                 tempPaths.append(tfp)
                 continue
 
             # Don't copy file from the store if it is empty
-            if self.exists(dst=path) is False \
-                    or self.__fs.du(path=(self.__bucket / path).as_posix()) == 0:
+            if (
+                self.exists(dst=path) is False
+                or self.__fs.du(path=(self.__bucket / path).as_posix()) == 0
+            ):
                 log.warn(
                     event="file in store is empty",
                     filepath=path.as_posix(),
@@ -150,12 +170,12 @@ class Client(internal.StorageInterface):
         log.debug(
             event="copied it folder to temporary files",
             nbytes=[p.stat().st_size for p in tempPaths],
-            inittime=it.strftime("%Y-%m-%d %H:%M")
+            inittime=it.strftime("%Y-%m-%d %H:%M"),
         )
 
         return tempPaths
 
-    def delete(self, *, p: pathlib.Path) -> None:
+    def delete(self, *, p: pathlib.Path) -> None:  # noqa: D102
         if self.__fs.isdir((self.__bucket / p).as_posix()):
             self.__fs.rm((self.__bucket / p).as_posix(), recursive=True)
         else:

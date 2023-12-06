@@ -3,7 +3,7 @@
 # * Install required non-python binaries via conda
 FROM quay.io/condaforge/miniforge3:latest AS build-venv
 RUN apt -qq update && apt -qq install -y build-essential
-RUN conda create -p /venv python=3.10
+RUN conda create -p /venv python=3.12
 RUN /venv/bin/pip install --upgrade -q pip wheel setuptools
 
 # Install packages into the virtualenv as a separate step
