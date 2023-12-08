@@ -38,9 +38,8 @@ Similarly, the service can write to multiple sinks:
 
 Its modular nature enables straightforward extension to alternate future sources.
 
-## Running the service
 
-### Environment variables
+## Running the service
 
 The service uses environment variables to configure sources and sinks in accordance with
 the [Twelve-Factor App methodology](https://12factor.net/config).
@@ -157,10 +156,21 @@ interfaces, and are *dependency-injected* in at runtime. This allows the service
 
 ## Local development
 
-Clone the repository and create and activate a new python virtualenv for it. `cd` to the repository root.
+Clone the repository, and create and activate a new python virtualenv for it. `cd` to the repository root.
 
 Install the [External](#external-dependencies) and [Python](#python-requirements) dependencies as shown in the sections
 below.
+
+### Taskfile
+
+This repository bundles often used commands into a [taskfile](./taskfile.yml) for convenience. To use these commands, ensure
+[go-task](https://taskfile.dev/) is installed, easily done via [homebrew](https://taskfile.dev/installation).
+
+You can then see the available tasks using
+
+```shell
+$ task -l
+```
 
 ### External dependencies
 
@@ -199,7 +209,26 @@ Install the required python dependencies and make it editable with
 $ pip install -e . 
 ```
 
+or use the taskfile
+
+```shell
+$ task install
+```
+
 This looks for requirements specified in the `pyproject.toml` file.
+
+Note that these are the bare dependencies for running the application. If you want to run tests,
+you need the development dependencies as well, which can be installed via
+
+```shell
+$ pip install -e .[dev]
+```
+
+or
+
+```shell
+$ task install-dev
+```
 
 <details>
     <summary>Where is the requirements.txt file?</summary>
@@ -223,10 +252,22 @@ Run the unit tests with
 $ python -m unittest discover -s src/nwp_consumer -p "test_*.py"
 ```
 
+or 
+
+```shell
+$ task test-unit
+```
+
 and the integration tests with
 
 ```shell
 $ python -m unittest discover -s test_integration -p "test_*.py"
+```
+
+or
+
+```shell
+$ task test-integration
 ```
 
 See [further reading](#further-reading) for more information on the `src` directory structure.

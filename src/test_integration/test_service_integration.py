@@ -46,7 +46,7 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
         out = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
         self.assertGreater(len(out), 0)
 
-        for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + ".zarr.zip"):
+        for path in out:
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}")
 
             # The number of variables in the dataset depends on the order from MetOffice
@@ -54,7 +54,7 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
 
             # Ensure the dimensions have the right sizes
             self.assertDictEqual(
-                {"variable": numVars, "init_time": 1, "step": 13, "y": 639, "x": 455},
+                {"variable": numVars, "init_time": 1, "step": 4, "y": 639, "x": 455},
                 dict(ds.dims.items()),
             )
             # Ensure the dimensions of the variables are in the correct order
@@ -118,6 +118,7 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
         storageClient = outputs.localfs.Client()
 
         # Test downloading the basic parameter set for the UK model
+        _ = config.ECMWFMARSEnv()
         ecmwfMarsClient = inputs.ecmwf.mars.Client(
             area="uk",
             hours=4,
@@ -143,7 +144,7 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
         out = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
         self.assertGreater(len(out), 0)
 
-        for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + ".zarr.zip"):
+        for path in out:
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
 
             # Enusre the data variables are correct
