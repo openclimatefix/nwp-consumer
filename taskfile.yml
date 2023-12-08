@@ -1,31 +1,40 @@
 version: '3'
 
+# If you want to run with python from a specific environment,
+# set the PYTHON_PREFIX environment variable to
+# /path/to/python/dir/
 
 tasks:
   
   install-dependencies:
+    aliases: ["install"]
     desc: "Install application dependencies as defined in pyproject.toml"
     cmds:
-      - ${PYTHON_PREFIX}python -m pip install -q .
+      - ${PYTHON_PREFIX}python -m pip install -q -e .
 
   install-dev-dependencies:
+    aliases: ["install-dev"]
     desc: "Installs development dependencies as defined in pyproject.toml"
-    deps: [install-dependencies]
     cmds:
       - ${PYTHON_PREFIX}python -m pip install --upgrade -q pip wheel setuptools
-      - ${PYTHON_PREFIX}python -m pip install -q .[dev]
+      - ${PYTHON_PREFIX}python -m pip install -q -e .[dev]
 
   test-unit:
+    aliases: ["ut"]
+    deps: [install-dev-dependencies]
     desc: "Run all application unittests"
     cmds:
       - ${PYTHON_PREFIX}python -m xmlrunner discover -s src/nwp_consumer -p "test_*.py" --output-file ut-report.xml
 
   test-integration:
+    aliases: ["it"]
+    deps: [install-dev-dependencies]
     desc: "Run all application integration tests"
     cmds:
       - ${PYTHON_PREFIX}python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
 
   build-wheel:
+    alises: ["wheel"]
     desc: "Build python wheel"
     cmds:
       - ${PYTHON_PREFIX}python -m pip wheel . --no-deps --wheel-dir dist
