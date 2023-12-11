@@ -43,5 +43,5 @@ tasks:
     aliases: ["cont"]
     desc: "Build container"
     cmds:
-      - docker build -f Containerfile . --tag nwp-consumer:local
+      - docker build -f Containerfile . --tag nwp-consumer:local --progress=plain
 
