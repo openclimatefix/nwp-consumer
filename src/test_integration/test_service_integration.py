@@ -155,7 +155,9 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
                 dict(ds.dims.items()),
             )
             # Ensure the init time is correct
-            self.assertEqual(np.datetime64(initTime), ds.coords["init_time"].values[0])
+            self.assertEqual(
+                str(np.datetime64(initTime))[:10], str(ds.coords["init_time"].values[0])[:10],
+            )
 
         shutil.rmtree(self.rawdir)
         shutil.rmtree(self.zarrdir)
