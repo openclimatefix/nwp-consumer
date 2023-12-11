@@ -18,17 +18,20 @@ RUN /venv/bin/pip install -q . --no-cache-dir --no-binary=nwp-consumer
 # * The package is versioned via setuptools_git_versioning
 #   hence the .git directory is required
 # * The README.md is required for the long description
+# * Remove test files and bufr definitions to reduce image size
 FROM build-reqs AS build-app
-COPY src src
-RUN rm -rf src/**/test_*
+COPY src/**/*.py src
 COPY .git .git
 COPY README.md README.md
 RUN /venv/bin/pip install .
+RUN rm -rf /venv/**/test_*
+RUN rm -rf /venv/share/eccodes/definitions/bufr
 
 # Copy the virtualenv into a distroless image
 # * These are small images that only contain the runtime dependencies
 FROM gcr.io/distroless/python3-debian11
 WORKDIR /app
+COPY --from=build-app /venv /venv
 HEALTHCHECK CMD ["/venv/bin/nwp-consumer", "check"]
 ENTRYPOINT ["/venv/bin/nwp-consumer"]
 VOLUME /tmp/nwpc

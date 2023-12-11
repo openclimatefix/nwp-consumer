@@ -58,7 +58,7 @@ class NWPConsumerService:
                 end=end + dt.timedelta(days=1),
                 inclusive="left",
                 freq="H",
-                tz=dt.timezone.utc,
+                tz=dt.UTC,
             ).tolist()
         ]
 
@@ -324,7 +324,7 @@ class NWPConsumerService:
 def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
     # Save the dataset to a temp zarr file
     dt64: np.datetime64 = ds.coords["init_time"].values[0]
-    initTime: dt.datetime = dt.datetime.fromtimestamp(dt64.astype(int) / 1e9, tz=dt.timezone.utc)
+    initTime: dt.datetime = dt.datetime.fromtimestamp(dt64.astype(int) / 1e9, tz=dt.UTC)
     tempZarrPath = internal.TMP_DIR / (
         initTime.strftime(internal.ZARR_FMTSTR.split("/")[-1]) + ".zarr.zip"
     )
@@ -347,7 +347,7 @@ def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
 def _saveAsTempRegularZarr(ds: xr.Dataset) -> pathlib.Path:
     # Save the dataset to a temp zarr file
     dt64: np.datetime64 = ds.coords["init_time"].values[0]
-    initTime: dt.datetime = dt.datetime.fromtimestamp(dt64.astype(int) / 1e9, tz=dt.timezone.utc)
+    initTime: dt.datetime = dt.datetime.fromtimestamp(dt64.astype(int) / 1e9, tz=dt.UTC)
     tempZarrPath = internal.TMP_DIR / (
         initTime.strftime(internal.ZARR_FMTSTR.split("/")[-1]) + ".zarr"
     )
