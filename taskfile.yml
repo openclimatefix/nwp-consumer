@@ -34,8 +34,14 @@ tasks:
       - ${PYTHON_PREFIX}python -m xmlrunner discover -s src/test_integration -p "test_*.py" --output-file it-report.xml
 
   build-wheel:
-    alises: ["wheel"]
+    aliases: ["wheel"]
     desc: "Build python wheel"
     cmds:
       - ${PYTHON_PREFIX}python -m pip wheel . --no-deps --wheel-dir dist
+
+  build-container:
+    aliases: ["cont"]
+    desc: "Build container"
+    cmds:
+      - docker build -f Containerfile . --tag nwp-consumer:local
 

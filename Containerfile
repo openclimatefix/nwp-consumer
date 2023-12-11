@@ -20,6 +20,7 @@ RUN /venv/bin/pip install -q . --no-cache-dir --no-binary=nwp-consumer
 # * The README.md is required for the long description
 FROM build-reqs AS build-app
 COPY src src
+RUN rm -rf src/**/test_*
 COPY .git .git
 COPY README.md README.md
 RUN /venv/bin/pip install .
@@ -28,7 +29,6 @@ RUN /venv/bin/pip install .
 # * These are small images that only contain the runtime dependencies
 FROM gcr.io/distroless/python3-debian11
 WORKDIR /app
-COPY --from=build-app /venv /venv
 HEALTHCHECK CMD ["/venv/bin/nwp-consumer", "check"]
 ENTRYPOINT ["/venv/bin/nwp-consumer"]
 VOLUME /tmp/nwpc
