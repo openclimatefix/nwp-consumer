@@ -1,7 +1,7 @@
 # --- PROJECT CONFIGURATION --- #
 
 [build-system]
-requires = ["setuptools>=67", "wheel", "setuptools_scm>=3.4", "setuptools-git-versioning>=1.13.3"]
+requires = ["setuptools>=67", "wheel", "setuptools-git-versioning>=1.13.3"]
 build-backend = "setuptools.build_meta"
 
 # Metadata (see https://peps.python.org/pep-0621/)
@@ -27,7 +27,6 @@ dependencies = [
     "marshmallow-dataclass == 8.6.0",
     "numpy == 1.26.2",
     "ocf-blosc2 == 0.0.3",
-    "pathlib == 1.0.1",
     "psutil == 5.9.6",
     "pyproj == 3.6.1",
     "requests == 2.31.0",
@@ -54,6 +53,9 @@ nwp-consumer = "nwp_consumer.cmd.main:main" # Set the entrypoint for the CLI
 
 [project.urls]
 repository = "https://github.com/openclimatefix/nwp-consumer"
+
+[tool.setuptools]
+include-package-data = false
 
 [tool.setuptools-git-versioning]
 enabled = true

@@ -18,14 +18,13 @@ RUN /venv/bin/pip install -q . --no-cache-dir --no-binary=nwp-consumer
 # * The package is versioned via setuptools_git_versioning
 #   hence the .git directory is required
 # * The README.md is required for the long description
-# * Remove test files and bufr definitions to reduce image size
 FROM build-reqs AS build-app
-COPY src/**/*.py src
+COPY src src
 COPY .git .git
 COPY README.md README.md
 RUN /venv/bin/pip install .
-RUN rm -rf /venv/**/test_*
-RUN rm -rf /venv/share/eccodes/definitions/bufr
+RUN rm -r /venv/share/eccodes/definitions/bufr
+RUN rm -r /venv/lib/python3.12/site-packages/pandas/tests
 
 # Copy the virtualenv into a distroless image
 # * These are small images that only contain the runtime dependencies
