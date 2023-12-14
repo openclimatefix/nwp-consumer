@@ -91,7 +91,7 @@ class ICONEnv(EnvParser):
 
 
 class CMCEnv(EnvParser):
-    """Config for ICON API."""
+    """Config for CMC API."""
 
     CMC_MODEL: str = "gdps"
     CMC_HOURS: int = 240

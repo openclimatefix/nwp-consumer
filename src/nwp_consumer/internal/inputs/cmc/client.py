@@ -17,7 +17,7 @@ from ._models import CMCFileInfo
 
 log = structlog.getLogger()
 
-# See https://d-nb.info/1081305452/34 for a list of ICON parameters
+# See https://eccc-msc.github.io/open-data/msc-data/nwp_gdps/readme_gdps-datamart_en/ for a list of CMC parameters
 PARAMETER_RENAME_MAP: dict[str, str] = {
     "t_2m": internal.OCFShortName.TemperatureAGL.value,
     "clch": internal.OCFShortName.HighCloudCover.value,
@@ -29,8 +29,6 @@ PARAMETER_RENAME_MAP: dict[str, str] = {
     "relhum_2m": internal.OCFShortName.RelativeHumidityAGL.value,
     "u_10m": internal.OCFShortName.WindUComponentAGL.value,
     "v_10m": internal.OCFShortName.WindVComponentAGL.value,
-    "clat": "lat",  # Icon has a seperate dataset for latitude...
-    "clon": "lon",  # ... and longitude (for the global model)! Go figure
 }
 
 COORDINATE_ALLOW_LIST: typing.Sequence[str] = ("time", "step", "latitude", "longitude")
