@@ -9,6 +9,7 @@ import urllib.request
 import requests
 import structlog
 import xarray as xr
+import cfgrib
 
 from nwp_consumer import internal
 
@@ -54,33 +55,17 @@ class Client(internal.FetcherInterface):
             param_group: The set of parameters to fetch.
                 Valid groups are "default", "full", and "basic".
         """
-        self.baseurl = "https://opendata.dwd.de/weather/nwp"
-
-        match model:
-            case "europe":
-                self.baseurl += "/icon-eu/grib"
-            case "global":
-                self.baseurl += "/icon/grib"
-            case _:
-                raise ValueError(
-                    f"unknown icon model {model}. Valid models are 'europe' and 'global'",
-                )
+        self.baseurl = "https://noaa-gfs-bdp-pds.s3.amazonaws.com/"
 
         match (param_group, model):
             case ("default", _):
                 self.parameters = list(PARAMETER_RENAME_MAP.keys())
                 self.conform = True
-            case ("basic", "europe"):
-                self.parameters = ["t_2m", "asob_s"]
-                self.conform = True
             case ("basic", "global"):
                 self.parameters = ["t_2m", "asob_s", "clat", "clon"]
                 self.conform = True
-            case ("full", "europe"):
-                self.parameters = EU_SL_VARS + EU_ML_VARS
-                self.conform = False
             case ("full", "global"):
-                self.parameters = GLOBAL_SL_VARS + GLOBAL_ML_VARS + ["clat", "clon"]
+                self.parameters = GLOBAL_SL_VARS + GLOBAL_ML_VARS
                 self.conform = False
             case (_, _):
                 raise ValueError(
@@ -92,73 +77,58 @@ class Client(internal.FetcherInterface):
         self.hours = hours
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
-        # ICON data is only available for today's date. If data hasn't been uploaded for that init
-        # time yet, then yesterday's data will still be present on the server.
-        if it.date() != dt.datetime.now(dt.timezone.utc).date():
-            raise ValueError("ICON data is only available on today's date")
-            return []
 
-        # The ICON model only runs on the hours [00, 06, 12, 18]
         if it.hour not in [0, 6, 12, 18]:
             return []
 
         files: list[internal.FileInfoModel] = []
 
-        # Files are split per parameter, level, and step, with a webpage per parameter
-        # * The webpage contains a list of files for the parameter
-        # * Find these files for each parameter and add them to the list
-        for param in self.parameters:
-            # The list of files for the parameter
-            parameterFiles: list[internal.FileInfoModel] = []
+        # Files are split per timestep
+        # And the url includes the time and init time
+        # https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.20201206/00/atmos/gfs.t00z.pgrb2.0p25.f000
 
-            # Fetch DWD webpage detailing the available files for the parameter
-            response = requests.get(f"{self.baseurl}/{it.strftime('%H')}/{param}/", timeout=3)
+        # Fetch AWS webpage detailing the available files for the parameter
+        response = requests.get(f"{self.baseurl}/gfs.{it.strftime('%Y%m%d')}/{it.strftime('%H')}/atmos/", timeout=3)
 
-            if response.status_code != 200:
-                log.warn(
-                    event="error fetching filelisting webpage for parameter",
-                    status=response.status_code,
-                    url=response.url,
-                    param=param,
-                    inittime=it.strftime("%Y-%m-%d %H:%M"),
-                )
+        if response.status_code != 200:
+            log.warn(
+                event="error fetching filelisting webpage for parameter",
+                status=response.status_code,
+                url=response.url,
+                inittime=it.strftime("%Y-%m-%d %H:%M"),
+            )
+            return []
+
+        # The webpage's HTML <body> contains a list of <a> tags
+        # * Each <a> tag has a href, most of which point to a file)
+        for line in response.text.splitlines():
+            # Check if the line contains a href, if not, skip it
+            refmatch = re.search(pattern=r'href="(.+)">', string=line)
+            if refmatch is None:
                 continue
 
-            # The webpage's HTML <body> contains a list of <a> tags
-            # * Each <a> tag has a href, most of which point to a file)
-            for line in response.text.splitlines():
-                # Check if the line contains a href, if not, skip it
-                refmatch = re.search(pattern=r'href="(.+)">', string=line)
-                if refmatch is None:
-                    continue
+            # The href contains the name of a file - parse this into a FileInfo object
+            fi: NOAAFileInfo | None = None
+            # If not conforming, match all files
+            # * Otherwise only match single level and time invariant
+            fi = _parseAWSFilename(
+                name=refmatch.groups()[0],
+                baseurl=self.baseurl,
+                match_aux=not self.conform,
+            )
+            # Ignore the file if it is not for today's date or has a step > 48 (when conforming)
+            if fi is None or fi.it() != it or (fi.step > self.hours and self.conform):
+                continue
 
-                # The href contains the name of a file - parse this into a FileInfo object
-                fi: IconFileInfo | None = None
-                # If not conforming, match all files
-                # * Otherwise only match single level and time invariant
-                fi = _parseIconFilename(
-                    name=refmatch.groups()[0],
-                    baseurl=self.baseurl,
-                    match_ml=not self.conform,
-                    match_pl=not self.conform,
-                )
-                # Ignore the file if it is not for today's date or has a step > 48 (when conforming)
-                if fi is None or fi.it() != it or (fi.step > self.hours and self.conform):
-                    continue
-
-                # Add the file to the list
-                parameterFiles.append(fi)
+            # Add the file to the list
+            files.append(fi)
 
             log.debug(
-                event="listed files for parameter",
-                param=param,
+                event="listed files for init time",
                 inittime=it.strftime("%Y-%m-%d %H:%M"),
                 url=response.url,
-                numfiles=len(parameterFiles),
+                numfiles=len(files),
             )
-
-            # Add the files for the parameter to the list of all files
-            files.extend(parameterFiles)
 
         return files
 
@@ -170,24 +140,12 @@ class Client(internal.FetcherInterface):
             )
             return xr.Dataset()
 
-        if p.stem.endswith("_CLAT") or p.stem.endswith("_CLON"):
-            # Ignore the latitude and longitude files
-            return xr.Dataset()
-
         log.debug(event="mapping raw file to xarray dataset", filepath=p.as_posix())
 
         # Load the raw file as a dataset
         try:
-            ds = xr.open_dataset(
+            ds = cfgrib.open_datasets(
                 p.as_posix(),
-                engine="cfgrib",
-                chunks={
-                    "time": 1,
-                    "step": 1,
-                    "variable": -1,
-                    "latitude": "auto",
-                    "longitude": "auto",
-                },
             )
         except Exception as e:
             log.warn(
@@ -196,6 +154,34 @@ class Client(internal.FetcherInterface):
                 filepath=p.as_posix(),
             )
             return xr.Dataset()
+
+        # Process all the parameters into a single file
+        ds = [
+            d for d in ds if any(x in d.coords for x in ["surface", "heightAboveGround", "isobaricInhPa"])
+        ]
+
+        # Split into surface, heightAboveGround, and isobaricInhPa lists
+        surface = [d for d in ds if "surface" in d.coords]
+        heightAboveGround = [d for d in ds if "heightAboveGround" in d.coords]
+        isobaricInhPa = [d for d in ds if "isobaricInhPa" in d.coords]
+
+        # Update name of each data variable based off the attribute GRIB_stepType
+        for i, d in enumerate(surface):
+            for variable in d.data_vars.keys():
+                d = d.rename({variable: f"{variable}_surface_{d[f'{variable}'].attrs['GRIB_stepType']}"})
+            surface[i] = d
+        for i, d in enumerate(heightAboveGround):
+            for variable in d.data_vars.keys():
+                d = d.rename({variable: f"{variable}_{d[f'{variable}'].attrs['GRIB_stepType']}"})
+            heightAboveGround[i] = d
+
+        surface = xr.merge(surface)
+        # Drop unknown data variable
+        surface = surface.drop_vars("unknown_surface_instant")
+        heightAboveGround = xr.merge(heightAboveGround)
+        isobaricInhPa = xr.merge(isobaricInhPa)
+
+        ds = xr.merge([surface, heightAboveGround, isobaricInhPa])
 
         # Only conform the dataset if requested (defaults to True)
         if self.conform:
@@ -211,48 +197,13 @@ class Client(internal.FetcherInterface):
                 errors="ignore",
             )
 
-        # Inject latitude and longitude into the dataset if they are missing
-        if "latitude" not in ds:
-            rawlats: list[pathlib.Path] = list(p.parent.glob("*CLAT.grib2"))
-            if len(rawlats) == 0:
-                log.warn(
-                    event="no latitude file found for init time",
-                    filepath=p.as_posix(),
-                    init_time=p.parent.name,
-                )
-                return xr.Dataset()
-            latds = xr.open_dataset(
-                rawlats[0],
-                engine="cfgrib",
-                backend_kwargs={"errors": "ignore"},
-            )
-            ds = ds.assign_coords({"latitude": ("values", latds.tlat.values)})
-            del latds
-
-        if "longitude" not in ds:
-            rawlons: list[pathlib.Path] = list(p.parent.glob("*CLON.grib2"))
-            if len(rawlons) == 0:
-                log.warn(
-                    event="no longitude file found for init time",
-                    filepath=p.as_posix(),
-                    init_time=p.parent.name,
-                )
-                return xr.Dataset()
-            londs = xr.open_dataset(
-                rawlons[0],
-                engine="cfgrib",
-                backend_kwargs={"errors": "ignore"},
-            )
-            ds = ds.assign_coords({"longitude": ("values", londs.tlon.values)})
-            del londs
-
         # Create chunked Dask dataset with a single "variable" dimension
         # * Each chunk is a single time step
         ds = (
             ds.rename({"time": "init_time"})
             .expand_dims("init_time")
             .expand_dims("step")
-            .to_array(dim="variable", name=f"ICON_{self.model}".upper())
+            .to_array(dim="variable", name=f"NOAA_{self.model}".upper())
             .to_dataset()
             .transpose("variable", "init_time", "step", ...)
             .sortby("step")
@@ -313,7 +264,7 @@ class Client(internal.FetcherInterface):
         return fi, tfp
 
 
-def _parseNCEPFilename(
+def _parseAWSFilename(
     name: str,
     baseurl: str,
     match_aux: bool = True,
@@ -326,8 +277,8 @@ def _parseNCEPFilename(
         baseurl: The base URL for the ICON model
     """
     # Only 2 types of file, they contain all variables in it
-    "https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20231206/06/atmos/gfs.t06z.pgrb2.0p25.f002"
-    "https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20231206/06/atmos/gfs.t06z.pgrb2b.0p25.f002"
+    # "https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20231206/06/atmos/gfs.t06z.pgrb2.0p25.f002"
+    # "https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20231206/06/atmos/gfs.t06z.pgrb2b.0p25.f002"
     # Define the regex patterns to match the different types of file; X is step, L is level
     mainRegex = r"gfs.t(\d{2})z.pgrb2.0p25.f(\d{3})"
     # Auxiliary files have b appended to them
@@ -341,7 +292,7 @@ def _parseNCEPFilename(
     if mainmatch and match_main:
         itstring, stepstring = mainmatch.groups()
     elif auxmatch and match_aux:
-        itstring, paramstring = auxmatch.groups()
+        itstring, stepstring = auxmatch.groups()
     else:
         return None
 
