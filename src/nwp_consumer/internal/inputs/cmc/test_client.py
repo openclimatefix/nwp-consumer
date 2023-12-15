@@ -28,7 +28,7 @@ class TestClient(unittest.TestCase):
             ("variable", "init_time", "step", "latitude", "longitude"),
         )
         # Check that the parameter is renamed
-        self.assertEqual(out["variable"].values[0], "v")
+        self.assertEqual(out["variable"].values[0], "v10")
 
         # Test with europe file
         testFilePath: pathlib.Path = (
