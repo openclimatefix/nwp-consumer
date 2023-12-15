@@ -29,6 +29,7 @@ currently packaged with adapters for pulling and converting `.grib` data from:
 - [CEDA Atmospheric Archive](https://catalogue.ceda.ac.uk)
 - [ECMWF MARS API](https://apps.ecmwf.int/mars-catalogue)
 - [DWD's ICON Model from the Opendata API](https://opendata.dwd.de)
+- [CMC's GDPS Model from the Opendata API](https://dd.weather.gc.ca/)
 
 Similarly, the service can write to multiple sinks:
 

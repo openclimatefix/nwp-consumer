@@ -90,6 +90,13 @@ class ICONEnv(EnvParser):
     ICON_PARAMETER_GROUP: str = "default"
 
 
+class CMCEnv(EnvParser):
+    """Config for CMC API."""
+
+    CMC_MODEL: str = "gdps"
+    CMC_HOURS: int = 240
+    CMC_PARAMETER_GROUP: str = "full"
+
 # --- Outputs environment variables --- #
 
 

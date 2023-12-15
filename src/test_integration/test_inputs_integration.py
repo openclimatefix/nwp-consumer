@@ -12,6 +12,7 @@ from nwp_consumer.internal.inputs.ceda._models import CEDAFileInfo
 from nwp_consumer.internal.inputs.ecmwf._models import ECMWFMarsFileInfo
 from nwp_consumer.internal.inputs.icon._models import IconFileInfo
 from nwp_consumer.internal.inputs.metoffice._models import MetOfficeFileInfo
+from nwp_consumer.internal.inputs.cmc._models import CMCFileInfo
 
 storageClient = outputs.localfs.Client()
 
@@ -92,6 +93,24 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         _, tmpPath = iconClient.downloadToTemp(fi=fileInfo)
         self.assertGreater(tmpPath.stat().st_size, 40000)
 
+    def test_downloadsRawGribFileFromCMC(self) -> None:
+        cmcInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+
+        cmcClient = inputs.cmc.Client(
+            model="gdps",
+        )
+        fileInfo = CMCFileInfo(
+            it=cmcInitTime,
+            filename=f"CMC_glb_VGRD_ISBL_200_latlon.15x.15_{cmcInitTime.strftime('%Y%m%d%H')}_P120.grib2",
+            currentURL="https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/00/120",
+            step=1,
+        )
+        _, tmpPath = cmcClient.downloadToTemp(fi=fileInfo)
+        self.assertTrue(tmpPath.name.endswith(".grib2"))
+        self.assertGreater(tmpPath.stat().st_size, 40000)
+
 
 class TestListRawFilesForInitTime(unittest.TestCase):
     def test_getsFileInfosFromCEDA(self) -> None:
@@ -152,6 +171,26 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         self.assertTrue(len(euFileInfos) > 0)
         self.assertNotEqual(fileInfos, euFileInfos)
 
+    def test_getsFileInfosFromCMC(self) -> None:
+        cmcInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+        cmcClient = inputs.cmc.Client(
+            model="gdps",
+            hours=4,
+            param_group="basic",
+        )
+        fileInfos = cmcClient.listRawFilesForInitTime(it=cmcInitTime)
+        self.assertTrue(len(fileInfos) > 0)
+
+        cmcClient = inputs.cmc.Client(
+            model="geps",
+            hours=4,
+            param_group="basic",
+        )
+        gepsFileInfos = cmcClient.listRawFilesForInitTime(it=cmcInitTime)
+        self.assertTrue(len(gepsFileInfos) > 0)
+        self.assertNotEqual(fileInfos, gepsFileInfos)
 
 if __name__ == "__main__":
     unittest.main()
