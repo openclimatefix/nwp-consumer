@@ -18,6 +18,7 @@ from ._models import CMCFileInfo
 log = structlog.getLogger()
 
 # See https://eccc-msc.github.io/open-data/msc-data/nwp_gdps/readme_gdps-datamart_en/ for a list of CMC parameters
+# TODO Update this
 PARAMETER_RENAME_MAP: dict[str, str] = {
     "t_2m": internal.OCFShortName.TemperatureAGL.value,
     "clch": internal.OCFShortName.HighCloudCover.value,
@@ -296,6 +297,7 @@ def _parseCMCFilename(
         match_tgl: Whether to match Height Above Ground-level files
         match_pl: Whether to match pressure-level files
     """
+    # TODO Skips the special ones, CWAT
     # Define the regex patterns to match the different types of file; X is step, L is level
     # * Single Level: `CMC_glb_PARAM_SFC_0_latlon.15x.15_YYYYMMDD_P<Step>.grib2`
     slRegex = r"CMC_glb_([A-Za-z_\d]+)_SFC_0_latlon.15x.15_(\d{10})_P(\d{3}).grib"
