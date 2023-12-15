@@ -198,11 +198,9 @@ class Client(internal.FetcherInterface):
             ds = ds.rename({list(ds.data_vars.keys())[0]: f"{list(ds.data_vars.keys())[0]}_surface"})
 
         if "isobaricInhPa" in list(ds.coords):
-            if len(ds["isobaricInhPa"].values) == 31:
-                # Rename data variable to name in list, so no conflicts
+            if "rh" in list(ds.data_vars.keys()):
                 ds = ds.rename({"isobaricInhPa": "isobaricInhPa_humidity"})
-            elif len(ds["isobaricInhPa"].values) == 5:
-                # Rename data variable to name in list, so no conflicts
+            if "absv" in list(ds.data_vars.keys()) or "vvel" in list(ds.data_vars.keys()):
                 ds = ds.rename({"isobaricInhPa": "isobaricInhPa_absv_vvel"})
 
         # Only conform the dataset if requested (defaults to True)
@@ -314,11 +312,11 @@ def _parseCMCFilename(
     plmatch = re.search(pattern=plRegex, string=name)
 
     if slmatch and match_sl:
-        itstring, stepstring, paramstring = slmatch.groups()
+        paramstring, itstring, stepstring = slmatch.groups()
     elif tglmatch and match_tgl:
-        itstring, stepstring, levelstring, paramstring = tglmatch.groups()
+        paramstring, levelstring, itstring, stepstring = tglmatch.groups()
     elif plmatch and match_pl:
-        itstring, stepstring, levelstring, paramstring = plmatch.groups()
+        paramstring, levelstring, itstring, stepstring = plmatch.groups()
     else:
         return None
 
