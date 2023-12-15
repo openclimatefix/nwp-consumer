@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 from .client import Client, _parseCMCFilename
 
-testClient = Client(model="global")
+testClient = Client(model="gdps")
 
 
 class TestClient(unittest.TestCase):
