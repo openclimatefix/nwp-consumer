@@ -98,7 +98,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
             hour=0, minute=0, second=0, microsecond=0,
         )
 
-        cmcClient = inputs.icon.Client(
+        cmcClient = inputs.cmc.Client(
             model="gdps",
         )
         fileInfo = CMCFileInfo(
@@ -183,7 +183,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         fileInfos = cmcClient.listRawFilesForInitTime(it=cmcInitTime)
         self.assertTrue(len(fileInfos) > 0)
 
-        cmcClient = inputs.icon.Client(
+        cmcClient = inputs.cmc.Client(
             model="geps",
             hours=4,
             param_group="basic",
