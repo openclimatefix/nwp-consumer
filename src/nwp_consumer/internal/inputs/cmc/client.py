@@ -18,18 +18,15 @@ from ._models import CMCFileInfo
 log = structlog.getLogger()
 
 # See https://eccc-msc.github.io/open-data/msc-data/nwp_gdps/readme_gdps-datamart_en/ for a list of CMC parameters
-# TODO Update this
 PARAMETER_RENAME_MAP: dict[str, str] = {
-    "t_2m": internal.OCFShortName.TemperatureAGL.value,
-    "clch": internal.OCFShortName.HighCloudCover.value,
-    "clcm": internal.OCFShortName.MediumCloudCover.value,
-    "clcl": internal.OCFShortName.LowCloudCover.value,
-    "asob_s": internal.OCFShortName.DownwardShortWaveRadiationFlux.value,
-    "athb_s": internal.OCFShortName.DownwardLongWaveRadiationFlux.value,
-    "w_snow": internal.OCFShortName.SnowDepthWaterEquivalent.value,
-    "relhum_2m": internal.OCFShortName.RelativeHumidityAGL.value,
-    "u_10m": internal.OCFShortName.WindUComponentAGL.value,
-    "v_10m": internal.OCFShortName.WindVComponentAGL.value,
+    "t": internal.OCFShortName.TemperatureAGL.value,
+    "tclc": internal.OCFShortName.LowCloudCover.value, # TODO: Check this is okay
+    "dswrf": internal.OCFShortName.DownwardShortWaveRadiationFlux.value,
+    "dlwrf": internal.OCFShortName.DownwardLongWaveRadiationFlux.value,
+    "snod": internal.OCFShortName.SnowDepthWaterEquivalent.value,
+    "rh": internal.OCFShortName.RelativeHumidityAGL.value,
+    "u": internal.OCFShortName.WindUComponentAGL.value,
+    "v": internal.OCFShortName.WindVComponentAGL.value,
 }
 
 COORDINATE_ALLOW_LIST: typing.Sequence[str] = ("time", "step", "latitude", "longitude")
