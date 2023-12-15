@@ -178,7 +178,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         cmcClient = inputs.cmc.Client(
             model="gdps",
             hours=4,
-            param_group="full",
+            param_group="basic",
         )
         fileInfos = cmcClient.listRawFilesForInitTime(it=cmcInitTime)
         self.assertTrue(len(fileInfos) > 0)
@@ -186,7 +186,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         cmcClient = inputs.icon.Client(
             model="geps",
             hours=4,
-            param_group="full",
+            param_group="basic",
         )
         gepsFileInfos = cmcClient.listRawFilesForInitTime(it=cmcInitTime)
         self.assertTrue(len(gepsFileInfos) > 0)
