@@ -302,9 +302,9 @@ def _parseCMCFilename(
     # * Single Level: `CMC_glb_PARAM_SFC_0_latlon.15x.15_YYYYMMDD_P<Step>.grib2`
     slRegex = r"CMC_glb_([A-Za-z_\d]+)_SFC_0_latlon.15x.15_(\d{10})_P(\d{3}).grib"
     # * HeightAboveGround
-    tglRegex = r"CMC_glb_([A-Za-z_\d]+)_TGL_<SOMETHING HERE>_latlon.15x.15_(\d{10})_P(\d{3}).grib"
+    tglRegex = r"CMC_glb_([A-Za-z_\d]+)_TGL_(\d{1,4})_latlon.15x.15_(\d{10})_P(\d{3}).grib"
     # * Pressure Level: `MODEL_pressure-level_YYYYDDMMHH_XXX_LLLL_SOME_PARAM.grib2.bz2`
-    plRegex = r"CMC_glb_([A-Za-z_\d]+)_ISBL_<SOMETHING HERE>_latlon.15x.15_(\d{10})_P(\d{3}).grib"
+    plRegex = r"CMC_glb_([A-Za-z_\d]+)_ISBL_(\d{1,4})_latlon.15x.15_(\d{10})_P(\d{3}).grib"
 
     itstring = paramstring = ""
     stepstring = "000"
@@ -330,6 +330,3 @@ def _parseCMCFilename(
         currentURL=f"{baseurl}/{it.strftime('%H')}/{stepstring}/",
         step=int(stepstring),
     )
-
-def _combine_pressure_level():
-    pass
