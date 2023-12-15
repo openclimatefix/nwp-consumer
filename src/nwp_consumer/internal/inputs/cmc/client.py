@@ -72,6 +72,12 @@ class Client(internal.FetcherInterface):
             case ("full", "gdps"):
                 self.parameters = GDPS_VARIABLES
                 self.conform = False
+            case ("basic", "geps"):
+                self.parameters = GEPS_VARIABLES[:2]
+                self.conform = False
+            case ("basic", "gdps"):
+                self.parameters = GDPS_VARIABLES[:2]
+                self.conform = False
             case (_, _):
                 raise ValueError(
                     f"unknown parameter group {param_group}."
