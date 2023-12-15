@@ -184,7 +184,7 @@ class Client(internal.FetcherInterface):
             return xr.Dataset()
         # Rename variable to the value, as some have unknown as the name
         if list(ds.data_vars.keys())[0] == "unknown":
-            ds = ds.rename({"unknown": str(p).split("_")[3].lower()})
+            ds = ds.rename({"unknown": str(p.name).split("_")[3].lower()})
 
         # Rename variables that are both pressure level and surface
         if "surface" in list(ds.coords):
