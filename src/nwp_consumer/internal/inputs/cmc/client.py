@@ -185,10 +185,9 @@ class Client(internal.FetcherInterface):
                 filepath=p.as_posix(),
             )
             return xr.Dataset()
-
         # Rename variable to the value, as some have unknown as the name
         if list(ds.data_vars.keys())[0] == "unknown":
-            ds = ds.rename({"unknown": str(p).split("_")[2].lower()})
+            ds = ds.rename({"unknown": str(p).split("_")[3].lower()})
 
         # Rename variables that are both pressure level and surface
         if "surface" in list(ds.coords):
@@ -203,7 +202,6 @@ class Client(internal.FetcherInterface):
                 ds = ds.rename({"isobaricInhPa": "isobaricInhPa_humidity"})
             if "absv" in list(ds.data_vars.keys()) or "vvel" in list(ds.data_vars.keys()):
                 ds = ds.rename({"isobaricInhPa": "isobaricInhPa_absv_vvel"})
-
         # Only conform the dataset if requested (defaults to True)
         if self.conform:
             # Rename the parameters to the OCF names
@@ -237,7 +235,6 @@ class Client(internal.FetcherInterface):
                 },
             )
         )
-
         return ds
 
     def downloadToTemp(  # noqa: D102

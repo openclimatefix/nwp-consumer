@@ -25,7 +25,7 @@ class TestClient(unittest.TestCase):
         # Check that the dimensions are correctly ordered and renamed
         self.assertEqual(
             out[next(iter(out.data_vars.keys()))].dims,
-            ("variable", "init_time", "step", "values"),
+            ("variable", "init_time", "step", "latitude", "longitude"),
         )
         # Check that the parameter is renamed
         self.assertEqual(out["variable"].values[0], "v")
