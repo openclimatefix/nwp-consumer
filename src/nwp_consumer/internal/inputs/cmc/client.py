@@ -1,4 +1,4 @@
-"""Implements a client to fetch ICON data from DWD."""
+"""Implements a client to fetch GDPS/GEPS data from CMC."""
 import bz2
 import datetime as dt
 import pathlib
@@ -33,9 +33,9 @@ COORDINATE_ALLOW_LIST: typing.Sequence[str] = ("time", "step", "latitude", "long
 
 
 class Client(internal.FetcherInterface):
-    """Implements a client to fetch ICON data from DWD."""
+    """Implements a client to fetch GDPS/GEPS data from CMC."""
 
-    baseurl: str  # The base URL for the ICON model
+    baseurl: str  # The base URL for the GDPS/GEPS model
     model: str  # The model to fetch data for
     parameters: list[str]  # The parameters to fetch
     conform: bool  # Whether to rename parameters to OCF names and clear unwanted coordinates
@@ -59,7 +59,7 @@ class Client(internal.FetcherInterface):
                 self.baseurl += "/ensemble/geps/grib2/raw/"
             case _:
                 raise ValueError(
-                    f"unknown icon model {model}. Valid models are 'gdps' and 'geps'",
+                    f"unknown GDPS/GEPS model {model}. Valid models are 'gdps' and 'geps'",
                 )
 
         match (param_group, model):
@@ -85,10 +85,10 @@ class Client(internal.FetcherInterface):
         # GDPS data is only available for today's and yesterdays's date. If data hasn't been uploaded for that init
         # time yet, then yesterday's data will still be present on the server.
         if it.date() != dt.datetime.now(dt.timezone.utc).date():
-            raise ValueError("ICON data is only available on today's date")
+            raise ValueError("GDPS/GEPS data is only available on today's date")
             return []
 
-        # The ICON model only runs on the hours [00, 12]
+        # The GDPS/GEPS model only runs on the hours [00, 12]
         if it.hour not in [0, 12]:
             return []
 
@@ -101,7 +101,7 @@ class Client(internal.FetcherInterface):
             # The list of files for the parameter
             parameterFiles: list[internal.FileInfoModel] = []
 
-            # Fetch DWD webpage detailing the available files for the timestep
+            # Fetch CMC webpage detailing the available files for the timestep
             response = requests.get(f"{self.baseurl}/{it.strftime('%H')}/000/", timeout=3)
 
             if response.status_code != 200:
@@ -184,7 +184,7 @@ class Client(internal.FetcherInterface):
             return xr.Dataset()
         # Rename variable to the value, as some have unknown as the name
         if list(ds.data_vars.keys())[0] == "unknown":
-            ds = ds.rename({"unknown": str(p.name).split("_")[3].lower()})
+            ds = ds.rename({"unknown": str(p.name).split("_")[2].lower()})
 
         # Rename variables that are both pressure level and surface
         if "surface" in list(ds.coords):

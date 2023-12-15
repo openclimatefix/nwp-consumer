@@ -22,6 +22,8 @@ class TestClient(unittest.TestCase):
         # Check latitude and longitude are injected
         self.assertTrue("latitude" in out.coords)
         self.assertTrue("longitude" in out.coords)
+        self.assertEqual(len(out["latitude"].values), 1201)
+        self.assertEqual(len(out["longitude"].values), 2400)
         # Check that the dimensions are correctly ordered and renamed
         self.assertEqual(
             out[next(iter(out.data_vars.keys()))].dims,
@@ -39,6 +41,8 @@ class TestClient(unittest.TestCase):
         # Check latitude and longitude are present
         self.assertTrue("latitude" in out.coords)
         self.assertTrue("longitude" in out.coords)
+        self.assertEqual(len(out["latitude"].values), 1201)
+        self.assertEqual(len(out["longitude"].values), 2400)
         # Check that the dimensions are correctly ordered and renamed
         self.assertEqual(
             out[next(iter(out.data_vars.keys()))].dims,
