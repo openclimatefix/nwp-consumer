@@ -15,7 +15,7 @@ class TestClient(unittest.TestCase):
     def test_mapTemp(self) -> None:
         # Test with global file
         testFilePath: pathlib.Path = (
-            pathlib.Path(__file__).parent / "test_icon_global_001_CLCL.grib2"
+            pathlib.Path(__file__).parent / "CMC_glb_VGRD_ISBL_200_latlon.15x.15_2023080900_P027.grib2"
         )
         out = testClient.mapTemp(p=testFilePath)
 
@@ -28,11 +28,11 @@ class TestClient(unittest.TestCase):
             ("variable", "init_time", "step", "values"),
         )
         # Check that the parameter is renamed
-        self.assertEqual(out["variable"].values[0], "ccl")
+        self.assertEqual(out["variable"].values[0], "v")
 
         # Test with europe file
         testFilePath: pathlib.Path = (
-            pathlib.Path(__file__).parent / "test_icon_europe_001_CLCL.grib2"
+            pathlib.Path(__file__).parent / "CMC_glb_CAPE_SFC_0_latlon.15x.15_2023080900_P027.grib2"
         )
         out = testClient.mapTemp(p=testFilePath)
 
@@ -45,55 +45,44 @@ class TestClient(unittest.TestCase):
             ("variable", "init_time", "step", "latitude", "longitude"),
         )
         # Check that the parameter is renamed
-        self.assertEqual(out["variable"].values[0], "ccl")
+        self.assertEqual(out["variable"].values[0], "cape")
 
 
-class TestParseIconFilename(unittest.TestCase):
-    baseurl = "https://opendata.dwd.de/weather/nwp/icon/grib"
+class TestParseCMCFilename(unittest.TestCase):
+    baseurl = "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/"
 
     def test_parsesSingleLevel(self) -> None:
-        filename: str = "icon_global_icosahedral_single-level_2020090100_000_T_HUM.grib2.bz2"
+        filename: str = "CMC_glb_CAPE_SFC_0_latlon.15x.15_2023080900_P027.grib2"
 
         out: CMCFileInfo | None = _parseCMCFilename(
             name=filename,
             baseurl=self.baseurl,
         )
         self.assertIsNotNone(out)
-        self.assertEqual(out.filename(), filename.removesuffix(".bz2"))
-        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
+        self.assertEqual(out.filename(), filename)
+        self.assertEqual(out.it(), dt.datetime(2023, 8, 9, 0, tzinfo=dt.timezone.utc))
 
-    def test_parsesTimeInvariant(self) -> None:
-        filename: str = "icon_global_icosahedral_time-invariant_2020090100_CLAT.grib2.bz2"
+    def test_parsesHeightAboveGround(self) -> None:
+        filename: str = "CMC_glb_TMP_TGL_2_latlon.15x.15_2023080900_P027.grib2"
 
         out: CMCFileInfo | None = _parseCMCFilename(
             name=filename,
             baseurl=self.baseurl,
+            match_tgl=True,
         )
         self.assertIsNotNone(out)
-        self.assertEqual(out.filename(), filename.removesuffix(".bz2"))
-        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
-
-    def test_parsesModelLevel(self) -> None:
-        filename: str = "icon_global_icosahedral_model-level_2020090100_048_32_CLCL.grib2.bz2"
+        self.assertEqual(out.filename(), filename)
+        self.assertEqual(out.it(), dt.datetime(2023, 8, 9, 0, tzinfo=dt.timezone.utc))
 
         out: CMCFileInfo | None = _parseCMCFilename(
             name=filename,
             baseurl=self.baseurl,
-            match_ml=True,
-        )
-        self.assertIsNotNone(out)
-        self.assertEqual(out.filename(), filename.removesuffix(".bz2"))
-        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
-
-        out: CMCFileInfo | None = _parseCMCFilename(
-            name=filename,
-            baseurl=self.baseurl,
-            match_ml=False,
+            match_tgl=False,
         )
         self.assertIsNone(out)
 
     def test_parsesPressureLevel(self) -> None:
-        filename: str = "icon_global_icosahedral_pressure-level_2020090100_048_1000_T.grib2.bz2"
+        filename: str = "CMC_glb_VGRD_ISBL_200_latlon.15x.15_2023080900_P027.grib2"
 
         out: CMCFileInfo | None = _parseCMCFilename(
             name=filename,
@@ -101,8 +90,8 @@ class TestParseIconFilename(unittest.TestCase):
             match_pl=True,
         )
         self.assertIsNotNone(out)
-        self.assertEqual(out.filename(), filename.removesuffix(".bz2"))
-        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
+        self.assertEqual(out.filename(), filename)
+        self.assertEqual(out.it(), dt.datetime(2023, 8, 9, 0, tzinfo=dt.timezone.utc))
 
         out: CMCFileInfo | None = _parseCMCFilename(
             name=filename,
