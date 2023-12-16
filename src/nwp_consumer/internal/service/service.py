@@ -330,16 +330,10 @@ def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
     )
     if tempZarrPath.exists():
         tempZarrPath.unlink()
-    dataVar: str = next(iter(ds.data_vars.keys()))
     with zarr.ZipStore(path=tempZarrPath.as_posix(), mode="w") as store:
         ds.to_zarr(
             store=store,
-            encoding={
-                "init_time": {"units": "nanoseconds since 1970-01-01"},
-                dataVar: {
-                    "compressor": Blosc2(cname="zstd", clevel=5),
-                },
-            },
+            encoding=_generate_encoding(ds=ds)
         )
     return tempZarrPath
 
@@ -353,17 +347,18 @@ def _saveAsTempRegularZarr(ds: xr.Dataset) -> pathlib.Path:
     )
     if tempZarrPath.exists() and tempZarrPath.is_dir():
         shutil.rmtree(tempZarrPath.as_posix())
-    dataVar: str = next(iter(ds.data_vars.keys()))
     ds.to_zarr(
         store=tempZarrPath.as_posix(),
-        encoding={
-            "init_time": {"units": "nanoseconds since 1970-01-01"},
-            dataVar: {
-                "compressor": Blosc2(cname="zstd", clevel=5),
-            },
-        },
+        encoding=_generate_encoding(ds=ds),
     )
     return tempZarrPath
+
+
+def _generate_encoding(ds: xr.Dataset) -> dict[str, dict[str, str] | dict[str, Blosc2]]:
+    encoding = {"init_time": {"units": "nanoseconds since 1970-01-01"}}
+    for var in ds.data_vars:
+        encoding[var] = {"compressor": Blosc2(cname="zstd", clevel=5)}
+    return encoding
 
 
 def _dataQualityFilter(ds: xr.Dataset) -> bool:

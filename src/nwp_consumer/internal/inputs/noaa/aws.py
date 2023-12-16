@@ -199,20 +199,18 @@ class Client(internal.FetcherInterface):
 
         # Create chunked Dask dataset with a single "variable" dimension
         # * Each chunk is a single time step
+        # Does not use teh "variable" dimension, as this makes a 86GiB dataset for a single timestamp
+        # Keeping variables separate keeps the dataset small enough to fit in memory
         ds = (
             ds.rename({"time": "init_time"})
             .expand_dims("init_time")
             .expand_dims("step")
-            .to_array(dim="variable", name=f"NOAA_{self.model}".upper())
-            .to_dataset()
-            .transpose("variable", "init_time", "step", ...)
+            .transpose("init_time", "step", ...)
             .sortby("step")
-            .sortby("variable")
             .chunk(
                 {
                     "init_time": 1,
                     "step": -1,
-                    "variable": -1,
                 },
             )
         )
