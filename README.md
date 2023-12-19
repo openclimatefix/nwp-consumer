@@ -30,7 +30,7 @@ currently packaged with adapters for pulling and converting `.grib` data from:
 - [ECMWF MARS API](https://apps.ecmwf.int/mars-catalogue)
 - [DWD's ICON Model from the Opendata API](https://opendata.dwd.de)
 - [CMC's GDPS Model from the Opendata API](https://dd.weather.gc.ca/)
-- [NOAA's GFS Model from NCEP's NOMADS](https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/)
+- [NOAA's GFS Model from AWS Open Data](https://noaa-gfs-bdp-pds.s3.amazonaws.com)
 - [NOAA's GFS Model from NCAR's Archive](https://rda.ucar.edu/datasets/ds084.1/)
 
 Similarly, the service can write to multiple sinks:
