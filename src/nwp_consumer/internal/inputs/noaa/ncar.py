@@ -167,7 +167,7 @@ class Client(internal.FetcherInterface):
 
         surface = xr.merge(surface)
         # Drop unknown data variable
-        surface = surface.drop_vars("unknown_surface_instant")
+        surface = surface.drop_vars("unknown_surface_instant", errors="ignore")
         heightAboveGround = xr.merge(heightAboveGround)
         isobaricInhPa = xr.merge(isobaricInhPa)
 
