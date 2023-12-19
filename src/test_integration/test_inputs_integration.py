@@ -13,6 +13,7 @@ from nwp_consumer.internal.inputs.ecmwf._models import ECMWFMarsFileInfo
 from nwp_consumer.internal.inputs.icon._models import IconFileInfo
 from nwp_consumer.internal.inputs.metoffice._models import MetOfficeFileInfo
 from nwp_consumer.internal.inputs.cmc._models import CMCFileInfo
+from nwp_consumer.internal.inputs.noaa._models import NOAAFileInfo
 
 storageClient = outputs.localfs.Client()
 
@@ -111,6 +112,41 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         self.assertTrue(tmpPath.name.endswith(".grib2"))
         self.assertGreater(tmpPath.stat().st_size, 40000)
 
+    def test_downloadsRawGribFileFromAWSNOAA(self) -> None:
+        noaaInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+
+        noaaClient = inputs.noaa.aws.Client(
+            model="global",
+            param_group="basic",
+        )
+        fileInfo = NOAAFileInfo(
+            it=noaaInitTime,
+            filename=f"gfs.t00z.pgrb2.0p25.f001",
+            currentURL=f"https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.{noaaInitTime.strftime('%Y%m%d')}/{noaaInitTime.strftime('%H')}",
+            step=1,
+        )
+        _, tmpPath = noaaClient.downloadToTemp(fi=fileInfo)
+        self.assertGreater(tmpPath.stat().st_size, 40000)
+
+    def test_downloadsRawGribFileFromNCARNOAA(self) -> None:
+        noaaInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+
+        noaaClient = inputs.noaa.ncar.Client(
+            model="global",
+            param_group="basic",
+        )
+        fileInfo = NOAAFileInfo(
+            it=noaaInitTime,
+            filename=f"gfs.0p25.2016010300.f003.grib2",
+            currentURL=f"https://data.rda.ucar.edu/ds084.1/2016/20160103",
+            step=3,
+        )
+        _, tmpPath = noaaClient.downloadToTemp(fi=fileInfo)
+        self.assertGreater(tmpPath.stat().st_size, 40000)
 
 class TestListRawFilesForInitTime(unittest.TestCase):
     def test_getsFileInfosFromCEDA(self) -> None:
@@ -191,6 +227,33 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         gepsFileInfos = cmcClient.listRawFilesForInitTime(it=cmcInitTime)
         self.assertTrue(len(gepsFileInfos) > 0)
         self.assertNotEqual(fileInfos, gepsFileInfos)
+
+
+    def test_getsFileInfosFromAWSNOAA(self) -> None:
+        noaaInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+        noaaClient = inputs.noaa.aws.Client(
+            model="global",
+            hours=4,
+            param_group="basic",
+        )
+        fileInfos = noaaClient.listRawFilesForInitTime(it=noaaInitTime)
+        self.assertTrue(len(fileInfos) > 0)
+
+    def test_getsFileInfosFromNCARNOAA(self) -> None:
+        noaaInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+        noaaInitTime = noaaInitTime.replace(year=2017)
+        noaaClient = inputs.noaa.ncar.Client(
+            model="global",
+            hours=4,
+            param_group="basic",
+        )
+        fileInfos = noaaClient.listRawFilesForInitTime(it=noaaInitTime)
+        self.assertTrue(len(fileInfos) > 0)
+
 
 if __name__ == "__main__":
     unittest.main()
