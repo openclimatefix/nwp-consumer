@@ -15,7 +15,7 @@ class TestClient(unittest.TestCase):
     def test_mapTemp(self) -> None:
         # Test with global file
         testFilePath: pathlib.Path = (
-            pathlib.Path(__file__).parent / "gfs.t06z.pgrb2.0p25.f005"
+            pathlib.Path(__file__).parent / "gfs.t06z.pgrb2.0p25.f001"
         )
         out = testClient.mapTemp(p=testFilePath)
         # Check latitude and longitude are injected
