@@ -194,19 +194,38 @@ class Client(internal.FetcherInterface):
         # * Each chunk is a single time step
         # Does not use teh "variable" dimension, as this makes a 86GiB dataset for a single timestamp
         # Keeping variables separate keeps the dataset small enough to fit in memory
-        ds = (
-            ds.rename({"time": "init_time"})
-            .expand_dims("init_time")
-            .expand_dims("step")
-            .transpose("init_time", "step", ...)
-            .sortby("step")
-            .chunk(
-                {
-                    "init_time": 1,
-                    "step": -1,
-                },
+        if self.conform:
+            ds = (
+                ds.rename({"time": "init_time"})
+                .expand_dims("init_time")
+                .expand_dims("step")
+                .to_array(dim="variable", name=f"ICON_{self.model}".upper())
+                .to_dataset()
+                .transpose("variable", "init_time", "step", ...)
+                .sortby("step")
+                .sortby("variable")
+                .chunk(
+                    {
+                        "init_time": 1,
+                        "step": -1,
+                        "variable": -1,
+                    },
+                )
             )
-        )
+        else:
+            ds = (
+                ds.rename({"time": "init_time"})
+                .expand_dims("init_time")
+                .expand_dims("step")
+                .transpose("init_time", "step", ...)
+                .sortby("step")
+                .chunk(
+                    {
+                        "init_time": 1,
+                        "step": -1,
+                    },
+                )
+            )
 
         return ds
 
