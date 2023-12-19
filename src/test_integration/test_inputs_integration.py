@@ -119,6 +119,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
 
         noaaClient = inputs.noaa.aws.Client(
             model="global",
+            param_group="basic",
         )
         fileInfo = NOAAFileInfo(
             it=noaaInitTime,
@@ -136,6 +137,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
 
         noaaClient = inputs.noaa.ncar.Client(
             model="global",
+            param_group="basic",
         )
         fileInfo = NOAAFileInfo(
             it=noaaInitTime,
