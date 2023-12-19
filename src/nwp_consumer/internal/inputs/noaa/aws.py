@@ -13,7 +13,7 @@ import cfgrib
 
 from nwp_consumer import internal
 
-from ._consts import GFS_VARIABLES, MISSING_STEP_0_VARIABLES, EXTRA_STEP_0_VARIABLES
+from ._consts import GFS_VARIABLES
 from ._models import NOAAFileInfo
 
 log = structlog.getLogger()
@@ -171,21 +171,6 @@ class Client(internal.FetcherInterface):
         isobaricInhPa = xr.merge(isobaricInhPa)
 
         ds = xr.merge([surface, heightAboveGround, isobaricInhPa])
-
-        # If step is 0, drop variables that are not in the list of variables that have step 0
-        if ds.step.values[0] == 0:
-            ds = ds.drop_vars(
-                names=[v for v in ds.data_vars if v not in EXTRA_STEP_0_VARIABLES],
-                errors="ignore",
-            )
-            # Add variables that are missing from the list of variables that have step 0
-            for variable in MISSING_STEP_0_VARIABLES:
-                if variable not in ds:
-                    ds[variable] = xr.DataArray(
-                        data=[0] * len(ds.latitude),
-                        dims=["latitude", "longitude"],
-                        coords={"latitude": ds.latitude, "longitude": ds.longitude},
-                    )
 
         # Only conform the dataset if requested (defaults to True)
         if self.conform:
