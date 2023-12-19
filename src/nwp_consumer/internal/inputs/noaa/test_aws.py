@@ -29,26 +29,16 @@ class TestClient(unittest.TestCase):
 
 
 class TestParseIconFilename(unittest.TestCase):
-    baseurl = "https://opendata.dwd.de/weather/nwp/icon/grib"
+    baseurl = "https://noaa-gfs-bdp-pds.s3.amazonaws.com"
 
     def test_parsesSingleLevel(self) -> None:
-        filename: str = "icon_global_icosahedral_single-level_2020090100_000_T_HUM.grib2.bz2"
-
+        filename: str = "gfs.t06z.pgrb2.0p25.f005"
+        it = dt.datetime(2020, 9, 1, 6, tzinfo=dt.timezone.utc)
         out: NOAAFileInfo | None = _parseAWSFilename(
             name=filename,
-            baseurl=self.baseurl,
+            baseurl=f"{self.baseurl}/gfs.{it.strftime('%Y%m%d')}/{it.strftime('%H')}",
+            it=it,
         )
         self.assertIsNotNone(out)
-        self.assertEqual(out.filename(), filename.removesuffix(".bz2"))
-        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
-
-    def test_parsesTimeInvariant(self) -> None:
-        filename: str = "icon_global_icosahedral_time-invariant_2020090100_CLAT.grib2.bz2"
-
-        out: NOAAFileInfo | None = _parseAWSFilename(
-            name=filename,
-            baseurl=self.baseurl,
-        )
-        self.assertIsNotNone(out)
-        self.assertEqual(out.filename(), filename.removesuffix(".bz2"))
-        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
+        self.assertEqual(out.filename(), filename)
+        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 6, tzinfo=dt.timezone.utc))

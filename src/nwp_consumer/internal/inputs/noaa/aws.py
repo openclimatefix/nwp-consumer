@@ -51,7 +51,7 @@ class Client(internal.FetcherInterface):
             param_group: The set of parameters to fetch.
                 Valid groups are "default", "full", and "basic".
         """
-        self.baseurl = "https://noaa-gfs-bdp-pds.s3.amazonaws.com/"
+        self.baseurl = "https://noaa-gfs-bdp-pds.s3.amazonaws.com"
 
         match (param_group, model):
             case ("default", _):
@@ -105,12 +105,12 @@ class Client(internal.FetcherInterface):
 
             # The href contains the name of a file - parse this into a FileInfo object
             fi: NOAAFileInfo | None = None
-            # If not conforming, match all files
-            # * Otherwise only match single level and time invariant
+            # The baseurl has to have the time and init time added to it for GFS
             fi = _parseAWSFilename(
                 name=refmatch.groups()[0],
-                baseurl=self.baseurl,
+                baseurl=f"{self.baseurl}/gfs.{it.strftime('%Y%m%d')}/{it.strftime('%H')}",
                 match_aux=not self.conform,
+                it=it,
             )
             # Ignore the file if it is not for today's date or has a step > 48 (when conforming)
             if fi is None or (fi.step > self.hours and self.conform):
@@ -259,7 +259,8 @@ def _parseAWSFilename(
     name: str,
     baseurl: str,
     match_aux: bool = True,
-    match_main: bool = True
+    match_main: bool = True,
+    it: dt.datetime | None = None,
 ) -> NOAAFileInfo | None:
     """Parse a string of HTML into an IconFileInfo object, if it contains one.
 
@@ -287,11 +288,9 @@ def _parseAWSFilename(
     else:
         return None
 
-    it = dt.datetime.strptime(itstring, "%Y%m%d%H").replace(tzinfo=dt.timezone.utc)
-
     return NOAAFileInfo(
         it=it,
         filename=name,
-        currentURL=f"{baseurl}/gfs.{it.strftime('%Y%m%d')}/{it.strftime('%H')}/gfs.t{itstring}z.pgrb2.0p25.f{stepstring}",
+        currentURL=f"{baseurl}/gfs.t{itstring}z.pgrb2.0p25.f{stepstring}",
         step=int(stepstring),
     )
