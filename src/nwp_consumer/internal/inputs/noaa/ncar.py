@@ -200,7 +200,7 @@ class Client(internal.FetcherInterface):
                 ds.rename({"time": "init_time"})
                 .expand_dims("init_time")
                 .expand_dims("step")
-                .to_array(dim="variable", name=f"ICON_{self.model}".upper())
+                .to_array(dim="variable", name=f"NOAA_{self.model}".upper())
                 .to_dataset()
                 .transpose("variable", "init_time", "step", ...)
                 .sortby("step")
