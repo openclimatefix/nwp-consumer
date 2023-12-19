@@ -244,10 +244,7 @@ class Client(internal.FetcherInterface):
         # Extract the bz2 file when downloading
         tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
         with open(tfp, "wb") as f:
-            dec = bz2.BZ2Decompressor()
-            for chunk in iter(lambda: response.read(16 * 1024), b""):
-                f.write(dec.decompress(chunk))
-                f.flush()
+            f.write(response.read())
 
         log.debug(
             event="fetched all data from file",
