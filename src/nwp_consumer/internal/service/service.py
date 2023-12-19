@@ -374,11 +374,17 @@ def _dataQualityFilter(ds: xr.Dataset) -> bool:
     # Carry out a basic data quality check
     if "variable" not in dict(ds.coords.items()):
         log.warn(
-            event="Dataset for is missing variable coord",
+            event="Dataset for is missing variable coord, checking other data variables",
             initTime=str(ds.coords["init_time"].values[0])[:16],
             coords=dict(ds.coords.items()),
         )
-        return False
+        for data_var in ds.data_vars.keys():
+            if True in ds[f"{data_var}"].isnull():
+                log.warn(
+                    event=f"Dataset has NaNs in variable {data_var}",
+                    initTime=str(ds.coords["init_time"].values[0])[:16],
+                    variable=data_var,
+                )
 
     for var in ds.coords["variable"].values:
         if True in ds.sel(variable=var).isnull():
