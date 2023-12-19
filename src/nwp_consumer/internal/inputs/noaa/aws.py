@@ -18,7 +18,7 @@ from ._models import NOAAFileInfo
 
 log = structlog.getLogger()
 
-# See https://d-nb.info/1081305452/34 for a list of NOAA GFS parameters
+# See https://www.nco.ncep.noaa.gov/pmb/products/gfs/gfs.t00z.pgrb2.0p25.f003.shtml for a list of NOAA GFS parameters
 PARAMETER_RENAME_MAP: dict[str, str] = {
     "t2m_instant": internal.OCFShortName.TemperatureAGL.value,
     "tcc": internal.OCFShortName.HighCloudCover.value,
@@ -47,7 +47,7 @@ class Client(internal.FetcherInterface):
         Exposes a client for NOAA data from AWS that conforms to the FetcherInterface.
 
         Args:
-            model: The model to fetch data for. Valid models are "europe" and "global".
+            model: The model to fetch data for. Valid models is "global".
             param_group: The set of parameters to fetch.
                 Valid groups are "default", "full", and "basic".
         """
