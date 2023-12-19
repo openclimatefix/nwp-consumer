@@ -1,33 +1,4 @@
 """Defines all parameters available from icon."""
 
 
-EU_SL_VARS = [
-    "alb_rad", "alhfl_s", "ashfl_s", "asob_s", "asob_t",
-    "aswdifd_s", "aswdifu_s", "aswdir_s", "athb_s",
-    "athb_t", "aumfl_s" "avmfl_s",
-    "cape_con", "cape_ml", "clch", "clcl", "clcm", "clct", "clct_mod", "cldepth",
-    "h_snow", "hbas_con", "htop_con", "htop_dc", "hzerocl",
-    "pmsl", "ps",
-    "qv_2m", "qv_s",
-    "rain_con", "rain_gsp", "relhum_2m", "rho_snow", "runoff_g", "runoff_s",
-    "snow_con", "snow_gsp", "snowlmt", "synmsg_bt_cl_ir10.8",
-    "t_2m", "t_g", "t_snow", "tch", "tcm", "td_2m",
-    "tmax_2m", "tmin_2m", "tot_prec", "tqc", "tqi",
-    "u_10m", "v_10m", "vmax_10m",
-    "w_snow", "w_so", "ww",
-    "z0",
-]
-
-EU_ML_VARS = ["clc", "fi", "omega", "p", "qv", "relhum", "t", "tke", "u", "v", "w"]
-
-GLOBAL_SL_VARS = [
-    *EU_SL_VARS,
-    "alb_rad",
-    "c_t_lk",
-    "freshsnw", "fr_ice",
-    "h_ice", "h_ml_lk",
-    "t_ice", "t_s", "tqr", "tqs", "tqv",
-]
-
-GLOBAL_ML_VARS: list[str] = ["fi", "relhum", "t", "u", "v"]
-
+GFS_VARIABLES = ['siconc_surface_instant','slt_surface_instant','cape_surface_instant','t_surface_instant','sp_surface_instant','lsm_surface_instant','sr_surface_instant','vis_surface_instant','prate_surface_instant','acpcp_surface_accum','sde_surface_instant','cin_surface_instant','orog_surface_instant','tp_surface_accum','lhtfl_surface_avg','shtfl_surface_avg','crain_surface_instant','cfrzr_surface_instant','cicep_surface_instant','csnow_surface_instant','cprat_surface_instant','cpofp_surface_instant','pevpr_surface_instant','sdwe_surface_instant','uflx_surface_avg','vflx_surface_avg','gust_surface_instant','fricv_surface_instant','u-gwd_surface_avg','v-gwd_surface_avg','hpbl_surface_instant','dswrf_surface_avg','uswrf_surface_avg','dlwrf_surface_avg','ulwrf_surface_avg','lftx_surface_instant','4lftx_surface_instant','veg_surface_instant','watr_surface_accum','gflux_surface_avg','fco2rec_surface_instant','hindex_surface_instant','wilt_surface_instant','fldcp_surface_instant','al_surface_avg','SUNSD_surface_instant','prate_surface_avg','crain_surface_avg','cfrzr_surface_avg','cicep_surface_avg','csnow_surface_avg','cprat_surface_avg','pres_instant','q_instant','t_instant','u_instant','v_instant','u10_instant','v10_instant','t2m_instant','d2m_instant','tmax_max','tmin_min','sh2_instant','r2_instant','aptmp_instant','u100_instant','v100_instant','refd_instant','t','u','v','q','w','gh','r','absv','o3mr','wz','tcc','clwmr','icmr','rwmr','snmr','grle',]

@@ -13,7 +13,7 @@ import cfgrib
 
 from nwp_consumer import internal
 
-from ._consts import EU_ML_VARS, EU_SL_VARS, GLOBAL_ML_VARS, GLOBAL_SL_VARS
+from ._consts import GFS_VARIABLES
 from ._models import NOAAFileInfo
 
 log = structlog.getLogger()
@@ -61,7 +61,7 @@ class Client(internal.FetcherInterface):
                 self.parameters = ["t2m_instant", "tcc",]
                 self.conform = True
             case ("full", "global"):
-                self.parameters = GLOBAL_SL_VARS + GLOBAL_ML_VARS
+                self.parameters = GFS_VARIABLES
                 self.conform = False
             case (_, _):
                 raise ValueError(
