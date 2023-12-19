@@ -18,7 +18,6 @@ class TestClient(unittest.TestCase):
             pathlib.Path(__file__).parent / "gfs.t06z.pgrb2.0p25.f005"
         )
         out = testClient.mapTemp(p=testFilePath)
-        print(out)
         # Check latitude and longitude are injected
         self.assertTrue("latitude" in out.coords)
         self.assertTrue("longitude" in out.coords)
