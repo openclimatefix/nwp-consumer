@@ -20,18 +20,14 @@ log = structlog.getLogger()
 
 # See https://d-nb.info/1081305452/34 for a list of ICON parameters
 PARAMETER_RENAME_MAP: dict[str, str] = {
-    "t_2m": internal.OCFShortName.TemperatureAGL.value,
-    "clch": internal.OCFShortName.HighCloudCover.value,
-    "clcm": internal.OCFShortName.MediumCloudCover.value,
-    "clcl": internal.OCFShortName.LowCloudCover.value,
-    "asob_s": internal.OCFShortName.DownwardShortWaveRadiationFlux.value,
-    "athb_s": internal.OCFShortName.DownwardLongWaveRadiationFlux.value,
-    "w_snow": internal.OCFShortName.SnowDepthWaterEquivalent.value,
-    "relhum_2m": internal.OCFShortName.RelativeHumidityAGL.value,
-    "u_10m": internal.OCFShortName.WindUComponentAGL.value,
-    "v_10m": internal.OCFShortName.WindVComponentAGL.value,
-    "clat": "lat",  # Icon has a seperate dataset for latitude...
-    "clon": "lon",  # ... and longitude (for the global model)! Go figure
+    "t2m_instant": internal.OCFShortName.TemperatureAGL.value,
+    "tcc": internal.OCFShortName.HighCloudCover.value,
+    "dswrf_surface_avg": internal.OCFShortName.DownwardShortWaveRadiationFlux.value,
+    "dlwrf_surface_avg": internal.OCFShortName.DownwardLongWaveRadiationFlux.value,
+    "sdwe_surface_instant": internal.OCFShortName.SnowDepthWaterEquivalent.value,
+    "r": internal.OCFShortName.RelativeHumidityAGL.value,
+    "u10_instant": internal.OCFShortName.WindUComponentAGL.value,
+    "v10_instant": internal.OCFShortName.WindVComponentAGL.value,
 }
 
 COORDINATE_ALLOW_LIST: typing.Sequence[str] = ("time", "step", "latitude", "longitude")
@@ -62,7 +58,7 @@ class Client(internal.FetcherInterface):
                 self.parameters = list(PARAMETER_RENAME_MAP.keys())
                 self.conform = True
             case ("basic", "global"):
-                self.parameters = ["t_2m", "asob_s", "clat", "clon"]
+                self.parameters = ["t2m_instant", "tcc",]
                 self.conform = True
             case ("full", "global"):
                 self.parameters = GLOBAL_SL_VARS + GLOBAL_ML_VARS
@@ -88,7 +84,7 @@ class Client(internal.FetcherInterface):
         # https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.20201206/00/atmos/gfs.t00z.pgrb2.0p25.f000
 
         # Fetch AWS webpage detailing the available files for the parameter
-        response = requests.get(f"{self.baseurl}/gfs.{it.strftime('%Y%m%d')}/{it.strftime('%H')}/atmos/", timeout=3)
+        response = requests.get(f"{self.baseurl}/gfs.{it.strftime('%Y%m%d')}/{it.strftime('%H')}/", timeout=3)
 
         if response.status_code != 200:
             log.warn(
@@ -197,7 +193,6 @@ class Client(internal.FetcherInterface):
                 errors="ignore",
             )
 
-        # Create chunked Dask dataset with a single "variable" dimension
         # * Each chunk is a single time step
         # Does not use teh "variable" dimension, as this makes a 86GiB dataset for a single timestamp
         # Keeping variables separate keeps the dataset small enough to fit in memory
@@ -299,6 +294,6 @@ def _parseAWSFilename(
     return NOAAFileInfo(
         it=it,
         filename=name,
-        currentURL=f"{baseurl}/{it.strftime('%H')}/{paramstring.lower()}/",
+        currentURL=f"{baseurl}/gfs.{it.strftime('%Y%m%d')}/{it.strftime('%H')}/gfs.t{itstring}z.pgrb2.0p25.f{stepstring}",
         step=int(stepstring),
     )
