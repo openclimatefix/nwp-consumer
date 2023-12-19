@@ -113,7 +113,7 @@ class Client(internal.FetcherInterface):
                 match_aux=not self.conform,
             )
             # Ignore the file if it is not for today's date or has a step > 48 (when conforming)
-            if fi is None or fi.it() != it or (fi.step > self.hours and self.conform):
+            if fi is None or (fi.step > self.hours and self.conform):
                 continue
 
             # Add the file to the list
@@ -129,13 +129,6 @@ class Client(internal.FetcherInterface):
         return files
 
     def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
-        if p.suffix != ".grib2":
-            log.warn(
-                event="cannot map non-grib file to dataset",
-                filepath=p.as_posix(),
-            )
-            return xr.Dataset()
-
         log.debug(event="mapping raw file to xarray dataset", filepath=p.as_posix())
 
         # Load the raw file as a dataset
@@ -182,6 +175,11 @@ class Client(internal.FetcherInterface):
         # Only conform the dataset if requested (defaults to True)
         if self.conform:
             # Rename the parameters to the OCF names
+            # Drop variables that are not in the OCF list first
+            ds = ds.drop_vars(
+                names=[v for v in ds.data_vars if v not in PARAMETER_RENAME_MAP.keys()],
+                errors="ignore",
+            )
             # * Only do so if they exist in the dataset
             for oldParamName, newParamName in PARAMETER_RENAME_MAP.items():
                 if oldParamName in ds:

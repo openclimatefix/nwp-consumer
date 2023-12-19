@@ -1,5 +1,3 @@
-__all__ = ["NCEPClient", "NCARClient"]
+__all__ = ["AWSClient"]
 
-from .ncar import Client as NCARClient
-from .ncep import Client as NCEPClient
-
+from .aws import Client as AWSClient
