@@ -160,7 +160,7 @@ class NWPConsumerService:
             bag.map(lambda time: self.storer.copyITFolderToTemp(prefix=self.rawdir, it=time))
             .filter(lambda temppaths: len(temppaths) != 0)
             .map(lambda temppaths: [self.fetcher.mapTemp(p=p) for p in temppaths])
-            .map(lambda datasets: xr.merge(objects=datasets, combine_attrs="drop_conflicts"))
+            .map(lambda datasets: _mergeDatasets(datasets=datasets))
             .filter(_dataQualityFilter)
             .map(lambda ds: _saveAsTempZipZarr(ds=ds))
             .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.name))
@@ -395,3 +395,26 @@ def _dataQualityFilter(ds: xr.Dataset) -> bool:
             )
 
     return True
+
+
+def _mergeDatasets(datasets: list[xr.Dataset]) -> xr.Dataset:
+    """Merge a list of datasets into a single dataset."""
+    try:
+        return xr.merge(objects=datasets, combine_attrs="drop_conflicts")
+    except xr.core.merge.MergeError:
+        datasets = _insert_zerod_missing_variables_with_correct_shape(datasets)
+        return xr.merge(objects=datasets, combine_attrs="drop_conflicts", compat="override")
+
+
+def _insert_zerod_missing_variables_with_correct_shape(datasets: list[xr.Dataset]) -> list[xr.Dataset]:
+    """Insert zero'd out data for missing variables in each dataset so that merging works."""
+    for i, dataset in enumerate(datasets):
+        for j, dataset2 in enumerate(datasets):
+            if i == j:
+                continue
+            for variable in dataset2.data_vars.keys():
+                if variable not in dataset.data_vars.keys():
+                    dataset[variable] = xr.zeros_like(dataset2[variable])
+                    dataset[variable].attrs = dataset2[variable].attrs
+        datasets[i] = dataset
+    return datasets
