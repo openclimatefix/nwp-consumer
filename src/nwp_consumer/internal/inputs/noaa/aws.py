@@ -1,4 +1,4 @@
-"""Implements a client to fetch ICON data from DWD."""
+"""Implements a client to fetch NOAA data from AWS."""
 import bz2
 import datetime as dt
 import pathlib
@@ -13,12 +13,12 @@ import cfgrib
 
 from nwp_consumer import internal
 
-from ._consts import GFS_VARIABLES
+from ._consts import GFS_VARIABLES, MISSING_STEP_0_VARIABLES, EXTRA_STEP_0_VARIABLES
 from ._models import NOAAFileInfo
 
 log = structlog.getLogger()
 
-# See https://d-nb.info/1081305452/34 for a list of ICON parameters
+# See https://d-nb.info/1081305452/34 for a list of NOAA GFS parameters
 PARAMETER_RENAME_MAP: dict[str, str] = {
     "t2m_instant": internal.OCFShortName.TemperatureAGL.value,
     "tcc": internal.OCFShortName.HighCloudCover.value,
@@ -34,17 +34,17 @@ COORDINATE_ALLOW_LIST: typing.Sequence[str] = ("time", "step", "latitude", "long
 
 
 class Client(internal.FetcherInterface):
-    """Implements a client to fetch ICON data from DWD."""
+    """Implements a client to fetch NOAA data from AWS."""
 
-    baseurl: str  # The base URL for the ICON model
+    baseurl: str  # The base URL for the NOAA model
     model: str  # The model to fetch data for
     parameters: list[str]  # The parameters to fetch
     conform: bool  # Whether to rename parameters to OCF names and clear unwanted coordinates
 
     def __init__(self, model: str, hours: int = 48, param_group: str = "default") -> None:
-        """Create a new Icon Client.
+        """Create a new NOAA Client.
 
-        Exposes a client for ICON data from DWD that conforms to the FetcherInterface.
+        Exposes a client for NOAA data from AWS that conforms to the FetcherInterface.
 
         Args:
             model: The model to fetch data for. Valid models are "europe" and "global".
@@ -172,6 +172,21 @@ class Client(internal.FetcherInterface):
 
         ds = xr.merge([surface, heightAboveGround, isobaricInhPa])
 
+        # If step is 0, drop variables that are not in the list of variables that have step 0
+        if ds.step.values[0] == 0:
+            ds = ds.drop_vars(
+                names=[v for v in ds.data_vars if v not in EXTRA_STEP_0_VARIABLES],
+                errors="ignore",
+            )
+            # Add variables that are missing from the list of variables that have step 0
+            for variable in MISSING_STEP_0_VARIABLES:
+                if variable not in ds:
+                    ds[variable] = xr.DataArray(
+                        data=[0] * len(ds.latitude),
+                        dims=["latitude", "longitude"],
+                        coords={"latitude": ds.latitude, "longitude": ds.longitude},
+                    )
+
         # Only conform the dataset if requested (defaults to True)
         if self.conform:
             # Rename the parameters to the OCF names
@@ -278,11 +293,11 @@ def _parseAWSFilename(
     match_main: bool = True,
     it: dt.datetime | None = None,
 ) -> NOAAFileInfo | None:
-    """Parse a string of HTML into an IconFileInfo object, if it contains one.
+    """Parse a string of HTML into an NOAAFileInfo object, if it contains one.
 
     Args:
         name: The name of the file to parse
-        baseurl: The base URL for the ICON model
+        baseurl: The base URL for the AWS NOAA model
     """
     # Only 2 types of file, they contain all variables in it
     # "https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20231206/06/atmos/gfs.t06z.pgrb2.0p25.f002"

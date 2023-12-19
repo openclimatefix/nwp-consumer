@@ -1,4 +1,4 @@
-"""Implements a client to fetch ICON data from DWD."""
+"""Implements a client to fetch NOAA data from NCAR."""
 import bz2
 import datetime as dt
 import pathlib
@@ -18,7 +18,7 @@ from ._models import NOAAFileInfo
 
 log = structlog.getLogger()
 
-# See https://d-nb.info/1081305452/34 for a list of ICON parameters
+# See https://d-nb.info/1081305452/34 for a list of NOAA parameters
 PARAMETER_RENAME_MAP: dict[str, str] = {
     "t2m_instant": internal.OCFShortName.TemperatureAGL.value,
     "tcc": internal.OCFShortName.HighCloudCover.value,
@@ -34,17 +34,17 @@ COORDINATE_ALLOW_LIST: typing.Sequence[str] = ("time", "step", "latitude", "long
 
 
 class Client(internal.FetcherInterface):
-    """Implements a client to fetch ICON data from DWD."""
+    """Implements a client to fetch NOAA data from NCAR."""
 
-    baseurl: str  # The base URL for the ICON model
+    baseurl: str  # The base URL for the NOAA model
     model: str  # The model to fetch data for
     parameters: list[str]  # The parameters to fetch
     conform: bool  # Whether to rename parameters to OCF names and clear unwanted coordinates
 
     def __init__(self, model: str, hours: int = 48, param_group: str = "default") -> None:
-        """Create a new Icon Client.
+        """Create a new NOAA Client.
 
-        Exposes a client for ICON data from DWD that conforms to the FetcherInterface.
+        Exposes a client for NOAA data from NCAR that conforms to the FetcherInterface.
 
         Args:
             model: The model to fetch data for. Valid models are "europe" and "global".
@@ -277,11 +277,11 @@ def _parseNCARFilename(
         baseurl: str,
         match_main: bool = True,
 ) -> NOAAFileInfo | None:
-    """Parse a string of HTML into an IconFileInfo object, if it contains one.
+    """Parse a string of HTML into an NOAAFileInfo object, if it contains one.
 
     Args:
         name: The name of the file to parse
-        baseurl: The base URL for the ICON model
+        baseurl: The base URL for the NOAA NCAR model
     """
     # Define the regex patterns to match the different types of file; X is step, L is level
     mainRegex = r"gfs.0p25.(\d{10}).f(\d{3}).grib2"
