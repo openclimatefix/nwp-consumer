@@ -79,10 +79,6 @@ class Client(internal.FetcherInterface):
 
         files: list[internal.FileInfoModel] = []
 
-        # Files are split per timestep
-        # And the url includes the time and init time
-        # https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.20201206/00/atmos/gfs.t00z.pgrb2.0p25.f000
-
         # Fetch NCAR webpage detailing the available files for the parameter
         response = requests.get(f"{self.baseurl}/{it.strftime('%Y')}/{it.strftime('%Y%m%d')}/", timeout=3)
 
@@ -268,11 +264,7 @@ def _parseNCARFilename(
         name: The name of the file to parse
         baseurl: The base URL for the ICON model
     """
-    # Only 2 types of file, they contain all variables in it
-    # "https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20231206/06/atmos/gfs.t06z.pgrb2.0p25.f002"
-    # "https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20231206/06/atmos/gfs.t06z.pgrb2b.0p25.f002"
     # Define the regex patterns to match the different types of file; X is step, L is level
-
     mainRegex = r"gfs.0p25.(\d{10}).f(\d{3}).grib2"
     # Auxiliary files have b appended to them
     itstring = paramstring = ""
