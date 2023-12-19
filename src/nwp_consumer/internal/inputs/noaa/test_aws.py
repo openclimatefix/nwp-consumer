@@ -26,6 +26,10 @@ class TestClient(unittest.TestCase):
             out[next(iter(out.data_vars.keys()))].dims,
             ("init_time", "step", "latitude", "longitude"),
         )
+        self.assertEqual(len(out["latitude"].values), 721)
+        self.assertEqual(len(out["longitude"].values), 1440)
+        self.assertEqual(len(out["init_time"].values), 1)
+        self.assertEqual(len(out["step"].values), 1)
 
 
 class TestParseIconFilename(unittest.TestCase):
