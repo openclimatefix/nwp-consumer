@@ -221,23 +221,38 @@ class Client(internal.FetcherInterface):
 
         # Create chunked Dask dataset with a single "variable" dimension
         # * Each chunk is a single time step
-        ds = (
-            ds.rename({"time": "init_time"})
-            .expand_dims("init_time")
-            .expand_dims("step")
-            .to_array(dim="variable", name=f"CMC_{self.model}".upper())
-            .to_dataset()
-            .transpose("variable", "init_time", "step", ...)
-            .sortby("step")
-            .sortby("variable")
-            .chunk(
-                {
-                    "init_time": 1,
-                    "step": -1,
-                    "variable": -1,
-                },
+        if self.conform:
+            ds = (
+                ds.rename({"time": "init_time"})
+                .expand_dims("init_time")
+                .expand_dims("step")
+                .to_array(dim="variable", name=f"CMC_{self.model}".upper())
+                .to_dataset()
+                .transpose("variable", "init_time", "step", ...)
+                .sortby("step")
+                .sortby("variable")
+                .chunk(
+                    {
+                        "init_time": 1,
+                        "step": -1,
+                        "variable": -1,
+                    },
+                )
             )
-        )
+        else:
+            ds = (
+                ds.rename({"time": "init_time"})
+                .expand_dims("init_time")
+                .expand_dims("step")
+                .transpose("init_time", "step", ...)
+                .sortby("step")
+                .chunk(
+                    {
+                        "init_time": 1,
+                        "step": -1,
+                    },
+                )
+            )
         return ds
 
     def downloadToTemp(  # noqa: D102
