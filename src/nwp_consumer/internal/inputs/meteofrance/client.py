@@ -10,6 +10,7 @@ import requests
 import structlog
 import xarray as xr
 import cfgrib
+import s3fs
 
 from nwp_consumer import internal
 
@@ -51,7 +52,8 @@ class Client(internal.FetcherInterface):
             param_group: The set of parameters to fetch.
                 Valid groups are "default", "full", and "basic".
         """
-        self.baseurl = "https://mf-nwp-models.s3.amazonaws.com/"
+        self.baseurl = "s3://mf-nwp-models/"
+        self.fs = s3fs.S3FileSystem(anon=True)
 
         match model:
             case "europe":
@@ -102,34 +104,22 @@ class Client(internal.FetcherInterface):
 
         # Parameter sets
         for parameter_set in ARPEGE_GLOBAL_PARAMETER_SETS:
-            # Fetch Arpege webpage detailing the available files for the parameter
-            response = requests.get(f"{self.baseurl}/{it.strftime('%YYYY-%MM-%DD')}/{it.strftime('%HH')}/{parameter_set}/", timeout=3)
 
-            if response.status_code != 200:
-                log.warn(
-                    event="error fetching filelisting webpage for parameter",
-                    status=response.status_code,
-                    url=response.url,
-                    param=parameter_set,
-                    inittime=it.strftime("%Y-%m-%d %H:%M"),
-                )
-                continue
+            # Fetch Arpege webpage detailing the available files for the parameter
+            files = self.fs.ls(f"{self.baseurl}{it.strftime('%Y-%m-%d')}/{it.strftime('%H')}/{parameter_set}/")
 
             # The webpage's HTML <body> contains a list of <a> tags
             # * Each <a> tag has a href, most of which point to a file)
-            for line in response.text.splitlines():
-                # Check if the line contains a href, if not, skip it
-                refmatch = re.search(pattern=r'href="(.+)">', string=line)
-                if refmatch is None:
+            for f in files:
+                if ".inv" in f: # Ignore the .inv files
                     continue
-
                 # The href contains the name of a file - parse this into a FileInfo object
                 fi: ArpegeFileInfo | None = None
                 # If not conforming, match all files
                 # * Otherwise only match single level
                 fi = _parseArpegeFilename(
-                    name=refmatch.groups()[0],
-                    baseurl=f"{self.baseurl}/{it.strftime('%YYYY-%MM-%DD')}/{it.strftime('%HH')}/{parameter_set}/",
+                    name=f.split("/")[-1],
+                    baseurl=f"{self.baseurl}{it.strftime('%Y-%m-%d')}/{it.strftime('%H')}/{parameter_set}/",
                     match_hl=not self.conform,
                     match_pl=not self.conform,
                 )
@@ -140,13 +130,13 @@ class Client(internal.FetcherInterface):
                 # Add the file to the list
                 parameterFiles.append(fi)
 
-            log.debug(
-                event="listed files for parameter",
-                param=parameter_set,
-                inittime=it.strftime("%Y-%m-%d %H:%M"),
-                url=response.url,
-                numfiles=len(parameterFiles),
-            )
+                log.debug(
+                    event="listed files for parameter",
+                    param=parameter_set,
+                    inittime=it.strftime("%Y-%m-%d %H:%M"),
+                    url=f,
+                    numfiles=len(parameterFiles),
+                )
 
             # Add the files for the parameter to the list of all files
             files.extend(parameterFiles)
@@ -258,33 +248,10 @@ class Client(internal.FetcherInterface):
         fi: internal.FileInfoModel,
     ) -> tuple[internal.FileInfoModel, pathlib.Path]:
         log.debug(event="requesting download of file", file=fi.filename(), path=fi.filepath())
-        try:
-            response = urllib.request.urlopen(fi.filepath())
-        except Exception as e:
-            log.warn(
-                event="error calling url for file",
-                url=fi.filepath(),
-                filename=fi.filename(),
-                error=e,
-            )
-            return fi, pathlib.Path()
-
-        if response.status != 200:
-            log.warn(
-                event="error downloading file",
-                status=response.status,
-                url=fi.filepath(),
-                filename=fi.filename(),
-            )
-            return fi, pathlib.Path()
 
         # Extract the bz2 file when downloading
         tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
-        with open(tfp, "wb") as f:
-            dec = bz2.BZ2Decompressor()
-            for chunk in iter(lambda: response.read(16 * 1024), b""):
-                f.write(dec.decompress(chunk))
-                f.flush()
+        self.fs.get(fi.filepath(), tfp)
 
         log.debug(
             event="fetched all data from file",
@@ -316,12 +283,11 @@ def _parseArpegeFilename(
     # Defined from the href of the file, its harder to split
     # Define the regex patterns to match the different types of file; X is step, L is level
     # * Single Level: `MODEL_single-level_YYYYDDMMHH_XXX_SOME_PARAM.grib2.bz2`
-    slRegex = r"https://mf-nwp-models.s3.amazonaws.com/arpege-([A-Za-z_\d]+)/v1/(\d{4})-(\d{2})-(\d{2})/(\d{2})/SP(\d{1})/(\d{2})H(\d{2})H.grib2"
-    #slRegex = r"arpege-([A-Za-z_\d]+)_(\d{10})_(\d{2})_SP(\d{1})_(\d{2})H(\d{2})H.grib2"
+    slRegex = r"s3://mf-nwp-models/arpege-([A-Za-z_\d]+)/v1/(\d{4})-(\d{2})-(\d{2})/(\d{2})/SP(\d{1})/(\d{2})H(\d{2})H.grib2"
     # * Height Level: `MODEL_time-invariant_YYYYDDMMHH_SOME_PARAM.grib2.bz2`
-    hlRegex = r"https://mf-nwp-models.s3.amazonaws.com/arpege-([A-Za-z_\d]+)/v1/(\d{4})-(\d{2})-(\d{2})/(\d{2})/HP(\d{1})/(\d{2})H(\d{2})H.grib2"
+    hlRegex = r"s3://mf-nwp-models/arpege-([A-Za-z_\d]+)/v1/(\d{4})-(\d{2})-(\d{2})/(\d{2})/HP(\d{1})/(\d{2})H(\d{2})H.grib2"
     # * Pressure Level: `MODEL_model-level_YYYYDDMMHH_XXX_LLL_SOME_PARAM.grib2.bz2`
-    plRegex = r"https://mf-nwp-models.s3.amazonaws.com/arpege-([A-Za-z_\d]+)/v1/(\d{4})-(\d{2})-(\d{2})/(\d{2})/IP(\d{1})/(\d{2})H(\d{2})H.grib2"
+    plRegex = r"s3://mf-nwp-models/arpege-([A-Za-z_\d]+)/v1/(\d{4})-(\d{2})-(\d{2})/(\d{2})/IP(\d{1})/(\d{2})H(\d{2})H.grib2"
 
     itstring_year = itstring_month = itstring_day = itstring_hour = paramstring = ""
     stepstring_start = stepstring_end = "00"
@@ -341,9 +307,11 @@ def _parseArpegeFilename(
 
     it = dt.datetime.strptime(itstring_year+itstring_month+itstring_day+itstring_hour, "%Y%m%d%H").replace(tzinfo=dt.timezone.utc)
 
+    # TODO Construct the public URL from S3 path?
+
     return ArpegeFileInfo(
         it=it,
         filename=name,
-        currentURL=f"{baseurl}/{it.strftime('%H')}/{paramstring.lower()}/",
+        currentURL=f"{baseurl}",
         step=int(stepstring_start),
     )

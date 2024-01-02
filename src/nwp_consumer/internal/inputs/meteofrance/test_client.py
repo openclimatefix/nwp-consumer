@@ -80,7 +80,7 @@ class TestClient(unittest.TestCase):
 
 
 class TestParseArpegeFilename(unittest.TestCase):
-    baseurl = "https://mf-nwp-models.s3.amazonaws.com/arpege-world/v1/2023-12-03/12/"
+    baseurl = "s3://mf-nwp-models/arpege-world/v1/2023-12-03/12/"
 
     def test_parsesSingleLevel(self) -> None:
         filename: str = "00H24H.grib2"
@@ -98,7 +98,7 @@ class TestParseArpegeFilename(unittest.TestCase):
 
         out: ArpegeFileInfo | None = _parseArpegeFilename(
             name=filename,
-            baseurl=self.baseurl+"HP1/",
+            baseurl=self.baseurl+"HP2/",
             match_hl=True,
         )
         self.assertIsNotNone(out)
@@ -117,7 +117,7 @@ class TestParseArpegeFilename(unittest.TestCase):
 
         out: ArpegeFileInfo | None = _parseArpegeFilename(
             name=filename,
-            baseurl=self.baseurl+"IP1/",
+            baseurl=self.baseurl+"IP4/",
             match_pl=True,
         )
         self.assertIsNotNone(out)
