@@ -126,10 +126,10 @@ class Client(internal.FetcherInterface):
                 # The href contains the name of a file - parse this into a FileInfo object
                 fi: ArpegeFileInfo | None = None
                 # If not conforming, match all files
-                # * Otherwise only match single level and time invariant
+                # * Otherwise only match single level
                 fi = _parseArpegeFilename(
                     name=refmatch.groups()[0],
-                    baseurl=self.baseurl,
+                    baseurl=f"{self.baseurl}/{it.strftime('%YYYY-%MM-%DD')}/{it.strftime('%HH')}/{parameter_set}/",
                     match_hl=not self.conform,
                     match_pl=not self.conform,
                 )
@@ -176,6 +176,31 @@ class Client(internal.FetcherInterface):
             )
             return xr.Dataset()
 
+        # Check if datasets is more than a single dataset or not
+        # * If it is, merge the datasets into a single dataset
+        if len(ds) > 1:
+            if "_IP" in str(p): # Pressure levels
+                ds = xr.merge([d for d in ds if "isobaricInhPa" in d.coords], compat="override")
+            elif "_SP" in str(p): # Single levels
+                for i, d in enumerate(ds):
+                    if "surface" in d.coords:
+                        d = d.rename({"surface": "heightAboveGround"})
+                    # Make heightAboveGround a coordinate
+                    if "heightAboveGround" in d.coords:
+                        d = d.expand_dims("heightAboveGround")
+                        ds[i] = d
+                # Merge all the datasets that have heightAboveGround
+                ds = xr.merge([d for d in ds if "heightAboveGround" in d.coords], compat="override")
+            elif "_HP" in str(p): # Height levels
+                for i, d in enumerate(ds):
+                    if "heightAboveGround" in d.coords and not "heightAboveGround" in d.dims:
+                        d = d.expand_dims("heightAboveGround")
+                        ds[i] = d
+                ds = xr.merge([d for d in ds if "heightAboveGround" in d.coords], compat="override")
+        else:
+            ds = ds[0]
+        ds = ds.drop_vars("unknown", errors="ignore")
+
         # Only conform the dataset if requested (defaults to True)
         if self.conform:
             # Rename the parameters to the OCF names
@@ -189,14 +214,12 @@ class Client(internal.FetcherInterface):
                 names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST],
                 errors="ignore",
             )
-
         # Create chunked Dask dataset with a single "variable" dimension
         # * Each chunk is a single time step
         if self.conform:
             ds = (
                 ds.rename({"time": "init_time"})
                 .expand_dims("init_time")
-                .expand_dims("step")
                 .to_array(dim="variable", name=f"MeteoFrance_{self.model}".upper())
                 .to_dataset()
                 .transpose("variable", "init_time", "step", ...)
@@ -214,7 +237,6 @@ class Client(internal.FetcherInterface):
             ds = (
                 ds.rename({"time": "init_time"})
                 .expand_dims("init_time")
-                .expand_dims("step")
                 .transpose( "init_time", "step", ...)
                 .sortby("step")
                 .chunk(

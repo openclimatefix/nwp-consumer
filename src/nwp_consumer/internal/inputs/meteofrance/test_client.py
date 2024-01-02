@@ -15,7 +15,7 @@ class TestClient(unittest.TestCase):
     def test_mapTemp(self) -> None:
         # Test with global file
         testFilePath: pathlib.Path = (
-            pathlib.Path(__file__).parent / "test_icon_global_001_CLCL.grib2"
+            pathlib.Path(__file__).parent / "arpege-world_20231203_12_SP1_00H24H.grib2"
         )
         out = testClient.mapTemp(p=testFilePath)
 
@@ -25,14 +25,19 @@ class TestClient(unittest.TestCase):
         # Check that the dimensions are correctly ordered and renamed
         self.assertEqual(
             out[next(iter(out.data_vars.keys()))].dims,
-            ("variable", "init_time", "step", "values"),
+            ("variable", "init_time", "step", "heightAboveGround", "latitude", "longitude"),
         )
         # Check that the parameter is renamed
-        self.assertEqual(out["variable"].values[0], "ccl")
+        self.assertEqual(out["variable"].values[0], "dswrf")
+        self.assertEqual(len(out["latitude"].values), 361)
+        self.assertEqual(len(out["longitude"].values), 720)
+        self.assertEqual(len(out["init_time"].values), 1)
+        self.assertEqual(len(out["step"].values), 9)
+        self.assertEqual(len(out["heightAboveGround"].values), 3)
 
-        # Test with europe file
+        # Test with pressure level file
         testFilePath: pathlib.Path = (
-            pathlib.Path(__file__).parent / "test_icon_europe_001_CLCL.grib2"
+            pathlib.Path(__file__).parent / "arpege-world_20231203_12_IP1_00H24H.grib2"
         )
         out = testClient.mapTemp(p=testFilePath)
 
@@ -42,13 +47,13 @@ class TestClient(unittest.TestCase):
         # Check that the dimensions are correctly ordered and renamed
         self.assertEqual(
             out[next(iter(out.data_vars.keys()))].dims,
-            ("variable", "init_time", "step", "latitude", "longitude"),
+            ("variable", "init_time", "step", "isobaricInhPa" "latitude", "longitude"),
         )
         # Check that the parameter is renamed
         self.assertEqual(out["variable"].values[0], "ccl")
 
 
-class TestParseIconFilename(unittest.TestCase):
+class TestParseArpegeFilename(unittest.TestCase):
     baseurl = "https://mf-nwp-models.s3.amazonaws.com/arpege-world/v1/2023-12-03/12/"
 
     def test_parsesSingleLevel(self) -> None:
