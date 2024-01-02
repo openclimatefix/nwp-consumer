@@ -217,7 +217,6 @@ class Client(internal.FetcherInterface):
                 names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST],
                 errors="ignore",
             )
-        print(ds)
         # Create chunked Dask dataset with a single "variable" dimension
         # * Each chunk is a single time step
         if self.conform:

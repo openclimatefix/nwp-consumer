@@ -15,7 +15,28 @@ class TestClient(unittest.TestCase):
     def test_mapTemp(self) -> None:
         # Test with global file
         testFilePath: pathlib.Path = (
-            pathlib.Path(__file__).parent / "arpege-world_20231203_12_SP1_00H24H.grib2"
+            pathlib.Path(__file__).parent / "SP1_00H24H_t.grib2"
+        )
+        out = testClient.mapTemp(p=testFilePath)
+
+        # Check latitude and longitude are injected
+        self.assertTrue("latitude" in out.coords)
+        self.assertTrue("longitude" in out.coords)
+        # Check that the dimensions are correctly ordered and renamed
+        self.assertEqual(
+            out[next(iter(out.data_vars.keys()))].dims,
+            ("variable", "init_time", "step", "latitude", "longitude"),
+        )
+        # Check that the parameter is renamed
+        self.assertEqual(out["variable"].values[0], "t")
+        self.assertEqual(len(out["latitude"].values), 361)
+        self.assertEqual(len(out["longitude"].values), 720)
+        self.assertEqual(len(out["init_time"].values), 1)
+        self.assertEqual(len(out["step"].values), 9)
+
+        # Test with height level file
+        testFilePath: pathlib.Path = (
+                pathlib.Path(__file__).parent / "HP1_00H24H_t.grib2"
         )
         out = testClient.mapTemp(p=testFilePath)
 
@@ -28,16 +49,16 @@ class TestClient(unittest.TestCase):
             ("variable", "init_time", "step", "heightAboveGround", "latitude", "longitude"),
         )
         # Check that the parameter is renamed
-        self.assertEqual(out["variable"].values[0], "dswrf")
+        self.assertEqual(out["variable"].values[0], "t")
         self.assertEqual(len(out["latitude"].values), 361)
         self.assertEqual(len(out["longitude"].values), 720)
         self.assertEqual(len(out["init_time"].values), 1)
         self.assertEqual(len(out["step"].values), 9)
-        self.assertEqual(len(out["heightAboveGround"].values), 3)
+        self.assertEqual(len(out["heightAboveGround"].values), 24)
 
         # Test with pressure level file
         testFilePath: pathlib.Path = (
-            pathlib.Path(__file__).parent / "arpege-world_20231203_12_IP1_00H24H.grib2"
+            pathlib.Path(__file__).parent / "IP1_00H24H_t.grib2"
         )
         out = testClient.mapTemp(p=testFilePath)
 
@@ -47,10 +68,10 @@ class TestClient(unittest.TestCase):
         # Check that the dimensions are correctly ordered and renamed
         self.assertEqual(
             out[next(iter(out.data_vars.keys()))].dims,
-            ("variable", "init_time", "step", "isobaricInhPa" "latitude", "longitude"),
+            ("variable", "init_time", "step", "isobaricInhPa", "latitude", "longitude"),
         )
         # Check that the parameter is renamed
-        self.assertEqual(out["variable"].values[0], "ccl")
+        self.assertEqual(out["variable"].values[0], "t")
         self.assertEqual(len(out["latitude"].values), 361)
         self.assertEqual(len(out["longitude"].values), 720)
         self.assertEqual(len(out["init_time"].values), 1)
