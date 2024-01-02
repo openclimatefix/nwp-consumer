@@ -16,7 +16,7 @@ class ArpegeFileInfo(internal.FileInfoModel):
         return self._filename
 
     def filepath(self) -> str:
-        return self._url + "/" + self._filename
+        return self._url + self._filename
 
     def it(self) -> dt.datetime:
         return self._it

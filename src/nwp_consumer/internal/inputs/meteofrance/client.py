@@ -248,10 +248,10 @@ class Client(internal.FetcherInterface):
         fi: internal.FileInfoModel,
     ) -> tuple[internal.FileInfoModel, pathlib.Path]:
         log.debug(event="requesting download of file", file=fi.filename(), path=fi.filepath())
-
         # Extract the bz2 file when downloading
         tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
-        self.fs.get(fi.filepath(), tfp)
+
+        self.fs.get(str(fi.filepath()), str(tfp))
 
         log.debug(
             event="fetched all data from file",
