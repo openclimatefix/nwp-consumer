@@ -14,6 +14,7 @@ from nwp_consumer.internal.inputs.icon._models import IconFileInfo
 from nwp_consumer.internal.inputs.metoffice._models import MetOfficeFileInfo
 from nwp_consumer.internal.inputs.cmc._models import CMCFileInfo
 from nwp_consumer.internal.inputs.noaa._models import NOAAFileInfo
+from nwp_consumer.internal.inputs.meteofrance._models import ArpegeFileInfo
 
 storageClient = outputs.localfs.Client()
 
@@ -109,6 +110,24 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
             step=1,
         )
         _, tmpPath = cmcClient.downloadToTemp(fi=fileInfo)
+        self.assertTrue(tmpPath.name.endswith(".grib2"))
+        self.assertGreater(tmpPath.stat().st_size, 40000)
+
+    def test_downloadsRawGribFileFromMeteoFrance(self) -> None:
+        arpegeInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+
+        arpegeClient = inputs.meteofrance.Client(
+            model="global",
+        )
+        fileInfo = ArpegeFileInfo(
+            it=arpegeInitTime,
+            filename=f"00H24H.grib2",
+            currentURL=f"s3://mf-nwp-models/arpege-world/v1/{arpegeInitTime.strftime('%Y-%m-%d')}/{arpegeInitTime.strftime('%H')}/SP1/",
+            step=1,
+        )
+        _, tmpPath = arpegeClient.downloadToTemp(fi=fileInfo)
         self.assertTrue(tmpPath.name.endswith(".grib2"))
         self.assertGreater(tmpPath.stat().st_size, 40000)
 
@@ -228,6 +247,26 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         self.assertTrue(len(gepsFileInfos) > 0)
         self.assertNotEqual(fileInfos, gepsFileInfos)
 
+    def test_getsFileInfosFromMeteoFrance(self) -> None:
+        arpegeInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+        arpegeClient = inputs.meteofrance.Client(
+            model="global",
+            hours=4,
+            param_group="basic",
+        )
+        fileInfos = arpegeClient.listRawFilesForInitTime(it=arpegeInitTime)
+        self.assertTrue(len(fileInfos) > 0)
+
+        arpegeClient = inputs.meteofrance.Client(
+            model="europe",
+            hours=4,
+            param_group="basic",
+        )
+        europeFileInfos = arpegeClient.listRawFilesForInitTime(it=arpegeInitTime)
+        self.assertTrue(len(europeFileInfos) > 0)
+        self.assertNotEqual(fileInfos, europeFileInfos)
 
     def test_getsFileInfosFromAWSNOAA(self) -> None:
         noaaInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
