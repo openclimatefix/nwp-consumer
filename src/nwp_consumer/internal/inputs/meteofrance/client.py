@@ -175,11 +175,14 @@ class Client(internal.FetcherInterface):
                 filepath=p.as_posix(),
             )
             return xr.Dataset()
-
         # Check if datasets is more than a single dataset or not
         # * If it is, merge the datasets into a single dataset
         if len(ds) > 1:
             if "_IP" in str(p): # Pressure levels
+                for i, d in enumerate(ds):
+                    if "isobaricInhPa" in d.coords and not "isobaricInhPa" in d.dims:
+                        d = d.expand_dims("isobaricInhPa")
+                        ds[i] = d
                 ds = xr.merge([d for d in ds if "isobaricInhPa" in d.coords], compat="override")
             elif "_SP" in str(p): # Single levels
                 for i, d in enumerate(ds):
@@ -214,6 +217,7 @@ class Client(internal.FetcherInterface):
                 names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST],
                 errors="ignore",
             )
+        print(ds)
         # Create chunked Dask dataset with a single "variable" dimension
         # * Each chunk is a single time step
         if self.conform:

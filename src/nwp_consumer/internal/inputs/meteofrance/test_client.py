@@ -51,6 +51,11 @@ class TestClient(unittest.TestCase):
         )
         # Check that the parameter is renamed
         self.assertEqual(out["variable"].values[0], "ccl")
+        self.assertEqual(len(out["latitude"].values), 361)
+        self.assertEqual(len(out["longitude"].values), 720)
+        self.assertEqual(len(out["init_time"].values), 1)
+        self.assertEqual(len(out["step"].values), 9)
+        self.assertEqual(len(out["isobaricInhPa"].values), 28)
 
 
 class TestParseArpegeFilename(unittest.TestCase):
