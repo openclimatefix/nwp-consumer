@@ -1,4 +1,4 @@
-"""Implements a client to fetch ICON data from DWD."""
+"""Implements a client to fetch Arpege data from MeteoFrance AWS."""
 import bz2
 import datetime as dt
 import pathlib
@@ -9,45 +9,42 @@ import urllib.request
 import requests
 import structlog
 import xarray as xr
+import cfgrib
 
 from nwp_consumer import internal
 
-from ._consts import EU_ML_VARS, EU_SL_VARS, GLOBAL_ML_VARS, GLOBAL_SL_VARS
-from ._models import IconFileInfo
+from ._consts import ARPEGE_GLOBAL_VARIABLES, ARPEGE_GLOBAL_PARAMETER_SETS
+from ._models import ArpegeFileInfo
 
 log = structlog.getLogger()
 
-# See https://d-nb.info/1081305452/34 for a list of ICON parameters
+# See https://mf-models-on-aws.org/en/doc/datasets/v1/ for a list of Arpege parameters
 PARAMETER_RENAME_MAP: dict[str, str] = {
-    "t_2m": internal.OCFShortName.TemperatureAGL.value,
-    "clch": internal.OCFShortName.HighCloudCover.value,
-    "clcm": internal.OCFShortName.MediumCloudCover.value,
-    "clcl": internal.OCFShortName.LowCloudCover.value,
-    "asob_s": internal.OCFShortName.DownwardShortWaveRadiationFlux.value,
-    "athb_s": internal.OCFShortName.DownwardLongWaveRadiationFlux.value,
-    "w_snow": internal.OCFShortName.SnowDepthWaterEquivalent.value,
-    "relhum_2m": internal.OCFShortName.RelativeHumidityAGL.value,
-    "u_10m": internal.OCFShortName.WindUComponentAGL.value,
-    "v_10m": internal.OCFShortName.WindVComponentAGL.value,
-    "clat": "lat",  # Icon has a seperate dataset for latitude...
-    "clon": "lon",  # ... and longitude (for the global model)! Go figure
+    "t2m": internal.OCFShortName.TemperatureAGL.value,
+    "hcc": internal.OCFShortName.HighCloudCover.value,
+    "mcc": internal.OCFShortName.MediumCloudCover.value,
+    "lcc": internal.OCFShortName.LowCloudCover.value,
+    "ssrd": internal.OCFShortName.DownwardShortWaveRadiationFlux.value,
+    "d2m": internal.OCFShortName.RelativeHumidityAGL.value,
+    "u10": internal.OCFShortName.WindUComponentAGL.value,
+    "v10": internal.OCFShortName.WindVComponentAGL.value,
 }
 
 COORDINATE_ALLOW_LIST: typing.Sequence[str] = ("time", "step", "latitude", "longitude")
 
 
 class Client(internal.FetcherInterface):
-    """Implements a client to fetch ICON data from DWD."""
+    """Implements a client to fetch Arpege data from AWS."""
 
-    baseurl: str  # The base URL for the ICON model
+    baseurl: str  # The base URL for the Argpege model
     model: str  # The model to fetch data for
     parameters: list[str]  # The parameters to fetch
     conform: bool  # Whether to rename parameters to OCF names and clear unwanted coordinates
 
     def __init__(self, model: str, hours: int = 48, param_group: str = "default") -> None:
-        """Create a new Icon Client.
+        """Create a new Arpege Client.
 
-        Exposes a client for ICON data from DWD that conforms to the FetcherInterface.
+        Exposes a client for Arpege data from AWS MeteoFrance that conforms to the FetcherInterface.
 
         Args:
             model: The model to fetch data for. Valid models are "europe" and "global".
@@ -55,7 +52,7 @@ class Client(internal.FetcherInterface):
                 Valid groups are "default", "full", and "basic".
         """
         self.baseurl = "https://mf-nwp-models.s3.amazonaws.com/"
-        "2023-12-12/12/IP2/00H24H.grib2"
+
         match model:
             case "europe":
                 self.baseurl += "arpege-europe/v1/"
@@ -63,7 +60,7 @@ class Client(internal.FetcherInterface):
                 self.baseurl += "arpege-world/v1/"
             case _:
                 raise ValueError(
-                    f"unknown icon model {model}. Valid models are 'europe' and 'global'",
+                    f"unknown arpege model {model}. Valid models are 'europe' and 'global'",
                 )
 
         match (param_group, model):
@@ -71,16 +68,16 @@ class Client(internal.FetcherInterface):
                 self.parameters = list(PARAMETER_RENAME_MAP.keys())
                 self.conform = True
             case ("basic", "europe"):
-                self.parameters = ["t_2m", "asob_s"]
+                self.parameters = ARPEGE_GLOBAL_VARIABLES[:2]
                 self.conform = True
             case ("basic", "global"):
-                self.parameters = ["t_2m", "asob_s", "clat", "clon"]
+                self.parameters = ARPEGE_GLOBAL_VARIABLES[:2]
                 self.conform = True
             case ("full", "europe"):
-                self.parameters = EU_SL_VARS + EU_ML_VARS
+                self.parameters = ARPEGE_GLOBAL_VARIABLES
                 self.conform = False
             case ("full", "global"):
-                self.parameters = GLOBAL_SL_VARS + GLOBAL_ML_VARS + ["clat", "clon"]
+                self.parameters = ARPEGE_GLOBAL_VARIABLES
                 self.conform = False
             case (_, _):
                 raise ValueError(
@@ -92,34 +89,28 @@ class Client(internal.FetcherInterface):
         self.hours = hours
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
-        # ICON data is only available for today's date. If data hasn't been uploaded for that init
-        # time yet, then yesterday's data will still be present on the server.
-        if it.date() != dt.datetime.now(dt.timezone.utc).date():
-            raise ValueError("ICON data is only available on today's date")
-            return []
 
-        # The ICON model only runs on the hours [00, 06, 12, 18]
+        # The Arpege model only runs on the hours [00, 06, 12, 18]
         if it.hour not in [0, 6, 12, 18]:
             return []
 
         files: list[internal.FileInfoModel] = []
 
-        # Files are split per parameter, level, and step, with a webpage per parameter
-        # * The webpage contains a list of files for the parameter
-        # * Find these files for each parameter and add them to the list
-        for param in self.parameters:
-            # The list of files for the parameter
-            parameterFiles: list[internal.FileInfoModel] = []
+        # Files are split per set of parameters, and set of steps
+        # The list of files for the parameter
+        parameterFiles: list[internal.FileInfoModel] = []
 
-            # Fetch DWD webpage detailing the available files for the parameter
-            response = requests.get(f"{self.baseurl}/{it.strftime('%H')}/{param}/", timeout=3)
+        # Parameter sets
+        for parameter_set in ARPEGE_GLOBAL_PARAMETER_SETS:
+            # Fetch Arpege webpage detailing the available files for the parameter
+            response = requests.get(f"{self.baseurl}/{it.strftime('%YYYY-%MM-%DD')}/{it.strftime('%HH')}/{parameter_set}/", timeout=3)
 
             if response.status_code != 200:
                 log.warn(
                     event="error fetching filelisting webpage for parameter",
                     status=response.status_code,
                     url=response.url,
-                    param=param,
+                    param=parameter_set,
                     inittime=it.strftime("%Y-%m-%d %H:%M"),
                 )
                 continue
@@ -133,13 +124,13 @@ class Client(internal.FetcherInterface):
                     continue
 
                 # The href contains the name of a file - parse this into a FileInfo object
-                fi: IconFileInfo | None = None
+                fi: ArpegeFileInfo | None = None
                 # If not conforming, match all files
                 # * Otherwise only match single level and time invariant
-                fi = _parseIconFilename(
+                fi = _parseArpegeFilename(
                     name=refmatch.groups()[0],
                     baseurl=self.baseurl,
-                    match_ml=not self.conform,
+                    match_hl=not self.conform,
                     match_pl=not self.conform,
                 )
                 # Ignore the file if it is not for today's date or has a step > 48 (when conforming)
@@ -151,7 +142,7 @@ class Client(internal.FetcherInterface):
 
             log.debug(
                 event="listed files for parameter",
-                param=param,
+                param=parameter_set,
                 inittime=it.strftime("%Y-%m-%d %H:%M"),
                 url=response.url,
                 numfiles=len(parameterFiles),
@@ -170,24 +161,12 @@ class Client(internal.FetcherInterface):
             )
             return xr.Dataset()
 
-        if p.stem.endswith("_CLAT") or p.stem.endswith("_CLON"):
-            # Ignore the latitude and longitude files
-            return xr.Dataset()
-
         log.debug(event="mapping raw file to xarray dataset", filepath=p.as_posix())
 
         # Load the raw file as a dataset
         try:
-            ds = xr.open_dataset(
+            ds = cfgrib.open_datasets(
                 p.as_posix(),
-                engine="cfgrib",
-                chunks={
-                    "time": 1,
-                    "step": 1,
-                    "variable": -1,
-                    "latitude": "auto",
-                    "longitude": "auto",
-                },
             )
         except Exception as e:
             log.warn(
@@ -211,41 +190,6 @@ class Client(internal.FetcherInterface):
                 errors="ignore",
             )
 
-        # Inject latitude and longitude into the dataset if they are missing
-        if "latitude" not in ds:
-            rawlats: list[pathlib.Path] = list(p.parent.glob("*CLAT.grib2"))
-            if len(rawlats) == 0:
-                log.warn(
-                    event="no latitude file found for init time",
-                    filepath=p.as_posix(),
-                    init_time=p.parent.name,
-                )
-                return xr.Dataset()
-            latds = xr.open_dataset(
-                rawlats[0],
-                engine="cfgrib",
-                backend_kwargs={"errors": "ignore"},
-            )
-            ds = ds.assign_coords({"latitude": ("values", latds.tlat.values)})
-            del latds
-
-        if "longitude" not in ds:
-            rawlons: list[pathlib.Path] = list(p.parent.glob("*CLON.grib2"))
-            if len(rawlons) == 0:
-                log.warn(
-                    event="no longitude file found for init time",
-                    filepath=p.as_posix(),
-                    init_time=p.parent.name,
-                )
-                return xr.Dataset()
-            londs = xr.open_dataset(
-                rawlons[0],
-                engine="cfgrib",
-                backend_kwargs={"errors": "ignore"},
-            )
-            ds = ds.assign_coords({"longitude": ("values", londs.tlon.values)})
-            del londs
-
         # Create chunked Dask dataset with a single "variable" dimension
         # * Each chunk is a single time step
         if self.conform:
@@ -253,7 +197,7 @@ class Client(internal.FetcherInterface):
                 ds.rename({"time": "init_time"})
                 .expand_dims("init_time")
                 .expand_dims("step")
-                .to_array(dim="variable", name=f"ICON_{self.model}".upper())
+                .to_array(dim="variable", name=f"MeteoFrance_{self.model}".upper())
                 .to_dataset()
                 .transpose("variable", "init_time", "step", ...)
                 .sortby("step")
@@ -328,48 +272,41 @@ class Client(internal.FetcherInterface):
         return fi, tfp
 
 
-def _parseIconFilename(
+def _parseArpegeFilename(
     name: str,
     baseurl: str,
     match_sl: bool = True,
-    match_ti: bool = True,
-    match_ml: bool = False,
+    match_hl: bool = True,
     match_pl: bool = False,
-) -> IconFileInfo | None:
-    """Parse a string of HTML into an IconFileInfo object, if it contains one.
+) -> ArpegeFileInfo | None:
+    """Parse a string of HTML into an ArpegeFileInfo object, if it contains one.
 
     Args:
         name: The name of the file to parse
-        baseurl: The base URL for the ICON model
+        baseurl: The base URL for the Arpege model
         match_sl: Whether to match single-level files
-        match_ti: Whether to match time-invariant files
-        match_ml: Whether to match model-level files
+        match_hl: Whether to match height-level files
         match_pl: Whether to match pressure-level files
     """
     # Define the regex patterns to match the different types of file; X is step, L is level
     # * Single Level: `MODEL_single-level_YYYYDDMMHH_XXX_SOME_PARAM.grib2.bz2`
-    slRegex = r"single-level_(\d{10})_(\d{3})_([A-Za-z_\d]+).grib"
-    # * Time Invariant: `MODEL_time-invariant_YYYYDDMMHH_SOME_PARAM.grib2.bz2`
-    tiRegex = r"time-invariant_(\d{10})_([A-Za-z_\d]+).grib"
-    # * Model Level: `MODEL_model-level_YYYYDDMMHH_XXX_LLL_SOME_PARAM.grib2.bz2`
-    mlRegex = r"model-level_(\d{10})_(\d{3})_(\d+)_([A-Za-z_\d]+).grib"
-    # * Pressure Level: `MODEL_pressure-level_YYYYDDMMHH_XXX_LLLL_SOME_PARAM.grib2.bz2`
-    plRegex = r"pressure-level_(\d{10})_(\d{3})_(\d+)_([A-Za-z_\d]+).grib"
+    slRegex = r"arpege-([A-Za-z_\d]+)_(\d{10})_(\d{2})_SP(\d{1})_(\d{2})H(\d{2})H.grib2"
+    # * Height Level: `MODEL_time-invariant_YYYYDDMMHH_SOME_PARAM.grib2.bz2`
+    hlRegex = r"arpege-([A-Za-z_\d]+)_(\d{10})_(\d{2})_IP(\d{1})_(\d{2})H(\d{2})H.grib2"
+    # * Pressure Level: `MODEL_model-level_YYYYDDMMHH_XXX_LLL_SOME_PARAM.grib2.bz2`
+    plRegex = r"arpege-([A-Za-z_\d]+)_(\d{10})_(\d{2})_HP(\d{1})_(\d{2})H(\d{2})H.grib2"
 
     itstring = paramstring = ""
     stepstring = "000"
     # Try to match the href to one of the regex patterns
     slmatch = re.search(pattern=slRegex, string=name)
-    timatch = re.search(pattern=tiRegex, string=name)
-    mlmatch = re.search(pattern=mlRegex, string=name)
+    hlmatch = re.search(pattern=hlRegex, string=name)
     plmatch = re.search(pattern=plRegex, string=name)
 
     if slmatch and match_sl:
         itstring, stepstring, paramstring = slmatch.groups()
-    elif timatch and match_ti:
-        itstring, paramstring = timatch.groups()
-    elif mlmatch and match_ml:
-        itstring, stepstring, levelstring, paramstring = mlmatch.groups()
+    elif hlmatch and match_hl:
+        itstring, paramstring = hlmatch.groups()
     elif plmatch and match_pl:
         itstring, stepstring, levelstring, paramstring = plmatch.groups()
     else:
@@ -377,7 +314,7 @@ def _parseIconFilename(
 
     it = dt.datetime.strptime(itstring, "%Y%m%d%H").replace(tzinfo=dt.timezone.utc)
 
-    return IconFileInfo(
+    return ArpegeFileInfo(
         it=it,
         filename=name,
         currentURL=f"{baseurl}/{it.strftime('%H')}/{paramstring.lower()}/",

@@ -4,9 +4,9 @@ import unittest
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ._models import IconFileInfo
+    from ._models import ArpegeFileInfo
 
-from .client import Client, _parseIconFilename
+from .client import Client, _parseArpegeFilename
 
 testClient = Client(model="global")
 
@@ -54,57 +54,46 @@ class TestParseIconFilename(unittest.TestCase):
     def test_parsesSingleLevel(self) -> None:
         filename: str = "icon_global_icosahedral_single-level_2020090100_000_T_HUM.grib2.bz2"
 
-        out: IconFileInfo | None = _parseIconFilename(
+        out: ArpegeFileInfo | None = _parseArpegeFilename(
             name=filename,
             baseurl=self.baseurl,
         )
         self.assertIsNotNone(out)
-        self.assertEqual(out.filename(), filename.removesuffix(".bz2"))
+        self.assertEqual(out.filename(), filename)
         self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
 
-    def test_parsesTimeInvariant(self) -> None:
-        filename: str = "icon_global_icosahedral_time-invariant_2020090100_CLAT.grib2.bz2"
-
-        out: IconFileInfo | None = _parseIconFilename(
-            name=filename,
-            baseurl=self.baseurl,
-        )
-        self.assertIsNotNone(out)
-        self.assertEqual(out.filename(), filename.removesuffix(".bz2"))
-        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
-
-    def test_parsesModelLevel(self) -> None:
+    def test_parsesHeightLevel(self) -> None:
         filename: str = "icon_global_icosahedral_model-level_2020090100_048_32_CLCL.grib2.bz2"
 
-        out: IconFileInfo | None = _parseIconFilename(
+        out: ArpegeFileInfo | None = _parseArpegeFilename(
             name=filename,
             baseurl=self.baseurl,
-            match_ml=True,
+            match_hl=True,
         )
         self.assertIsNotNone(out)
-        self.assertEqual(out.filename(), filename.removesuffix(".bz2"))
+        self.assertEqual(out.filename(), filename)
         self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
 
-        out: IconFileInfo | None = _parseIconFilename(
+        out: ArpegeFileInfo | None = _parseArpegeFilename(
             name=filename,
             baseurl=self.baseurl,
-            match_ml=False,
+            match_hl=False,
         )
         self.assertIsNone(out)
 
     def test_parsesPressureLevel(self) -> None:
         filename: str = "icon_global_icosahedral_pressure-level_2020090100_048_1000_T.grib2.bz2"
 
-        out: IconFileInfo | None = _parseIconFilename(
+        out: ArpegeFileInfo | None = _parseArpegeFilename(
             name=filename,
             baseurl=self.baseurl,
             match_pl=True,
         )
         self.assertIsNotNone(out)
-        self.assertEqual(out.filename(), filename.removesuffix(".bz2"))
+        self.assertEqual(out.filename(), filename)
         self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
 
-        out: IconFileInfo | None = _parseIconFilename(
+        out: ArpegeFileInfo | None = _parseArpegeFilename(
             name=filename,
             baseurl=self.baseurl,
             match_pl=False,
