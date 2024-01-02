@@ -49,30 +49,30 @@ class TestClient(unittest.TestCase):
 
 
 class TestParseIconFilename(unittest.TestCase):
-    baseurl = "https://opendata.dwd.de/weather/nwp/icon/grib"
+    baseurl = "https://mf-nwp-models.s3.amazonaws.com/arpege-world/v1/2023-12-03/12/"
 
     def test_parsesSingleLevel(self) -> None:
-        filename: str = "icon_global_icosahedral_single-level_2020090100_000_T_HUM.grib2.bz2"
+        filename: str = "00H24H.grib2"
 
         out: ArpegeFileInfo | None = _parseArpegeFilename(
             name=filename,
-            baseurl=self.baseurl,
+            baseurl=self.baseurl+"SP1/",
         )
         self.assertIsNotNone(out)
         self.assertEqual(out.filename(), filename)
-        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
+        self.assertEqual(out.it(), dt.datetime(2023, 12, 3, 12, tzinfo=dt.timezone.utc))
 
     def test_parsesHeightLevel(self) -> None:
-        filename: str = "icon_global_icosahedral_model-level_2020090100_048_32_CLCL.grib2.bz2"
+        filename: str = "00H24H.grib2"
 
         out: ArpegeFileInfo | None = _parseArpegeFilename(
             name=filename,
-            baseurl=self.baseurl,
+            baseurl=self.baseurl+"HP1/",
             match_hl=True,
         )
         self.assertIsNotNone(out)
         self.assertEqual(out.filename(), filename)
-        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
+        self.assertEqual(out.it(), dt.datetime(2023, 12, 3, 12, tzinfo=dt.timezone.utc))
 
         out: ArpegeFileInfo | None = _parseArpegeFilename(
             name=filename,
@@ -82,16 +82,16 @@ class TestParseIconFilename(unittest.TestCase):
         self.assertIsNone(out)
 
     def test_parsesPressureLevel(self) -> None:
-        filename: str = "icon_global_icosahedral_pressure-level_2020090100_048_1000_T.grib2.bz2"
+        filename: str = "00H24H.grib2"
 
         out: ArpegeFileInfo | None = _parseArpegeFilename(
             name=filename,
-            baseurl=self.baseurl,
+            baseurl=self.baseurl+"IP1/",
             match_pl=True,
         )
         self.assertIsNotNone(out)
         self.assertEqual(out.filename(), filename)
-        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
+        self.assertEqual(out.it(), dt.datetime(2023, 12, 3, 12, tzinfo=dt.timezone.utc))
 
         out: ArpegeFileInfo | None = _parseArpegeFilename(
             name=filename,

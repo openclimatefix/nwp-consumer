@@ -288,35 +288,37 @@ def _parseArpegeFilename(
         match_hl: Whether to match height-level files
         match_pl: Whether to match pressure-level files
     """
+    # Defined from the href of the file, its harder to split
     # Define the regex patterns to match the different types of file; X is step, L is level
     # * Single Level: `MODEL_single-level_YYYYDDMMHH_XXX_SOME_PARAM.grib2.bz2`
-    slRegex = r"arpege-([A-Za-z_\d]+)_(\d{10})_(\d{2})_SP(\d{1})_(\d{2})H(\d{2})H.grib2"
+    slRegex = r"https://mf-nwp-models.s3.amazonaws.com/arpege-([A-Za-z_\d]+)/v1/(\d{4})-(\d{2})-(\d{2})/(\d{2})/SP(\d{1})/(\d{2})H(\d{2})H.grib2"
+    #slRegex = r"arpege-([A-Za-z_\d]+)_(\d{10})_(\d{2})_SP(\d{1})_(\d{2})H(\d{2})H.grib2"
     # * Height Level: `MODEL_time-invariant_YYYYDDMMHH_SOME_PARAM.grib2.bz2`
-    hlRegex = r"arpege-([A-Za-z_\d]+)_(\d{10})_(\d{2})_IP(\d{1})_(\d{2})H(\d{2})H.grib2"
+    hlRegex = r"https://mf-nwp-models.s3.amazonaws.com/arpege-([A-Za-z_\d]+)/v1/(\d{4})-(\d{2})-(\d{2})/(\d{2})/HP(\d{1})/(\d{2})H(\d{2})H.grib2"
     # * Pressure Level: `MODEL_model-level_YYYYDDMMHH_XXX_LLL_SOME_PARAM.grib2.bz2`
-    plRegex = r"arpege-([A-Za-z_\d]+)_(\d{10})_(\d{2})_HP(\d{1})_(\d{2})H(\d{2})H.grib2"
+    plRegex = r"https://mf-nwp-models.s3.amazonaws.com/arpege-([A-Za-z_\d]+)/v1/(\d{4})-(\d{2})-(\d{2})/(\d{2})/IP(\d{1})/(\d{2})H(\d{2})H.grib2"
 
-    itstring = paramstring = ""
-    stepstring = "000"
+    itstring_year = itstring_month = itstring_day = itstring_hour = paramstring = ""
+    stepstring_start = stepstring_end = "00"
     # Try to match the href to one of the regex patterns
-    slmatch = re.search(pattern=slRegex, string=name)
-    hlmatch = re.search(pattern=hlRegex, string=name)
-    plmatch = re.search(pattern=plRegex, string=name)
+    slmatch = re.search(pattern=slRegex, string=baseurl+name)
+    hlmatch = re.search(pattern=hlRegex, string=baseurl+name)
+    plmatch = re.search(pattern=plRegex, string=baseurl+name)
 
     if slmatch and match_sl:
-        itstring, stepstring, paramstring = slmatch.groups()
+        _, itstring_year, itstring_month, itstring_day, itstring_hour, paramstring, stepstring_start, stepstring_end = slmatch.groups()
     elif hlmatch and match_hl:
-        itstring, paramstring = hlmatch.groups()
+        _, itstring_year, itstring_month, itstring_day, itstring_hour, paramstring, stepstring_start, stepstring_end = hlmatch.groups()
     elif plmatch and match_pl:
-        itstring, stepstring, levelstring, paramstring = plmatch.groups()
+        _, itstring_year, itstring_month, itstring_day, itstring_hour, paramstring, stepstring_start, stepstring_end = plmatch.groups()
     else:
         return None
 
-    it = dt.datetime.strptime(itstring, "%Y%m%d%H").replace(tzinfo=dt.timezone.utc)
+    it = dt.datetime.strptime(itstring_year+itstring_month+itstring_day+itstring_hour, "%Y%m%d%H").replace(tzinfo=dt.timezone.utc)
 
     return ArpegeFileInfo(
         it=it,
         filename=name,
         currentURL=f"{baseurl}/{it.strftime('%H')}/{paramstring.lower()}/",
-        step=int(stepstring),
+        step=int(stepstring_start),
     )
