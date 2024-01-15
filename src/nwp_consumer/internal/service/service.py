@@ -164,7 +164,7 @@ class NWPConsumerService:
             bag.map(lambda time: self.storer.copyITFolderToTemp(prefix=self.rawdir, it=time))
             .filter(lambda temppaths: len(temppaths) != 0)
             .map(lambda temppaths: [self.fetcher.mapTemp(p=p) for p in temppaths])
-            .map(lambda datasets: xr.merge(objects=datasets, combine_attrs="drop_conflicts"))
+            .map(lambda datasets: _mergeDatasets(datasets=datasets))
             .filter(_dataQualityFilter)
             .map(lambda ds: _saveAsTempZipZarr(ds=ds))
             .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.name))
@@ -334,16 +334,10 @@ def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
     )
     if tempZarrPath.exists():
         tempZarrPath.unlink()
-    dataVar: str = next(iter(ds.data_vars.keys()))
     with zarr.ZipStore(path=tempZarrPath.as_posix(), mode="w") as store:
         ds.to_zarr(
             store=store,
-            encoding={
-                "init_time": {"units": "nanoseconds since 1970-01-01"},
-                dataVar: {
-                    "compressor": Blosc2(cname="zstd", clevel=5),
-                },
-            },
+            encoding=_generate_encoding(ds=ds)
         )
     return tempZarrPath
 
@@ -357,17 +351,18 @@ def _saveAsTempRegularZarr(ds: xr.Dataset) -> pathlib.Path:
     )
     if tempZarrPath.exists() and tempZarrPath.is_dir():
         shutil.rmtree(tempZarrPath.as_posix())
-    dataVar: str = next(iter(ds.data_vars.keys()))
     ds.to_zarr(
         store=tempZarrPath.as_posix(),
-        encoding={
-            "init_time": {"units": "nanoseconds since 1970-01-01"},
-            dataVar: {
-                "compressor": Blosc2(cname="zstd", clevel=5),
-            },
-        },
+        encoding=_generate_encoding(ds=ds),
     )
     return tempZarrPath
+
+
+def _generate_encoding(ds: xr.Dataset) -> dict[str, dict[str, str] | dict[str, Blosc2]]:
+    encoding = {"init_time": {"units": "nanoseconds since 1970-01-01"}}
+    for var in ds.data_vars:
+        encoding[var] = {"compressor": Blosc2(cname="zstd", clevel=5)}
+    return encoding
 
 
 def _dataQualityFilter(ds: xr.Dataset) -> bool:
@@ -378,11 +373,17 @@ def _dataQualityFilter(ds: xr.Dataset) -> bool:
     # Carry out a basic data quality check
     if "variable" not in dict(ds.coords.items()):
         log.warn(
-            event="Dataset for is missing variable coord",
+            event="Dataset for is missing variable coord, checking other data variables",
             initTime=str(ds.coords["init_time"].values[0])[:16],
             coords=dict(ds.coords.items()),
         )
-        return False
+        for data_var in ds.data_vars.keys():
+            if True in ds[f"{data_var}"].isnull():
+                log.warn(
+                    event=f"Dataset has NaNs in variable {data_var}",
+                    initTime=str(ds.coords["init_time"].values[0])[:16],
+                    variable=data_var,
+                )
 
     for var in ds.coords["variable"].values:
         if True in ds.sel(variable=var).isnull():
@@ -393,3 +394,26 @@ def _dataQualityFilter(ds: xr.Dataset) -> bool:
             )
 
     return True
+
+
+def _mergeDatasets(datasets: list[xr.Dataset]) -> xr.Dataset:
+    """Merge a list of datasets into a single dataset."""
+    try:
+        return xr.merge(objects=datasets, combine_attrs="drop_conflicts")
+    except xr.core.merge.MergeError:
+        datasets = _insert_zerod_missing_variables_with_correct_shape(datasets)
+        return xr.merge(objects=datasets, combine_attrs="drop_conflicts", compat="override")
+
+
+def _insert_zerod_missing_variables_with_correct_shape(datasets: list[xr.Dataset]) -> list[xr.Dataset]:
+    """Insert zero'd out data for missing variables in each dataset so that merging works."""
+    for i, dataset in enumerate(datasets):
+        for j, dataset2 in enumerate(datasets):
+            if i == j:
+                continue
+            for variable in dataset2.data_vars.keys():
+                if variable not in dataset.data_vars.keys():
+                    dataset[variable] = xr.zeros_like(dataset2[variable])
+                    dataset[variable].attrs = dataset2[variable].attrs
+        datasets[i] = dataset
+    return datasets

@@ -12,6 +12,9 @@ from nwp_consumer.internal.inputs.ceda._models import CEDAFileInfo
 from nwp_consumer.internal.inputs.ecmwf._models import ECMWFMarsFileInfo
 from nwp_consumer.internal.inputs.icon._models import IconFileInfo
 from nwp_consumer.internal.inputs.metoffice._models import MetOfficeFileInfo
+from nwp_consumer.internal.inputs.cmc._models import CMCFileInfo
+from nwp_consumer.internal.inputs.noaa._models import NOAAFileInfo
+from nwp_consumer.internal.inputs.meteofrance._models import ArpegeFileInfo
 
 storageClient = outputs.localfs.Client()
 
@@ -92,6 +95,77 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         _, tmpPath = iconClient.downloadToTemp(fi=fileInfo)
         self.assertGreater(tmpPath.stat().st_size, 40000)
 
+    def test_downloadsRawGribFileFromCMC(self) -> None:
+        cmcInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+
+        cmcClient = inputs.cmc.Client(
+            model="gdps",
+        )
+        fileInfo = CMCFileInfo(
+            it=cmcInitTime,
+            filename=f"CMC_glb_VGRD_ISBL_200_latlon.15x.15_{cmcInitTime.strftime('%Y%m%d%H')}_P120.grib2",
+            currentURL="https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/00/120",
+            step=1,
+        )
+        _, tmpPath = cmcClient.downloadToTemp(fi=fileInfo)
+        self.assertTrue(tmpPath.name.endswith(".grib2"))
+        self.assertGreater(tmpPath.stat().st_size, 40000)
+
+    def test_downloadsRawGribFileFromMeteoFrance(self) -> None:
+        arpegeInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+
+        arpegeClient = inputs.meteofrance.Client(
+            model="global",
+        )
+        fileInfo = ArpegeFileInfo(
+            it=arpegeInitTime,
+            filename=f"00H24H.grib2",
+            currentURL=f"s3://mf-nwp-models/arpege-world/v1/{arpegeInitTime.strftime('%Y-%m-%d')}/{arpegeInitTime.strftime('%H')}/SP1/",
+            step=1,
+        )
+        _, tmpPath = arpegeClient.downloadToTemp(fi=fileInfo)
+        self.assertTrue(tmpPath.name.endswith(".grib2"))
+        self.assertGreater(tmpPath.stat().st_size, 40000)
+
+    def test_downloadsRawGribFileFromAWSNOAA(self) -> None:
+        noaaInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+
+        noaaClient = inputs.noaa.aws.Client(
+            model="global",
+            param_group="basic",
+        )
+        fileInfo = NOAAFileInfo(
+            it=noaaInitTime,
+            filename=f"gfs.t00z.pgrb2.0p25.f001",
+            currentURL=f"https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.{noaaInitTime.strftime('%Y%m%d')}/{noaaInitTime.strftime('%H')}",
+            step=1,
+        )
+        _, tmpPath = noaaClient.downloadToTemp(fi=fileInfo)
+        self.assertGreater(tmpPath.stat().st_size, 40000)
+
+    def test_downloadsRawGribFileFromNCARNOAA(self) -> None:
+        noaaInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+
+        noaaClient = inputs.noaa.ncar.Client(
+            model="global",
+            param_group="basic",
+        )
+        fileInfo = NOAAFileInfo(
+            it=noaaInitTime,
+            filename=f"gfs.0p25.2016010300.f003.grib2",
+            currentURL=f"https://data.rda.ucar.edu/ds084.1/2016/20160103",
+            step=3,
+        )
+        _, tmpPath = noaaClient.downloadToTemp(fi=fileInfo)
+        self.assertGreater(tmpPath.stat().st_size, 40000)
 
 class TestListRawFilesForInitTime(unittest.TestCase):
     def test_getsFileInfosFromCEDA(self) -> None:
@@ -151,6 +225,73 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         euFileInfos = iconClient.listRawFilesForInitTime(it=iconInitTime)
         self.assertTrue(len(euFileInfos) > 0)
         self.assertNotEqual(fileInfos, euFileInfos)
+
+    def test_getsFileInfosFromCMC(self) -> None:
+        cmcInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+        cmcClient = inputs.cmc.Client(
+            model="gdps",
+            hours=4,
+            param_group="basic",
+        )
+        fileInfos = cmcClient.listRawFilesForInitTime(it=cmcInitTime)
+        self.assertTrue(len(fileInfos) > 0)
+
+        cmcClient = inputs.cmc.Client(
+            model="geps",
+            hours=4,
+            param_group="basic",
+        )
+        gepsFileInfos = cmcClient.listRawFilesForInitTime(it=cmcInitTime)
+        self.assertTrue(len(gepsFileInfos) > 0)
+        self.assertNotEqual(fileInfos, gepsFileInfos)
+
+    def test_getsFileInfosFromMeteoFrance(self) -> None:
+        arpegeInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+        arpegeClient = inputs.meteofrance.Client(
+            model="global",
+            hours=4,
+            param_group="basic",
+        )
+        fileInfos = arpegeClient.listRawFilesForInitTime(it=arpegeInitTime)
+        self.assertTrue(len(fileInfos) > 0)
+
+        arpegeClient = inputs.meteofrance.Client(
+            model="europe",
+            hours=4,
+            param_group="basic",
+        )
+        europeFileInfos = arpegeClient.listRawFilesForInitTime(it=arpegeInitTime)
+        self.assertTrue(len(europeFileInfos) > 0)
+        self.assertNotEqual(fileInfos, europeFileInfos)
+
+    def test_getsFileInfosFromAWSNOAA(self) -> None:
+        noaaInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+        noaaClient = inputs.noaa.aws.Client(
+            model="global",
+            hours=4,
+            param_group="basic",
+        )
+        fileInfos = noaaClient.listRawFilesForInitTime(it=noaaInitTime)
+        self.assertTrue(len(fileInfos) > 0)
+
+    def test_getsFileInfosFromNCARNOAA(self) -> None:
+        noaaInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+        noaaInitTime = noaaInitTime.replace(year=2017)
+        noaaClient = inputs.noaa.ncar.Client(
+            model="global",
+            hours=4,
+            param_group="basic",
+        )
+        fileInfos = noaaClient.listRawFilesForInitTime(it=noaaInitTime)
+        self.assertTrue(len(fileInfos) > 0)
 
 
 if __name__ == "__main__":
