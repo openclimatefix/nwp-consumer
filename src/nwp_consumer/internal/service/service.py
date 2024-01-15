@@ -87,7 +87,7 @@ class NWPConsumerService:
                 startDate=start.strftime("%Y-%m-%d %H:%M"),
                 endDate=end.strftime("%Y-%m-%d %H:%M"),
             )
-            return []
+            return [self.rawdir / fi.it().strftime(internal.IT_FOLDER_FMTSTR) / fi.filename() for fi in allWantedFileInfos]
         else:
             log.info(
                 event="downloading files",
@@ -145,7 +145,11 @@ class NWPConsumerService:
                 startDate=start.strftime("%Y/%m/%d %H:%M"),
                 endDate=end.strftime("%Y/%m/%d %H:%M"),
             )
-            return []
+            return [
+                self.zarrdir / it.strftime(f"{internal.ZARR_FMTSTR}.zarr.zip")
+                for it in allInitTimes
+                if start <= it.date() <= end
+            ]
         else:
             log.info(
                 event=f"converting {len(desiredInitTimes)} init times to zarr.",
