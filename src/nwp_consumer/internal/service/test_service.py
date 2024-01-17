@@ -123,8 +123,9 @@ class TestNWPConsumerService(unittest.TestCase):
 
         files = self.service.DownloadRawDataset(start=start, end=end)
 
-        # 2 files per init time, all init times
-        self.assertEqual(2 * len(INIT_HOURS) * (len(DAYS)), len(files))
+        # 2 files per init time, all init times except the last
+        # one so none of the init time files for that one
+        self.assertEqual((2 * len(INIT_HOURS) * len(DAYS)) - 1 * len(INIT_TIME_FILES), len(files))
 
     def test_convertRawDataset(self) -> None:
         start = testInitTimes[0]
