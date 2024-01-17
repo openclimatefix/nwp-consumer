@@ -1,11 +1,11 @@
 """nwp-consumer.
 
 Usage:
-  nwp-consumer download --source <source> [options]
-  nwp-consumer convert --source <source> [options]
-  nwp-consumer consume --source <source> [options]
-  nwp-consumer env (--source <source> | --sink <sink>)
-  nwp-consumer check [--sink <sink> --rdir <rawdir> --zdir <zarrdir>]
+  nwp-consumer download --source <src> [--from=FROM] [--to=TO] [--rdir=RDIR] [--zdir=ZDIR] [--sink=SINK] [-v]
+  nwp-consumer convert  --source <src> [--from=FROM] [--to=TO] [--rdir=RDIR] [--zdir=ZDIR] [--sink=SINK] [--create-latest] [-v]
+  nwp-consumer consume  --source <src> [--from=FROM] [--to=TO] [--rdir=RDIR] [--zdir=ZDIR] [--sink=SINK] [--create-latest] [-v]
+  nwp-consumer env (--source=SOURCE | --sink=SINK)
+  nwp-consumer check [--sink=SINK] [--rdir=RDIR] [--zdir=ZDIR]
   nwp-consumer (-h | --help)
   nwp-consumer --version
 
@@ -16,19 +16,19 @@ Options:
   check               Perform a healthcheck.py on the service
   env                 Print the unset environment variables required by the source/sink
 
-  -h --help           Show this screen.
+  -h, --help          Show this screen.
   --version           Show version.
-  --from <startDate>  Start datetime in YYYY-MM-DDTHH:MM format,
+  --from=FROM         Start datetime in YYYY-MM-DDTHH:MM format,
                       or in YYYY-MM-DD format [default: today].
-  --to <endDate>      End date in YYYY-MM-DDTHH:MM format.
-  --source <source>   Data source to use
+  --to=TO             End datetime in YYYY-MM-DD or YYYY-MM-DDTHH:MM format.
+  --source=SOURCE     Data source to use
                       (ceda/metoffice/ecmwf-mars/icon/cmc).
-  --sink <sink>       Data sink to use
+  --sink=SINK         Data sink to use
                       (local/s3/huggingface) [default: local].
-  --rdir <rawdir>     Directory of raw data store [default: /tmp/raw].
-  --zdir <zarrdir>    Directory of zarr data store [default: /tmp/zarr].
+  --rdir=RDIR         Directory of raw data store [default: /tmp/raw].
+  --zdir=ZDIR         Directory of zarr data store [default: /tmp/zarr].
   --create-latest     Create a zarr of the dataset with the latest init time [default: False].
-  -v --verbose        Enable verbose logging [default: False].
+  -v, --verbose       Enable verbose logging [default: False].
 """
 
 import contextlib
@@ -181,6 +181,8 @@ def main() -> None:
     # Parse command line arguments from docstring
     arguments = docopt(__doc__, version=__version__)
     erred = False
+
+    print(arguments)
 
     if arguments["--verbose"]:
         os.environ["LOGLEVEL"] = "DEBUG"
