@@ -69,6 +69,10 @@ class DummyFileInfo(internal.FileInfoModel):
 
 
 class DummyFetcher(internal.FetcherInterface):
+
+    def getInitHours(self) -> list[int]:
+        return INIT_HOURS
+
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[FileInfoModel]:
         raw_files = [DummyFileInfo(file, it) for file in INIT_TIME_FILES if it in testInitTimes]
         return raw_files
