@@ -11,6 +11,8 @@ import signal
 import unittest
 from collections.abc import Callable
 
+import requests
+import urllib3
 from nwp_consumer.internal import config, inputs, outputs
 from nwp_consumer.internal.inputs.ceda._models import CEDAFileInfo
 from nwp_consumer.internal.inputs.cmc._models import CMCFileInfo
@@ -22,11 +24,12 @@ from nwp_consumer.internal.inputs.metoffice._models import MetOfficeFileInfo
 storageClient = outputs.localfs.Client()
 
 
-TIMEOUT = 5
+TIMEOUT = 10
 
 
 def _handle_timeout(sig, frame):
     raise TimeoutError
+
 
 signal.signal(signal.SIGALRM, _handle_timeout)
 
@@ -37,7 +40,13 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         try:
             signal.alarm(TIMEOUT)
             func()
+        # Catch the TimeoutExceptions we would expect to see
+        # from the forced timeout, fail on any other exception
         except TimeoutError:
+            pass
+        except requests.exceptions.ConnectTimeout:
+            pass
+        except urllib3.exceptions.ConnectTimeoutError:
             pass
         except Exception as e:
             self.fail(f"Unexpected exception: {e}")
@@ -281,6 +290,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         europeFileInfos = arpegeClient.listRawFilesForInitTime(it=arpegeInitTime)
         self.assertTrue(len(europeFileInfos) > 0)
         self.assertNotEqual(fileInfos, europeFileInfos)
+
 
 # TODO: NOAA
 

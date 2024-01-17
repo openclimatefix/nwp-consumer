@@ -92,7 +92,7 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
 
         initTime: dt.datetime = dt.datetime(year=2022, month=1, day=1, tzinfo=dt.UTC)
 
-        out = self.testService.DownloadRawDataset(start=initTime, end=initTime))
+        out = self.testService.DownloadRawDataset(start=initTime, end=initTime)
         self.assertGreater(len(out), 0)
 
         out = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
