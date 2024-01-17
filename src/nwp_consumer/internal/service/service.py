@@ -103,16 +103,14 @@ class NWPConsumerService:
         # Create a dask pipeline to download the files
         storedFiles: list[pathlib.Path] = (
             dask.bag.from_sequence(seq=newWantedFileInfos, npartitions=len(newWantedFileInfos))
-            .map(func=lambda fi: self.fetcher.downloadToTemp(fi=fi))
-            .filter(func=lambda infoPathTuple: infoPathTuple[1] != pathlib.Path())
-            .map(
-                func=lambda infoPathTuple: self.storer.store(
+            .map(lambda fi: self.fetcher.downloadToTemp(fi=fi))
+            .filter(lambda infoPathTuple: infoPathTuple[1] != pathlib.Path())
+            .map(lambda infoPathTuple: self.storer.store(
                     src=infoPathTuple[1],
                     dst=self.rawdir
                     / infoPathTuple[0].it().strftime(internal.IT_FOLDER_FMTSTR)
                     / (infoPathTuple[0].filename()),
-                ),
-                pure=False,
+                )
             )
             .compute()
         )
@@ -171,7 +169,7 @@ class NWPConsumerService:
         # * Partition the bag by init time
         bag = dask.bag.from_sequence(desiredInitTimes, npartitions=len(desiredInitTimes))
         storedfiles = (
-            bag.map(func=lambda time: self.storer.copyITFolderToTemp(prefix=self.rawdir, it=time))
+            bag.map(lambda time: self.storer.copyITFolderToTemp(prefix=self.rawdir, it=time))
             .filter(lambda temppaths: len(temppaths) != 0)
             .map(lambda temppaths: [self.fetcher.mapTemp(p=p) for p in temppaths])
             .map(lambda datasets: _mergeDatasets(datasets=datasets))
