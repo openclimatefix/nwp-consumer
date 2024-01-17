@@ -72,15 +72,22 @@ class Client(internal.FetcherInterface):
         self.model = model
         self.hours = hours
 
+    def getInitHours(self) -> list[int]:  # noqa: D102
+        return [0, 6, 12, 18]
+
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
 
-        if it.hour not in [0, 6, 12, 18]:
+        # Ignore inittimes that don't correspond to valid hours
+        if it.hour not in self.getInitHours():
             return []
 
         files: list[internal.FileInfoModel] = []
 
         # Fetch NCAR webpage detailing the available files for the parameter
-        response = requests.get(f"{self.baseurl}/{it.strftime('%Y')}/{it.strftime('%Y%m%d')}/", timeout=3)
+        response = requests.get(
+            f"{self.baseurl}/{it.strftime('%Y')}/{it.strftime('%Y%m%d')}/",
+            timeout=3
+        )
 
         if response.status_code != 200:
             log.warn(

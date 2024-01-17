@@ -1,10 +1,10 @@
 """Implements a client to fetch data from ECMWF."""
 import datetime as dt
+import inspect
 import os
 import pathlib
 import tempfile
 import typing
-import inspect
 
 import cfgrib
 import ecmwfapi.api
@@ -127,10 +127,12 @@ class Client(internal.FetcherInterface):
             case _:
                 self.parameters = list(PARAMETER_ECMWFCODE_MAP.keys())
 
+    def getInitHours(self) -> list[int]:  # noqa: D102
+        return [0, 12]
+
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
-        # For the model we are pulling from, there are only files for 00:00 and 12:00
-        # * Hence, only check requests for these times
-        if it.hour not in [0, 12]:
+        # Ignore inittimes that don't correspond to valid hours
+        if it.hour not in self.getInitHours():
             return []
 
         # MARS requests can only ask for data that is more than 24 hours old: see

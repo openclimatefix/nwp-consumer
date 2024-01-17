@@ -43,23 +43,24 @@ class NWPConsumerService:
         self.rawdir = pathlib.Path(rawdir)
         self.zarrdir = pathlib.Path(zarrdir)
 
-    def DownloadRawDataset(self, *, start: dt.date, end: dt.date) -> list[pathlib.Path]:
+    def DownloadRawDataset(self, *, start: dt.datetime, end: dt.datetime) -> list[pathlib.Path]:
         """Fetch raw data for each initTime in the given range.
 
         :param start: The start date of the time range to download
         :param end: The end date of the time range to download
         """
-        # Get the list of init times as datetime objects
-        # * This spans every hour between the start and end dates up to 11:00pm on the end date
+        # Get the list of init times valid for the fetcher
+        # between the start and end times (inclusive)
         allInitTimes: list[dt.datetime] = [
             pdt.to_pydatetime()
             for pdt in pd.date_range(
-                start=start,
-                end=end + dt.timedelta(days=1),
+                start=start.date(),
+                end=end,
                 inclusive="left",
                 freq="H",
                 tz=dt.UTC,
             ).tolist()
+            if pdt.to_pydatetime().hour in self.fetcher.getInitHours()
         ]
 
         # For each init time, get the list of files that need to be downloaded
@@ -87,7 +88,10 @@ class NWPConsumerService:
                 startDate=start.strftime("%Y-%m-%d %H:%M"),
                 endDate=end.strftime("%Y-%m-%d %H:%M"),
             )
-            return [self.rawdir / fi.it().strftime(internal.IT_FOLDER_FMTSTR) / fi.filename() for fi in allWantedFileInfos]
+            return [
+                self.rawdir / fi.it().strftime(internal.IT_FOLDER_FMTSTR) / fi.filename()
+                for fi in allWantedFileInfos
+            ]
         else:
             log.info(
                 event="downloading files",
@@ -99,22 +103,28 @@ class NWPConsumerService:
         # Create a dask pipeline to download the files
         storedFiles: list[pathlib.Path] = (
             dask.bag.from_sequence(seq=newWantedFileInfos, npartitions=len(newWantedFileInfos))
-            .map(lambda fi: self.fetcher.downloadToTemp(fi=fi))
-            .filter(lambda infoPathTuple: infoPathTuple[1] != pathlib.Path())
+            .map(func=lambda fi: self.fetcher.downloadToTemp(fi=fi), pure=False)
+            .filter(func=lambda infoPathTuple: infoPathTuple[1] != pathlib.Path())
             .map(
-                lambda infoPathTuple: self.storer.store(
+                func=lambda infoPathTuple: self.storer.store(
                     src=infoPathTuple[1],
                     dst=self.rawdir
                     / infoPathTuple[0].it().strftime(internal.IT_FOLDER_FMTSTR)
                     / (infoPathTuple[0].filename()),
                 ),
+                pure=False,
             )
             .compute()
         )
 
         return storedFiles
 
-    def ConvertRawDatasetToZarr(self, *, start: dt.date, end: dt.date) -> list[pathlib.Path]:
+    def ConvertRawDatasetToZarr(
+        self,
+        *,
+        start: dt.datetime,
+        end: dt.datetime
+    ) -> list[pathlib.Path]:
         """Convert raw data for the given time range to Zarr.
 
         :param start: The start date of the time range to convert
@@ -161,13 +171,16 @@ class NWPConsumerService:
         # * Partition the bag by init time
         bag = dask.bag.from_sequence(desiredInitTimes, npartitions=len(desiredInitTimes))
         storedfiles = (
-            bag.map(lambda time: self.storer.copyITFolderToTemp(prefix=self.rawdir, it=time))
+            bag.map(
+                func=lambda time: self.storer.copyITFolderToTemp(prefix=self.rawdir, it=time),
+                pure=False
+            )
             .filter(lambda temppaths: len(temppaths) != 0)
             .map(lambda temppaths: [self.fetcher.mapTemp(p=p) for p in temppaths])
             .map(lambda datasets: _mergeDatasets(datasets=datasets))
             .filter(_dataQualityFilter)
-            .map(lambda ds: _saveAsTempZipZarr(ds=ds))
-            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.name))
+            .map(lambda ds: _saveAsTempZipZarr(ds=ds), pure=False)
+            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.name), pure=False)
             .compute(num_workers=1)
         )  # AWS ECS only has 1 CPU which amounts to half a physical core
 
@@ -179,8 +192,8 @@ class NWPConsumerService:
     def DownloadAndConvert(
         self,
         *,
-        start: dt.date,
-        end: dt.date,
+        start: dt.datetime,
+        end: dt.datetime,
     ) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
         """Fetch and save as Zarr a dataset for each initTime in the given time range.
 
@@ -337,7 +350,7 @@ def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
     with zarr.ZipStore(path=tempZarrPath.as_posix(), mode="w") as store:
         ds.to_zarr(
             store=store,
-            encoding=_generate_encoding(ds=ds)
+            encoding=_generate_encoding(ds=ds),
         )
     return tempZarrPath
 
@@ -405,7 +418,9 @@ def _mergeDatasets(datasets: list[xr.Dataset]) -> xr.Dataset:
         return xr.merge(objects=datasets, combine_attrs="drop_conflicts", compat="override")
 
 
-def _insert_zerod_missing_variables_with_correct_shape(datasets: list[xr.Dataset]) -> list[xr.Dataset]:
+def _insert_zerod_missing_variables_with_correct_shape(
+    datasets: list[xr.Dataset],
+) -> list[xr.Dataset]:
     """Insert zero'd out data for missing variables in each dataset so that merging works."""
     for i, dataset in enumerate(datasets):
         for j, dataset2 in enumerate(datasets):

@@ -1,20 +1,17 @@
 """Implements a client to fetch Arpege data from MeteoFrance AWS."""
-import bz2
 import datetime as dt
 import pathlib
 import re
 import typing
-import urllib.request
 
-import requests
-import structlog
-import xarray as xr
 import cfgrib
 import s3fs
+import structlog
+import xarray as xr
 
 from nwp_consumer import internal
 
-from ._consts import ARPEGE_GLOBAL_VARIABLES, ARPEGE_GLOBAL_PARAMETER_SETS
+from ._consts import ARPEGE_GLOBAL_PARAMETER_SETS, ARPEGE_GLOBAL_VARIABLES
 from ._models import ArpegeFileInfo
 
 log = structlog.getLogger()
@@ -90,10 +87,12 @@ class Client(internal.FetcherInterface):
         self.model = model
         self.hours = hours
 
-    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
+    def getInitHours(self) -> list[int]:  # noqa: D102
+        return [0, 6, 12, 18]
 
-        # The Arpege model only runs on the hours [00, 06, 12, 18]
-        if it.hour not in [0, 6, 12, 18]:
+    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
+        # Ignore inittimes that don't correspond to valid hours
+        if it.hour not in self.getInitHours():
             return []
 
         files: list[internal.FileInfoModel] = []
@@ -104,14 +103,15 @@ class Client(internal.FetcherInterface):
 
         # Parameter sets
         for parameter_set in ARPEGE_GLOBAL_PARAMETER_SETS:
-
             # Fetch Arpege webpage detailing the available files for the parameter
-            files = self.fs.ls(f"{self.baseurl}{it.strftime('%Y-%m-%d')}/{it.strftime('%H')}/{parameter_set}/")
+            files = self.fs.ls(
+                f"{self.baseurl}{it.strftime('%Y-%m-%d')}/{it.strftime('%H')}/{parameter_set}/"
+            )
 
             # The webpage's HTML <body> contains a list of <a> tags
             # * Each <a> tag has a href, most of which point to a file)
             for f in files:
-                if ".inv" in f: # Ignore the .inv files
+                if ".inv" in f:  # Ignore the .inv files
                     continue
                 # The href contains the name of a file - parse this into a FileInfo object
                 fi: ArpegeFileInfo | None = None
@@ -168,13 +168,13 @@ class Client(internal.FetcherInterface):
         # Check if datasets is more than a single dataset or not
         # * If it is, merge the datasets into a single dataset
         if len(ds) > 1:
-            if "_IP" in str(p): # Pressure levels
+            if "_IP" in str(p):  # Pressure levels
                 for i, d in enumerate(ds):
-                    if "isobaricInhPa" in d.coords and not "isobaricInhPa" in d.dims:
+                    if "isobaricInhPa" in d.coords and "isobaricInhPa" not in d.dims:
                         d = d.expand_dims("isobaricInhPa")
                         ds[i] = d
                 ds = xr.merge([d for d in ds if "isobaricInhPa" in d.coords], compat="override")
-            elif "_SP" in str(p): # Single levels
+            elif "_SP" in str(p):  # Single levels
                 for i, d in enumerate(ds):
                     if "surface" in d.coords:
                         d = d.rename({"surface": "heightAboveGround"})
@@ -184,9 +184,9 @@ class Client(internal.FetcherInterface):
                         ds[i] = d
                 # Merge all the datasets that have heightAboveGround
                 ds = xr.merge([d for d in ds if "heightAboveGround" in d.coords], compat="override")
-            elif "_HP" in str(p): # Height levels
+            elif "_HP" in str(p):  # Height levels
                 for i, d in enumerate(ds):
-                    if "heightAboveGround" in d.coords and not "heightAboveGround" in d.dims:
+                    if "heightAboveGround" in d.coords and "heightAboveGround" not in d.dims:
                         d = d.expand_dims("heightAboveGround")
                         ds[i] = d
                 ds = xr.merge([d for d in ds if "heightAboveGround" in d.coords], compat="override")
@@ -230,7 +230,7 @@ class Client(internal.FetcherInterface):
             ds = (
                 ds.rename({"time": "init_time"})
                 .expand_dims("init_time")
-                .transpose( "init_time", "step", ...)
+                .transpose("init_time", "step", ...)
                 .sortby("step")
                 .chunk(
                     {
@@ -292,20 +292,49 @@ def _parseArpegeFilename(
     itstring_year = itstring_month = itstring_day = itstring_hour = paramstring = ""
     stepstring_start = stepstring_end = "00"
     # Try to match the href to one of the regex patterns
-    slmatch = re.search(pattern=slRegex, string=baseurl+name)
-    hlmatch = re.search(pattern=hlRegex, string=baseurl+name)
-    plmatch = re.search(pattern=plRegex, string=baseurl+name)
+    slmatch = re.search(pattern=slRegex, string=baseurl + name)
+    hlmatch = re.search(pattern=hlRegex, string=baseurl + name)
+    plmatch = re.search(pattern=plRegex, string=baseurl + name)
 
     if slmatch and match_sl:
-        _, itstring_year, itstring_month, itstring_day, itstring_hour, paramstring, stepstring_start, stepstring_end = slmatch.groups()
+        (
+            _,
+            itstring_year,
+            itstring_month,
+            itstring_day,
+            itstring_hour,
+            paramstring,
+            stepstring_start,
+            stepstring_end,
+        ) = slmatch.groups()
     elif hlmatch and match_hl:
-        _, itstring_year, itstring_month, itstring_day, itstring_hour, paramstring, stepstring_start, stepstring_end = hlmatch.groups()
+        (
+            _,
+            itstring_year,
+            itstring_month,
+            itstring_day,
+            itstring_hour,
+            paramstring,
+            stepstring_start,
+            stepstring_end,
+        ) = hlmatch.groups()
     elif plmatch and match_pl:
-        _, itstring_year, itstring_month, itstring_day, itstring_hour, paramstring, stepstring_start, stepstring_end = plmatch.groups()
+        (
+            _,
+            itstring_year,
+            itstring_month,
+            itstring_day,
+            itstring_hour,
+            paramstring,
+            stepstring_start,
+            stepstring_end,
+        ) = plmatch.groups()
     else:
         return None
 
-    it = dt.datetime.strptime(itstring_year+itstring_month+itstring_day+itstring_hour, "%Y%m%d%H").replace(tzinfo=dt.timezone.utc)
+    it = dt.datetime.strptime(
+        itstring_year + itstring_month + itstring_day + itstring_hour, "%Y%m%d%H"
+    ).replace(tzinfo=dt.UTC)
 
     # TODO Construct the public URL from S3 path?
 

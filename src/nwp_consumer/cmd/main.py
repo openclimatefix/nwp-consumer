@@ -18,19 +18,22 @@ Options:
 
   -h --help           Show this screen.
   --version           Show version.
-  --from <startDate>  Start date in YYYY-MM-DD format [default: today].
-  --to <endDate>      End date in YYYY-MM-DD format [default: today].
-  --source <source>   Data source to use (ceda/metoffice/ecmwf-mars/icon).
-  --sink <sink>       Data sink to use (local/s3) [default: local].
+  --from <startDate>  Start datetime in YYYY-MM-DDTHH:MM format [default: today].
+  --to <endDate>      End date in YYYY-MM-DDTHH:MM format.
+  --source <source>   Data source to use
+                      (ceda/metoffice/ecmwf-mars/icon/cmc).
+  --sink <sink>       Data sink to use
+                      (local/s3/huggingface) [default: local].
   --rdir <rawdir>     Directory of raw data store [default: /tmp/raw].
   --zdir <zarrdir>    Directory of zarr data store [default: /tmp/zarr].
   --create-latest     Create a zarr of the dataset with the latest init time [default: False].
-  --verbose           Enable verbose logging [default: False].
+  -v --verbose        Enable verbose logging [default: False].
 """
 
 import contextlib
 import datetime as dt
 import importlib.metadata
+import os
 import pathlib
 import shutil
 
@@ -80,7 +83,9 @@ def run(arguments: dict) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
                 repoID=env.HUGGINGFACE_REPO_ID,
             )
         case _:
-            raise ValueError(f"unknown sink {arguments['--sink']}")
+            raise ValueError(
+                f"unknown sink {arguments['--sink']}. Require one of (local/s3/huggingface)",
+            )
 
     # Map source argument to fetcher
     match arguments["--source"]:
@@ -110,23 +115,21 @@ def run(arguments: dict) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
                 model=env.ICON_MODEL,
                 param_group=env.ICON_PARAMETER_GROUP,
             )
+        case "cmc":
+            env = config.CMCEnv()
+            fetcher = inputs.cmc.Client(
+                param_group=env.CMC_PARAMETER_GROUP,
+                hours=env.CMC_HOURS,
+                model=env.CMC_MODEL,
+            )
         case None:
             pass
         case _:
             raise ValueError(f"unknown source {arguments['--source']}")
 
     # Map from and to arguments to datetime objects
-    if arguments["--from"] == "today" or arguments["--from"] is None:
-        arguments["--from"] = dt.datetime.now(tz=dt.UTC).strftime("%Y-%m-%d")
-    if arguments["--to"] == "today" or arguments["--to"] is None:
-        arguments["--to"] = dt.datetime.now(tz=dt.UTC).strftime("%Y-%m-%d")
-    startDate: dt.date = (
-        dt.datetime.strptime(arguments["--from"], "%Y-%m-%d").replace(tzinfo=dt.UTC).date()
-    )
-    endDate: dt.date = (
-        dt.datetime.strptime(arguments["--to"], "%Y-%m-%d").replace(tzinfo=dt.UTC).date()
-    )
-    if endDate < startDate:
+    start, end = _process_time_args(arguments["--from"], arguments["--to"])
+    if end < start:
         raise ValueError("argument '--from' cannot specify date prior to '--to'")
 
     # Create the service using the fetcher and storer
@@ -155,14 +158,14 @@ def run(arguments: dict) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
     processedFiles: list[pathlib.Path] = []
 
     if arguments["download"]:
-        rawFiles += service.DownloadRawDataset(start=startDate, end=endDate)
+        rawFiles += service.DownloadRawDataset(start=start, end=end)
 
     if arguments["convert"]:
-        processedFiles += service.ConvertRawDatasetToZarr(start=startDate, end=endDate)
+        processedFiles += service.ConvertRawDatasetToZarr(start=start, end=end)
 
     if arguments["consume"]:
         service.Check()
-        r, p = service.DownloadAndConvert(start=startDate, end=endDate)
+        r, p = service.DownloadAndConvert(start=start, end=end)
         rawFiles += r
         processedFiles += p
 
@@ -177,6 +180,9 @@ def main() -> None:
     # Parse command line arguments from docstring
     arguments = docopt(__doc__, version=__version__)
     erred = False
+
+    if arguments["--verbose"]:
+        os.environ["LOGLEVEL"] = "DEBUG"
 
     programStartTime = dt.datetime.now(tz=dt.UTC)
     try:
@@ -204,3 +210,39 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+def _process_time_args(fr: str, to: str | None) -> tuple[dt.datetime, dt.datetime]:
+    """Process the from and to arguments."""
+    # Modify the default "today" argument to today's date
+    if fr == "today":
+        fr = dt.datetime.now(tz=dt.UTC).strftime("%Y-%m-%d")
+    # If --from specifies a date, and --to is not set, set --to to the next day
+    if len(fr) == 10 and to is None:
+        to = (
+            dt.datetime.strptime(
+                fr,
+                "%Y-%m-%d",
+            ).replace(tzinfo=dt.UTC)
+            + dt.timedelta(days=1)
+        ).strftime("%Y-%m-%d")
+    # Otherwise, --from specifies a datetime,
+    # so if --to is not set, set --to to the same time
+    if to is None:
+        to = fr
+    # If --from and --to are missing time information, assume midnight
+    if len(fr) == 10:
+        fr += "T00:00"
+    if len(to) == 10:
+        to += "T00:00"
+    # Process to datetime objects
+    start: dt.datetime = dt.datetime.strptime(
+        fr,
+        "%Y-%m-%dT%H:%M",
+    ).replace(tzinfo=dt.UTC)
+    end: dt.datetime = dt.datetime.strptime(
+        to,
+        "%Y-%m-%dT%H:%M",
+    ).replace(tzinfo=dt.UTC)
+
+    return start, end

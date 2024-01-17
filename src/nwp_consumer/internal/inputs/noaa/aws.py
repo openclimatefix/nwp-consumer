@@ -1,15 +1,14 @@
 """Implements a client to fetch NOAA data from AWS."""
-import bz2
 import datetime as dt
 import pathlib
 import re
 import typing
 import urllib.request
 
+import cfgrib
 import requests
 import structlog
 import xarray as xr
-import cfgrib
 
 from nwp_consumer import internal
 
@@ -58,7 +57,7 @@ class Client(internal.FetcherInterface):
                 self.parameters = list(PARAMETER_RENAME_MAP.keys())
                 self.conform = True
             case ("basic", "global"):
-                self.parameters = ["t2m_instant", "tcc",]
+                self.parameters = ["t2m_instant", "tcc"]
                 self.conform = True
             case ("full", "global"):
                 self.parameters = GFS_VARIABLES
@@ -72,9 +71,12 @@ class Client(internal.FetcherInterface):
         self.model = model
         self.hours = hours
 
-    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
+    def getInitHours(self) -> list[int]:  # noqa: D102
+        return [0, 6, 12, 18]
 
-        if it.hour not in [0, 6, 12, 18]:
+    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
+        # Ignore inittimes that don't correspond to valid hours
+        if it.hour not in self.getInitHours():
             return []
 
         files: list[internal.FileInfoModel] = []
@@ -84,7 +86,9 @@ class Client(internal.FetcherInterface):
         # https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.20201206/00/atmos/gfs.t00z.pgrb2.0p25.f000
 
         # Fetch AWS webpage detailing the available files for the parameter
-        response = requests.get(f"{self.baseurl}/gfs.{it.strftime('%Y%m%d')}/{it.strftime('%H')}/", timeout=3)
+        response = requests.get(
+            f"{self.baseurl}/gfs.{it.strftime('%Y%m%d')}/{it.strftime('%H')}/", timeout=3
+        )
 
         if response.status_code != 200:
             log.warn(
@@ -146,7 +150,9 @@ class Client(internal.FetcherInterface):
 
         # Process all the parameters into a single file
         ds = [
-            d for d in ds if any(x in d.coords for x in ["surface", "heightAboveGround", "isobaricInhPa"])
+            d
+            for d in ds
+            if any(x in d.coords for x in ["surface", "heightAboveGround", "isobaricInhPa"])
         ]
 
         # Split into surface, heightAboveGround, and isobaricInhPa lists
@@ -157,7 +163,9 @@ class Client(internal.FetcherInterface):
         # Update name of each data variable based off the attribute GRIB_stepType
         for i, d in enumerate(surface):
             for variable in d.data_vars.keys():
-                d = d.rename({variable: f"{variable}_surface_{d[f'{variable}'].attrs['GRIB_stepType']}"})
+                d = d.rename(
+                    {variable: f"{variable}_surface_{d[f'{variable}'].attrs['GRIB_stepType']}"}
+                )
             surface[i] = d
         for i, d in enumerate(heightAboveGround):
             for variable in d.data_vars.keys():
