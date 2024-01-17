@@ -52,4 +52,4 @@ class TestProcessTimeArgs(unittest.TestCase):
             _process_time_args("2021-01-01T12:00:00", None)
 
         with self.assertRaises(ValueError):
-            _process_time_args("2021010100")
+            _process_time_args("2021010100", None)

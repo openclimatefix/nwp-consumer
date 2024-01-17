@@ -81,9 +81,7 @@ class DummyFetcher(internal.FetcherInterface):
         return fi, pathlib.Path(f"{fi.it():%Y%m%d%H%M}/{fi.filename()}")
 
     def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
-        initTime = dt.datetime.strptime(p.parent.as_posix(), "%Y%m%d%H%M").replace(
-            tzinfo=dt.timezone.utc,
-        )
+        initTime = dt.datetime.strptime(p.parent.as_posix(), "%Y%m%d%H%M").replace(tzinfo=dt.UTC)
         return xr.Dataset(
             data_vars={
                 "UKV": (
@@ -119,25 +117,25 @@ class TestNWPConsumerService(unittest.TestCase):
             zarrdir="zarr",
         )
 
-    def test_downloadRawDataset(self):
-        startDate = testInitTimes[0].date()
-        endDate = testInitTimes[-1].date()
+    def test_downloadRawDataset(self) -> None:
+        start = testInitTimes[0]
+        end = testInitTimes[-1]
 
-        files = self.service.DownloadRawDataset(start=startDate, end=endDate)
+        files = self.service.DownloadRawDataset(start=start, end=end)
 
         # 2 files per init time, all init times
         self.assertEqual(2 * len(INIT_HOURS) * (len(DAYS)), len(files))
 
-    def test_convertRawDataset(self):
-        startDate = testInitTimes[0].date()
-        endDate = testInitTimes[-1].date()
+    def test_convertRawDataset(self) -> None:
+        start = testInitTimes[0]
+        end = testInitTimes[-1]
 
-        files = self.service.ConvertRawDatasetToZarr(start=startDate, end=endDate)
+        files = self.service.ConvertRawDatasetToZarr(start=start, end=end)
 
         # 1 Dataset per init time, all init times per day, all days
         self.assertEqual(1 * len(INIT_HOURS) * (len(DAYS)), len(files))
 
-    def test_createLatestZarr(self):
+    def test_createLatestZarr(self) -> None:
         files = self.service.CreateLatestZarr()
         # 1 zarr, 1 zipped zarr
         self.assertEqual(2, len(files))
@@ -147,8 +145,9 @@ class TestNWPConsumerService(unittest.TestCase):
 
 
 class TestSaveAsZippedZarr(unittest.TestCase):
-    def test_createsValidZipZarr(self):
+    def test_createsValidZipZarr(self) -> None:
         ds = DummyFetcher().mapTemp(p=pathlib.Path("202101010000/dswrf.grib"))
         file = _saveAsTempZipZarr(ds=ds)
         outds = xr.open_zarr(f"zip::{file.as_posix()}")
         self.assertEqual(ds.dims, outds.dims)
+
