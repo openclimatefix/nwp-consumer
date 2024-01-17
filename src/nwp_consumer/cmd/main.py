@@ -18,7 +18,8 @@ Options:
 
   -h --help           Show this screen.
   --version           Show version.
-  --from <startDate>  Start datetime in YYYY-MM-DDTHH:MM format [default: today].
+  --from <startDate>  Start datetime in YYYY-MM-DDTHH:MM format,
+                      or in YYYY-MM-DD format [default: today].
   --to <endDate>      End date in YYYY-MM-DDTHH:MM format.
   --source <source>   Data source to use
                       (ceda/metoffice/ecmwf-mars/icon/cmc).

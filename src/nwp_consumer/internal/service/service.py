@@ -54,7 +54,7 @@ class NWPConsumerService:
         allInitTimes: list[dt.datetime] = [
             pdt.to_pydatetime()
             for pdt in pd.date_range(
-                start=start.date(),
+                start=start,
                 end=end,
                 inclusive="left",
                 freq="H",
@@ -103,7 +103,7 @@ class NWPConsumerService:
         # Create a dask pipeline to download the files
         storedFiles: list[pathlib.Path] = (
             dask.bag.from_sequence(seq=newWantedFileInfos, npartitions=len(newWantedFileInfos))
-            .map(func=lambda fi: self.fetcher.downloadToTemp(fi=fi), pure=False)
+            .map(func=lambda fi: self.fetcher.downloadToTemp(fi=fi))
             .filter(func=lambda infoPathTuple: infoPathTuple[1] != pathlib.Path())
             .map(
                 func=lambda infoPathTuple: self.storer.store(
@@ -146,7 +146,7 @@ class NWPConsumerService:
                     ).as_posix(),
                 )
                 continue
-            if start <= it.date() <= end:
+            if start <= it <= end:
                 desiredInitTimes.append(it)
 
         if not desiredInitTimes:
@@ -158,7 +158,7 @@ class NWPConsumerService:
             return [
                 self.zarrdir / it.strftime(f"{internal.ZARR_FMTSTR}.zarr.zip")
                 for it in allInitTimes
-                if start <= it.date() <= end
+                if start <= it <= end
             ]
         else:
             log.info(
@@ -171,16 +171,13 @@ class NWPConsumerService:
         # * Partition the bag by init time
         bag = dask.bag.from_sequence(desiredInitTimes, npartitions=len(desiredInitTimes))
         storedfiles = (
-            bag.map(
-                func=lambda time: self.storer.copyITFolderToTemp(prefix=self.rawdir, it=time),
-                pure=False
-            )
+            bag.map(func=lambda time: self.storer.copyITFolderToTemp(prefix=self.rawdir, it=time))
             .filter(lambda temppaths: len(temppaths) != 0)
             .map(lambda temppaths: [self.fetcher.mapTemp(p=p) for p in temppaths])
             .map(lambda datasets: _mergeDatasets(datasets=datasets))
             .filter(_dataQualityFilter)
-            .map(lambda ds: _saveAsTempZipZarr(ds=ds), pure=False)
-            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.name), pure=False)
+            .map(lambda ds: _saveAsTempZipZarr(ds=ds))
+            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.name))
             .compute(num_workers=1)
         )  # AWS ECS only has 1 CPU which amounts to half a physical core
 
