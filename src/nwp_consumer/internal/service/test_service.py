@@ -16,7 +16,7 @@ DAYS = [1, 2]
 INIT_HOURS = [0, 6, 12, 18]
 INIT_TIME_FILES = ["dswrf.grib", "prate.grib"]
 testInitTimes = [
-    dt.datetime(2021, 1, d, h, 0, 0, tzinfo=dt.timezone.utc) for h in INIT_HOURS for d in DAYS
+    dt.datetime(2021, 1, d, h, 0, 0, tzinfo=dt.UTC) for h in INIT_HOURS for d in DAYS
 ]
 
 log = structlog.getLogger()
@@ -69,6 +69,10 @@ class DummyFileInfo(internal.FileInfoModel):
 
 
 class DummyFetcher(internal.FetcherInterface):
+
+    def getInitHours(self) -> list[int]:
+        return INIT_HOURS
+
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[FileInfoModel]:
         raw_files = [DummyFileInfo(file, it) for file in INIT_TIME_FILES if it in testInitTimes]
         return raw_files
@@ -77,9 +81,7 @@ class DummyFetcher(internal.FetcherInterface):
         return fi, pathlib.Path(f"{fi.it():%Y%m%d%H%M}/{fi.filename()}")
 
     def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
-        initTime = dt.datetime.strptime(p.parent.as_posix(), "%Y%m%d%H%M").replace(
-            tzinfo=dt.timezone.utc,
-        )
+        initTime = dt.datetime.strptime(p.parent.as_posix(), "%Y%m%d%H%M").replace(tzinfo=dt.UTC)
         return xr.Dataset(
             data_vars={
                 "UKV": (
@@ -115,25 +117,26 @@ class TestNWPConsumerService(unittest.TestCase):
             zarrdir="zarr",
         )
 
-    def test_downloadRawDataset(self):
-        startDate = testInitTimes[0].date()
-        endDate = testInitTimes[-1].date()
+    def test_downloadRawDataset(self) -> None:
+        start = testInitTimes[0]
+        end = testInitTimes[-1]
 
-        files = self.service.DownloadRawDataset(start=startDate, end=endDate)
+        files = self.service.DownloadRawDataset(start=start, end=end)
 
-        # 2 files per init time, all init times
-        self.assertEqual(2 * len(INIT_HOURS) * (len(DAYS)), len(files))
+        # 2 files per init time, all init times except the last
+        # one so none of the init time files for that one
+        self.assertEqual((2 * len(INIT_HOURS) * len(DAYS)) - 1 * len(INIT_TIME_FILES), len(files))
 
-    def test_convertRawDataset(self):
-        startDate = testInitTimes[0].date()
-        endDate = testInitTimes[-1].date()
+    def test_convertRawDataset(self) -> None:
+        start = testInitTimes[0]
+        end = testInitTimes[-1]
 
-        files = self.service.ConvertRawDatasetToZarr(start=startDate, end=endDate)
+        files = self.service.ConvertRawDatasetToZarr(start=start, end=end)
 
         # 1 Dataset per init time, all init times per day, all days
         self.assertEqual(1 * len(INIT_HOURS) * (len(DAYS)), len(files))
 
-    def test_createLatestZarr(self):
+    def test_createLatestZarr(self) -> None:
         files = self.service.CreateLatestZarr()
         # 1 zarr, 1 zipped zarr
         self.assertEqual(2, len(files))
@@ -143,8 +146,9 @@ class TestNWPConsumerService(unittest.TestCase):
 
 
 class TestSaveAsZippedZarr(unittest.TestCase):
-    def test_createsValidZipZarr(self):
+    def test_createsValidZipZarr(self) -> None:
         ds = DummyFetcher().mapTemp(p=pathlib.Path("202101010000/dswrf.grib"))
         file = _saveAsTempZipZarr(ds=ds)
         outds = xr.open_zarr(f"zip::{file.as_posix()}")
         self.assertEqual(ds.dims, outds.dims)
+

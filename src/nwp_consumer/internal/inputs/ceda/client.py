@@ -73,44 +73,14 @@ class Client(internal.FetcherInterface):
         self.__password: str = urllib.parse.quote(ftpPassword)
         self.__ftpBase: str = f"ftp://{self.__username}:{self.__password}@ftp.ceda.ac.uk"
 
-    def downloadToTemp(  # noqa: D102
-        self, *, fi: internal.FileInfoModel,
-    ) -> tuple[internal.FileInfoModel, pathlib.Path]:
-        if self.__password == "" or self.__username == "":
-            log.error(event="all ceda credentials not provided")
-            return fi, pathlib.Path()
-
-        log.debug(event="requesting download of file", file=fi.filename(), path=fi.filepath())
-        url: str = f"{self.__ftpBase}/{fi.filepath()}"
-        try:
-            response = urllib.request.urlopen(url=url)
-        except Exception as e:
-            log.warn(
-                event="error calling url for file",
-                url=fi.filepath(),
-                filename=fi.filename(),
-                error=e,
-            )
-            return fi, pathlib.Path()
-
-        # Stream the filedata into a temporary file
-        tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
-        with tfp.open("wb") as f:
-            for chunk in iter(lambda: response.read(16 * 1024), b""):
-                f.write(chunk)
-                f.flush()
-
-        log.debug(
-            event="fetched all data from file",
-            filename=fi.filename(),
-            url=fi.filepath(),
-            filepath=tfp.as_posix(),
-            nbytes=tfp.stat().st_size,
-        )
-
-        return fi, tfp
+    def getInitHours(self) -> list[int]:  # noqa: D102
+        return [0, 3, 6, 9, 12, 15, 18, 21]
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
+        # Ignore inittimes that don't correspond to valid hours
+        if it.hour not in self.getInitHours():
+            return []
+
         # Fetch info for all files available on the input date
         # * CEDA has a HTTPS JSON API for this purpose
         response: requests.Response = requests.request(
@@ -152,6 +122,43 @@ class Client(internal.FetcherInterface):
         ]
 
         return wantedFiles
+    def downloadToTemp(  # noqa: D102
+        self, *, fi: internal.FileInfoModel,
+    ) -> tuple[internal.FileInfoModel, pathlib.Path]:
+        if self.__password == "" or self.__username == "":
+            log.error(event="all ceda credentials not provided")
+            return fi, pathlib.Path()
+
+        log.debug(event="requesting download of file", file=fi.filename(), path=fi.filepath())
+        url: str = f"{self.__ftpBase}/{fi.filepath()}"
+        try:
+            response = urllib.request.urlopen(url=url)
+        except Exception as e:
+            log.warn(
+                event="error calling url for file",
+                url=fi.filepath(),
+                filename=fi.filename(),
+                error=e,
+            )
+            return fi, pathlib.Path()
+
+        # Stream the filedata into a temporary file
+        tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
+        with tfp.open("wb") as f:
+            for chunk in iter(lambda: response.read(16 * 1024), b""):
+                f.write(chunk)
+                f.flush()
+
+        log.debug(
+            event="fetched all data from file",
+            filename=fi.filename(),
+            url=fi.filepath(),
+            filepath=tfp.as_posix(),
+            nbytes=tfp.stat().st_size,
+        )
+
+        return fi, tfp
+
 
     def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
         if p.suffix != ".grib":

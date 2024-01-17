@@ -1,9 +1,22 @@
-__all__ = ["ceda", "metoffice", "ecmwf", "icon", "cmc"]
+"""Available inputs to source data from."""
+
+__all__ = [
+    "ceda",
+    "metoffice",
+    "ecmwf",
+    "icon",
+    "cmc",
+    "meteofrance",
+    "noaa",
+]
 
 from . import (
-    ceda, 
-    metoffice, 
-    ecmwf, 
-    icon,
+    ceda,
     cmc,
+    ecmwf,
+    icon,
+    meteofrance,
+    metoffice,
+    noaa,
 )
+

@@ -1,3 +1,13 @@
-__all_ = ["localfs", "s3", "huggingface"]
+"""Output modules the consumer can write to."""
 
-from . import localfs, s3, huggingface
+from . import (
+    huggingface,
+    localfs,
+    s3,
+)
+
+__all__ = [
+    "localfs",
+    "s3",
+    "huggingface",
+]

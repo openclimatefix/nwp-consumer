@@ -3,6 +3,7 @@
 __all__ = [
     "EnvParser",
     "CEDAEnv",
+    "CMCEnv",
     "ECMWFMARSEnv",
     "ICONEnv",
     "HuggingFaceEnv",
@@ -13,6 +14,7 @@ __all__ = [
 
 from .env import (
     CEDAEnv,
+    CMCEnv,
     ECMWFMARSEnv,
     EnvParser,
     HuggingFaceEnv,

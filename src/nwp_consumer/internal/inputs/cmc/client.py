@@ -1,5 +1,4 @@
 """Implements a client to fetch GDPS/GEPS data from CMC."""
-import bz2
 import datetime as dt
 import pathlib
 import re
@@ -20,7 +19,7 @@ log = structlog.getLogger()
 # See https://eccc-msc.github.io/open-data/msc-data/nwp_gdps/readme_gdps-datamart_en/ for a list of CMC parameters
 PARAMETER_RENAME_MAP: dict[str, str] = {
     "t": internal.OCFShortName.TemperatureAGL.value,
-    "tclc": internal.OCFShortName.LowCloudCover.value, # TODO: Check this is okay
+    "tclc": internal.OCFShortName.LowCloudCover.value,  # TODO: Check this is okay
     "dswrf": internal.OCFShortName.DownwardShortWaveRadiationFlux.value,
     "dlwrf": internal.OCFShortName.DownwardLongWaveRadiationFlux.value,
     "snod": internal.OCFShortName.SnowDepthWaterEquivalent.value,
@@ -87,15 +86,19 @@ class Client(internal.FetcherInterface):
         self.model = model
         self.hours = hours
 
+    def getInitHours(self) -> list[int]:  # noqa: D102
+        return [0, 12]
+
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
-        # GDPS data is only available for today's and yesterdays's date. If data hasn't been uploaded for that init
-        # time yet, then yesterday's data will still be present on the server.
-        if it.date() != dt.datetime.now(dt.timezone.utc).date():
+        # GDPS data is only available for today's and yesterdays's date.
+        # If data hasn't been uploaded for that inittime yet,
+        # then yesterday's data will still be present on the server.
+        if it.date() != dt.datetime.now(dt.UTC).date():
             raise ValueError("GDPS/GEPS data is only available on today's date")
             return []
 
-        # The GDPS/GEPS model only runs on the hours [00, 12]
-        if it.hour not in [0, 12]:
+        # Ignore inittimes that don't correspond to valid hours
+        if it.hour not in self.getInitHours():
             return []
 
         files: list[internal.FileInfoModel] = []
@@ -135,8 +138,8 @@ class Client(internal.FetcherInterface):
                 fi = _parseCMCFilename(
                     name=refmatch.groups()[0],
                     baseurl=self.baseurl,
-                    match_ml=not self.conform,
                     match_pl=not self.conform,
+                    match_tgl=not self.conform,
                 )
                 # Ignore the file if it is not for today's date or has a step > 48 (when conforming)
                 if fi is None or fi.it() != it or (fi.step > self.hours and self.conform):
@@ -189,16 +192,23 @@ class Client(internal.FetcherInterface):
             )
             return xr.Dataset()
         # Rename variable to the value, as some have unknown as the name
-        if list(ds.data_vars.keys())[0] == "unknown":
+        if next(iter(ds.data_vars.keys())) == "unknown":
             ds = ds.rename({"unknown": str(p.name).split("_")[2].lower()})
 
         # Rename variables that are both pressure level and surface
         if "surface" in list(ds.coords):
             ds = ds.rename({"surface": "heightAboveGround"})
 
-        if "heightAboveGround" in list(ds.coords) and list(ds.data_vars.keys())[0] in ["q","t","u","v"]:
+        if "heightAboveGround" in list(ds.coords) and next(iter(ds.data_vars.keys())) in [
+            "q",
+            "t",
+            "u",
+            "v",
+        ]:
             # Rename data variable to add _surface to it so merging works later
-            ds = ds.rename({list(ds.data_vars.keys())[0]: f"{list(ds.data_vars.keys())[0]}_surface"})
+            ds = ds.rename(
+                {next(iter(ds.data_vars.keys())): f"{next(iter(ds.data_vars.keys()))}_surface"},
+            )
 
         if "isobaricInhPa" in list(ds.coords):
             if "rh" in list(ds.data_vars.keys()):
@@ -337,7 +347,7 @@ def _parseCMCFilename(
     else:
         return None
 
-    it = dt.datetime.strptime(itstring, "%Y%m%d%H").replace(tzinfo=dt.timezone.utc)
+    it = dt.datetime.strptime(itstring, "%Y%m%d%H").replace(tzinfo=dt.UTC)
 
     return CMCFileInfo(
         it=it,

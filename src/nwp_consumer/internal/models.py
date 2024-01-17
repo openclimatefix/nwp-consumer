@@ -122,6 +122,14 @@ class FetcherInterface(abc.ABC):
         pass
 
 
+    @abc.abstractmethod
+    def getInitHours(self) -> list[int]:
+        """Get the forecast init hours available from the source.
+
+        :return: List of forecast init hours
+        """
+        pass
+
 class StorageInterface(abc.ABC):
     """Generic interface for storing data, used for dependency injection."""
 

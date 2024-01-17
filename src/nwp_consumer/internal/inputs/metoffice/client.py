@@ -67,6 +67,70 @@ class Client(internal.FetcherInterface):
             "X-IBM-Client-Secret": clientSecret,
         }
 
+    def getInitHours(self) -> list[int]:  # noqa: D102
+        # NOTE: This will depend on the order you have with the MetOffice.
+        # Technically they can provide data for every hour of the day,
+        # but OpenClimateFix choose to match what is available from CEDA.
+        return [0, 3, 6, 9, 12, 15, 18, 21]
+
+    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
+        if (
+            self.__headers.get("X-IBM-Client-Id") is None
+            or self.__headers.get("X-IBM-Client-Secret") is None
+        ):
+            log.error("all metoffice API credentials not provided")
+            return []
+
+        if it.date() != dt.datetime.now(tz=dt.UTC).date():
+            log.warn("metoffice API only supports fetching data for the current day")
+            return []
+
+        # Ignore inittimes that don't correspond to valid hours
+        if it.hour not in self.getInitHours():
+            return []
+
+        # Fetch info for all files available on the input date
+        response: requests.Response = requests.request(
+            method="GET",
+            url=self.baseurl,
+            headers=self.__headers,
+            params=self.querystring,
+        )
+        try:
+            rj: dict = response.json()
+        except Exception as e:
+            log.warn(
+                event="error parsing response from filelist endpoint",
+                error=e,
+                response=response.content,
+            )
+            return []
+        if not response.ok or ("httpCode" in rj and int(rj["httpCode"]) > 399):
+            log.warn(
+                event="error response from filelist endpoint",
+                url=response.url,
+                response=rj,
+            )
+            return []
+
+        # Map the response to a MetOfficeResponse object
+        try:
+            responseObj: MetOfficeResponse = MetOfficeResponse.Schema().load(response.json())
+        except Exception as e:
+            log.warn(
+                event="response from metoffice does not match expected schema",
+                error=e,
+                response=response.json(),
+            )
+            return []
+
+        # Filter the file infos for the desired init time
+        wantedFileInfos: list[MetOfficeFileInfo] = [
+            fo for fo in responseObj.orderDetails.files if _isWantedFile(fi=fo, dit=it)
+        ]
+
+        return wantedFileInfos
+
     def downloadToTemp(  # noqa: D102
         self,
         *,
@@ -127,59 +191,6 @@ class Client(internal.FetcherInterface):
 
         return fi, tfp
 
-    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
-        if (
-            self.__headers.get("X-IBM-Client-Id") is None
-            or self.__headers.get("X-IBM-Client-Secret") is None
-        ):
-            log.error("all metoffice API credentials not provided")
-            return []
-
-        if it.date() != dt.datetime.now(tz=dt.UTC).date():
-            log.warn("metoffice API only supports fetching data for the current day")
-            return []
-
-        # Fetch info for all files available on the input date
-        response: requests.Response = requests.request(
-            method="GET",
-            url=self.baseurl,
-            headers=self.__headers,
-            params=self.querystring,
-        )
-        try:
-            rj: dict = response.json()
-        except Exception as e:
-            log.warn(
-                event="error parsing response from filelist endpoint",
-                error=e,
-                response=response.content,
-            )
-            return []
-        if not response.ok or ("httpCode" in rj and int(rj["httpCode"]) > 399):
-            log.warn(
-                event="error response from filelist endpoint",
-                url=response.url,
-                response=rj,
-            )
-            return []
-
-        # Map the response to a MetOfficeResponse object
-        try:
-            responseObj: MetOfficeResponse = MetOfficeResponse.Schema().load(response.json())
-        except Exception as e:
-            log.warn(
-                event="response from metoffice does not match expected schema",
-                error=e,
-                response=response.json(),
-            )
-            return []
-
-        # Filter the file infos for the desired init time
-        wantedFileInfos: list[MetOfficeFileInfo] = [
-            fo for fo in responseObj.orderDetails.files if _isWantedFile(fi=fo, dit=it)
-        ]
-
-        return wantedFileInfos
 
     def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
         if p.suffix != ".grib":

@@ -91,6 +91,9 @@ class Client(internal.FetcherInterface):
         self.model = model
         self.hours = hours
 
+    def getInitHours(self) -> list[int]:
+        return [0, 6, 12, 18]
+
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
         # ICON data is only available for today's date. If data hasn't been uploaded for that init
         # time yet, then yesterday's data will still be present on the server.
@@ -98,8 +101,8 @@ class Client(internal.FetcherInterface):
             raise ValueError("ICON data is only available on today's date")
             return []
 
-        # The ICON model only runs on the hours [00, 06, 12, 18]
-        if it.hour not in [0, 6, 12, 18]:
+        # Ignore inittimes that don't correspond to valid hours
+        if it.hour not in self.getInitHours():
             return []
 
         files: list[internal.FileInfoModel] = []
