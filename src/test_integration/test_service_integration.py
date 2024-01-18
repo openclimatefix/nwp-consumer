@@ -12,7 +12,6 @@ import unittest
 import numpy as np
 import ocf_blosc2  # noqa: F401
 import xarray as xr
-import nwp_consumer
 from nwp_consumer.internal import ZARR_GLOBSTR, config, inputs, outputs, service
 
 
@@ -39,13 +38,15 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
         )
 
     def test_downloadAndConvertDataset(self) -> None:
-        initTime: dt.datetime = dt.datetime.now(tz=dt.UTC)
+        initTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
 
         out = self.testService.DownloadRawDataset(start=initTime, end=initTime)
         self.assertGreater(len(out), 0)
 
         out = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
-        self.assertEqual(len(out), 0)
+        self.assertEqual(len(out), 1)
 
         for path in out:
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}")
@@ -89,14 +90,13 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
         )
 
     def test_downloadAndConvertDataset(self) -> None:
-
         initTime: dt.datetime = dt.datetime(year=2022, month=1, day=1, tzinfo=dt.UTC)
 
         out = self.testService.DownloadRawDataset(start=initTime, end=initTime)
         self.assertGreater(len(out), 0)
 
         out = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
-        self.assertEqual(len(out), 0)
+        self.assertEqual(len(out), 1)
 
         for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + ".zarr.zip"):
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
@@ -141,10 +141,10 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
         initTime: dt.datetime = dt.datetime(year=2022, month=1, day=1, tzinfo=dt.UTC)
 
         out = self.testService.DownloadRawDataset(start=initTime, end=initTime)
-        self.assertEqual(len(out), 0)
+        self.assertGreater(len(out), 0)
 
         out = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
-        self.assertEqual(len(out), 0)
+        self.assertEqual(len(out), 1)
 
         for path in out:
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
@@ -158,7 +158,8 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
             )
             # Ensure the init time is correct
             self.assertEqual(
-                str(np.datetime64(initTime))[:10], str(ds.coords["init_time"].values[0])[:10],
+                str(np.datetime64(initTime))[:10],
+                str(ds.coords["init_time"].values[0])[:10],
             )
 
         shutil.rmtree(self.rawdir)
@@ -189,13 +190,15 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
         )
 
     def test_downloadAndConvertDataset(self) -> None:
-        initTime: dt.datetime = dt.datetime.now(tz=dt.UTC)
+        initTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
 
         out = self.testService.DownloadRawDataset(start=initTime, end=initTime)
         self.assertGreater(len(out), 0)
 
         out = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
-        self.assertEqual(len(out), 0)
+        self.assertEqual(len(out), 1)
 
         for path in out:
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
@@ -210,7 +213,7 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
             # Ensure the init time is correct
             dt64: np.datetime64 = ds.coords["init_time"].values[0]
             it: dt.datetime = dt.datetime.fromtimestamp(dt64.astype(int) / 1e9, tz=dt.UTC)
-            self.assertEqual(initTime, it.date())
+            self.assertEqual(initTime, it)
 
         shutil.rmtree(self.rawdir)
         shutil.rmtree(self.zarrdir)
