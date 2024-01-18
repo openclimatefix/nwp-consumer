@@ -7,12 +7,10 @@ and will be considered passed if no exception is raised within that time.
 """
 
 import datetime as dt
-import signal
+import multiprocessing
 import unittest
 from collections.abc import Callable
 
-import requests
-import urllib3
 from nwp_consumer.internal import config, inputs, outputs
 from nwp_consumer.internal.inputs.ceda._models import CEDAFileInfo
 from nwp_consumer.internal.inputs.cmc._models import CMCFileInfo
@@ -27,39 +25,29 @@ storageClient = outputs.localfs.Client()
 TIMEOUT = 10
 
 
-def _handle_timeout(sig, frame):
-    raise TimeoutError
-
-
-signal.signal(signal.SIGALRM, _handle_timeout)
-
-
 class TestClient_FetchRawFileBytes(unittest.TestCase):
-    def _stop_after_timeout(self, func: Callable) -> None:
+    def _stop_after_timeout(self, func: Callable, kwargs: dict) -> None:
         """Wrapper to stop a test after TIMEOUT seconds."""
-        try:
-            signal.alarm(TIMEOUT)
-            func()
-        # Catch the TimeoutExceptions we would expect to see
-        # from the forced timeout, fail on any other exception
-        except TimeoutError:
-            pass
-        except requests.exceptions.ConnectTimeout:
-            pass
-        except urllib3.exceptions.ConnectTimeoutError:
-            pass
-        except Exception as e:
-            self.fail(f"Unexpected exception: {e}")
+        p = multiprocessing.Process(target=func, kwargs=kwargs)
+        p.start()
+        p.join(TIMEOUT)
+        if p.is_alive():
+            p.terminate()
+        else:
+            # Capture any excepotions raised by the process function
+            p.join()
+            if p.exitcode != 0:
+                self.fail("Function terminated with error.")
 
     def test_downloadsRawGribFileFromCEDA(self) -> None:
         c = config.CEDAEnv()
         cedaClient = inputs.ceda.Client(
             ftpUsername=c.CEDA_FTP_USER,
             ftpPassword=c.CEDA_FTP_PASS,
-        )
+)
 
         fileInfo = CEDAFileInfo(name="202201010000_u1096_ng_umqv_Wholesale1.grib")
-        self._stop_after_timeout(lambda: cedaClient.downloadToTemp(fi=fileInfo))
+        self._stop_after_timeout(cedaClient.downloadToTemp, kwargs={"fi": fileInfo})
 
     def test_downloadsRawGribFileFromMetOffice(self) -> None:
         metOfficeInitTime: dt.datetime = dt.datetime.now(dt.UTC).replace(
@@ -79,7 +67,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
             fileId=f'agl_temperature_1.5_{dt.datetime.now(tz=dt.UTC).strftime("%Y%m%d")}00',
             runDateTime=metOfficeInitTime,
         )
-        self._stop_after_timeout(lambda: metOfficeClient.downloadToTemp(fi=fileInfo))
+        self._stop_after_timeout(metOfficeClient.downloadToTemp, kwargs={"fi": fileInfo})
 
     def test_downloadsRawGribFileFromECMWFMARS(self) -> None:
         ecmwfMarsInitTime: dt.datetime = dt.datetime(
@@ -99,7 +87,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
             inittime=ecmwfMarsInitTime,
             area="uk",
         )
-        self._stop_after_timeout(lambda: ecmwfMarsClient.downloadToTemp(fi=fileInfo))
+        self._stop_after_timeout(ecmwfMarsClient.downloadToTemp, kwargs={"fi": fileInfo})
 
     def test_downloadsRawGribFileFromICON(self) -> None:
         iconInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
@@ -118,7 +106,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
             currentURL="https://opendata.dwd.de/weather/nwp/icon/grib/00/clcl",
             step=1,
         )
-        self._stop_after_timeout(lambda: iconClient.downloadToTemp(fi=fileInfo))
+        self._stop_after_timeout(iconClient.downloadToTemp, kwargs={"fi": fileInfo})
 
         iconClient = inputs.icon.Client(model="europe")
         fileInfo = IconFileInfo(
@@ -127,7 +115,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
             currentURL="https://opendata.dwd.de/weather/nwp/icon-eu/grib/00/clcl",
             step=1,
         )
-        self._stop_after_timeout(lambda: iconClient.downloadToTemp(fi=fileInfo))
+        self._stop_after_timeout(iconClient.downloadToTemp, kwargs={"fi": fileInfo})
 
     def test_downloadsRawGribFileFromCMC(self) -> None:
         cmcInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
@@ -146,7 +134,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
             currentURL="https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/00/120",
             step=1,
         )
-        self._stop_after_timeout(lambda: cmcClient.downloadToTemp(fi=fileInfo))
+        self._stop_after_timeout(cmcClient.downloadToTemp, kwargs={"fi": fileInfo})
 
     def test_downloadsRawGribFileFromMeteoFrance(self) -> None:
         arpegeInitTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
@@ -165,7 +153,7 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
             currentURL=f"s3://mf-nwp-models/arpege-world/v1/{arpegeInitTime.strftime('%Y-%m-%d')}/{arpegeInitTime.strftime('%H')}/SP1/",
             step=1,
         )
-        self._stop_after_timeout(lambda: arpegeClient.downloadToTemp(fi=fileInfo))
+        self._stop_after_timeout(arpegeClient.downloadToTemp, kwargs={"fi": fileInfo})
 
 
 class TestListRawFilesForInitTime(unittest.TestCase):
@@ -256,7 +244,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
             param_group="basic",
         )
         fileInfos = cmcClient.listRawFilesForInitTime(it=cmcInitTime)
-        self.assertTrue(len(fileInfos) > 0)
+        self.assertGreater(len(fileInfos), 0)
 
         cmcClient = inputs.cmc.Client(
             model="geps",
@@ -264,7 +252,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
             param_group="basic",
         )
         gepsFileInfos = cmcClient.listRawFilesForInitTime(it=cmcInitTime)
-        self.assertTrue(len(gepsFileInfos) > 0)
+        self.assertGreater(len(gepsFileInfos), 0)
         self.assertNotEqual(fileInfos, gepsFileInfos)
 
     def test_getsFileInfosFromMeteoFrance(self) -> None:

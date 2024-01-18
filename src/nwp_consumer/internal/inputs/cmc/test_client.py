@@ -55,51 +55,27 @@ class TestClient(unittest.TestCase):
 class TestParseCMCFilename(unittest.TestCase):
     baseurl = "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/"
 
-    def test_parsesSingleLevel(self) -> None:
-        filename: str = "CMC_glb_CAPE_SFC_0_latlon.15x.15_2023080900_P027.grib2"
+    def test_parses(self) -> None:
+        tests = {
+            "gdps-sl": "CMC_glb_CIN_SFC_0_latlon.15x.15_2023080900_P027.grib2",
+            "geps-sl": "CMC_geps-raw_CIN_SFC_0_latlon0p5x0p5_2023080900_P027_allmbrs.grib2",
+            "gdps-hl": "CMC_glb_SPFH_TGL_40_latlon.15x.15_2023080900_P027.grib2",
+            "geps-hl": "CMC_geps-raw_SPFH_TGL_80_latlon0p5x0p5_2023080900_P000_allmbrs.grib2",
+            "gdps-pl": "CMC_glb_TMP_ISBL_300_latlon.15x.15_2023080900_P000.grib2",
+            "geps-pl": "CMC_geps-raw_TMP_ISBL_0500_latlon0p5x0p5_2023080900_P000_allmbrs.grib2",
+        }
 
-        out: CMCFileInfo | None = _parseCMCFilename(
-            name=filename,
-            baseurl=self.baseurl,
-        )
-        self.assertIsNotNone(out)
-        self.assertEqual(out.filename(), filename)
-        self.assertEqual(out.it(), dt.datetime(2023, 8, 9, 0, tzinfo=dt.timezone.utc))
+        for k, v in tests.items():
+            with self.subTest(msg=k):
+                out: CMCFileInfo | None = _parseCMCFilename(
+                    name=v,
+                    baseurl=self.baseurl,
+                    match_hl="hl" in k,
+                    match_pl="pl" in k,
+                )
+                if out is None:
+                    self.fail(f"Failed to parse filename {v}")
+                self.assertEqual(out.filename(), v)
+                self.assertEqual(out.it(), dt.datetime(2023, 8, 9, 0, tzinfo=dt.UTC))
 
-    def test_parsesHeightAboveGround(self) -> None:
-        filename: str = "CMC_glb_TMP_TGL_2_latlon.15x.15_2023080900_P027.grib2"
 
-        out: CMCFileInfo | None = _parseCMCFilename(
-            name=filename,
-            baseurl=self.baseurl,
-            match_tgl=True,
-        )
-        self.assertIsNotNone(out)
-        self.assertEqual(out.filename(), filename)
-        self.assertEqual(out.it(), dt.datetime(2023, 8, 9, 0, tzinfo=dt.timezone.utc))
-
-        out: CMCFileInfo | None = _parseCMCFilename(
-            name=filename,
-            baseurl=self.baseurl,
-            match_tgl=False,
-        )
-        self.assertIsNone(out)
-
-    def test_parsesPressureLevel(self) -> None:
-        filename: str = "CMC_glb_VGRD_ISBL_200_latlon.15x.15_2023080900_P027.grib2"
-
-        out: CMCFileInfo | None = _parseCMCFilename(
-            name=filename,
-            baseurl=self.baseurl,
-            match_pl=True,
-        )
-        self.assertIsNotNone(out)
-        self.assertEqual(out.filename(), filename)
-        self.assertEqual(out.it(), dt.datetime(2023, 8, 9, 0, tzinfo=dt.timezone.utc))
-
-        out: CMCFileInfo | None = _parseCMCFilename(
-            name=filename,
-            baseurl=self.baseurl,
-            match_pl=False,
-        )
-        self.assertIsNone(out)
