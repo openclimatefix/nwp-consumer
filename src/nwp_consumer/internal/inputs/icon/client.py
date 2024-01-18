@@ -91,13 +91,13 @@ class Client(internal.FetcherInterface):
         self.model = model
         self.hours = hours
 
-    def getInitHours(self) -> list[int]:
+    def getInitHours(self) -> list[int]:  # noqa: D102
         return [0, 6, 12, 18]
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
         # ICON data is only available for today's date. If data hasn't been uploaded for that init
         # time yet, then yesterday's data will still be present on the server.
-        if it.date() != dt.datetime.now(dt.timezone.utc).date():
+        if it.date() != dt.datetime.now(dt.UTC).date():
             raise ValueError("ICON data is only available on today's date")
             return []
 
@@ -378,7 +378,7 @@ def _parseIconFilename(
     else:
         return None
 
-    it = dt.datetime.strptime(itstring, "%Y%m%d%H").replace(tzinfo=dt.timezone.utc)
+    it = dt.datetime.strptime(itstring, "%Y%m%d%H").replace(tzinfo=dt.UTC)
 
     return IconFileInfo(
         it=it,
