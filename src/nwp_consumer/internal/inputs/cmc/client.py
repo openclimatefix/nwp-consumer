@@ -139,7 +139,7 @@ class Client(internal.FetcherInterface):
                     name=refmatch.groups()[0],
                     baseurl=self.baseurl,
                     match_pl=not self.conform,
-                    match_tgl=not self.conform,
+                    match_hl=not self.conform,
                 )
                 # Ignore the file if it is not for today's date or has a step > 48 (when conforming)
                 if fi is None or fi.it() != it or (fi.step > self.hours and self.conform):
@@ -310,7 +310,7 @@ def _parseCMCFilename(
     name: str,
     baseurl: str,
     match_sl: bool = True,
-    match_tgl: bool = False,
+    match_hl: bool = False,
     match_pl: bool = False,
 ) -> CMCFileInfo | None:
     """Parse a string of HTML into an CMCFileInfo object, if it contains one.
@@ -319,29 +319,32 @@ def _parseCMCFilename(
         name: The name of the file to parse
         baseurl: The base URL for the GDPS model
         match_sl: Whether to match single-level files
-        match_tgl: Whether to match Height Above Ground-level files
+        match_hl: Whether to match Height Above Ground-level files
         match_pl: Whether to match pressure-level files
     """
-    # TODO Skips the special ones, CWAT
-    # Define the regex patterns to match the different types of file; X is step, L is level
-    # * Single Level: `CMC_glb_PARAM_SFC_0_latlon.15x.15_YYYYMMDD_P<Step>.grib2`
-    slRegex = r"CMC_glb_([A-Za-z_\d]+)_SFC_0_latlon.15x.15_(\d{10})_P(\d{3}).grib"
-    # * HeightAboveGround
-    tglRegex = r"CMC_glb_([A-Za-z_\d]+)_TGL_(\d{1,4})_latlon.15x.15_(\d{10})_P(\d{3}).grib"
-    # * Pressure Level: `MODEL_pressure-level_YYYYDDMMHH_XXX_LLLL_SOME_PARAM.grib2.bz2`
-    plRegex = r"CMC_glb_([A-Za-z_\d]+)_ISBL_(\d{1,4})_latlon.15x.15_(\d{10})_P(\d{3}).grib"
+    # TODO: @Jacob even fixed, these do not match a lot of the files in the store, is that on purpose?  # noqa: E501
+    # Define the regex patterns to match the different types of file
+    # * Single Level GDPS: `CMC_<MODEL>_<PARAM>_SFC_0_latlon<GRID>_YYYYMMDD_PLLL.grib2`
+    # * Sinle Level GEPS: `CMC_geps-raw_CIN_SFC_0_latlon0p5x0p5_2024011800_P000_allmbrs.grib2`
+    slRegex = r"CMC_[a-z-]{3,8}_([A-Za-z_\d]+)_SFC_0_latlon[\S]{7}_(\d{10})_P(\d{3})[\S]*.grib"
+    # * HeightAboveGround GDPS: `CMC_glb_ISBL_TGL_40_latlon.15x.15_2023080900_P027.grib2`
+    # * HeightAboveGround GEPS: `CMC_geps-raw_SPFH_TGL_2_latlon0p5x0p5_2023080900_P027_allmbrs.grib2`  # noqa: E501
+    hlRegex = r"CMC_[a-z-]{3,8}_([A-Za-z_\d]+)_TGL_(\d{1,4})_latlon[\S]{7}_(\d{10})_P(\d{3})[\S]*.grib"  # noqa: E501
+    # * Pressure Level GDPS: `CMC_glb_TMP_ISBL_500_latlon.15x.15_2023080900_P027.grib2`
+    # * Pressure Level GEPS: `CMC_geps-raw_TMP_ISBL_500_latlon0p5x0p5_2023080900_P027_allmbrs.grib2`
+    plRegex = r"CMC_[a-z-]{3,8}_([A-Za-z_\d]+)_ISBL_(\d{1,4})_latlon[\S]{7}_(\d{10})_P(\d{3})[\S]*.grib"  # noqa: E501
 
     itstring = paramstring = ""
     stepstring = "000"
     # Try to match the href to one of the regex patterns
     slmatch = re.search(pattern=slRegex, string=name)
-    tglmatch = re.search(pattern=tglRegex, string=name)
+    hlmatch = re.search(pattern=hlRegex, string=name)
     plmatch = re.search(pattern=plRegex, string=name)
 
     if slmatch and match_sl:
         paramstring, itstring, stepstring = slmatch.groups()
-    elif tglmatch and match_tgl:
-        paramstring, levelstring, itstring, stepstring = tglmatch.groups()
+    elif hlmatch and match_hl:
+        paramstring, levelstring, itstring, stepstring = hlmatch.groups()
     elif plmatch and match_pl:
         paramstring, levelstring, itstring, stepstring = plmatch.groups()
     else:
