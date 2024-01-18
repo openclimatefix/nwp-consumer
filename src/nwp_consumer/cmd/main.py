@@ -1,33 +1,34 @@
 """nwp-consumer.
 
 Usage:
-  nwp-consumer download --source <src> [--from=FROM] [--to=TO] [--rdir=RDIR] [--zdir=ZDIR] [--sink=SINK] [-v]
-  nwp-consumer convert  --source <src> [--from=FROM] [--to=TO] [--rdir=RDIR] [--zdir=ZDIR] [--sink=SINK] [--create-latest] [-v]
-  nwp-consumer consume  --source <src> [--from=FROM] [--to=TO] [--rdir=RDIR] [--zdir=ZDIR] [--sink=SINK] [--create-latest] [-v]
+  nwp-consumer download --source=SOURCE [--sink=SINK] [options]
+  nwp-consumer convert --source=SOURCE [--sink=SINK] [options]
+  nwp-consumer consume --source=SOURCE [--sink=SINK] [options]
   nwp-consumer env (--source=SOURCE | --sink=SINK)
   nwp-consumer check [--sink=SINK] [--rdir=RDIR] [--zdir=ZDIR]
   nwp-consumer (-h | --help)
   nwp-consumer --version
 
-Options:
+Commands:
   download            Download raw data from source to sink
   convert             Convert raw data present in sink
   consume             Download and convert raw data from source to sink
   check               Perform a healthcheck.py on the service
   env                 Print the unset environment variables required by the source/sink
 
-  -h, --help          Show this screen.
-  --version           Show version.
-  --from=FROM         Start datetime in YYYY-MM-DDTHH:MM format,
-                      or in YYYY-MM-DD format [default: today].
+Options:
+  --from=FROM         Start datetime in YYYY-MM-DDTHH:MM or YYYY-MM-DD format [default: today].
   --to=TO             End datetime in YYYY-MM-DD or YYYY-MM-DDTHH:MM format.
-  --source=SOURCE     Data source to use
-                      (ceda/metoffice/ecmwf-mars/icon/cmc).
-  --sink=SINK         Data sink to use
-                      (local/s3/huggingface) [default: local].
+  --source=SOURCE     Data source (ceda/metoffice/ecmwf-mars/icon/cmc).
+  --sink=SINK         Data sink (local/s3/huggingface) [default: local].
+  --set=SET           The set of parameters to download (basic/default/full) [default: default].
   --rdir=RDIR         Directory of raw data store [default: /tmp/raw].
   --zdir=ZDIR         Directory of zarr data store [default: /tmp/zarr].
   --create-latest     Create a zarr of the dataset with the latest init time [default: False].
+
+Generic Options:
+  --version           Show version.
+  -h, --help          Show this screen.
   -v, --verbose       Enable verbose logging [default: False].
 """
 
