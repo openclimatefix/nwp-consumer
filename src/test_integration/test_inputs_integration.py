@@ -9,7 +9,6 @@ and will be considered passed if no exception is raised within that time.
 import datetime as dt
 import multiprocessing
 import unittest
-import os
 from collections.abc import Callable
 
 from nwp_consumer.internal import config, inputs, outputs
@@ -34,13 +33,18 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         p.join(TIMEOUT)
         if p.is_alive():
             p.terminate()
+        else:
+            # Capture any excepotions raised by the process function
+            p.join()
+            if p.exitcode != 0:
+                self.fail("Function terminated with error.")
 
     def test_downloadsRawGribFileFromCEDA(self) -> None:
         c = config.CEDAEnv()
         cedaClient = inputs.ceda.Client(
             ftpUsername=c.CEDA_FTP_USER,
             ftpPassword=c.CEDA_FTP_PASS,
-        )
+)
 
         fileInfo = CEDAFileInfo(name="202201010000_u1096_ng_umqv_Wholesale1.grib")
         self._stop_after_timeout(cedaClient.downloadToTemp, kwargs={"fi": fileInfo})
