@@ -60,11 +60,11 @@ jobs:
         if: steps.restore-cache.outputs.cache-hit != 'true'
 
       # Should mirror the build-reqs stage in the Containerfile
-      # * Except this installs the dev dependencies and binaries as well
+      # * Except this installs the dev dependencies as well
       - name: Install all dependencies
         run: |
           conda install -p ./venv -q -y eccodes zarr
-          ./venv/bin/python -m pip install -q .[dev]
+          ./venv/bin/python -m pip install -q .[dev] --no-binary=nwp-consumer
         if: steps.restore-cache.outputs.cache-hit != 'true'
 
       # Cache the virtualenv for future runs
@@ -91,6 +91,9 @@ jobs:
         with:
           path: ./venv
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
+
+      - name: Install package
+        run: ./venv/bin/python -m pip install -q .
 
       # Run unittests
       # * Produce JUnit XML report
@@ -127,6 +130,9 @@ jobs:
         with:
           path: ./venv
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
+
+      - name: Install package
+        run: ./venv/bin/python -m pip install -q .
 
       # Run integration tests
       # * Requires secrets to be set in the repository settings
