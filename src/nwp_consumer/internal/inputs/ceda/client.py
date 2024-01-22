@@ -53,10 +53,8 @@ class Client(internal.FetcherInterface):
 
     # CEDA FTP Username
     __username: str
-
     # CEDA FTP Password
     __password: str
-
     # FTP url for CEDA data
     __ftpBase: str
 
@@ -73,10 +71,12 @@ class Client(internal.FetcherInterface):
         self.__password: str = urllib.parse.quote(ftpPassword)
         self.__ftpBase: str = f"ftp://{self.__username}:{self.__password}@ftp.ceda.ac.uk"
 
-    def getInitHours(self) -> list[int]:  # noqa: D102
+    def getInitHours(self) -> list[int]:
+        """Overrides corresponding parent method."""
         return [0, 3, 6, 9, 12, 15, 18, 21]
 
-    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
+    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
+        """Overrides corresponding parent method."""
         # Ignore inittimes that don't correspond to valid hours
         if it.hour not in self.getInitHours():
             return []
@@ -122,9 +122,11 @@ class Client(internal.FetcherInterface):
         ]
 
         return wantedFiles
-    def downloadToTemp(  # noqa: D102
+
+    def downloadToTemp(
         self, *, fi: internal.FileInfoModel,
     ) -> tuple[internal.FileInfoModel, pathlib.Path]:
+        """Overrides corresponding parent method."""
         if self.__password == "" or self.__username == "":
             log.error(event="all ceda credentials not provided")
             return fi, pathlib.Path()
@@ -160,7 +162,8 @@ class Client(internal.FetcherInterface):
         return fi, tfp
 
 
-    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
+    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
+        """Overrides corresponding parent method."""
         if p.suffix != ".grib":
             log.warn(event="cannot map non-grib file to dataset", filepath=p.as_posix())
             return xr.Dataset()

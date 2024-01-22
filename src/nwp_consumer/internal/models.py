@@ -130,6 +130,7 @@ class FetcherInterface(abc.ABC):
         """
         pass
 
+
 class StorageInterface(abc.ABC):
     """Generic interface for storing data, used for dependency injection."""
 
