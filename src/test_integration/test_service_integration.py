@@ -7,7 +7,7 @@ Runs the main function of the consumer as it would appear externally imported
 """
 
 import datetime as dt
-import pathlib
+import os
 import shutil
 import unittest
 
@@ -15,7 +15,6 @@ import numpy as np
 import ocf_blosc2  # noqa: F401
 import xarray as xr
 from nwp_consumer.cmd.main import run
-from nwp_consumer.internal import ZARR_GLOBSTR, config, inputs, outputs, service
 
 
 class TestNWPConsumerService_MetOffice(unittest.TestCase):
@@ -32,7 +31,6 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
             [
                 "consume",
                 "--source=metoffice",
-                "--set=basic",
                 "--rdir=" + self.rawdir,
                 "--zdir=" + self.zarrdir,
                 "--from=" + initTime.strftime("%Y-%m-%dT00:00"),
@@ -56,7 +54,10 @@ class TestNWPConsumerService_MetOffice(unittest.TestCase):
             # Ensure the dimensions of the variables are in the correct order
             self.assertEqual(("variable", "init_time", "step", "y", "x"), ds["UKV"].dims)
             # Ensure the init time is correct
-            self.assertEqual(np.datetime64(initTime), ds.coords["init_time"].values[0])
+            self.assertEqual(
+                np.datetime64(initTime.strftime("%Y-%m-%dT00:00")),
+                ds.coords["init_time"].values[0],
+            )
 
         shutil.rmtree(self.rawdir)
         shutil.rmtree(self.zarrdir)
@@ -70,22 +71,20 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
         self.zarrdir = "data/cd_zarr"
 
     def test_downloadAndConvertDataset(self) -> None:
-
         raw_files, zarr_files = run(
             [
                 "consume",
                 "--source=ceda",
-                "--set=basic",
                 "--rdir=" + self.rawdir,
                 "--zdir=" + self.zarrdir,
-                "--from=2022-01-01T00:00",
+                "--from=2022-01-01T12:00",
             ],
         )
 
         self.assertGreater(len(raw_files), 0)
         self.assertEqual(len(zarr_files), 1)
 
-        for path in pathlib.Path(self.zarrdir).glob(ZARR_GLOBSTR + ".zarr.zip"):
+        for path in zarr_files:
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
 
             # Enusre the data variables are correct
@@ -96,7 +95,10 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
                 dict(ds.dims.items()),
             )
             # Ensure the init time is correct
-            self.assertEqual(np.datetime64("2022-01-01"), ds.coords["init_time"].values[0])
+            self.assertEqual(
+                np.datetime64("2022-01-01T12:00"),
+                ds.coords["init_time"].values[0],
+            )
 
         shutil.rmtree(self.rawdir)
         shutil.rmtree(self.zarrdir)
@@ -104,36 +106,27 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
 
 class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
     def setUp(self) -> None:
-        storageClient = outputs.localfs.Client()
-
-        # Test downloading the basic parameter set for the UK model
-        _ = config.ECMWFMARSEnv()
-        ecmwfMarsClient = inputs.ecmwf.mars.Client(
-            area="uk",
-            hours=4,
-            param_group="basic",
-        )
-
         self.rawdir = "data/ec_raw"
         self.zarrdir = "data/ec_zarr"
-
-        self.testService = service.NWPConsumerService(
-            fetcher=ecmwfMarsClient,
-            storer=storageClient,
-            rawdir=self.rawdir,
-            zarrdir=self.zarrdir,
-        )
+        os.environ["ECMWF_PARAMETER_GROUP"] = "basic"
 
     def test_downloadAndConvertDataset(self) -> None:
         initTime: dt.datetime = dt.datetime(year=2022, month=1, day=1, tzinfo=dt.UTC)
 
-        out = self.testService.DownloadRawDataset(start=initTime, end=initTime)
-        self.assertGreater(len(out), 0)
+        raw_files, zarr_files = run(
+            [
+                "consume",
+                "--source=ecmwf-mars",
+                "--rdir=" + self.rawdir,
+                "--zdir=" + self.zarrdir,
+                "--from=" + initTime.strftime("%Y-%m-%dT00:00"),
+            ],
+        )
 
-        out = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
-        self.assertEqual(len(out), 1)
+        self.assertGreater(len(raw_files), 0)
+        self.assertEqual(len(zarr_files), 1)
 
-        for path in out:
+        for path in zarr_files:
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
 
             # Ensure the data variables are correct
@@ -145,8 +138,8 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
             )
             # Ensure the init time is correct
             self.assertEqual(
-                str(np.datetime64(initTime))[:10],
-                str(ds.coords["init_time"].values[0])[:10],
+                np.datetime64(initTime.strftime("%Y-%m-%dT%00:00")),
+                ds.coords["init_time"].values[0],
             )
 
         shutil.rmtree(self.rawdir)
@@ -157,40 +150,27 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
     """Integration tests for the NWPConsumerService class."""
 
     def setUp(self) -> None:
-        storageClient = outputs.localfs.Client()
-
-        # Test downloading the basic parameter set for the global model
-        iconClient = inputs.icon.Client(
-            model="global",
-            hours=4,
-            param_group="basic",
-        )
-
         self.rawdir = "data/ic_raw"
         self.zarrdir = "data/ic_zarr"
-
-        self.testService = service.NWPConsumerService(
-            fetcher=iconClient,
-            storer=storageClient,
-            rawdir=self.rawdir,
-            zarrdir=self.zarrdir,
-        )
+        os.environ["ICON_PARAMETER_GROUP"] = "basic"
 
     def test_downloadAndConvertDataset(self) -> None:
-        initTime: dt.datetime = dt.datetime.now(tz=dt.UTC).replace(
-            hour=0,
-            minute=0,
-            second=0,
-            microsecond=0,
+        initTime: dt.datetime = dt.datetime.now(tz=dt.UTC)
+
+        raw_files, zarr_files = run(
+            [
+                "consume",
+                "--source=icon",
+                "--rdir=" + self.rawdir,
+                "--zdir=" + self.zarrdir,
+                "--from=" + initTime.strftime("%Y-%m-%dT00:00"),
+            ],
         )
 
-        out = self.testService.DownloadRawDataset(start=initTime, end=initTime)
-        self.assertGreater(len(out), 0)
+        self.assertGreater(len(raw_files), 0)
+        self.assertEqual(len(zarr_files), 1)
 
-        out = self.testService.ConvertRawDatasetToZarr(start=initTime, end=initTime)
-        self.assertEqual(len(out), 1)
-
-        for path in out:
+        for path in zarr_files:
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
 
             # Enusre the data variables are correct
@@ -201,9 +181,10 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
                 dict(ds.dims.items()),
             )
             # Ensure the init time is correct
-            dt64: np.datetime64 = ds.coords["init_time"].values[0]
-            it: dt.datetime = dt.datetime.fromtimestamp(dt64.astype(int) / 1e9, tz=dt.UTC)
-            self.assertEqual(initTime, it)
+            self.assertEqual(
+                np.datetime64(initTime.strftime("%Y-%m-%dT00:00")),
+                ds.coords["init_time"].values[0],
+            )
 
         shutil.rmtree(self.rawdir)
         shutil.rmtree(self.zarrdir)

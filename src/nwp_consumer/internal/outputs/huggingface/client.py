@@ -23,7 +23,7 @@ class Client(internal.StorageInterface):
     def __init__(self, repoID: str, token: str | None = None, endpoint: str | None = None) -> None:
         """Create a new client for HuggingFace.
 
-        Exposes a client for the HuggingFace filesystem APIthat conforms to the StorageInterface.
+        Exposes a client for the HuggingFace filesystem API that conforms to the StorageInterface.
 
         Args:
             repoID: The ID of the repo to use for the dataset.
