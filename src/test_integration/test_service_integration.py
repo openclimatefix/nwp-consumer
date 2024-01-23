@@ -108,7 +108,9 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
     def setUp(self) -> None:
         self.rawdir = "data/ec_raw"
         self.zarrdir = "data/ec_zarr"
+        self.steps = 4
         os.environ["ECMWF_PARAMETER_GROUP"] = "basic"
+        os.environ["ECMWF_HOURS"] = self.steps - 1
 
     def test_downloadAndConvertDataset(self) -> None:
         initTime: dt.datetime = dt.datetime(year=2022, month=1, day=1, tzinfo=dt.UTC)
@@ -133,7 +135,13 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
             self.assertEqual(["ECMWF_UK"], list(ds.data_vars))
             # Ensure the dimensions have the right sizes
             self.assertEqual(
-                {"variable": 2, "init_time": 1, "step": 5, "latitude": 241, "longitude": 301},
+                {
+                    "variable": 2,
+                    "init_time": 1,
+                    "step": self.steps,
+                    "latitude": 241,
+                    "longitude": 301,
+                },
                 dict(ds.dims.items()),
             )
             # Ensure the init time is correct
@@ -152,7 +160,9 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
     def setUp(self) -> None:
         self.rawdir = "data/ic_raw"
         self.zarrdir = "data/ic_zarr"
+        self.steps = 4
         os.environ["ICON_PARAMETER_GROUP"] = "basic"
+        os.environ["ICON_HOURS"] = self.steps - 1
 
     def test_downloadAndConvertDataset(self) -> None:
         initTime: dt.datetime = dt.datetime.now(tz=dt.UTC)
@@ -177,7 +187,7 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
             self.assertEqual(["ICON_GLOBAL"], list(ds.data_vars))
             # Ensure the dimensions have the right sizes
             self.assertEqual(
-                {"variable": 2, "init_time": 1, "step": 5, "values": 2949120},
+                {"variable": 2, "init_time": 1, "step": self.steps, "values": 2949120},
                 dict(ds.dims.items()),
             )
             # Ensure the init time is correct
