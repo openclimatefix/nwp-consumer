@@ -185,11 +185,12 @@ def _parse_from_to(fr: str, to: str | None) -> tuple[dt.datetime, dt.datetime]:
 
 def _parse_source(source: str) -> internal.FetcherInterface:
     """Parse the source argument into a fetcher interface."""
+    # Set defaults for fetcher and env for typesafe assignments
     fetcher: internal.FetcherInterface = inputs.ceda.Client(
         ftpUsername="not-set",
         ftpPassword="not-set",
     )
-    env: config.EnvParser = config.CEDAEnv()
+    env: config.EnvParser = config.LocalEnv()
 
     match source:
         case "ceda":

@@ -123,6 +123,7 @@ class Client(internal.FetcherInterface):
 
         match param_group:
             case "basic":
+                log.debug(event="Initialising ECMWF Client with basic parameter group")
                 self.parameters = ["167.128/169.128"]  # 2 Metre Temperature, Dswrf
             case _:
                 self.parameters = list(PARAMETER_ECMWFCODE_MAP.keys())

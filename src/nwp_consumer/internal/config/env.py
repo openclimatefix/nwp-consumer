@@ -1,7 +1,7 @@
 """Config struct for application running."""
 import os
 from distutils.util import strtobool
-from typing import Literal, get_type_hints
+from typing import get_type_hints
 
 import structlog
 
@@ -96,6 +96,7 @@ class CMCEnv(EnvParser):
     CMC_MODEL: str = "gdps"
     CMC_HOURS: int = 240
     CMC_PARAMETER_GROUP: str = "full"
+
 
 # --- Outputs environment variables --- #
 

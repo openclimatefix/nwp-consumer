@@ -10,6 +10,7 @@ import datetime as dt
 import os
 import shutil
 import unittest
+import unittest.mock
 
 import numpy as np
 import ocf_blosc2  # noqa: F401
@@ -108,10 +109,8 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
     def setUp(self) -> None:
         self.rawdir = "data/ec_raw"
         self.zarrdir = "data/ec_zarr"
-        self.steps = 4
-        os.environ["ECMWF_PARAMETER_GROUP"] = "basic"
-        os.environ["ECMWF_HOURS"] = self.steps - 1
 
+    @unittest.mock.patch.dict(os.environ, {"ECMWF_PARAMETER_GROUP": "basic", "ECMWF_HOURS": "3"})
     def test_downloadAndConvertDataset(self) -> None:
         initTime: dt.datetime = dt.datetime(year=2022, month=1, day=1, tzinfo=dt.UTC)
 
@@ -133,12 +132,14 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
 
             # Ensure the data variables are correct
             self.assertEqual(["ECMWF_UK"], list(ds.data_vars))
-            # Ensure the dimensions have the right sizes
+            # Ensure the dimensions have the right sizes.
+            # * Should be two variables due to the "basic" parameter group
+            # * Should be 4 steps due to the "3" hours
             self.assertEqual(
                 {
                     "variable": 2,
                     "init_time": 1,
-                    "step": self.steps,
+                    "step": 4,
                     "latitude": 241,
                     "longitude": 301,
                 },
@@ -160,10 +161,8 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
     def setUp(self) -> None:
         self.rawdir = "data/ic_raw"
         self.zarrdir = "data/ic_zarr"
-        self.steps = 4
-        os.environ["ICON_PARAMETER_GROUP"] = "basic"
-        os.environ["ICON_HOURS"] = self.steps - 1
 
+    @unittest.mock.patch.dict(os.environ, {"ICON_PARAMETER_GROUP": "basic", "ICON_HOURS": "3"})
     def test_downloadAndConvertDataset(self) -> None:
         initTime: dt.datetime = dt.datetime.now(tz=dt.UTC)
 
@@ -186,8 +185,10 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
             # Enusre the data variables are correct
             self.assertEqual(["ICON_GLOBAL"], list(ds.data_vars))
             # Ensure the dimensions have the right sizes
+            # * Should be two variables due to the "basic" parameter group
+            # * Should be 4 steps due to the "3" hours
             self.assertEqual(
-                {"variable": 2, "init_time": 1, "step": self.steps, "values": 2949120},
+                {"variable": 2, "init_time": 1, "step": 4, "values": 2949120},
                 dict(ds.dims.items()),
             )
             # Ensure the init time is correct
