@@ -5,6 +5,13 @@ import pathlib
 
 import huggingface_hub as hfh
 import structlog
+from huggingface_hub.hf_api import (
+    RepoFile,
+    RepoFolder,
+    RepositoryNotFoundError,
+    EntryNotFoundError,
+    RevisionNotFoundError,
+)
 
 from nwp_consumer import internal
 
@@ -34,10 +41,13 @@ class Client(internal.StorageInterface):
             endpoint: The HuggingFace endpoint to use.
         """
         self.__api = hfh.HfApi(token=token, endpoint=endpoint)
-        # See https://huggingface.co/docs/huggingface_hub/guides/hf_file_system#integrations
-        self.datasetPath = pathlib.Path(f"datasets/{repoID}")
         # Get the URL to the dataset, e.g. https://huggingface.co/datasets/username/dataset
-        self.dsURL = hfh.hf_hub_url(endpoint=endpoint, repo_id=repoID, repo_type="dataset")
+        self.dsURL = hfh.hf_hub_url(
+            endpoint=endpoint,
+            repo_id=repoID,
+            repo_type="dataset",
+            filename="",
+        )
         # Repo ID
         self.repoID = repoID
 
@@ -53,11 +63,14 @@ class Client(internal.StorageInterface):
     def exists(self, *, dst: pathlib.Path) -> bool:
         """Overrides the corresponding method of the parent class."""
         try:
-            # Check if we are considering a folder
-            if dst.suffix == ".zarr":
-                dst = dst / ".zattrs"
-            self.__api.get_hf_file_metadata(url=self.dsURL + dst.as_posix())
-        except (hfh.RepositoryNotFoundError, hfh.EntryNotFoundError, hfh.RevisionNotFoundError):
+            path_infos: list[RepoFile | RepoFolder] = self.__api.get_paths_info(
+                repo_id=self.repoID,
+                repo_type="dataset",
+                paths=[dst.as_posix()],
+            )
+            if len(path_infos) == 0:
+                return False
+        except RevisionNotFoundError:
             return False
         return True
 
@@ -111,7 +124,7 @@ class Client(internal.StorageInterface):
                 path_in_repo=prefix.as_posix(),
                 recursive=True,
             )
-            if isinstance(f, hfh.RepoFolder)
+            if isinstance(f, RepoFolder)
         ]
 
         # Get the initTime from the folder pattern
@@ -143,7 +156,7 @@ class Client(internal.StorageInterface):
     def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         """Overrides the corresponding method of the parent class."""
         initTimeDirPath = self.datasetPath / prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
-        paths: list[hfh.RepoFile] = [
+        paths: list[RepoFile] = [
             p
             for p in self.__api.list_repo_tree(
                 repo_id=self.repoID,
@@ -151,7 +164,7 @@ class Client(internal.StorageInterface):
                 path_in_repo=initTimeDirPath.as_posix(),
                 recursive=True,
             )
-            if isinstance(p, hfh.RepoFile)
+            if isinstance(p, RepoFile)
         ]
 
         log.debug(
@@ -215,14 +228,14 @@ class Client(internal.StorageInterface):
 
     def delete(self, *, p: pathlib.Path) -> None:  # noqa: D102
         # Determine if the path corresponds to a file or a folder
-        info: hfh.RepoFile | hfh.RepoFolder = self.__api.get_paths_info(
+        info: RepoFile | RepoFolder = self.__api.get_paths_info(
             repo_id=self.repoID,
             repo_type="dataset",
             paths=[p.as_posix()],
             recursive=False,
         )[0]
         # Call the relevant delete function using the huggingface API
-        if isinstance(info, hfh.RepoFolder):
+        if isinstance(info, RepoFolder):
             self.__api.delete_folder(
                 repo_id=self.repoID,
                 repo_type="dataset",
@@ -237,16 +250,30 @@ class Client(internal.StorageInterface):
 
     def _get_size(self, *, p: pathlib.Path) -> int:
         """Gets the size of a file or folder in the huggingface dataset."""
-        size: int = sum(
-            [
-                f.size
-                for f in self.__api.list_repo_tree(
-                    repo_id=self.repoID,
-                    repo_type="dataset",
-                    path_in_repo=p.as_posix(),
-                    recursive=True,
-                )
-                if isinstance(f, hfh.RepoFile)
-            ],
-        )
+        size: int = 0
+
+        # Determine if the path corresponds to a file or a folder
+        path_info: RepoFile | RepoFolder = self.__api.get_paths_info(
+            repo_id=self.repoID,
+            repo_type="dataset",
+            paths=[p.as_posix()],
+        )[0]
+
+        # Calculate the size of the file or folder
+        if isinstance(path_info, RepoFolder):
+            size = sum(
+                [
+                    f.size
+                    for f in self.__api.list_repo_tree(
+                        repo_id=self.repoID,
+                        repo_type="dataset",
+                        path_in_repo=p.as_posix(),
+                        recursive=True,
+                    )
+                    if isinstance(f, RepoFile)
+                ],
+            )
+        elif isinstance(path_info, RepoFile):
+            size = path_info.size
+
         return size
