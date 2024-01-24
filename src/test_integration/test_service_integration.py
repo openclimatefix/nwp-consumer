@@ -147,7 +147,7 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
             )
             # Ensure the init time is correct
             self.assertEqual(
-                np.datetime64(initTime.strftime("%Y-%m-%dT%00:00")),
+                np.datetime64(initTime.strftime("%Y-%m-%dT00:00")),
                 ds.coords["init_time"].values[0],
             )
 
