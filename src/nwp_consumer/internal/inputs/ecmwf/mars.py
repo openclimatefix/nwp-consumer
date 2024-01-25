@@ -35,28 +35,30 @@ PARAMETER_RENAME_MAP: dict[str, str] = {
     "v100": internal.OCFShortName.WindVComponent100m.value,
     "u200": internal.OCFShortName.WindUComponent200m.value,
     "v200": internal.OCFShortName.WindVComponent200m.value,
+    "vis": internal.OCFShortName.VisibilityAGL.value,
 }
 
 # Mapping from ECMWF eccode to ECMWF short name
 # * https://codes.ecmwf.int/grib/param-db/?filter=All
 PARAMETER_ECMWFCODE_MAP: dict[str, str] = {
-    "167.128": "tas",  # 2 metre temperature
-    "165.128": "uas",  # 10 metre U-component of wind
-    "166.128": "vas",  # 10 metre V-component of wind
-    "47.128": "dsrp",  # Direct solar radiation
-    "57.128": "uvb",  # Downward uv radiation at surface
-    "188.128": "hcc",  # High cloud cover
-    "187.128": "mcc",  # Medium cloud cover
-    "186.128": "lcc",  # Low cloud cover
-    "164.128": "clt",  # Cloud area fraction
-    "169.128": "ssrd",  # Surface shortwave radiation downward
-    "175.128": "strd",  # Surface longwave radiation downward
+    "167.128": "tas",    # 2 metre temperature
+    "165.128": "uas",    # 10 metre U-component of wind
+    "166.128": "vas",    # 10 metre V-component of wind
+    "47.128": "dsrp",    # Direct solar radiation
+    "57.128": "uvb",     # Downward uv radiation at surface
+    "188.128": "hcc",    # High cloud cover
+    "187.128": "mcc",    # Medium cloud cover
+    "186.128": "lcc",    # Low cloud cover
+    "164.128": "clt",    # Cloud area fraction
+    "169.128": "ssrd",   # Surface shortwave radiation downward
+    "175.128": "strd",   # Surface longwave radiation downward
     "260048": "tprate",  # Total precipitation rate
-    "141.128": "sd",  # Snow depth, m
-    "246.228": "u100",  # 100 metre U component of wind
-    "247.228": "v100",  # 100 metre V component of wind
-    "239.228": "u200",  # 200 metre U component of wind
-    "240.228": "v200",  # 200 metre V component of wind
+    "141.128": "sd",     # Snow depth, m
+    "246.228": "u100",   # 100 metre U component of wind
+    "247.228": "v100",   # 100 metre V component of wind
+    "239.228": "u200",   # 200 metre U component of wind
+    "240.228": "v200",   # 200 metre V component of wind
+    "20.3": "vis",       # Visibility
 }
 
 AREA_MAP: dict[str, str] = {
