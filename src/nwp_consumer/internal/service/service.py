@@ -105,12 +105,13 @@ class NWPConsumerService:
             dask.bag.from_sequence(seq=newWantedFileInfos, npartitions=len(newWantedFileInfos))
             .map(lambda fi: self.fetcher.downloadToTemp(fi=fi))
             .filter(lambda infoPathTuple: infoPathTuple[1] != pathlib.Path())
-            .map(lambda infoPathTuple: self.storer.store(
+            .map(
+                lambda infoPathTuple: self.storer.store(
                     src=infoPathTuple[1],
                     dst=self.rawdir
                     / infoPathTuple[0].it().strftime(internal.IT_FOLDER_FMTSTR)
                     / (infoPathTuple[0].filename()),
-                )
+                ),
             )
             .compute()
         )
@@ -121,7 +122,7 @@ class NWPConsumerService:
         self,
         *,
         start: dt.datetime,
-        end: dt.datetime
+        end: dt.datetime,
     ) -> list[pathlib.Path]:
         """Convert raw data for the given time range to Zarr.
 
