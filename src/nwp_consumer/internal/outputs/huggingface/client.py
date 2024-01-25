@@ -257,7 +257,11 @@ class Client(internal.StorageInterface):
             repo_id=self.repoID,
             repo_type="dataset",
             paths=[p.as_posix()],
-        )[0]
+        )
+
+        if len(path_info) == 0:
+            # The path in question doesn't exist
+            return size
 
         # Calculate the size of the file or folder
         if isinstance(path_info, RepoFolder):
