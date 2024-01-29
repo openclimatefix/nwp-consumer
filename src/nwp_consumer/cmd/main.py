@@ -218,6 +218,7 @@ def _parse_source(source: str) -> internal.FetcherInterface:
             fetcher = inputs.icon.Client(
                 model=env.ICON_MODEL,
                 param_group=env.ICON_PARAMETER_GROUP,
+                hours=env.ICON_HOURS,
             )
         case "cmc":
             env = config.CMCEnv()
