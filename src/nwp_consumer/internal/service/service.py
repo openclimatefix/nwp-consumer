@@ -177,7 +177,7 @@ class NWPConsumerService:
             .filter(_dataQualityFilter)
             .map(lambda ds: _saveAsTempZipZarr(ds=ds))
             .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.name))
-            .compute(num_workers=1)
+            .compute(scheduler="single-threaded")
         )  # AWS ECS only has 1 CPU which amounts to half a physical core
 
         if not isinstance(storedfiles, list):

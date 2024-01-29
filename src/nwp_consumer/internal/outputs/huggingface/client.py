@@ -8,8 +8,6 @@ import structlog
 from huggingface_hub.hf_api import (
     RepoFile,
     RepoFolder,
-    RepositoryNotFoundError,
-    EntryNotFoundError,
     RevisionNotFoundError,
 )
 
@@ -52,7 +50,9 @@ class Client(internal.StorageInterface):
         self.repoID = repoID
 
         try:
-            self.__api.dataset_info(repo_id=self.datasetPath.relative_to("datasets").as_posix())
+            self.__api.dataset_info(
+                repo_id=repoID,
+            )
         except Exception as e:
             log.warn(
                 event="failed to authenticate with huggingface for given repo",
@@ -252,7 +252,7 @@ class Client(internal.StorageInterface):
         """Gets the size of a file or folder in the huggingface dataset."""
         size: int = 0
 
-        # Determine if the path corresponds to a file or a folder
+        # Get the info of the path
         path_info: RepoFile | RepoFolder = self.__api.get_paths_info(
             repo_id=self.repoID,
             repo_type="dataset",
