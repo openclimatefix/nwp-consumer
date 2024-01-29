@@ -79,21 +79,26 @@ class Client(internal.StorageInterface):
         # Handle the case where we are trying to upload a folder
         if src.is_dir():
             # Upload the folder using the huggingface API
-            self.__api.upload_folder(
+            future = self.__api.upload_folder(
                 repo_id=self.repoID,
                 repo_type="dataset",
                 folder_path=src.as_posix(),
                 path_in_repo=dst.as_posix(),
+                run_as_future=True,
             )
         # Handle the case where we are trying to upload a file
         else:
             # Upload the file using the huggingface API
-            self.__api.upload_file(
+            future = self.__api.upload_file(
                 repo_id=self.repoID,
                 repo_type="dataset",
                 path_or_fileobj=src.as_posix(),
                 path_in_repo=dst.as_posix(),
+                run_as_future=True,
             )
+
+        # Block until the upload is complete to prevent overlapping commits
+        future.result()
 
         # Perform a check on the size of the file
         size = self._get_size(p=dst)
