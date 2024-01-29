@@ -2,7 +2,7 @@
 
 import unittest.mock
 
-from .env import EnvParser
+from .env import EnvParser, ICONEnv
 
 
 class TestConfig(EnvParser):
@@ -52,3 +52,12 @@ class Test_EnvParser(unittest.TestCase):
     def test_errorsIfRequiredFieldNotSet(self) -> None:
         with self.assertRaises(OSError):
             TestConfig()
+
+    @unittest.mock.patch.dict(
+        "os.environ", {"ICON_HOURS": "3", "ICON_PARAMETER_GROUP": "basic"}
+    )
+    def test_parsesIconConfig(self) -> None:
+        tc = ICONEnv()
+
+        self.assertEqual(3, tc.ICON_HOURS)
+        self.assertEqual("basic", tc.ICON_PARAMETER_GROUP)
