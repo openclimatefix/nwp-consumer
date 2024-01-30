@@ -53,6 +53,7 @@ class TestECMWFMARSClient(unittest.TestCase):
             list_only=True,
             target=testFilePath.as_posix(),
             it=dt.datetime(2020, 1, 1, tzinfo=dt.UTC),
+            params=testDefaultClient.desired_params,
         )
 
         out.replace(" ", "")
@@ -74,12 +75,12 @@ class TestECMWFMARSClient(unittest.TestCase):
             hours=4,
             param_group="basic",
         )
-        testBasicClient.available_params = ["167.128", "169.128"]
 
         out = testBasicClient._buildMarsRequest(
             list_only=False,
             target=testFilePath.as_posix(),
             it=dt.datetime(2020, 1, 1, tzinfo=dt.UTC),
+            params=testBasicClient.desired_params,
         )
 
         out.replace(" ", "")
