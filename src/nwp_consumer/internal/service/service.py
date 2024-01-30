@@ -72,7 +72,7 @@ class NWPConsumerService:
                 start=start,
                 end=end,
                 inclusive="left",
-                freq="H",
+                freq="h",
                 tz=dt.UTC,
             ).tolist()
             if pdt.to_pydatetime().hour in self.fetcher.getInitHours()
