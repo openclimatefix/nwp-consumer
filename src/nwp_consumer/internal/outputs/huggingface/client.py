@@ -77,6 +77,9 @@ class Client(internal.StorageInterface):
 
     def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:
         """Overrides the corresponding method of the parent class."""
+        # Remove any leading slashes as they are not allowed in huggingface
+        dst = dst.relative_to("/") if dst.is_absolute() else dst
+
         # Get the hash of the latest commit
         sha: str = self.__api.dataset_info(repo_id=self.repoID).sha
         # Handle the case where we are trying to upload a folder
@@ -126,6 +129,8 @@ class Client(internal.StorageInterface):
 
     def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:
         """Overrides the corresponding method of the parent class."""
+        # Remove any leading slashes as they are not allowed in huggingface
+        prefix = prefix.relative_to("/") if prefix.is_absolute() else prefix
         # Get the path relative to the prefix of every folder in the repo
         allDirs: list[pathlib.Path] = [
             pathlib.Path(f.path).relative_to(prefix)
@@ -166,6 +171,10 @@ class Client(internal.StorageInterface):
 
     def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         """Overrides the corresponding method of the parent class."""
+        # Remove any leading slashes as they are not allowed in huggingface
+        prefix = prefix.relative_to("/") if prefix.is_absolute() else prefix
+
+        # Get the paths of all files in the folder
         paths: list[RepoFile] = [
             p
             for p in self.__api.list_repo_tree(
@@ -238,6 +247,9 @@ class Client(internal.StorageInterface):
 
     def delete(self, *, p: pathlib.Path) -> None:
         """Overrides the corresponding method of the parent class."""
+        # Remove any leading slashes as they are not allowed in huggingface
+        p = p.relative_to("/") if p.is_absolute() else p
+
         # Determine if the path corresponds to a file or a folder
         info: RepoFile | RepoFolder = self.__api.get_paths_info(
             repo_id=self.repoID,
@@ -261,8 +273,10 @@ class Client(internal.StorageInterface):
 
     def _get_size(self, *, p: pathlib.Path) -> int:
         """Gets the size of a file or folder in the huggingface dataset."""
-        size: int = 0
+        # Remove any leading slashes as they are not allowed in huggingface
+        p = p.relative_to("/") if p.is_absolute() else p
 
+        size: int = 0
         # Get the info of the path
         path_info: RepoFile | RepoFolder = self.__api.get_paths_info(
             repo_id=self.repoID,
