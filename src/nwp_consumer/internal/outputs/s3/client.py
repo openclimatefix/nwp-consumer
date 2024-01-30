@@ -58,10 +58,16 @@ class Client(internal.StorageInterface):
 
         self.__bucket = pathlib.Path(bucket)
 
-    def exists(self, *, dst: pathlib.Path) -> bool:  # noqa: D102
+    def name(self) -> str:
+        """Overrides the corresponding method in the parent class."""
+        return "s3"
+
+    def exists(self, *, dst: pathlib.Path) -> bool:
+        """Overrides the corresponding method in the parent class."""
         return self.__fs.exists((self.__bucket / dst).as_posix())
 
-    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:  # noqa: D102
+    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:
+        """Overrides the corresponding method in the parent class."""
         log.debug(
             event="storing file in s3",
             src=src.as_posix(),
@@ -88,7 +94,8 @@ class Client(internal.StorageInterface):
             )
         return dst
 
-    def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:  # noqa: D102
+    def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:
+        """Overrides the corresponding method in the parent class."""
         allDirs = [
             pathlib.Path(d).relative_to(self.__bucket / prefix)
             for d in self.__fs.glob(f"{self.__bucket}/{prefix}/{internal.IT_FOLDER_GLOBSTR}")
@@ -102,7 +109,7 @@ class Client(internal.StorageInterface):
                 try:
                     # Try to parse the folder name as a datetime
                     ddt = dt.datetime.strptime(dir.as_posix(), internal.IT_FOLDER_FMTSTR).replace(
-                        tzinfo=dt.timezone.utc,
+                        tzinfo=dt.UTC,
                     )
                     initTimes.add(ddt)
                 except ValueError:
@@ -120,7 +127,8 @@ class Client(internal.StorageInterface):
         )
         return sortedInitTimes
 
-    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:  # noqa: D102
+    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
+        """Overrides the corresponding method in the parent class."""
         initTimeDirPath = self.__bucket / prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
         paths = [
             pathlib.Path(p).relative_to(self.__bucket)
@@ -175,7 +183,8 @@ class Client(internal.StorageInterface):
 
         return tempPaths
 
-    def delete(self, *, p: pathlib.Path) -> None:  # noqa: D102
+    def delete(self, *, p: pathlib.Path) -> None:
+        """Overrides the corresponding method in the parent class."""
         if self.__fs.isdir((self.__bucket / p).as_posix()):
             self.__fs.rm((self.__bucket / p).as_posix(), recursive=True)
         else:
