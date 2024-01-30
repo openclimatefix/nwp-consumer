@@ -23,6 +23,9 @@ log = structlog.getLogger()
 
 
 class DummyStorer(internal.StorageInterface):
+    def name(self) -> str:
+        return "dummy"
+
     def exists(self, *, dst: pathlib.Path) -> bool:
         log.info("exists", dst=dst)
         if "exists" in dst.name:
