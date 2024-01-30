@@ -70,6 +70,12 @@ class DummyFileInfo(internal.FileInfoModel):
     def filepath(self) -> str:
         return self.f
 
+    def variables(self) -> list[str]:
+        raise NotImplementedError()
+
+    def steps(self) -> list[int]:
+        return list(range(100))
+
 
 class DummyFetcher(internal.FetcherInterface):
 

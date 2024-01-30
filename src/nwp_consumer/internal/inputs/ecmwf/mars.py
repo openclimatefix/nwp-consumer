@@ -94,7 +94,6 @@ class Client(internal.FetcherInterface):
     server: ecmwfapi.api.ECMWFService
     area: str
     desired_params: list[str]
-    available_params: list[str]
 
     def __init__(
         self,
@@ -124,7 +123,6 @@ class Client(internal.FetcherInterface):
                 "ECMWF operational archive only goes out to 90 hours in hourly increments",
             )
         self.hours = hours
-        self.available_params = []
 
         match param_group:
             case "basic":
@@ -150,7 +148,12 @@ class Client(internal.FetcherInterface):
             return []
 
         with tempfile.NamedTemporaryFile(suffix=".txt", mode="r+") as tf:
-            req: str = self._buildMarsRequest(list_only=True, it=it, target=tf.name)
+            req: str = self._buildMarsRequest(
+                list_only=True,
+                it=it,
+                target=tf.name,
+                params=self.desired_params,
+            )
 
             log.debug(event="listing ECMWF MARS inittime data", request=req, inittime=it)
 
@@ -167,22 +170,21 @@ class Client(internal.FetcherInterface):
             # `available_params` list according to the result of the list request
             # TODO: Make it so ECMWF saves to a file per parameter per step
             # * This will allow us to only request the parameters and steps that are a) available
-            #     and b) not already downloaded byt the user.
-            self.available_params = []
+            #     and b) not already downloaded by the user.
+            available_params: list[str] = []
             tf.seek(0)
             file_contents: str = tf.read()
-            for parameter in PARAMETER_ECMWFCODE_MAP:
+            for parameter in self.desired_params:
                 if parameter not in file_contents:
                     log.warn(
                         event=f"ECMWF MARS inittime data does not contain parameter {parameter}",
                         parameter=parameter,
                         inittime=it,
                     )
-                    return []
                 else:
-                    self.available_params.append(parameter)
+                    available_params.append(parameter)
 
-        return [ECMWFMarsFileInfo(inittime=it, area=self.area)]
+        return [ECMWFMarsFileInfo(inittime=it, area=self.area, params=available_params)]
 
     def downloadToTemp(  # noqa: D102
         self,
@@ -191,7 +193,12 @@ class Client(internal.FetcherInterface):
     ) -> tuple[internal.FileInfoModel, pathlib.Path]:
         tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
 
-        req: str = self._buildMarsRequest(list_only=False, it=fi.it(), target=tfp.as_posix())
+        req: str = self._buildMarsRequest(
+            list_only=False,
+            it=fi.it(),
+            target=tfp.as_posix(),
+            params=fi.variables(),
+        )
 
         log.debug(
             event="fetching ECMWF MARS data",
@@ -299,7 +306,9 @@ class Client(internal.FetcherInterface):
 
         return wholesaleDataset
 
-    def _buildMarsRequest(self, *, list_only: bool, it: dt.datetime, target: str) -> str:
+    def _buildMarsRequest(
+        self, *, list_only: bool, it: dt.datetime, target: str, params: list[str]
+    ) -> str:
         """Build a MARS request according to the parameters of the client.
 
         Args:
@@ -308,6 +317,7 @@ class Client(internal.FetcherInterface):
                 that match the request.
             it: The initialisation time to request data for.
             target: The path to the target file to write the data to.
+            params: The parameters to request data for.
 
         Returns:
             The MARS request.
@@ -318,7 +328,7 @@ class Client(internal.FetcherInterface):
                 date     = {it.strftime("%Y%m%d")},
                 expver   = 1,
                 levtype  = sfc,
-                param    = {'/'.join(self.desired_params if list_only else self.available_params)},
+                param    = {'/'.join(params)},
                 step     = 0/to/{self.hours}/by/1,
                 stream   = oper,
                 time     = {it.strftime("%H")},

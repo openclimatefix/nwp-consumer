@@ -61,6 +61,8 @@ class FileInfoModel(abc.ABC):
     1. The file has a name
     2. The file has a path
     3. The file corresponds to a single forecast init time
+    4. The file corresponds to one or more time steps
+    5. The file corresponds to one or more variables
 
     These assumptions are reflected in the abstract methods of this class.
     """
@@ -78,6 +80,16 @@ class FileInfoModel(abc.ABC):
     @abc.abstractmethod
     def it(self) -> dt.datetime:
         """Return the init time of the file."""
+        pass
+
+    @abc.abstractmethod
+    def steps(self) -> list[int]:
+        """Return the time steps of the file."""
+        pass
+
+    @abc.abstractmethod
+    def variables(self) -> list[str]:
+        """Return the variables of the file."""
         pass
 
 

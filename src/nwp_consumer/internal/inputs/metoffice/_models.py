@@ -19,15 +19,24 @@ class MetOfficeFileInfo(internal.FileInfoModel):
     Schema: ClassVar[type[Schema]] = Schema  # To prevent confusing type checkers
 
     def it(self) -> dt.datetime:
+        """Overrides the corresponding method in the parent class."""
         return self.runDateTime.replace(tzinfo=None)
 
     def filename(self) -> str:
+        """Overrides the corresponding method in the parent class."""
         return self.fileId + ".grib"
 
     def filepath(self) -> str:
+        """Overrides the corresponding method in the parent class."""
         return f"{self.fileId}/data"
 
+    def steps(self) -> list[int]:
+        """Overrides the corresponding method in the parent class."""
+        raise NotImplementedError()
 
+    def variables(self) -> list[str]:
+        """Overrides the corresponding method in the parent class."""
+        raise NotImplementedError()
 
 
 @dataclass
