@@ -60,6 +60,10 @@ class Client(internal.StorageInterface):
                 error=e,
             )
 
+    def name(self) -> str:
+        """Overrides the corresponding method of the parent class."""
+        return "huggingface"
+
     def exists(self, *, dst: pathlib.Path) -> bool:
         """Overrides the corresponding method of the parent class."""
         try:
@@ -76,6 +80,8 @@ class Client(internal.StorageInterface):
 
     def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:
         """Overrides the corresponding method of the parent class."""
+        # Get the hash of the latest commit
+        sha: str = self.__api.dataset_info(repo_id=self.repoID).sha
         # Handle the case where we are trying to upload a folder
         if src.is_dir():
             # Upload the folder using the huggingface API
@@ -84,6 +90,7 @@ class Client(internal.StorageInterface):
                 repo_type="dataset",
                 folder_path=src.as_posix(),
                 path_in_repo=dst.as_posix(),
+                parent_commit=sha,
                 run_as_future=True,
             )
         # Handle the case where we are trying to upload a file
@@ -94,15 +101,17 @@ class Client(internal.StorageInterface):
                 repo_type="dataset",
                 path_or_fileobj=src.as_posix(),
                 path_in_repo=dst.as_posix(),
+                parent_commit=sha,
                 run_as_future=True,
             )
 
         # Block until the upload is complete to prevent overlapping commits
-        future.result()
+        url = future.result(timeout=120)
+        log.info("Uploaded to huggingface", commiturl=url)
 
         # Perform a check on the size of the file
         size = self._get_size(p=dst)
-        if size != src.stat().st_size:
+        if size != src.stat().st_size and future.done():
             log.warn(
                 event="stored file size does not match source file size",
                 src=src.as_posix(),
@@ -231,7 +240,8 @@ class Client(internal.StorageInterface):
 
         return tempPaths
 
-    def delete(self, *, p: pathlib.Path) -> None:  # noqa: D102
+    def delete(self, *, p: pathlib.Path) -> None:
+        """Overrides the corresponding method of the parent class."""
         # Determine if the path corresponds to a file or a folder
         info: RepoFile | RepoFolder = self.__api.get_paths_info(
             repo_id=self.repoID,
@@ -266,6 +276,7 @@ class Client(internal.StorageInterface):
 
         if len(path_info) == 0:
             # The path in question doesn't exist
+            log.warn("here")
             return size
 
         # Calculate the size of the file or folder
