@@ -29,6 +29,14 @@ class NWPConsumerService:
     Each method on the class is a business use case for the consumer
     """
 
+    # Dependency-injected attributes
+    fetcher: internal.FetcherInterface
+    storer: internal.StorageInterface
+    # Configuration options
+    rawdir: pathlib.Path
+    zarrdir: pathlib.Path
+    scheduler: str | None = None
+
     def __init__(
         self,
         *,
@@ -37,11 +45,18 @@ class NWPConsumerService:
         rawdir: str,
         zarrdir: str,
     ) -> None:
-        """Initialise the service."""
+        """Create a consumer service with the given dependencies."""
         self.fetcher = fetcher
         self.storer = storer
         self.rawdir = pathlib.Path(rawdir)
         self.zarrdir = pathlib.Path(zarrdir)
+
+        # If huggingface is used as the storer, revert to single threaded scheduler
+        # for dask, as the version-controlled filesystem is not thread-safe in this
+        # implementation of the logic. It could be done via many operations in one
+        # commit, but that would require modifying the signature of the storer interface
+        if storer.name() == "huggingface":
+            self.scheduler = "single-threaded"
 
     def DownloadRawDataset(self, *, start: dt.datetime, end: dt.datetime) -> list[pathlib.Path]:
         """Fetch raw data for each initTime in the given range.
@@ -113,7 +128,7 @@ class NWPConsumerService:
                     / (infoPathTuple[0].filename()),
                 ),
             )
-            .compute()
+            .compute(scheduler=self.scheduler)
         )
 
         return storedFiles
@@ -177,8 +192,8 @@ class NWPConsumerService:
             .filter(_dataQualityFilter)
             .map(lambda ds: _saveAsTempZipZarr(ds=ds))
             .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.name))
-            .compute(scheduler="single-threaded")
-        )  # AWS ECS only has 1 CPU which amounts to half a physical core
+            .compute(scheduler=self.scheduler, num_workers=1)
+        )
 
         if not isinstance(storedfiles, list):
             storedfiles = [storedfiles]
@@ -235,7 +250,7 @@ class NWPConsumerService:
         storedFiles = (
             datasets.map(lambda ds: _saveAsTempZipZarr(ds=ds))
             .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / "latest.zarr.zip"))
-            .compute()
+            .compute(scheduler=self.scheduler)
         )
 
         # Save as regular zarr
@@ -244,7 +259,7 @@ class NWPConsumerService:
         storedFiles += (
             datasets.map(lambda ds: _saveAsTempRegularZarr(ds=ds))
             .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / "latest.zarr"))
-            .compute()
+            .compute(scheduler=self.scheduler)
         )
 
         # Delete the temporary files
