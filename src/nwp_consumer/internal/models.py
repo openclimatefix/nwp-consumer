@@ -180,3 +180,11 @@ class StorageInterface(abc.ABC):
         :param p: Path to delete
         """
         pass
+
+    @abc.abstractmethod
+    def name(self) -> str:
+        """Return the name of the storage provider.
+
+        :return: Name of the storage provider
+        """
+        pass
