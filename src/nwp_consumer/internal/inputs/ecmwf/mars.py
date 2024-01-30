@@ -27,6 +27,7 @@ PARAMETER_RENAME_MAP: dict[str, str] = {
     "hcc": internal.OCFShortName.HighCloudCover.value,
     "mcc": internal.OCFShortName.MediumCloudCover.value,
     "lcc": internal.OCFShortName.LowCloudCover.value,
+    "clt": internal.OCFShortName.TotalCloudCover.value,
     "ssrd": internal.OCFShortName.DownwardShortWaveRadiationFlux.value,
     "strd": internal.OCFShortName.DownwardLongWaveRadiationFlux.value,
     "tprate": internal.OCFShortName.RainPrecipitationRate.value,
@@ -49,7 +50,7 @@ PARAMETER_ECMWFCODE_MAP: dict[str, str] = {
     "188.128": "hcc",    # High cloud cover
     "187.128": "mcc",    # Medium cloud cover
     "186.128": "lcc",    # Low cloud cover
-    "164.128": "clt",    # Cloud area fraction
+    "164.128": "clt",    # Total cloud cover
     "169.128": "ssrd",   # Surface shortwave radiation downward
     "175.128": "strd",   # Surface longwave radiation downward
     "260048": "tprate",  # Total precipitation rate
@@ -92,7 +93,8 @@ class Client(internal.FetcherInterface):
 
     server: ecmwfapi.api.ECMWFService
     area: str
-    parameters: list[str]
+    desired_params: list[str]
+    available_params: list[str]
 
     def __init__(
         self,
@@ -122,13 +124,14 @@ class Client(internal.FetcherInterface):
                 "ECMWF operational archive only goes out to 90 hours in hourly increments",
             )
         self.hours = hours
+        self.available_params = []
 
         match param_group:
             case "basic":
                 log.debug(event="Initialising ECMWF Client with basic parameter group")
-                self.parameters = ["167.128/169.128"]  # 2 Metre Temperature, Dswrf
+                self.desired_params = ["167.128/169.128"]  # 2 Metre Temperature, Dswrf
             case _:
-                self.parameters = list(PARAMETER_ECMWFCODE_MAP.keys())
+                self.desired_params = list(PARAMETER_ECMWFCODE_MAP.keys())
 
     def getInitHours(self) -> list[int]:  # noqa: D102
         return [0, 12]
@@ -159,6 +162,25 @@ class Client(internal.FetcherInterface):
 
             if (not tf.readable()) or (os.stat(tf.name).st_size < 100 and "0 bytes" in tf.read()):
                 return []
+
+            # Ensure only available parameters are requested by populating the
+            # `available_params` list according to the result of the list request
+            # TODO: Make it so ECMWF saves to a file per parameter per step
+            # * This will allow us to only request the parameters and steps that are a) available
+            #     and b) not already downloaded byt the user.
+            self.available_params = []
+            tf.seek(0)
+            file_contents: str = tf.read()
+            for parameter in PARAMETER_ECMWFCODE_MAP:
+                if parameter not in file_contents:
+                    log.warn(
+                        event=f"ECMWF MARS inittime data does not contain parameter {parameter}",
+                        parameter=parameter,
+                        inittime=it,
+                    )
+                    return []
+                else:
+                    self.available_params.append(parameter)
 
         return [ECMWFMarsFileInfo(inittime=it, area=self.area)]
 
@@ -296,7 +318,7 @@ class Client(internal.FetcherInterface):
                 date     = {it.strftime("%Y%m%d")},
                 expver   = 1,
                 levtype  = sfc,
-                param    = {'/'.join(self.parameters)},
+                param    = {'/'.join(self.desired_params if list_only else self.available_params)},
                 step     = 0/to/{self.hours}/by/1,
                 stream   = oper,
                 time     = {it.strftime("%H")},
