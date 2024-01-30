@@ -188,7 +188,7 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
             # * Should be two variables due to the "basic" parameter group
             # * Should be 4 steps due to the "3" hours
             self.assertEqual(
-                {"variable": 2, "init_time": 1, "step": 4, "values": 2949120},
+                {"variable": 2, "init_time": 1, "step": 4, "latitude": 657, "longitude": 1377},
                 dict(ds.dims.items()),
             )
             # Ensure the init time is correct
