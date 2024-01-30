@@ -32,6 +32,7 @@ class OCFShortName(str, Enum):
     LowCloudCover = "lcc"
     MediumCloudCover = "mcc"
     HighCloudCover = "hcc"
+    TotalCloudCover = "clt"
     VisibilityAGL = "vis"
     RelativeHumidityAGL = "r"
     RainPrecipitationRate = "prate"

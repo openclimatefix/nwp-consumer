@@ -4,7 +4,7 @@ import datetime as dt
 import pathlib
 import unittest.mock
 
-from .mars import Client, PARAMETER_ECMWFCODE_MAP
+from .mars import PARAMETER_ECMWFCODE_MAP, Client
 
 # --------- Test setup --------- #
 
@@ -47,7 +47,6 @@ class TestECMWFMARSClient(unittest.TestCase):
     def test_buildMarsRequest(self) -> None:
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_2params.grib"
 
-
         # Test that the request is build correctly for the default client
         testDefaultClient = Client()
         out = testDefaultClient._buildMarsRequest(
@@ -75,6 +74,7 @@ class TestECMWFMARSClient(unittest.TestCase):
             hours=4,
             param_group="basic",
         )
+        testBasicClient.available_params = ["167.128", "169.128"]
 
         out = testBasicClient._buildMarsRequest(
             list_only=False,
@@ -93,7 +93,6 @@ class TestECMWFMARSClient(unittest.TestCase):
 
         self.assertEqual(d2["param"], "167.128/169.128")
         self.assertEqual(d2["date"], "20200101")
-
 
 
 # --------- Static methods --------- #
