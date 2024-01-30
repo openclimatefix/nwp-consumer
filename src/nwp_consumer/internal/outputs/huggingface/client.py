@@ -22,9 +22,6 @@ class Client(internal.StorageInterface):
     # HuggingFace API
     __api: hfh.HfApi
 
-    # Path prefix
-    datasetPath: pathlib.Path
-
     # DatasetURL
     dsURL: str
 
@@ -169,13 +166,12 @@ class Client(internal.StorageInterface):
 
     def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         """Overrides the corresponding method of the parent class."""
-        initTimeDirPath = self.datasetPath / prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
         paths: list[RepoFile] = [
             p
             for p in self.__api.list_repo_tree(
                 repo_id=self.repoID,
                 repo_type="dataset",
-                path_in_repo=initTimeDirPath.as_posix(),
+                path_in_repo=(prefix / it.strftime(internal.IT_FOLDER_FMTSTR)).as_posix(),
                 recursive=True,
             )
             if isinstance(p, RepoFile)
@@ -276,7 +272,10 @@ class Client(internal.StorageInterface):
 
         if len(path_info) == 0:
             # The path in question doesn't exist
-            log.warn("here")
+            log.warn(
+                event="path does not exist in huggingface dataset",
+                path=p.as_posix(),
+            )
             return size
 
         # Calculate the size of the file or folder
