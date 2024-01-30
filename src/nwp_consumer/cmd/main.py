@@ -13,7 +13,7 @@ Commands:
   download            Download raw data from source to sink
   convert             Convert raw data present in sink
   consume             Download and convert raw data from source to sink
-  check               Perform a healthcheck.py on the service
+  check               Perform a healthcheck on the service
   env                 Print the unset environment variables required by the source/sink
 
 Options:
