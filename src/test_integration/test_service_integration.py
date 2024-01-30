@@ -183,7 +183,7 @@ class TestNWPConsumerService_ICON(unittest.TestCase):
             ds = xr.open_zarr(store=f"zip::{path.as_posix()}").compute()
 
             # Enusre the data variables are correct
-            self.assertEqual(["ICON_GLOBAL"], list(ds.data_vars))
+            self.assertEqual(["ICON_EUROPE"], list(ds.data_vars))
             # Ensure the dimensions have the right sizes
             # * Should be two variables due to the "basic" parameter group
             # * Should be 4 steps due to the "3" hours

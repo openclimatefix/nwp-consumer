@@ -37,3 +37,4 @@ class TestHuggingFaceClient(unittest.TestCase):
         for name, exp in name_exists_map.items():
             with self.subTest(msg=name):
                 self.assertEqual(self.client.exists(dst=pathlib.Path(name)), exp)
+

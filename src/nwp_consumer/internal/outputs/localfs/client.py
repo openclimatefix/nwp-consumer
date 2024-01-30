@@ -18,10 +18,16 @@ class Client(internal.StorageInterface):
     This class implements the StorageInterface for the local filesystem.
     """
 
-    def exists(self, *, dst: pathlib.Path) -> bool:  # noqa: D102
+    def name(self) -> str:
+        """Overrides the corresponding method in the parent class."""
+        return "localfilesystem"
+
+    def exists(self, *, dst: pathlib.Path) -> bool:
+        """Overrides the corresponding method in the parent class."""
         return dst.exists()
 
-    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:  # noqa: D102
+    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:
+        """Overrides the corresponding method in the parent class."""
         if src == dst:
             return dst
 
@@ -47,7 +53,8 @@ class Client(internal.StorageInterface):
             )
         return dst
 
-    def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:  # noqa: D102
+    def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:
+        """Overrides the corresponding method in the parent class."""
         # List all the inittime folders in the given directory
         dirs = [
             f.relative_to(prefix) for f in prefix.glob(internal.IT_FOLDER_GLOBSTR) if f.suffix == ""
@@ -60,7 +67,7 @@ class Client(internal.StorageInterface):
                 ddt: dt.datetime = dt.datetime.strptime(
                     dir.as_posix(),
                     internal.IT_FOLDER_FMTSTR,
-                ).replace(tzinfo=dt.timezone.utc)
+                ).replace(tzinfo=dt.UTC)
                 # Add the initTime to the set
                 initTimes.add(ddt)
             except ValueError:
@@ -86,16 +93,16 @@ class Client(internal.StorageInterface):
 
         return sortedInitTimes
 
-    def copyITFolderToTemp(  # noqa: D102
-        self, *, prefix: pathlib.Path, it: dt.datetime,
-    ) -> list[pathlib.Path]:
+    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
+        """Overrides the corresponding method in the parent class."""
         # Local FS already has access to files, so just return the paths
         initTimeDirPath = prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
         paths: list[pathlib.Path] = list(initTimeDirPath.iterdir())
 
         return paths
 
-    def delete(self, *, p: pathlib.Path) -> None:  # noqa: D102
+    def delete(self, *, p: pathlib.Path) -> None:
+        """Overrides the corresponding method in the parent class."""
         if not p.exists():
             raise FileNotFoundError(f"file does not exist: {p}")
         if p.is_file():
