@@ -175,8 +175,8 @@ class Client(internal.StorageInterface):
         prefix = prefix.relative_to("/") if prefix.is_absolute() else prefix
 
         # Get the paths of all files in the folder
-        paths: list[RepoFile] = [
-            p
+        paths: list[pathlib.Path] = [
+            pathlib.Path(p.path)
             for p in self.__api.list_repo_tree(
                 repo_id=self.repoID,
                 repo_type="dataset",
