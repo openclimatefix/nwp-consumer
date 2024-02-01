@@ -147,7 +147,9 @@ class Client(internal.FetcherInterface):
             )
             return []
 
-        with tempfile.NamedTemporaryFile(suffix=".txt", mode="r+") as tf:
+        tf = tempfile.NamedTemporaryFile(suffix=".txt", delete=False)
+
+        with open(tf.name, "w") as f:
             req: str = self._buildMarsRequest(
                 list_only=True,
                 it=it,
@@ -163,17 +165,20 @@ class Client(internal.FetcherInterface):
                 log.warn("error listing ECMWF MARS inittime data", error=e)
                 return []
 
-            if (not tf.readable()) or (os.stat(tf.name).st_size < 100 and "0 bytes" in tf.read()):
-                return []
+        # Explicitly check that the MARS listing file is readable and non-empty
+        if (os.access(tf.name, os.R_OK) is False) or (os.stat(tf.name).st_size < 100):
+            log.warn(
+                event="ECMWF filelisting is empty, check error logs",
+                filepath=tf.name,
+            )
+            return []
 
-            # Ensure only available parameters are requested by populating the
-            # `available_params` list according to the result of the list request
-            # TODO: Make it so ECMWF saves to a file per parameter per step
-            # * This will allow us to only request the parameters and steps that are a) available
-            #     and b) not already downloaded by the user.
+        # Ensure only available parameters are requested by populating the
+        # `available_params` list according to the result of the list request
+        # TODO: Properly parse the file for parameters
+        with open(tf.name) as f:
             available_params: list[str] = []
-            tf.seek(0)
-            file_contents: str = tf.read()
+            file_contents: str = f.read()
             for parameter in self.desired_params:
                 if parameter not in file_contents:
                     log.warn(
@@ -183,6 +188,16 @@ class Client(internal.FetcherInterface):
                     )
                 else:
                     available_params.append(parameter)
+
+        log.debug(
+            event="Listed raw files for ECMWF MARS inittime",
+            inittime=it,
+            available_params=available_params,
+        )
+
+        # Clean up the temporary file
+        tf.close()
+        os.unlink(tf.name)
 
         return [ECMWFMarsFileInfo(inittime=it, area=self.area, params=available_params)]
 
