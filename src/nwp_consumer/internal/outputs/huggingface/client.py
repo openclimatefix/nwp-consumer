@@ -217,7 +217,7 @@ class Client(internal.StorageInterface):
 
             # Copy the file from the store to a temporary file
             self.__api.hf_hub_download(
-                repoID=self.repoID,
+                repo_id=self.repoID,
                 repo_type="dataset",
                 filename=path.as_posix(),
                 local_dir=internal.TMP_DIR.as_posix(),
