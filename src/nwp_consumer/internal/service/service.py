@@ -191,7 +191,9 @@ class NWPConsumerService:
             .map(lambda datasets: _mergeDatasets(datasets=datasets))
             .filter(_dataQualityFilter)
             .map(lambda ds: _saveAsTempZipZarr(ds=ds))
-            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / path.name))
+            .map(lambda path: self.storer.store(
+                src=path, dst=self.zarrdir / path.relative_to(internal.TMP_DIR))
+            )
             .compute(scheduler=self.scheduler, num_workers=1)
         )
 
@@ -350,19 +352,24 @@ class NWPConsumerService:
 
 
 def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
-    # Save the dataset to a temp zarr file
+    # Get the name of the zarr file from the inittime and the zarr format string
     dt64: np.datetime64 = ds.coords["init_time"].values[0]
     initTime: dt.datetime = dt.datetime.fromtimestamp(dt64.astype(int) / 1e9, tz=dt.UTC)
     tempZarrPath = internal.TMP_DIR / (
-        initTime.strftime(internal.ZARR_FMTSTR.split("/")[-1]) + ".zarr.zip"
+        initTime.strftime(internal.ZARR_FMTSTR) + ".zarr.zip"
     )
+    # Delete the temporary zarr if it already exists
     if tempZarrPath.exists():
         tempZarrPath.unlink()
+    tempZarrPath.parent.mkdir(parents=True, exist_ok=True)
+    # Save the dataset to a zarr file
     with zarr.ZipStore(path=tempZarrPath.as_posix(), mode="w") as store:
         ds.to_zarr(
             store=store,
             encoding=_generate_encoding(ds=ds),
         )
+
+    log.debug("Saved as zipped zarr", path=tempZarrPath.as_posix())
     return tempZarrPath
 
 

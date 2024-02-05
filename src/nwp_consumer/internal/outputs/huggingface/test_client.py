@@ -1,5 +1,8 @@
+import datetime as dt
 import pathlib
 import unittest
+
+from nwp_consumer import internal
 
 from .client import Client
 
@@ -38,13 +41,3 @@ class TestHuggingFaceClient(unittest.TestCase):
             with self.subTest(msg=name):
                 self.assertEqual(self.client.exists(dst=pathlib.Path(name)), exp)
 
-    def test_download(self) -> None:
-        client = Client(repoID="sol-ocf/test-dwd-global")
-        client.__api.hf_hub_download(
-            repo_id=self.repoID,
-            repo_type="dataset",
-            filename="raw/2024/02/05/0000/icon_global_icosahedral_single-level_2024020500_000_ASOB_S.grib2",
-            local_dir=internal.TMP_DIR.as_posix(),
-            local_dir_use_symlinks=False,
-            force_filename=,
-        )
