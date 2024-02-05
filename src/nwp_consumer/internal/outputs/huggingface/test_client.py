@@ -1,5 +1,8 @@
+import datetime as dt
 import pathlib
 import unittest
+
+from nwp_consumer import internal
 
 from .client import Client
 

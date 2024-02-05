@@ -195,7 +195,9 @@ class Client(internal.StorageInterface):
         # Read all files into temporary files
         tempPaths: list[pathlib.Path] = []
         for path in paths:
-            tfp: pathlib.Path = internal.TMP_DIR / path.name
+            # Huggingface replicates the full path from repo root on download
+            # to local directory.
+            tfp: pathlib.Path = internal.TMP_DIR / path.as_posix()
 
             # Use existing temp file if it already exists in the temp dir
             if tfp.exists() and tfp.stat().st_size > 0:
@@ -222,11 +224,10 @@ class Client(internal.StorageInterface):
                 filename=path.as_posix(),
                 local_dir=internal.TMP_DIR.as_posix(),
                 local_dir_use_symlinks=False,
-                force_filename=path.name,
             )
 
             # Check that the file was copied correctly
-            if tfp.stat().st_size != self._get_size(p=path):
+            if tfp.stat().st_size != self._get_size(p=path) or tfp.stat().st_size == 0:
                 log.warn(
                     event="copied file size does not match source file size",
                     src=path.as_posix(),
