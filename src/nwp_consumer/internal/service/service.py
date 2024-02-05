@@ -101,7 +101,7 @@ class NWPConsumerService:
             log.info(
                 event="no new files to download",
                 startDate=start.strftime("%Y-%m-%d %H:%M"),
-                endDate=end.strftime("%Y-%m-%d %H:%M"),
+               endDate=end.strftime("%Y-%m-%d %H:%M"),
             )
             return [
                 self.rawdir / fi.it().strftime(internal.IT_FOLDER_FMTSTR) / fi.filename()
