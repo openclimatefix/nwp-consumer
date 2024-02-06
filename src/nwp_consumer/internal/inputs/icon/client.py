@@ -97,8 +97,11 @@ class Client(internal.FetcherInterface):
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
         # ICON data is only available for today's date. If data hasn't been uploaded for that init
         # time yet, then yesterday's data will still be present on the server.
-        if it.date() != dt.datetime.now(dt.UTC).date():
-            raise ValueError("ICON data is only available on today's date")
+        if dt.datetime.now(dt.UTC) - it > dt.timedelta(days=1):
+            log.warn(
+                event="requested init time is too old",
+                inittime=it.strftime("%Y-%m-%d %H:%M"),
+            )
             return []
 
         # Ignore inittimes that don't correspond to valid hours
