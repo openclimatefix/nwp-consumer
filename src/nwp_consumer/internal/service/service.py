@@ -43,14 +43,22 @@ class NWPConsumerService:
         *,
         fetcher: internal.FetcherInterface,
         storer: internal.StorageInterface,
-        rawstorer: internal.StorageInterface,
         rawdir: str,
         zarrdir: str,
+        rawstorer: internal.StorageInterface | None = None,
     ) -> None:
-        """Create a consumer service with the given dependencies."""
+        """Create a consumer service with the given dependencies.
+
+        Args:
+            fetcher: The fetcher to use for downloading data
+            storer: The storer to use for saving data
+            rawdir: The directory to store raw data
+            zarrdir: The directory to store zarr data
+            rawstorer: The storer to use for saving raw data. Defaults to the storer.
+        """
         self.fetcher = fetcher
         self.storer = storer
-        self.rawstorer = rawstorer
+        self.rawstorer = rawstorer if rawstorer is not None else storer
         self.rawdir = pathlib.Path(rawdir)
         self.zarrdir = pathlib.Path(zarrdir)
 
