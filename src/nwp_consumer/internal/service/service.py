@@ -32,6 +32,7 @@ class NWPConsumerService:
     # Dependency-injected attributes
     fetcher: internal.FetcherInterface
     storer: internal.StorageInterface
+    rawstorer: internal.StorageInterface
     # Configuration options
     rawdir: pathlib.Path
     zarrdir: pathlib.Path
@@ -44,10 +45,20 @@ class NWPConsumerService:
         storer: internal.StorageInterface,
         rawdir: str,
         zarrdir: str,
+        rawstorer: internal.StorageInterface | None = None,
     ) -> None:
-        """Create a consumer service with the given dependencies."""
+        """Create a consumer service with the given dependencies.
+
+        Args:
+            fetcher: The fetcher to use for downloading data
+            storer: The storer to use for saving data
+            rawdir: The directory to store raw data
+            zarrdir: The directory to store zarr data
+            rawstorer: The storer to use for saving raw data. Defaults to the storer.
+        """
         self.fetcher = fetcher
         self.storer = storer
+        self.rawstorer = rawstorer if rawstorer is not None else storer
         self.rawdir = pathlib.Path(rawdir)
         self.zarrdir = pathlib.Path(zarrdir)
 
@@ -92,7 +103,7 @@ class NWPConsumerService:
         newWantedFileInfos: list[internal.FileInfoModel] = [
             fi
             for fi in allWantedFileInfos
-            if not self.storer.exists(
+            if not self.rawstorer.exists(
                 dst=self.rawdir / fi.it().strftime(internal.IT_FOLDER_FMTSTR) / fi.filename(),
             )
         ]
@@ -121,7 +132,7 @@ class NWPConsumerService:
             .map(lambda fi: self.fetcher.downloadToTemp(fi=fi))
             .filter(lambda infoPathTuple: infoPathTuple[1] != pathlib.Path())
             .map(
-                lambda infoPathTuple: self.storer.store(
+                lambda infoPathTuple: self.rawstorer.store(
                     src=infoPathTuple[1],
                     dst=self.rawdir
                     / infoPathTuple[0].it().strftime(internal.IT_FOLDER_FMTSTR)
@@ -146,7 +157,7 @@ class NWPConsumerService:
         """
         # Get a list of all the init times that are stored locally between the start and end dates
         desiredInitTimes: list[dt.datetime] = []
-        allInitTimes: list[dt.datetime] = self.storer.listInitTimes(prefix=self.rawdir)
+        allInitTimes: list[dt.datetime] = self.rawstorer.listInitTimes(prefix=self.rawdir)
         for it in allInitTimes:
             # Don't convert files that already exist
             if self.storer.exists(
@@ -185,7 +196,7 @@ class NWPConsumerService:
         # * Partition the bag by init time
         bag = dask.bag.from_sequence(desiredInitTimes, npartitions=len(desiredInitTimes))
         storedfiles = (
-            bag.map(lambda time: self.storer.copyITFolderToTemp(prefix=self.rawdir, it=time))
+            bag.map(lambda time: self.rawstorer.copyITFolderToTemp(prefix=self.rawdir, it=time))
             .filter(lambda temppaths: len(temppaths) != 0)
             .map(lambda temppaths: [self.fetcher.mapTemp(p=p) for p in temppaths])
             .map(lambda datasets: _mergeDatasets(datasets=datasets))
@@ -221,14 +232,14 @@ class NWPConsumerService:
     def CreateLatestZarr(self) -> list[pathlib.Path]:
         """Create a Zarr file for the latest init time."""
         # Get the latest init time
-        allInitTimes: list[dt.datetime] = self.storer.listInitTimes(prefix=self.rawdir)
+        allInitTimes: list[dt.datetime] = self.rawstorer.listInitTimes(prefix=self.rawdir)
         if not allInitTimes:
             log.info(event="no init times found", within=self.rawdir)
             return []
         latestInitTime = allInitTimes[-1]
 
         # Load the latest init time as a dataset
-        tempPaths = self.storer.copyITFolderToTemp(it=latestInitTime, prefix=self.rawdir)
+        tempPaths = self.rawstorer.copyITFolderToTemp(it=latestInitTime, prefix=self.rawdir)
         log.info(
             event="creating latest zarr for initTime",
             inittime=latestInitTime.strftime("%Y/%m/%d %H:%M"),

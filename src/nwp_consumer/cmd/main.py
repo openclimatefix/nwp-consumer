@@ -2,8 +2,8 @@
 
 Usage:
   nwp-consumer download --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR]
-  nwp-consumer convert --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR --create-latest]
-  nwp-consumer consume --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR --create-latest]
+  nwp-consumer convert --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR --rsink=RSINK --create-latest]
+  nwp-consumer consume --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR --rsink=RSINK --create-latest]
   nwp-consumer env (--source=SOURCE | --sink=SINK)
   nwp-consumer check [--sink=SINK] [--rdir=RDIR] [--zdir=ZDIR]
   nwp-consumer (-h | --help)
@@ -21,6 +21,7 @@ Options:
   --to=TO             End datetime in YYYY-MM-DD or YYYY-MM-DDTHH:MM format.
   --source=SOURCE     Data source (ceda/metoffice/ecmwf-mars/icon/cmc).
   --sink=SINK         Data sink (local/s3/huggingface) [default: local].
+  --rsink=RSINK       Data sink for raw data, if different (local/s3/huggingface) [default: SINK].
   --rdir=RDIR         Directory of raw data store [default: /tmp/raw].
   --zdir=ZDIR         Directory of zarr data store [default: /tmp/zarr].
   --create-latest     Create a zarr of the dataset with the latest init time [default: False].
@@ -64,15 +65,17 @@ def run(argv: list[str]) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
     """
     # --- Map arguments to service configuration --- #
     arguments = docopt(__doc__, argv=argv, version=__version__)
-
     storer = _parse_sink(arguments["--sink"])
     fetcher = _parse_source(arguments["--source"])
+    # Set the raw sink to the same as the zarr sink if not specified
+    rawstorer = storer if arguments["--rsink"] == "SINK" else _parse_sink(arguments["--rsink"])
     start, end = _parse_from_to(arguments["--from"], arguments["--to"])
 
     # Create the service using the fetcher and storer
     service = NWPConsumerService(
         fetcher=fetcher,
         storer=storer,
+        rawstorer=rawstorer,
         zarrdir=arguments["--zdir"],
         rawdir=arguments["--rdir"],
     )
