@@ -224,7 +224,7 @@ Note that these are the bare dependencies for running the application. If you wa
 you need the development dependencies as well, which can be installed via
 
 ```shell
-$ pip install -e .[dev]
+$ pip install -e ".[dev]"
 ```
 
 or
