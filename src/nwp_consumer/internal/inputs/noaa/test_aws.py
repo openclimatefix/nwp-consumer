@@ -37,7 +37,7 @@ class TestParseIconFilename(unittest.TestCase):
 
     def test_parsesSingleLevel(self) -> None:
         filename: str = "gfs.t06z.pgrb2.0p25.f005"
-        it = dt.datetime(2020, 9, 1, 6, tzinfo=dt.timezone.utc)
+        it = dt.datetime(2020, 9, 1, 6, tzinfo=dt.UTC)
         out: NOAAFileInfo | None = _parseAWSFilename(
             name=filename,
             baseurl=f"{self.baseurl}/gfs.{it.strftime('%Y%m%d')}/{it.strftime('%H')}",
@@ -45,4 +45,4 @@ class TestParseIconFilename(unittest.TestCase):
         )
         self.assertIsNotNone(out)
         self.assertEqual(out.filename(), filename)
-        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 6, tzinfo=dt.timezone.utc))
+        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 6, tzinfo=dt.UTC))

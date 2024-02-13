@@ -310,9 +310,9 @@ def _reshapeTo2DGrid(*, ds: xr.Dataset) -> xr.Dataset:
     northing = np.arange(start=maxY, stop=minY, step=-dy, dtype=np.int32)
     easting = np.arange(start=minX, stop=maxX, step=dx, dtype=np.int32)
 
-    if ds.dims["values"] != len(northing) * len(easting):
+    if ds.sizes["values"] != len(northing) * len(easting):
         raise ValueError(
-            f"dataset has {ds.dims['values']} values, "
+            f"dataset has {ds.sizes['values']} values, "
             f"but expected {len(northing) * len(easting)}",
         )
 

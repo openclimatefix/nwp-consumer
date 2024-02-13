@@ -41,7 +41,7 @@ class TestClient_MapTemp(unittest.TestCase):
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(
             {"init_time": 1, "variable": 6, "step": 4, "y": 704, "x": 548},
-            dict(out.dims.items()),
+            dict(out.sizes.items()),
         )
         # Ensure the dimensions of the variables are in the correct order
         self.assertEqual(("variable", "init_time", "step", "y", "x"), out["UKV"].dims)
@@ -59,7 +59,7 @@ class TestClient_MapTemp(unittest.TestCase):
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(
             {"init_time": 1, "variable": 6, "step": 4, "y": 704, "x": 548},
-            dict(out.dims.items()),
+            dict(out.sizes.items()),
         )
         # Ensure the dimensions of the variables are in the correct order
         self.assertEqual(("variable", "init_time", "step", "y", "x"), out["UKV"].dims)

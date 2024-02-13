@@ -37,7 +37,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(
             {"init_time": 1, "variable": 1, "step": 13, "y": 639, "x": 455},
-            dict(out.dims.items()),
+            dict(out.sizes.items()),
         )
         # Ensure the dimensions of the variables are in the correct order
         self.assertEqual(("variable", "init_time", "step", "y", "x"), out["UKV"].dims)
@@ -52,7 +52,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(
             {"init_time": 1, "variable": 1, "step": 13, "y": 639, "x": 455},
-            dict(out.dims.items()),
+            dict(out.sizes.items()),
         )
         # Ensure the dimensions of the variables are in the correct order
         self.assertEqual(out["UKV"].dims, ("variable", "init_time", "step", "y", "x"))
@@ -67,7 +67,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(
             {"init_time": 1, "variable": 1, "step": 43, "y": 639, "x": 455},
-            dict(out.dims.items()),
+            dict(out.sizes.items()),
         )
         # Ensure the dimensions of the variables are in the correct order
         self.assertEqual(out["UKV"].dims, ("variable", "init_time", "step", "y", "x"))
@@ -82,7 +82,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(
             {"init_time": 1, "variable": 1, "step": 10, "y": 639, "x": 455},
-            dict(out.dims.items()),
+            dict(out.sizes.items()),
         )
         # Ensure the dimensions of the variables are in the correct order
         self.assertEqual(("variable", "init_time", "step", "y", "x"), out["UKV"].dims)
