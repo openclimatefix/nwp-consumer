@@ -60,7 +60,7 @@ class TestParseIconFilename(unittest.TestCase):
         )
         self.assertIsNotNone(out)
         self.assertEqual(out.filename(), filename.removesuffix(".bz2"))
-        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
+        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.UTC))
 
     def test_parsesTimeInvariant(self) -> None:
         filename: str = "icon_global_icosahedral_time-invariant_2020090100_CLAT.grib2.bz2"

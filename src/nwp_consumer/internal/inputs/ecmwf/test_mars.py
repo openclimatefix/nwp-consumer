@@ -34,7 +34,7 @@ class TestECMWFMARSClient(unittest.TestCase):
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(
             {"init_time": 1, "variable": 2, "step": 49, "latitude": 241, "longitude": 301},
-            dict(out.dims.items()),
+            dict(out.sizes.items()),
         )
         # Ensure the dimensions of the variables are in the correct order
         self.assertEqual(

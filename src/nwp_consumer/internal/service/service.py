@@ -6,6 +6,7 @@ import shutil
 from typing import TYPE_CHECKING
 
 import dask.bag
+import dask.distributed
 import pandas as pd
 import psutil
 import structlog
@@ -13,14 +14,17 @@ import xarray as xr
 import zarr
 from ocf_blosc2 import Blosc2
 
+from nwp_consumer.internal import config
+
 if TYPE_CHECKING:
     import numpy as np
+
 
 from nwp_consumer import internal
 
 log = structlog.getLogger()
-# Enable dask to split large chunks
-dask.config.set({"array.slicing.split_large_chunks": True})
+
+
 
 
 class NWPConsumerService:
@@ -36,7 +40,6 @@ class NWPConsumerService:
     # Configuration options
     rawdir: pathlib.Path
     zarrdir: pathlib.Path
-    scheduler: str | None = None
 
     def __init__(
         self,
@@ -61,13 +64,6 @@ class NWPConsumerService:
         self.rawstorer = rawstorer if rawstorer is not None else storer
         self.rawdir = pathlib.Path(rawdir)
         self.zarrdir = pathlib.Path(zarrdir)
-
-        # If huggingface is used as the storer, revert to single threaded scheduler
-        # for dask, as the version-controlled filesystem is not thread-safe in this
-        # implementation of the logic. It could be done via many operations in one
-        # commit, but that would require modifying the signature of the storer interface
-        if storer.name() == "huggingface":
-            self.scheduler = "single-threaded"
 
     def DownloadRawDataset(self, *, start: dt.datetime, end: dt.datetime) -> list[pathlib.Path]:
         """Fetch raw data for each initTime in the given range.
@@ -112,7 +108,7 @@ class NWPConsumerService:
             log.info(
                 event="no new files to download",
                 startDate=start.strftime("%Y-%m-%d %H:%M"),
-               endDate=end.strftime("%Y-%m-%d %H:%M"),
+                endDate=end.strftime("%Y-%m-%d %H:%M"),
             )
             return [
                 self.rawdir / fi.it().strftime(internal.IT_FOLDER_FMTSTR) / fi.filename()
@@ -139,7 +135,7 @@ class NWPConsumerService:
                     / (infoPathTuple[0].filename()),
                 ),
             )
-            .compute(scheduler=self.scheduler)
+            .compute()
         )
 
         return storedFiles
@@ -203,9 +199,9 @@ class NWPConsumerService:
             .filter(_dataQualityFilter)
             .map(lambda ds: _saveAsTempZipZarr(ds=ds))
             .map(lambda path: self.storer.store(
-                src=path, dst=self.zarrdir / path.relative_to(internal.TMP_DIR))
+                src=path, dst=self.zarrdir / path.relative_to(internal.TMP_DIR)),
             )
-            .compute(scheduler=self.scheduler, num_workers=1)
+            .compute(num_workers=1)
         )
 
         if not isinstance(storedfiles, list):
@@ -263,7 +259,7 @@ class NWPConsumerService:
         storedFiles = (
             datasets.map(lambda ds: _saveAsTempZipZarr(ds=ds))
             .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / "latest.zarr.zip"))
-            .compute(scheduler=self.scheduler)
+            .compute()
         )
 
         # Save as regular zarr
@@ -272,7 +268,7 @@ class NWPConsumerService:
         storedFiles += (
             datasets.map(lambda ds: _saveAsTempRegularZarr(ds=ds))
             .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / "latest.zarr"))
-            .compute(scheduler=self.scheduler)
+            .compute()
         )
 
         # Delete the temporary files
@@ -366,9 +362,7 @@ def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
     # Get the name of the zarr file from the inittime and the zarr format string
     dt64: np.datetime64 = ds.coords["init_time"].values[0]
     initTime: dt.datetime = dt.datetime.fromtimestamp(dt64.astype(int) / 1e9, tz=dt.UTC)
-    tempZarrPath = internal.TMP_DIR / (
-        initTime.strftime(internal.ZARR_FMTSTR) + ".zarr.zip"
-    )
+    tempZarrPath = internal.TMP_DIR / (initTime.strftime(internal.ZARR_FMTSTR) + ".zarr.zip")
     # Delete the temporary zarr if it already exists
     if tempZarrPath.exists():
         tempZarrPath.unlink()
@@ -402,7 +396,7 @@ def _saveAsTempRegularZarr(ds: xr.Dataset) -> pathlib.Path:
 
 def _generate_encoding(ds: xr.Dataset) -> dict[str, dict[str, str] | dict[str, Blosc2]]:
     encoding = {"init_time": {"units": "nanoseconds since 1970-01-01"}}
-    for var in ds.data_vars:
+    for var in ds.data_vars.keys():
         encoding[var] = {"compressor": Blosc2(cname="zstd", clevel=5)}
     return encoding
 

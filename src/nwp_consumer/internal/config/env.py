@@ -53,6 +53,14 @@ class EnvParser:
                     self.__setattr__(field, t(env_value))
 
 
+# --- Configuration environment variables --- #
+
+class ConsumerEnv(EnvParser):
+    """Config for Consumer."""
+
+    DASK_SCHEDULER_ADDRESS: str = ""
+
+
 # --- Inputs environment variables --- #
 
 

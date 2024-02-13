@@ -39,6 +39,8 @@ import pathlib
 import shutil
 import sys
 
+import dask
+import dask.distributed
 import structlog
 from docopt import docopt
 
@@ -63,7 +65,22 @@ def run(argv: list[str]) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
     Returns:
         A tuple of lists of raw and processed files.
     """
+    # --- Map environment variables to service configuration --- ## Configure dask
+
+    dask.config.set({"array.slicing.split_large_chunks": True})
+    if config.ConsumerEnv().DASK_SCHEDULER_ADDRESS != "":
+        # Connect to the dask scheduler if the address is set
+        # * This becomes the default client for all dask operations
+        client = dask.distributed.Client(
+            address=config.ConsumerEnv().DASK_SCHEDULER_ADDRESS,
+        )
+        log.info(
+            event="Connected to dask scheduler",
+            address=config.ConsumerEnv().DASK_SCHEDULER_ADDRESS,
+        )
+
     # --- Map arguments to service configuration --- #
+
     arguments = docopt(__doc__, argv=argv, version=__version__)
     storer = _parse_sink(arguments["--sink"])
     fetcher = _parse_source(arguments["--source"])
@@ -237,6 +254,7 @@ def _parse_source(source: str) -> internal.FetcherInterface:
                 f"unknown source {source}. Exoected one of (ceda/metoffice/ecmwf-mars/icon/cmc)",
             )
     return fetcher
+
 
 def _parse_sink(sink: str) -> internal.StorageInterface:
     """Parse the sink argument into a storer interface."""
