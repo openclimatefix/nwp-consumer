@@ -45,8 +45,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         c = config.MetOfficeEnv()
         metOfficeClient = inputs.metoffice.Client(
             orderID=c.METOFFICE_ORDER_ID,
-            clientID=c.METOFFICE_CLIENT_ID,
-            clientSecret=c.METOFFICE_CLIENT_SECRET,
+            apiKey=c.METOFFICE_API_KEY,
         )
         fileInfos = metOfficeClient.listRawFilesForInitTime(it=metOfficeInitTime)
         self.assertTrue(len(fileInfos) > 0)

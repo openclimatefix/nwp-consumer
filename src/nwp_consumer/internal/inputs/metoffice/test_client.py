@@ -11,8 +11,7 @@ from .client import Client, _isWantedFile
 
 testClient = Client(
     orderID="tmp",
-    clientID="tmp",
-    clientSecret="tmp",
+    apiKey="tmp",
 )
 
 # --------- Client methods --------- #
@@ -23,7 +22,7 @@ class TestClient_Init(unittest.TestCase):
 
     def test_errorsWhenVariablesAreNotSet(self) -> None:
         with self.assertRaises(KeyError):
-            _ = Client(orderID="unset", clientID="", clientSecret="test_client_secret")
+            _ = Client(orderID="tmp", apiKey="")
 
 
 class TestClient_ConvertRawFileToDataset(unittest.TestCase):

@@ -75,8 +75,7 @@ class MetOfficeEnv(EnvParser):
     """Config for Met Office API."""
 
     METOFFICE_ORDER_ID: str
-    METOFFICE_CLIENT_ID: str
-    METOFFICE_CLIENT_SECRET: str
+    METOFFICE_API_KEY: str
 
 
 class ECMWFMARSEnv(EnvParser):

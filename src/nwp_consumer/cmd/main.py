@@ -223,8 +223,7 @@ def _parse_source(source: str) -> internal.FetcherInterface:
             env = config.MetOfficeEnv()
             fetcher = inputs.metoffice.Client(
                 orderID=env.METOFFICE_ORDER_ID,
-                clientID=env.METOFFICE_CLIENT_ID,
-                clientSecret=env.METOFFICE_CLIENT_SECRET,
+                apiKey=env.METOFFICE_API_KEY,
             )
         case "ecmwf-mars":
             env = config.ECMWFMARSEnv()
