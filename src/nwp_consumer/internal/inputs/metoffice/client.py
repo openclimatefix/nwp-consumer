@@ -145,14 +145,12 @@ class Client(internal.FetcherInterface):
         url: str = f"{self.baseurl}/{fi.filepath()}"
         try:
             opener = urllib.request.build_opener()
-            headers = list(
+            opener.addheaders = list(
                 dict(
                     self.__headers,
-                    **{"Accept": "application/x-grib"},
+                    **{"accept": "application/x-grib"},
                 ).items(),
             )
-            log.info(f"{headers=}")
-            opener.addheaders = headers
             urllib.request.install_opener(opener)
             response = urllib.request.urlopen(url=url)
             if response.status != 200:
