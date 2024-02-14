@@ -56,7 +56,7 @@ class Client(internal.FetcherInterface):
         if any(value in [None, "", "unset"] for value in [apiKey, orderID]):
             raise KeyError("must provide apiKey and orderID for MetOffice API")
         self.baseurl: str = (
-            f"https://data.hub.api.metoffice.gov.uk/atmospheric-models/1.0.0/{orderID}/latest"
+            f"https://data.hub.api.metoffice.gov.uk/atmospheric-models/1.0.0/orders/{orderID}/latest"
         )
         self.querystring: dict[str, str] = {"detail": "MINIMAL"}
         self.__headers: dict[str, str] = {

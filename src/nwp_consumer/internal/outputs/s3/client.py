@@ -25,9 +25,9 @@ class Client(internal.StorageInterface):
         *,
         bucket: str,
         region: str,
-        key: str="",
-        secret: str="",
-        endpointURL: str="",
+        key: str | None = "",
+        secret: str| None = "",
+        endpointURL: str = "",
     ) -> None:
         """Create a new S3Client.
 
@@ -46,6 +46,7 @@ class Client(internal.StorageInterface):
             log.info(
                 event="attempting AWS connection using default credentials",
             )
+            key, secret = None, None
 
         self.__fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
             key=key,
