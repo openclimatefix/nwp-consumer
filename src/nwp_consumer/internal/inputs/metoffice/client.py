@@ -42,7 +42,7 @@ class Client(internal.FetcherInterface):
     # Query string headers to pass to the MetOffice API
     __headers: dict[str, str]
 
-    def __init__(self, *, orderID: str, clientID: str, clientSecret: str) -> None:
+    def __init__(self, *, orderID: str, apiKey: str) -> None:
         """Create a new MetOfficeClient.
 
         Exposes a client for the MetOffice API which conforms to the FetcherInterface.
@@ -51,20 +51,17 @@ class Client(internal.FetcherInterface):
 
         Args:
             orderID: The orderID to fetch from the MetOffice API.
-            clientID: The clientID for the MetOffice API.
-            clientSecret: The clientSecret for the MetOffice API.
+            apiKey: The apiKey to use to authenticate with the MetOffice API.
         """
-        if any(value in [None, "", "unset"] for value in [clientID, clientSecret, orderID]):
-            raise KeyError("must provide clientID, clientSecret, and orderID")
+        if any(value in [None, "", "unset"] for value in [apiKey, orderID]):
+            raise KeyError("must provide apiKey and orderID for MetOffice API")
         self.baseurl: str = (
-            f"https://api-metoffice.apiconnect.ibmcloud.com/1.0.0/orders/{orderID}/latest"
+            f"https://data.hub.api.metoffice.gov.uk/atmospheric-models/1.0.0/orders/{orderID}/latest"
         )
         self.querystring: dict[str, str] = {"detail": "MINIMAL"}
         self.__headers: dict[str, str] = {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "X-IBM-Client-Id": clientID,
-            "X-IBM-Client-Secret": clientSecret,
+            "accept": "application/json, application/json",
+            "apikey": apiKey,
         }
 
     def getInitHours(self) -> list[int]:  # noqa: D102
@@ -75,8 +72,7 @@ class Client(internal.FetcherInterface):
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
         if (
-            self.__headers.get("X-IBM-Client-Id") is None
-            or self.__headers.get("X-IBM-Client-Secret") is None
+            self.__headers.get("apikey") is None
         ):
             log.error("all metoffice API credentials not provided")
             return []
@@ -137,8 +133,7 @@ class Client(internal.FetcherInterface):
         fi: internal.FileInfoModel,
     ) -> tuple[internal.FileInfoModel, pathlib.Path]:
         if (
-            self.__headers.get("X-IBM-Client-Id") is None
-            or self.__headers.get("X-IBM-Client-Secret") is None
+            self.__headers.get("apikey") is None
         ):
             log.error("all metoffice API credentials not provided")
             return fi, pathlib.Path()

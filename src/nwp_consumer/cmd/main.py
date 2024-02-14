@@ -1,7 +1,7 @@
 """nwp-consumer.
 
 Usage:
-  nwp-consumer download --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR]
+  nwp-consumer download --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR --create-latest]
   nwp-consumer convert --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR --rsink=RSINK --create-latest]
   nwp-consumer consume --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR --rsink=RSINK --create-latest]
   nwp-consumer env (--source=SOURCE | --sink=SINK)
@@ -223,8 +223,7 @@ def _parse_source(source: str) -> internal.FetcherInterface:
             env = config.MetOfficeEnv()
             fetcher = inputs.metoffice.Client(
                 orderID=env.METOFFICE_ORDER_ID,
-                clientID=env.METOFFICE_CLIENT_ID,
-                clientSecret=env.METOFFICE_CLIENT_SECRET,
+                apiKey=env.METOFFICE_API_KEY,
             )
         case "ecmwf-mars":
             env = config.ECMWFMARSEnv()
