@@ -148,7 +148,7 @@ class Client(internal.FetcherInterface):
             opener.addheaders = list(
                 dict(
                     self.__headers,
-                    **{"Accept": "application/x-grib"},
+                    **{"accept": "application/x-grib"},
                 ).items(),
             )
             urllib.request.install_opener(opener)
