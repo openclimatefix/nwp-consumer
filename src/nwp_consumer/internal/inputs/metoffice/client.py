@@ -60,8 +60,7 @@ class Client(internal.FetcherInterface):
         )
         self.querystring: dict[str, str] = {"detail": "MINIMAL"}
         self.__headers: dict[str, str] = {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
+            "accept": "application/json, application/json",
             "apikey": apiKey,
         }
 
