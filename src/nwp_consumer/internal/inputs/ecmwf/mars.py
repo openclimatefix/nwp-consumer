@@ -3,6 +3,7 @@ import datetime as dt
 import inspect
 import os
 import pathlib
+import re
 import tempfile
 import typing
 
@@ -42,24 +43,24 @@ PARAMETER_RENAME_MAP: dict[str, str] = {
 # Mapping from ECMWF eccode to ECMWF short name
 # * https://codes.ecmwf.int/grib/param-db/?filter=All
 PARAMETER_ECMWFCODE_MAP: dict[str, str] = {
-    "167.128": "tas",    # 2 metre temperature
-    "165.128": "uas",    # 10 metre U-component of wind
-    "166.128": "vas",    # 10 metre V-component of wind
-    "47.128": "dsrp",    # Direct solar radiation
-    "57.128": "uvb",     # Downward uv radiation at surface
-    "188.128": "hcc",    # High cloud cover
-    "187.128": "mcc",    # Medium cloud cover
-    "186.128": "lcc",    # Low cloud cover
-    "164.128": "clt",    # Total cloud cover
-    "169.128": "ssrd",   # Surface shortwave radiation downward
-    "175.128": "strd",   # Surface longwave radiation downward
+    "167.128": "tas",  # 2 metre temperature
+    "165.128": "uas",  # 10 metre U-component of wind
+    "166.128": "vas",  # 10 metre V-component of wind
+    "47.128": "dsrp",  # Direct solar radiation
+    "57.128": "uvb",  # Downward uv radiation at surface
+    "188.128": "hcc",  # High cloud cover
+    "187.128": "mcc",  # Medium cloud cover
+    "186.128": "lcc",  # Low cloud cover
+    "164.128": "clt",  # Total cloud cover
+    "169.128": "ssrd",  # Surface shortwave radiation downward
+    "175.128": "strd",  # Surface longwave radiation downward
     "260048": "tprate",  # Total precipitation rate
-    "141.128": "sd",     # Snow depth, m
-    "246.228": "u100",   # 100 metre U component of wind
-    "247.228": "v100",   # 100 metre V component of wind
-    "239.228": "u200",   # 200 metre U component of wind
-    "240.228": "v200",   # 200 metre V component of wind
-    "20.3": "vis",       # Visibility
+    "141.128": "sd",  # Snow depth, m
+    "246.228": "u100",  # 100 metre U component of wind
+    "247.228": "v100",  # 100 metre V component of wind
+    "239.228": "u200",  # 200 metre U component of wind
+    "240.228": "v200",  # 200 metre V component of wind
+    "20.3": "vis",  # Visibility
 }
 
 AREA_MAP: dict[str, str] = {
@@ -175,19 +176,16 @@ class Client(internal.FetcherInterface):
 
         # Ensure only available parameters are requested by populating the
         # `available_params` list according to the result of the list request
-        # TODO: Properly parse the file for parameters
         with open(tf.name) as f:
-            available_params: list[str] = []
             file_contents: str = f.read()
+            available_params: list[str] = _parseAvaliableParams(fileData=file_contents)
             for parameter in self.desired_params:
-                if parameter not in file_contents:
+                if parameter not in available_params:
                     log.warn(
                         event=f"ECMWF MARS inittime data does not contain parameter {parameter}",
                         parameter=parameter,
                         inittime=it,
                     )
-                else:
-                    available_params.append(parameter)
 
         log.debug(
             event="Listed raw files for ECMWF MARS inittime",
@@ -322,7 +320,12 @@ class Client(internal.FetcherInterface):
         return wholesaleDataset
 
     def _buildMarsRequest(
-        self, *, list_only: bool, it: dt.datetime, target: str, params: list[str]
+        self,
+        *,
+        list_only: bool,
+        it: dt.datetime,
+        target: str,
+        params: list[str],
     ) -> str:
         """Build a MARS request according to the parameters of the client.
 
@@ -354,3 +357,44 @@ class Client(internal.FetcherInterface):
         """
 
         return inspect.cleandoc(marsReq)
+
+
+def _parseAvaliableParams(fileData: str) -> list[str]:
+    """Parse the response from a MARS list request.
+
+    When calling LIST to MARS, the response is a file containing the available
+    parameters, steps, times and sizes etc. This function parses the file to
+    extract the available parameters.
+
+    The files contains some metadata, followed by a table as follows:
+
+    ```
+    file length   missing offset      param   step
+    0    13204588 .       149401026   20.3    0
+    0    13204588 .       502365532   47.128  0
+    0    13204588 .       568388472   57.128  0
+    0    19804268 .       911707760   141.128 0
+    0    13204588 .       1050353320  164.128 0
+
+    Grand Total
+    ```
+
+    This function uses positive lookahead and lookbehind regex to extract the
+    lines between the table header and the "Grand Total" line. The fourth
+    column of each line is the parameter.
+
+    Args:
+        fileData: The data from the file.
+
+    Returns:
+        A list of parameters specified in the fileData.
+    """
+    tablematch = re.search(
+        pattern=r"(?<!step)[\s\.\d]*?(?=\n.*?\nGrand)",
+        string=fileData,
+    )
+    if tablematch:
+        tablelines: list[str] = tablematch.group(0).split("\n")
+        return list({line.split()[4] for line in tablelines})
+    return []
+

@@ -4,7 +4,7 @@ import datetime as dt
 import pathlib
 import unittest.mock
 
-from .mars import PARAMETER_ECMWFCODE_MAP, Client
+from .mars import PARAMETER_ECMWFCODE_MAP, Client, _parseAvaliableParams
 
 # --------- Test setup --------- #
 
@@ -97,3 +97,33 @@ class TestECMWFMARSClient(unittest.TestCase):
 
 
 # --------- Static methods --------- #
+
+
+class TestParseAvailableParams(unittest.TestCase):
+    def test_parsesParamsCorrectly(self) -> None:
+        testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_list_response.txt"
+
+        filedata: str = testFilePath.read_text()
+
+        out = _parseAvaliableParams(fileData=filedata)
+
+        self.assertListEqual(
+            [
+                "141.128",
+                "164.128",
+                "165.128",
+                "166.128",
+                "167.128",
+                "169.128",
+                "175.128",
+                "186.128",
+                "187.128",
+                "188.128",
+                "20.3",
+                "246.228",
+                "247.228",
+                "47.128",
+                "57.128",
+            ],
+            sorted(out),
+        )
