@@ -6,15 +6,12 @@ import shutil
 from typing import TYPE_CHECKING
 
 import dask.bag
-import dask.distributed
 import pandas as pd
 import psutil
 import structlog
 import xarray as xr
 import zarr
 from ocf_blosc2 import Blosc2
-
-from nwp_consumer.internal import config
 
 if TYPE_CHECKING:
     import numpy as np
@@ -23,8 +20,6 @@ if TYPE_CHECKING:
 from nwp_consumer import internal
 
 log = structlog.getLogger()
-
-
 
 
 class NWPConsumerService:
@@ -198,10 +193,13 @@ class NWPConsumerService:
             .map(lambda datasets: _mergeDatasets(datasets=datasets))
             .filter(_dataQualityFilter)
             .map(lambda ds: _saveAsTempZipZarr(ds=ds))
-            .map(lambda path: self.storer.store(
-                src=path, dst=self.zarrdir / path.relative_to(internal.TMP_DIR)),
+            .map(
+                lambda path: self.storer.store(
+                    src=path,
+                    dst=self.zarrdir / path.relative_to(internal.TMP_DIR),
+                ),
             )
-            .compute(num_workers=1)
+            .compute()
         )
 
         if not isinstance(storedfiles, list):
@@ -437,6 +435,11 @@ def _mergeDatasets(datasets: list[xr.Dataset]) -> xr.Dataset:
     try:
         return xr.merge(objects=datasets, combine_attrs="drop_conflicts")
     except xr.core.merge.MergeError:
+        log.debug(
+            event="Merging datasets failed, trying to insert zeros for missing variables",
+            datasets=[str(ds) for ds in datasets],
+            sizes=[ds.sizes for ds in datasets],
+        )
         datasets = _insert_zerod_missing_variables_with_correct_shape(datasets)
         return xr.merge(objects=datasets, combine_attrs="drop_conflicts", compat="override")
 
@@ -451,6 +454,11 @@ def _insert_zerod_missing_variables_with_correct_shape(
                 continue
             for variable in dataset2.data_vars.keys():
                 if variable not in dataset.data_vars.keys():
+                    log.debug(
+                        event="Adding zeros in dataset for missing variable",
+                        variable=variable,
+                        dataset=str(dataset),
+                    )
                     dataset[variable] = xr.zeros_like(dataset2[variable])
                     dataset[variable].attrs = dataset2[variable].attrs
         datasets[i] = dataset
