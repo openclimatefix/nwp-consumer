@@ -116,9 +116,9 @@ jobs:
     runs-on: ubuntu-latest
     container: quay.io/condaforge/miniforge3:latest
     needs: build-venv
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (contains(github.ref, 'refs/tags/v') && github.event_name == 'push')
+#    if: |
+#      github.event_name == 'workflow_dispatch' ||
+#      (contains(github.ref, 'refs/tags/v') && github.event_name == 'push')
 
     steps:
       - name: Checkout repository
