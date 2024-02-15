@@ -147,6 +147,7 @@ jobs:
           METOFFICE_CLIENT_ID: ${{ secrets.METOFFICE_CLIENT_ID }}
           METOFFICE_CLIENT_SECRET: ${{ secrets.METOFFICE_CLIENT_SECRET }}
           METOFFICE_ORDER_ID: ${{ secrets.METOFFICE_ORDER_ID }}
+          METOFFICE_API_KEY: ${{ secrets.METOFFICE_API_KEY }}
           ECMWF_API_KEY: ${{ secrets.ECMWF_API_KEY }}
           ECMWF_API_EMAIL: ${{ secrets.ECMWF_API_EMAIL }}
           ECMWF_API_URL: ${{ secrets.ECMWF_API_URL }}
