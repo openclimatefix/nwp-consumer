@@ -437,30 +437,19 @@ def _mergeDatasets(datasets: list[xr.Dataset]) -> xr.Dataset:
     except xr.core.merge.MergeError:
         log.warn(
             event="Merging datasets failed, trying to insert zeros for missing variables",
-            datasets=[str(ds) for ds in datasets],
-            sizes=[ds.sizes for ds in datasets],
+            dataset1={
+                "data_vars": list(datasets[0].data_vars.keys()),
+                "dimensions": datasets[0].sizes,
+            },
+            dataset2={
+                "data_vars": list(datasets[1].data_vars.keys()),
+                "dimensions": datasets[1].sizes,
+            },
         )
-        # TODO: Is this any different to adding "fill_value=0" in the merge?
-        datasets = _insert_zerod_missing_variables_with_correct_shape(datasets)
-        return xr.merge(objects=datasets, combine_attrs="drop_conflicts", compat="override")
+        return xr.merge(
+            objects=datasets,
+            combine_attrs="drop_conflicts",
+            fill_value=0,
+            compat="override",
+        )
 
-
-def _insert_zerod_missing_variables_with_correct_shape(
-    datasets: list[xr.Dataset],
-) -> list[xr.Dataset]:
-    """Insert zero'd out data for missing variables in each dataset so that merging works."""
-    for i, dataset in enumerate(datasets):
-        for j, dataset2 in enumerate(datasets):
-            if i == j:
-                continue
-            for variable in dataset2.data_vars.keys():
-                if variable not in dataset.data_vars.keys():
-                    log.warn(
-                        event="Adding zeros in dataset for missing variable",
-                        variable=variable,
-                        dataset=str(dataset),
-                    )
-                    dataset[variable] = xr.zeros_like(dataset2[variable])
-                    dataset[variable].attrs = dataset2[variable].attrs
-        datasets[i] = dataset
-    return datasets
