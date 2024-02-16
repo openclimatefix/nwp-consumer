@@ -395,6 +395,6 @@ def _parseAvaliableParams(fileData: str) -> list[str]:
     )
     if tablematch:
         tablelines: list[str] = tablematch.group(0).split("\n")
-        return list({line.split()[4] for line in tablelines})
+        return list({line.split()[4] for line in tablelines if len(line.split()) > 4})
     return []
 

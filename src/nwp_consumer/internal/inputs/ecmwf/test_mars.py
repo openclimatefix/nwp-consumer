@@ -13,6 +13,35 @@ testMARSClient = Client(
     hours=48,
 )
 
+test_list_response: str = """
+class   = od
+date    = 2017-09-11
+expver  = 1
+file[0] = hpss:/mars/prod/od/o/oper/fc/sfc/marsodoper/0001/fc/20170911/sfc/1200/879664.20170927.205633
+id      = 879664
+levtype = sfc
+month   = 201709
+stream  = oper
+time    = 12:00:00
+type    = fc
+year    = 2017
+file length   missing offset     param   step
+0    13204588 .       1089967084 167.128 0
+0    13204588 .       1116376260 169.128 0
+0    13204588 .       2921064730 167.128 1
+0    13204588 .       2947473906 169.128 1
+0    13204588 .       4699268722 167.128 2
+0    13204588 .       4725677898 169.128 2
+0    13204588 .       6516961654 167.128 3
+0    13204588 .       6543370830 169.128 3
+
+Grand Total:
+============
+
+Entries       : 8
+Total         : 105,636,704 (100.743 Mbytes)
+"""
+
 
 # --------- Client methods --------- #
 
@@ -100,6 +129,17 @@ class TestECMWFMARSClient(unittest.TestCase):
 
 
 class TestParseAvailableParams(unittest.TestCase):
+    def test_parsesSmallFileCorrectly(self) -> None:
+
+        out = _parseAvaliableParams(fileData=test_list_response)
+
+        self.assertListEqual(
+            [
+                "167.128",
+                "169.128",
+            ],
+            sorted(out),
+        )
     def test_parsesParamsCorrectly(self) -> None:
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_list_response.txt"
 
