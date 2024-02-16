@@ -9,15 +9,13 @@ import xarray as xr
 
 from .. import FileInfoModel
 from .. import models as internal
-from .service import NWPConsumerService, _saveAsTempZipZarr
+from .service import NWPConsumerService, _mergeDatasets, _saveAsTempZipZarr
 
 # Two days, four init times per day -> 8 init times
 DAYS = [1, 2]
 INIT_HOURS = [0, 6, 12, 18]
 INIT_TIME_FILES = ["dswrf.grib", "prate.grib"]
-testInitTimes = [
-    dt.datetime(2021, 1, d, h, 0, 0, tzinfo=dt.UTC) for h in INIT_HOURS for d in DAYS
-]
+testInitTimes = [dt.datetime(2021, 1, d, h, 0, 0, tzinfo=dt.UTC) for h in INIT_HOURS for d in DAYS]
 
 log = structlog.getLogger()
 
@@ -78,7 +76,6 @@ class DummyFileInfo(internal.FileInfoModel):
 
 
 class DummyFetcher(internal.FetcherInterface):
-
     def getInitHours(self) -> list[int]:
         return INIT_HOURS
 
@@ -160,4 +157,78 @@ class TestSaveAsZippedZarr(unittest.TestCase):
         file = _saveAsTempZipZarr(ds=ds)
         outds = xr.open_zarr(f"zip::{file.as_posix()}")
         self.assertEqual(ds.dims, outds.dims)
+
+
+class TestMergeDatasets(unittest.TestCase):
+    def test_mergeDifferrentDataVars(self) -> None:
+        """Test merging datasets with different data variables.
+
+        This targets a bug seen in merging large ICON datasets, whereby
+        two datasets with different variables and number of steps would
+        not merge correctly.
+
+        """
+        # Create a list of datasets
+        # * Dataset1: 1 variable, 12 steps
+        # * Dataset2: 1 variable, 96 steps
+        datasets = [
+            xr.Dataset(
+                data_vars={
+                    "vis": (
+                        ("init_time", "step", "x", "y"),
+                        np.random.rand(1, 96, 100, 100),
+                    ),
+                },
+                coords={
+                    "init_time": [np.datetime64("2021-01-01T00:00:00")],
+                    "step": range(96),
+                    "x": range(100),
+                    "y": range(100),
+                },
+            ),
+            xr.Dataset(
+                data_vars={
+                    "ahum_s": (
+                        ("init_time", "step", "x", "y"),
+                        np.random.rand(1, 1, 100, 100),
+                    ),
+                },
+                coords={
+                    "init_time": [np.datetime64("2021-01-01T06:00:00")],
+                    "step": [1],
+                    "x": range(100),
+                    "y": range(100),
+                },
+            ),
+        ]
+        # Merge the datasets
+        merged = _mergeDatasets(datasets)
+        # Check the merged dataset
+        self.assertListEqual(
+            list(merged.data_vars),
+            list(datasets[0].data_vars) + list(datasets[1].data_vars),
+        )
+        self.assertEqual(merged.attrs, datasets[0].attrs)
+
+        # Then merge again with the next step of the second dataset
+        datasets = [
+            merged,
+            xr.Dataset(
+                data_vars={
+                    "ahum_s": (
+                        ("init_time", "step", "x", "y"),
+                        np.random.rand(1, 1, 100, 100),
+                    ),
+                },
+                coords={
+                    "init_time": [np.datetime64("2021-01-01T06:00:00")],
+                    "step": [2],
+                    "x": range(100),
+                    "y": range(100),
+                },
+            ),
+        ]
+
+        merged = _mergeDatasets(datasets)
+        self.assertEqual(merged.sizes, datasets[0].sizes)
 
