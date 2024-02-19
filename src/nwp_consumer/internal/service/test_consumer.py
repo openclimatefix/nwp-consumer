@@ -7,8 +7,7 @@ import numpy as np
 import structlog
 import xarray as xr
 
-from .. import FileInfoModel
-from .. import models as internal
+from nwp_consumer import internal
 from .consumer import NWPConsumerService, _mergeDatasets, _cacheAsZipZarr
 
 # Two days, four init times per day -> 8 init times

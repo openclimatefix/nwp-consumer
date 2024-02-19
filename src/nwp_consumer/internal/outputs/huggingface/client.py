@@ -151,7 +151,7 @@ class Client(internal.StorageInterface):
                     # Try to parse the folder name as a datetime
                     ddt = dt.datetime.strptime(
                         d.as_posix(),
-                        internal.IT_FOLDER_FMTSTR,
+                        internal.IT_FOLDER_STRUCTURE_RAW,
                     ).replace(tzinfo=dt.UTC)
                     initTimes.add(ddt)
                 except ValueError:
@@ -180,7 +180,7 @@ class Client(internal.StorageInterface):
             for p in self.__api.list_repo_tree(
                 repo_id=self.repoID,
                 repo_type="dataset",
-                path_in_repo=(prefix / it.strftime(internal.IT_FOLDER_FMTSTR)).as_posix(),
+                path_in_repo=(prefix / it.strftime(internal.IT_FOLDER_STRUCTURE_RAW)).as_posix(),
                 recursive=True,
             )
             if isinstance(p, RepoFile)
@@ -188,7 +188,7 @@ class Client(internal.StorageInterface):
 
         log.debug(
             event="copying it folder to cache",
-            inittime=it.strftime(internal.IT_FOLDER_FMTSTR),
+            inittime=it.strftime(internal.IT_FOLDER_STRUCTURE_RAW),
             numfiles=len(paths),
         )
 

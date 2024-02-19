@@ -95,7 +95,7 @@ class NWPConsumerService:
             fi
             for fi in allWantedFileInfos
             if not self.rawstorer.exists(
-                dst=self.rawdir / fi.it().strftime(internal.IT_FOLDER_FMTSTR) / fi.filename(),
+                dst=self.rawdir / fi.it().strftime(internal.IT_FOLDER_STRUCTURE_RAW) / fi.filename(),
             )
         ]
 
@@ -106,7 +106,7 @@ class NWPConsumerService:
                 endDate=end.strftime("%Y-%m-%d %H:%M"),
             )
             return [
-                self.rawdir / fi.it().strftime(internal.IT_FOLDER_FMTSTR) / fi.filename()
+                self.rawdir / fi.it().strftime(internal.IT_FOLDER_STRUCTURE_RAW) / fi.filename()
                 for fi in allWantedFileInfos
             ]
         else:

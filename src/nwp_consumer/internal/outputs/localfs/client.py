@@ -66,7 +66,7 @@ class Client(internal.StorageInterface):
                 # Try to parse the dir as a datetime
                 ddt: dt.datetime = dt.datetime.strptime(
                     dir.as_posix(),
-                    internal.IT_FOLDER_FMTSTR,
+                    internal.IT_FOLDER_STRUCTURE_RAW,
                 ).replace(tzinfo=dt.UTC)
                 # Add the initTime to the set
                 initTimes.add(ddt)
@@ -96,7 +96,7 @@ class Client(internal.StorageInterface):
     def copyITFolderToCache(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         """Overrides the corresponding method in the parent class."""
         # Local FS already has access to files, so just return the paths
-        initTimeDirPath = prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
+        initTimeDirPath = prefix / it.strftime(internal.IT_FOLDER_STRUCTURE_RAW)
         paths: list[pathlib.Path] = list(initTimeDirPath.iterdir())
 
         return paths

@@ -151,9 +151,9 @@ class TestS3Client(unittest.TestCase):
         # Make some files in the raw directory
         initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc)
         files = [
-            RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp1.grib",
-            RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp2.grib",
-            RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp3.grib",
+            RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_copyITFolderToTemp1.grib",
+            RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_copyITFolderToTemp2.grib",
+            RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_copyITFolderToTemp3.grib",
         ]
         for f in files:
             self.testS3.put_object(
@@ -200,7 +200,7 @@ class TestS3Client(unittest.TestCase):
     def test_delete(self) -> None:
         # Create a file in the raw directory
         initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc)
-        path = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_delete.grib"
+        path = RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_delete.grib"
         self.testS3.put_object(
             Bucket=BUCKET, Key=path.as_posix(), Body=bytes("test_delete", "utf-8"),
         )

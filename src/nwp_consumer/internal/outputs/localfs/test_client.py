@@ -34,7 +34,7 @@ class TestLocalFSClient(unittest.TestCase):
         initTime = dt.datetime(2021, 1, 1, 0, 0, 0, tzinfo=dt.timezone.utc)
 
         # Create a file in the raw directory
-        path = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_file.grib"
+        path = RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_file.grib"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch()
 
@@ -49,7 +49,7 @@ class TestLocalFSClient(unittest.TestCase):
 
         # Check that the function returns false when the file does not exist
         exists = self.testClient.exists(
-            dst=RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "not_exists.grib",
+            dst=RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "not_exists.grib",
         )
 
         # Assert that the file does not exist
@@ -82,7 +82,7 @@ class TestLocalFSClient(unittest.TestCase):
 
     def test_store(self) -> None:
         initTime = dt.datetime(2021, 1, 2, 0, 0, 0, tzinfo=dt.timezone.utc)
-        dst = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_store.grib"
+        dst = RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_store.grib"
         src = internal.CACHE_DIR / f"nwpc-{uuid.uuid4()}"
         # Create a temporary file to simulate a file to be stored
         src.write_bytes(bytes("test_file_contents", "utf-8"))
@@ -105,7 +105,7 @@ class TestLocalFSClient(unittest.TestCase):
         ]
 
         # Create some files in the raw directory
-        dirs = [RAW / t.strftime(internal.IT_FOLDER_FMTSTR) for t in expectedTimes]
+        dirs = [RAW / t.strftime(internal.IT_FOLDER_STRUCTURE_RAW) for t in expectedTimes]
 
         for d in dirs:
             d.mkdir(parents=True, exist_ok=True)
