@@ -330,7 +330,7 @@ class Client(internal.FetcherInterface):
                 url=fi.filepath(),
                 filepath=tfp.as_posix(),
             )
-            return fi, tfp
+            return fi, pathlib.Path()
 
         log.debug(
             event="fetched all data from file",
