@@ -1,3 +1,3 @@
-__all__ = ['NWPConsumerService']
+__all__ = ["NWPConsumerService"]
 
-from .service import NWPConsumerService
+from .consumer import NWPConsumerService

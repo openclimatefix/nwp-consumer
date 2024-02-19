@@ -117,7 +117,7 @@ class FetcherInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def downloadToTemp(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, pathlib.Path]:
+    def downloadToCache(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, pathlib.Path]:
         """Fetch the bytes of a single raw file from source and save to a temp file.
 
         :param fi: File Info object describing the file to fetch
@@ -126,7 +126,7 @@ class FetcherInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
+    def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:
         """Create an xarray dataset from the given RAW data in a temp file.
 
         :param p: Path to temp file holding raw data

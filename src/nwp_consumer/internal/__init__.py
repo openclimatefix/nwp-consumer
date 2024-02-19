@@ -24,4 +24,8 @@ from .models import (
     StorageInterface,
 )
 
-TMP_DIR.mkdir(parents=True, exist_ok=True)
+from .cache import (
+    raw_cache_path,
+    zarr_cache_path,
+)
+
