@@ -129,7 +129,7 @@ class Client(internal.StorageInterface):
 
     def copyITFolderToCache(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         """Overrides the corresponding method in the parent class."""
-        initTimeDirPath = self.__bucket / prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
+        initTimeDirPath = self.__bucket / prefix / it.strftime(internal.IT_FOLDER_STRUCTURE_RAW)
         paths = [
             pathlib.Path(p).relative_to(self.__bucket)
             for p in self.__fs.ls(initTimeDirPath.as_posix())
@@ -137,7 +137,7 @@ class Client(internal.StorageInterface):
 
         log.debug(
             event="copying it folder to cache",
-            inittime=it.strftime(internal.IT_FOLDER_FMTSTR),
+            inittime=it.strftime(internal.IT_FOLDER_STRUCTURE_RAW),
             numfiles=len(paths),
         )
 

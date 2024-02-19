@@ -101,6 +101,7 @@ class TestS3Client(unittest.TestCase):
         fileName = inspect.stack()[0][3] + ".grib"
         dst = RAW / f"{initTime:%Y/%m/%d/%H%M}" / fileName
         src = internal.CACHE_DIR / f"nwpc-{uuid.uuid4()}"
+        src.parent.mkdir(parents=True, exist_ok=True)
 
         # Write the data to the temporary file
         src.write_bytes(bytes(fileName, "utf-8"))

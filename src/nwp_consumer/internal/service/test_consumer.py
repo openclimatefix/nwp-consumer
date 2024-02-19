@@ -76,11 +76,11 @@ class DummyFetcher(internal.FetcherInterface):
     def getInitHours(self) -> list[int]:
         return INIT_HOURS
 
-    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[FileInfoModel]:
+    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
         raw_files = [DummyFileInfo(file, it) for file in INIT_TIME_FILES if it in testInitTimes]
         return raw_files
 
-    def downloadToCache(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, pathlib.Path]:
+    def downloadToCache(self, *, fi: internal.FileInfoModel) -> tuple[internal.FileInfoModel, pathlib.Path]:
         return fi, pathlib.Path(f"{fi.it():%Y/%m/%d/%H%M}/{fi.filename()}")
 
     def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:

@@ -85,6 +85,7 @@ class TestLocalFSClient(unittest.TestCase):
         dst = RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_store.grib"
         src = internal.CACHE_DIR / f"nwpc-{uuid.uuid4()}"
         # Create a temporary file to simulate a file to be stored
+        src.parent.mkdir(parents=True, exist_ok=True)
         src.write_bytes(bytes("test_file_contents", "utf-8"))
 
         # Store the file using the function
