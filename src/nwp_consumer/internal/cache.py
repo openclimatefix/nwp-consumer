@@ -45,6 +45,8 @@ from .models import FileInfoModel
 
 # Define the location of the consumer's cache directory
 CACHE_DIR = pathlib.Path("/tmp/nwpc")  # noqa: S108
+CACHE_DIR_RAW = CACHE_DIR / "raw"
+CACHE_DIR_ZARR = CACHE_DIR / "zarr"
 
 # Define the datetime format strings for creating a folder
 # structure from a datetime object for raw and zarr files
@@ -53,26 +55,28 @@ IT_FOLDER_STRUCTURE_ZARR = "%Y/%m/%d"
 
 # Define the datetime format string for a zarr filename
 IT_FILENAME_ZARR = "%Y%m%dT%H%M.zarr"
+IT_FULLPATH_ZARR = f"{IT_FOLDER_STRUCTURE_ZARR}/{IT_FILENAME_ZARR}"
 
 # --- Functions --- #
 
 
-def raw_cache_path(fi: FileInfoModel) -> pathlib.Path:
+def rawCachePath(it: dt.datetime, filename: str) -> pathlib.Path:
     """Create a filepath to cache a raw file.
 
     Args:
-        fi: The file information to cache.
+        it: The initialisation time of the file to cache.
+        filename: The name of the file (including extension).
 
     Returns:
-        The path to the cache file.
+        The path to the cached file.
     """
     # Build the directory structure according to the file's datetime
-    parent: pathlib.Path = CACHE_DIR / "raw" / fi.it().strftime(IT_FOLDER_STRUCTURE_RAW)
+    parent: pathlib.Path = CACHE_DIR_RAW / it.strftime(IT_FOLDER_STRUCTURE_RAW)
     parent.mkdir(parents=True, exist_ok=True)
-    return parent / fi.filename()
+    return parent / filename
 
 
-def zarr_cache_path(it: dt.datetime) -> pathlib.Path:
+def zarrCachePath(it: dt.datetime) -> pathlib.Path:
     """Create a filepath to cache a zarr file.
 
     Args:
@@ -82,7 +86,7 @@ def zarr_cache_path(it: dt.datetime) -> pathlib.Path:
         The path to the cache file.
     """
     # Build the directory structure according to the file's datetime
-    parent: pathlib.Path = CACHE_DIR / "zarr" / it.strftime(IT_FOLDER_STRUCTURE_ZARR)
+    parent: pathlib.Path = CACHE_DIR_ZARR / it.strftime(IT_FOLDER_STRUCTURE_ZARR)
     parent.mkdir(parents=True, exist_ok=True)
     return parent / it.strftime(IT_FILENAME_ZARR)
 

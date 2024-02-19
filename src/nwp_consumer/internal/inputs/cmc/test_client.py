@@ -12,12 +12,12 @@ testClient = Client(model="gdps")
 
 
 class TestClient(unittest.TestCase):
-    def test_mapTemp(self) -> None:
+    def test_mapCachedRaw(self) -> None:
         # Test with global file
         testFilePath: pathlib.Path = (
             pathlib.Path(__file__).parent / "CMC_glb_VGRD_ISBL_200_latlon.15x.15_2023080900_P027.grib2"
         )
-        out = testClient.mapTemp(p=testFilePath)
+        out = testClient.mapCachedRaw(p=testFilePath)
 
         # Check latitude and longitude are injected
         self.assertTrue("latitude" in out.coords)
@@ -36,7 +36,7 @@ class TestClient(unittest.TestCase):
         testFilePath: pathlib.Path = (
             pathlib.Path(__file__).parent / "CMC_glb_CAPE_SFC_0_latlon.15x.15_2023080900_P027.grib2"
         )
-        out = testClient.mapTemp(p=testFilePath)
+        out = testClient.mapCachedRaw(p=testFilePath)
 
         # Check latitude and longitude are present
         self.assertTrue("latitude" in out.coords)

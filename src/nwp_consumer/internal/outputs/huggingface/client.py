@@ -169,7 +169,7 @@ class Client(internal.StorageInterface):
         )
         return sortedInitTimes
 
-    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
+    def copyITFolderToCache(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         """Overrides the corresponding method of the parent class."""
         # Remove any leading slashes as they are not allowed in huggingface
         prefix = prefix.relative_to("/") if prefix.is_absolute() else prefix
@@ -187,26 +187,26 @@ class Client(internal.StorageInterface):
         ]
 
         log.debug(
-            event="copying it folder to temporary files",
+            event="copying it folder to cache",
             inittime=it.strftime(internal.IT_FOLDER_FMTSTR),
             numfiles=len(paths),
         )
 
-        # Read all files into temporary files
-        tempPaths: list[pathlib.Path] = []
+        # Read all files into cache
+        cachedPaths: list[pathlib.Path] = []
         for path in paths:
             # Huggingface replicates the full path from repo root on download
             # to local directory.
-            tfp: pathlib.Path = internal.TMP_DIR / path.as_posix()
+            cfp: pathlib.Path = internal.CACHE_DIR / path.as_posix()
 
-            # Use existing temp file if it already exists in the temp dir
-            if tfp.exists() and tfp.stat().st_size > 0:
+            # Use existing cached file if it already exists in the cache
+            if cfp.exists() and cfp.stat().st_size > 0:
                 log.debug(
-                    event="file already exists in temporary directory, skipping",
+                    event="file already exists in cache, skipping",
                     filepath=path.as_posix(),
-                    temppath=tfp.as_posix(),
+                    cachepath=cfp.as_posix(),
                 )
-                tempPaths.append(tfp)
+                cachedPaths.append(cfp)
                 continue
 
             # Don't copy file from the store if it is empty
@@ -217,34 +217,34 @@ class Client(internal.StorageInterface):
                 )
                 continue
 
-            # Copy the file from the store to a temporary file
+            # Copy the file from the store to cache
             self.__api.hf_hub_download(
                 repo_id=self.repoID,
                 repo_type="dataset",
                 filename=path.as_posix(),
-                local_dir=internal.TMP_DIR.as_posix(),
+                local_dir=internal.CACHE_DIR.as_posix(),
                 local_dir_use_symlinks=False,
             )
 
             # Check that the file was copied correctly
-            if tfp.stat().st_size != self._get_size(p=path) or tfp.stat().st_size == 0:
+            if cfp.stat().st_size != self._get_size(p=path) or cfp.stat().st_size == 0:
                 log.warn(
                     event="copied file size does not match source file size",
                     src=path.as_posix(),
-                    dst=tfp.as_posix(),
+                    dst=cfp.as_posix(),
                     srcsize=self._get_size(p=path),
-                    dstsize=tfp.stat().st_size,
+                    dstsize=cfp.stat().st_size,
                 )
             else:
-                tempPaths.append(tfp)
+                cachedPaths.append(cfp)
 
         log.debug(
-            event="copied it folder to temporary files",
-            nbytes=[p.stat().st_size for p in tempPaths],
+            event="copied it folder to cache",
+            nbytes=[p.stat().st_size for p in cachedPaths],
             inittime=it.strftime("%Y-%m-%d %H:%M"),
         )
 
-        return tempPaths
+        return cachedPaths
 
     def delete(self, *, p: pathlib.Path) -> None:
         """Overrides the corresponding method of the parent class."""

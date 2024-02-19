@@ -33,7 +33,7 @@ class Client(internal.StorageInterface):
 
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(src=src, dst=dst)
-        # Do delete temp file here to avoid local duplication of file.
+        # Delete cached file to avoid local duplication of file.
         src.unlink(missing_ok=True)
         nbytes = os.stat(dst).st_size
         if nbytes != dst.stat().st_size:
@@ -93,7 +93,7 @@ class Client(internal.StorageInterface):
 
         return sortedInitTimes
 
-    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
+    def copyITFolderToCache(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         """Overrides the corresponding method in the parent class."""
         # Local FS already has access to files, so just return the paths
         initTimeDirPath = prefix / it.strftime(internal.IT_FOLDER_FMTSTR)

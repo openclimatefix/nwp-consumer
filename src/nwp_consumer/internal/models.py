@@ -7,22 +7,6 @@ from enum import Enum
 
 import xarray as xr
 
-# ------- Global constants ------- #
-
-# The folder pattern format string for the raw data's init time
-IT_FOLDER_FMTSTR = "%Y/%m/%d/%H%M"
-# The globstring is the format string with stars between the slashes
-IT_FOLDER_GLOBSTR = "/".join(["*"] * len(IT_FOLDER_FMTSTR.split("/")))
-
-# The temporaray directory for storing downloaded files
-TMP_DIR = pathlib.Path("/tmp/nwpc")  # noqa: S108
-
-# The format string for the zarr dataset
-ZARR_FMTSTR = "%Y/%m/%d/%Y%m%dT%H%M"
-# The zarr globstring is the format string with stars between the slashes
-ZARR_GLOBSTR = "/".join(["*"] * len(ZARR_FMTSTR.split("/")))
-
-
 # ------- Domain models ------- #
 
 
@@ -39,7 +23,7 @@ class OCFShortName(str, Enum):
     SnowDepthWaterEquivalent = "sde"
     DownwardShortWaveRadiationFlux = "dswrf"
     DownwardLongWaveRadiationFlux = "dlwrf"
-    TemperatureAGL = "t"
+    cacheeratureAGL = "t"
     WindSpeedSurfaceAdjustedAGL = "si10"
     WindDirectionFromWhichBlowingSurfaceAdjustedAGL = "wdir10"
     WindUComponentAGL = "u10"
@@ -118,18 +102,18 @@ class FetcherInterface(abc.ABC):
 
     @abc.abstractmethod
     def downloadToCache(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, pathlib.Path]:
-        """Fetch the bytes of a single raw file from source and save to a temp file.
+        """Fetch the bytes of a single raw file from source and save to a cache file.
 
         :param fi: File Info object describing the file to fetch
-        :return: Tuple of the File Info object and a path to the local temp file
+        :return: Tuple of the File Info object and a path to the local cache file
         """
         pass
 
     @abc.abstractmethod
     def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:
-        """Create an xarray dataset from the given RAW data in a temp file.
+        """Create an xarray dataset from the given RAW data in a cache file.
 
-        :param p: Path to temp file holding raw data
+        :param p: Path to cached file holding raw data
         :return: Dataset created from the raw data
         """
         pass
@@ -158,9 +142,9 @@ class StorageInterface(abc.ABC):
 
     @abc.abstractmethod
     def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:
-        """Move the given temp file to the store at path p.
+        """Move a file to the store.
 
-        :param src: Path to temp file to move
+        :param src: Path to file to store
         :param dst: Desired path in store
         :return: Number of bytes copied
         """
@@ -176,13 +160,13 @@ class StorageInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) \
+    def copyITFolderToCache(self, *, prefix: pathlib.Path, it: dt.datetime) \
             -> list[pathlib.Path]:
-        """Copy all files in given folder to temp files.
+        """Copy all files in given folder to cache.
 
         :param prefix: Path of folder in which to find initTimes
         :param it: InitTime to copy files for
-        :return: List of paths to temp files
+        :return: List of paths to cached files
         """
         pass
 

@@ -9,7 +9,7 @@ import xarray as xr
 
 from .. import FileInfoModel
 from .. import models as internal
-from .service import NWPConsumerService, _mergeDatasets, _saveAsTempZipZarr
+from .consumer import NWPConsumerService, _mergeDatasets, _cacheAsZipZarr
 
 # Two days, four init times per day -> 8 init times
 DAYS = [1, 2]
@@ -39,11 +39,9 @@ class DummyStorer(internal.StorageInterface):
         return dst
 
     def listInitTimes(self, prefix: pathlib.Path) -> list[dt.datetime]:
-        log.info("listInitTimes", prefix=prefix)
         return testInitTimes
 
-    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
-        log.info("copyITFolderToTemp", prefix=prefix, it=it)
+    def copyITFolderToCache(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         return [pathlib.Path(f"{it:%Y%m%d%H%M}/{f}.grib") for f in INIT_TIME_FILES]
 
     def delete(self, *, p: pathlib.Path) -> None:
@@ -83,11 +81,11 @@ class DummyFetcher(internal.FetcherInterface):
         raw_files = [DummyFileInfo(file, it) for file in INIT_TIME_FILES if it in testInitTimes]
         return raw_files
 
-    def downloadToTemp(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, pathlib.Path]:
-        return fi, pathlib.Path(f"{fi.it():%Y%m%d%H%M}/{fi.filename()}")
+    def downloadToCache(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, pathlib.Path]:
+        return fi, pathlib.Path(f"{fi.it():%Y/%m/%d/%H%M}/{fi.filename()}")
 
-    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:
-        initTime = dt.datetime.strptime(p.parent.as_posix(), "%Y%m%d%H%M").replace(tzinfo=dt.UTC)
+    def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:
+        initTime = dt.datetime.strptime(p.parent.as_posix(), "%Y/%m/%d/%H%M").replace(tzinfo=dt.UTC)
         return xr.Dataset(
             data_vars={
                 "UKV": (
@@ -151,10 +149,10 @@ class TestNWPConsumerService(unittest.TestCase):
 # ------------ Static Methods ----------- #
 
 
-class TestSaveAsZippedZarr(unittest.TestCase):
+class TestCacheAsZipZarr(unittest.TestCase):
     def test_createsValidZipZarr(self) -> None:
-        ds = DummyFetcher().mapTemp(p=pathlib.Path("202101010000/dswrf.grib"))
-        file = _saveAsTempZipZarr(ds=ds)
+        ds = DummyFetcher().mapCachedRaw(p=pathlib.Path("202101010000/dswrf.grib"))
+        file = _cacheAsZipZarr(ds=ds)
         outds = xr.open_zarr(f"zip::{file.as_posix()}")
         self.assertEqual(ds.dims, outds.dims)
 

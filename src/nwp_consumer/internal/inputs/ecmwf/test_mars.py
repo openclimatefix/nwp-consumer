@@ -55,10 +55,10 @@ class TestECMWFMARSClient(unittest.TestCase):
         with self.assertRaises(KeyError):
             _ = Client(area="uk", hours=100)
 
-    def test_mapTemp(self) -> None:
+    def test_mapCachedRaw(self) -> None:
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_2params.grib"
 
-        out = testMARSClient.mapTemp(p=testFilePath)
+        out = testMARSClient.mapCachedRaw(p=testFilePath)
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(

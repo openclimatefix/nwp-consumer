@@ -143,7 +143,7 @@ class Client(internal.FetcherInterface):
 
         return files
 
-    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
+    def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
         if p.suffix != ".grib2":
             log.warn(
                 event="cannot map non-grib file to dataset",
@@ -242,26 +242,26 @@ class Client(internal.FetcherInterface):
 
         return ds
 
-    def downloadToTemp(  # noqa: D102
+    def downloadToCache(  # noqa: D102
         self,
         *,
         fi: internal.FileInfoModel,
     ) -> tuple[internal.FileInfoModel, pathlib.Path]:
         log.debug(event="requesting download of file", file=fi.filename(), path=fi.filepath())
         # Extract the bz2 file when downloading
-        tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
+        cfp: pathlib.Path = internal.rawCachePath(it=fi.it(), filename=fi.filename())
 
-        self.fs.get(str(fi.filepath()), str(tfp))
+        self.fs.get(str(fi.filepath()), str(cfp))
 
         log.debug(
             event="fetched all data from file",
             filename=fi.filename(),
             url=fi.filepath(),
-            filepath=tfp.as_posix(),
-            nbytes=tfp.stat().st_size,
+            filepath=cfp.as_posix(),
+            nbytes=cfp.stat().st_size,
         )
 
-        return fi, tfp
+        return fi, cfp
 
 
 def _parseArpegeFilename(

@@ -148,8 +148,8 @@ def main() -> None:
         log.error("encountered error running nwp-consumer", error=str(e), exc_info=True)
         erred = True
     finally:
-        leftoverTempPaths = list(internal.TMP_DIR.glob("*"))
-        for p in leftoverTempPaths:
+        clearableCache: list[pathlib.Path] = list(internal.CACHE_DIR.glob("*"))
+        for p in clearableCache:
             if p.exists() and p.is_dir():
                 shutil.rmtree(p)
             if p.is_file():
