@@ -98,14 +98,14 @@ class Client(internal.StorageInterface):
         """Overrides the corresponding method in the parent class."""
         allDirs = [
             pathlib.Path(d).relative_to(self.__bucket / prefix)
-            for d in self.__fs.glob(f"{self.__bucket}/{prefix}/{internal.IT_FOLDER_GLOBSTR}")
+            for d in self.__fs.glob(f"{self.__bucket}/{prefix}/{internal.IT_FOLDER_GLOBSTR_RAW}")
             if self.__fs.isdir(d)
         ]
 
         # Get the initTime from the folder pattern
         initTimes = set()
         for dir in allDirs:
-            if dir.match(internal.IT_FOLDER_GLOBSTR):
+            if dir.match(internal.IT_FOLDER_GLOBSTR_RAW):
                 try:
                     # Try to parse the folder name as a datetime
                     ddt = dt.datetime.strptime(dir.as_posix(), internal.IT_FOLDER_STRUCTURE_RAW).replace(
@@ -129,7 +129,7 @@ class Client(internal.StorageInterface):
 
     def copyITFolderToCache(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         """Overrides the corresponding method in the parent class."""
-        initTimeDirPath = self.__bucket / prefix / it.strftime(internal.IT_FOLDER_STRUCTURE_RAW)
+        initTimeDirPath = self.__bucket / prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
         paths = [
             pathlib.Path(p).relative_to(self.__bucket)
             for p in self.__fs.ls(initTimeDirPath.as_posix())
@@ -137,7 +137,7 @@ class Client(internal.StorageInterface):
 
         log.debug(
             event="copying it folder to cache",
-            inittime=it.strftime(internal.IT_FOLDER_STRUCTURE_RAW),
+            inittime=it.strftime(internal.IT_FOLDER_FMTSTR),
             numfiles=len(paths),
         )
 

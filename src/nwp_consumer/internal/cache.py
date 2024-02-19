@@ -51,7 +51,9 @@ CACHE_DIR_ZARR = CACHE_DIR / "zarr"
 # Define the datetime format strings for creating a folder
 # structure from a datetime object for raw and zarr files
 IT_FOLDER_STRUCTURE_RAW = "%Y/%m/%d/%H%M"
+IT_FOLDER_GLOBSTR_RAW = "*/*/*/*"
 IT_FOLDER_STRUCTURE_ZARR = "%Y/%m/%d"
+IT_FOLDER_GLOBSTR_ZARR = "*/*/*"
 
 # Define the datetime format string for a zarr filename
 IT_FILENAME_ZARR = "%Y%m%dT%H%M.zarr"

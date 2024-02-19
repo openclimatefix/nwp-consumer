@@ -23,7 +23,7 @@ class OCFShortName(str, Enum):
     SnowDepthWaterEquivalent = "sde"
     DownwardShortWaveRadiationFlux = "dswrf"
     DownwardLongWaveRadiationFlux = "dlwrf"
-    cacheeratureAGL = "t"
+    TemperatureAGL = "t"
     WindSpeedSurfaceAdjustedAGL = "si10"
     WindDirectionFromWhichBlowingSurfaceAdjustedAGL = "wdir10"
     WindUComponentAGL = "u10"

@@ -146,7 +146,7 @@ class Client(internal.StorageInterface):
         # Get the initTime from the folder pattern
         initTimes = set()
         for d in allDirs:
-            if d.match(internal.IT_FOLDER_GLOBSTR):
+            if d.match(internal.IT_FOLDER_GLOBSTR_RAW):
                 try:
                     # Try to parse the folder name as a datetime
                     ddt = dt.datetime.strptime(

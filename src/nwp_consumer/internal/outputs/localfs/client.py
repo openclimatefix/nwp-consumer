@@ -57,7 +57,7 @@ class Client(internal.StorageInterface):
         """Overrides the corresponding method in the parent class."""
         # List all the inittime folders in the given directory
         dirs = [
-            f.relative_to(prefix) for f in prefix.glob(internal.IT_FOLDER_GLOBSTR) if f.suffix == ""
+            f.relative_to(prefix) for f in prefix.glob(internal.IT_FOLDER_GLOBSTR_RAW) if f.suffix == ""
         ]
 
         initTimes = set()

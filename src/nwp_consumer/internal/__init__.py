@@ -10,7 +10,9 @@ __all__ = [
     "CACHE_DIR_ZARR",
     "IT_FULLPATH_ZARR",
     "IT_FOLDER_STRUCTURE_RAW",
+    "IT_FOLDER_GLOBSTR_RAW",
     "IT_FOLDER_STRUCTURE_ZARR",
+    "IT_FOLDER_GLOBSTR_ZARR",
     "rawCachePath",
     "zarrCachePath",
 ]
@@ -28,7 +30,9 @@ from .cache import (
     CACHE_DIR_RAW,
     IT_FULLPATH_ZARR,
     IT_FOLDER_STRUCTURE_RAW,
+    IT_FOLDER_GLOBSTR_RAW,
     IT_FOLDER_STRUCTURE_ZARR,
+    IT_FOLDER_GLOBSTR_ZARR,
     rawCachePath,
     zarrCachePath,
 )
