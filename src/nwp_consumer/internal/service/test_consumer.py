@@ -8,7 +8,8 @@ import structlog
 import xarray as xr
 
 from nwp_consumer import internal
-from .consumer import NWPConsumerService, _mergeDatasets, _cacheAsZipZarr
+
+from .consumer import NWPConsumerService, _cacheAsZipZarr, _mergeDatasets
 
 # Two days, four init times per day -> 8 init times
 DAYS = [1, 2]
@@ -41,7 +42,7 @@ class DummyStorer(internal.StorageInterface):
         return testInitTimes
 
     def copyITFolderToCache(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
-        return [pathlib.Path(f"{it:%Y%m%d%H%M}/{f}.grib") for f in INIT_TIME_FILES]
+        return [pathlib.Path(f"{it:%Y/%m/%d/%H%M}/{f}.grib") for f in INIT_TIME_FILES]
 
     def delete(self, *, p: pathlib.Path) -> None:
         if p.exists():
@@ -80,7 +81,11 @@ class DummyFetcher(internal.FetcherInterface):
         raw_files = [DummyFileInfo(file, it) for file in INIT_TIME_FILES if it in testInitTimes]
         return raw_files
 
-    def downloadToCache(self, *, fi: internal.FileInfoModel) -> tuple[internal.FileInfoModel, pathlib.Path]:
+    def downloadToCache(
+        self,
+        *,
+        fi: internal.FileInfoModel,
+    ) -> tuple[internal.FileInfoModel, pathlib.Path]:
         return fi, pathlib.Path(f"{fi.it():%Y/%m/%d/%H%M}/{fi.filename()}")
 
     def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:
@@ -150,7 +155,7 @@ class TestNWPConsumerService(unittest.TestCase):
 
 class TestCacheAsZipZarr(unittest.TestCase):
     def test_createsValidZipZarr(self) -> None:
-        ds = DummyFetcher().mapCachedRaw(p=pathlib.Path("202101010000/dswrf.grib"))
+        ds = DummyFetcher().mapCachedRaw(p=pathlib.Path("2021/01/01/0000/dswrf.grib"))
         file = _cacheAsZipZarr(ds=ds)
         outds = xr.open_zarr(f"zip::{file.as_posix()}")
         self.assertEqual(ds.dims, outds.dims)
@@ -228,4 +233,3 @@ class TestMergeDatasets(unittest.TestCase):
 
         merged = _mergeDatasets(datasets)
         self.assertEqual(merged.sizes, datasets[0].sizes)
-

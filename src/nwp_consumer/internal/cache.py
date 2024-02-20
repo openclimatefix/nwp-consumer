@@ -39,8 +39,6 @@ Example:
 import datetime as dt
 import pathlib
 
-from .models import FileInfoModel
-
 # --- Constants --- #
 
 # Define the location of the consumer's cache directory
@@ -91,4 +89,3 @@ def zarrCachePath(it: dt.datetime) -> pathlib.Path:
     parent: pathlib.Path = CACHE_DIR_ZARR / it.strftime(IT_FOLDER_STRUCTURE_ZARR)
     parent.mkdir(parents=True, exist_ok=True)
     return parent / it.strftime(IT_FILENAME_ZARR)
-

@@ -125,7 +125,7 @@ class NWPConsumerService:
             .map(
                 lambda infoPathTuple: self.rawstorer.store(
                     src=infoPathTuple[1],
-                    dst=self.rawdir / infoPathTuple[0].relative_to(internal.CACHE_DIR_RAW),
+                    dst=self.rawdir / infoPathTuple[1].relative_to(internal.CACHE_DIR_RAW),
                 ),
             )
             .compute()

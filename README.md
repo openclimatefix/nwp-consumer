@@ -41,7 +41,6 @@ Similarly, the service can write to multiple sinks:
 
 Its modular nature enables straightforward extension to alternate future sources.
 
-
 ## Running the service
 
 The service uses environment variables to configure sources and sinks in accordance with
