@@ -42,7 +42,10 @@ class DummyStorer(internal.StorageInterface):
         return testInitTimes
 
     def copyITFolderToCache(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
-        return [pathlib.Path(f"{it:%Y/%m/%d/%H%M}/{f}.grib") for f in INIT_TIME_FILES]
+        return [
+            pathlib.Path(f"{internal.CACHE_DIR_RAW}/{it:%Y/%m/%d/%H%M}/{f}.grib")
+            for f in INIT_TIME_FILES
+        ]
 
     def delete(self, *, p: pathlib.Path) -> None:
         if p.exists():
