@@ -161,7 +161,7 @@ class Client(internal.FetcherInterface):
 
         return files
 
-    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
+    def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
         if p.suffix != ".grib2":
             log.warn(
                 event="cannot map non-grib file to dataset",
@@ -265,7 +265,7 @@ class Client(internal.FetcherInterface):
             )
         return ds
 
-    def downloadToTemp(  # noqa: D102
+    def downloadToCache(  # noqa: D102
         self,
         *,
         fi: internal.FileInfoModel,
@@ -291,19 +291,19 @@ class Client(internal.FetcherInterface):
             )
             return fi, pathlib.Path()
 
-        tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
-        with open(tfp, "wb") as f:
+        cfp: pathlib.Path = internal.rawCachePath(it=fi.it(), filename=fi.filename())
+        with open(cfp, "wb") as f:
             f.write(response.read())
 
         log.debug(
             event="fetched all data from file",
             filename=fi.filename(),
             url=fi.filepath(),
-            filepath=tfp.as_posix(),
-            nbytes=tfp.stat().st_size,
+            filepath=cfp.as_posix(),
+            nbytes=cfp.stat().st_size,
         )
 
-        return fi, tfp
+        return fi, cfp
 
 
 def _parseCMCFilename(

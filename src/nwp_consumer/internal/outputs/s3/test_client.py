@@ -99,8 +99,9 @@ class TestS3Client(unittest.TestCase):
     def test_store(self) -> None:
         initTime = dt.datetime(2023, 1, 2, tzinfo=dt.timezone.utc)
         fileName = inspect.stack()[0][3] + ".grib"
-        dst = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / fileName
-        src = internal.TMP_DIR / f"nwpc-{uuid.uuid4()}"
+        dst = RAW / f"{initTime:%Y/%m/%d/%H%M}" / fileName
+        src = internal.CACHE_DIR / f"nwpc-{uuid.uuid4()}"
+        src.parent.mkdir(parents=True, exist_ok=True)
 
         # Write the data to the temporary file
         src.write_bytes(bytes(fileName, "utf-8"))
@@ -147,49 +148,49 @@ class TestS3Client(unittest.TestCase):
             Key=f"{RAW}/2023/01/04/0300/test_raw_file2.grib",
         )
 
-    def test_copyITFolderToTemp(self) -> None:
+    def test_copyITFolderToCache(self) -> None:
         # Make some files in the raw directory
         initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc)
         files = [
-            RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp1.grib",
-            RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp2.grib",
-            RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp3.grib",
+            RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_copyITFolderToTemp1.grib",
+            RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_copyITFolderToTemp2.grib",
+            RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_copyITFolderToTemp3.grib",
         ]
         for f in files:
             self.testS3.put_object(
                 Bucket=BUCKET, Key=f.as_posix(), Body=bytes("test_file_contents", "utf-8"),
             )
 
-        # Call the copyItFolderToTemp method
-        paths = self.client.copyITFolderToTemp(prefix=RAW, it=initTime)
+        # Call the copyItFolderToCache method
+        paths = self.client.copyITFolderToCache(prefix=RAW, it=initTime)
 
-        # Assert the contents of the temp files is correct
+        # Assert the contents of the cached files is correct
         for _i, path in enumerate(paths):
             self.assertEqual(path.read_bytes(), bytes("test_file_contents", "utf-8"))
 
-            # Delete the temp files
+            # Delete the cached files
             path.unlink()
 
         # Delete the files in S3
         for f in files:
             self.testS3.delete_object(Bucket=BUCKET, Key=f.as_posix())
 
-        # Make some more RAW files in the raw directory AND in the temp directory
+        # Make some more RAW files in the raw directory AND in the cache directory
         initTime2 = dt.datetime(2023, 1, 1, 6, tzinfo=dt.timezone.utc)
         files2 = [
-            RAW / f"{initTime2:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp1.grib",
-            RAW / f"{initTime2:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp2.grib",
-            RAW / f"{initTime2:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp3.grib",
+            RAW / f"{initTime2:%Y/%m/%d/%H%M}" / "test_copyITFolderToTemp1.grib",
+            RAW / f"{initTime2:%Y/%m/%d/%H%M}" / "test_copyITFolderToTemp2.grib",
+            RAW / f"{initTime2:%Y/%m/%d/%H%M}" / "test_copyITFolderToTemp3.grib",
         ]
         for f in files2:
             self.testS3.put_object(
                 Bucket=BUCKET, Key=f.as_posix(), Body=bytes("test_file_contents", "utf-8"),
             )
-            with open(internal.TMP_DIR / f.name, "w") as f:
+            with open(internal.CACHE_DIR / f.name, "w") as f:
                 f.write("test_file_contents")
 
-        # Call the copyITFolderToTemp method again
-        paths = self.client.copyITFolderToTemp(prefix=RAW, it=initTime2)
+        # Call the copyITFolderToCache method again
+        paths = self.client.copyITFolderToCache(prefix=RAW, it=initTime2)
         self.assertEqual(len(paths), 3)
 
         # Delete the files in S3
@@ -200,7 +201,7 @@ class TestS3Client(unittest.TestCase):
     def test_delete(self) -> None:
         # Create a file in the raw directory
         initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc)
-        path = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_delete.grib"
+        path = RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_delete.grib"
         self.testS3.put_object(
             Bucket=BUCKET, Key=path.as_posix(), Body=bytes("test_delete", "utf-8"),
         )

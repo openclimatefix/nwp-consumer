@@ -33,7 +33,7 @@ class Client(internal.StorageInterface):
 
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(src=src, dst=dst)
-        # Do delete temp file here to avoid local duplication of file.
+        # Delete cached file to avoid local duplication of file.
         src.unlink(missing_ok=True)
         nbytes = os.stat(dst).st_size
         if nbytes != dst.stat().st_size:
@@ -57,7 +57,7 @@ class Client(internal.StorageInterface):
         """Overrides the corresponding method in the parent class."""
         # List all the inittime folders in the given directory
         dirs = [
-            f.relative_to(prefix) for f in prefix.glob(internal.IT_FOLDER_GLOBSTR) if f.suffix == ""
+            f.relative_to(prefix) for f in prefix.glob(internal.IT_FOLDER_GLOBSTR_RAW) if f.suffix == ""
         ]
 
         initTimes = set()
@@ -66,7 +66,7 @@ class Client(internal.StorageInterface):
                 # Try to parse the dir as a datetime
                 ddt: dt.datetime = dt.datetime.strptime(
                     dir.as_posix(),
-                    internal.IT_FOLDER_FMTSTR,
+                    internal.IT_FOLDER_STRUCTURE_RAW,
                 ).replace(tzinfo=dt.UTC)
                 # Add the initTime to the set
                 initTimes.add(ddt)
@@ -93,10 +93,10 @@ class Client(internal.StorageInterface):
 
         return sortedInitTimes
 
-    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
+    def copyITFolderToCache(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         """Overrides the corresponding method in the parent class."""
         # Local FS already has access to files, so just return the paths
-        initTimeDirPath = prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
+        initTimeDirPath = prefix / it.strftime(internal.IT_FOLDER_STRUCTURE_RAW)
         paths: list[pathlib.Path] = list(initTimeDirPath.iterdir())
 
         return paths

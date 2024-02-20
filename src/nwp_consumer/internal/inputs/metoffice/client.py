@@ -127,7 +127,7 @@ class Client(internal.FetcherInterface):
 
         return wantedFileInfos
 
-    def downloadToTemp(  # noqa: D102
+    def downloadToCache(  # noqa: D102
         self,
         *,
         fi: internal.FileInfoModel,
@@ -169,9 +169,9 @@ class Client(internal.FetcherInterface):
             )
             return fi, pathlib.Path()
 
-        # Stream the filedata into a temporary file
-        tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
-        with tfp.open("wb") as f:
+        # Stream the filedata into cache
+        cfp: pathlib.Path = internal.rawCachePath(it=fi.it(), filename=fi.filename())
+        with cfp.open("wb") as f:
             for chunk in iter(lambda: response.read(16 * 1024), b""):
                 f.write(chunk)
                 f.flush()
@@ -180,14 +180,14 @@ class Client(internal.FetcherInterface):
             event="fetched all data from file",
             filename=fi.filename(),
             url=url,
-            filepath=tfp.as_posix(),
-            nbytes=tfp.stat().st_size,
+            filepath=cfp.as_posix(),
+            nbytes=cfp.stat().st_size,
         )
 
-        return fi, tfp
+        return fi, cfp
 
 
-    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
+    def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
         if p.suffix != ".grib":
             log.warn(
                 event="cannot map non-grib file to dataset",

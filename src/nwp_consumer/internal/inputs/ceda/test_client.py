@@ -31,12 +31,12 @@ class TestClient_FetchRawFileBytes(unittest.TestCase):
         pass
 
 
-class TestClient_MapTemp(unittest.TestCase):
+class TestClient_MapCachedRaw(unittest.TestCase):
 
     def test_convertsWholesale1FileCorrectly(self) -> None:
         wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wholesale1.grib"
 
-        out = testClient.mapTemp(p=wholesalePath)
+        out = testClient.mapCachedRaw(p=wholesalePath)
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(
@@ -54,7 +54,7 @@ class TestClient_MapTemp(unittest.TestCase):
     def test_convertsWholesale2FileCorrectly(self) -> None:
         wholesalePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wholesale2.grib"
 
-        out = testClient.mapTemp(p=wholesalePath)
+        out = testClient.mapCachedRaw(p=wholesalePath)
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(

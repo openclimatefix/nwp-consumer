@@ -5,23 +5,35 @@ __all__ = [
     "FetcherInterface",
     "StorageInterface",
     "FileInfoModel",
-    "IT_FOLDER_FMTSTR",
-    "IT_FOLDER_GLOBSTR",
-    "TMP_DIR",
-    "ZARR_FMTSTR",
-    "ZARR_GLOBSTR",
+    "CACHE_DIR",
+    "CACHE_DIR_RAW",
+    "CACHE_DIR_ZARR",
+    "IT_FULLPATH_ZARR",
+    "IT_FOLDER_STRUCTURE_RAW",
+    "IT_FOLDER_GLOBSTR_RAW",
+    "IT_FOLDER_STRUCTURE_ZARR",
+    "IT_FOLDER_GLOBSTR_ZARR",
+    "rawCachePath",
+    "zarrCachePath",
 ]
 
 from .models import (
-    IT_FOLDER_FMTSTR,
-    IT_FOLDER_GLOBSTR,
-    TMP_DIR,
-    ZARR_FMTSTR,
-    ZARR_GLOBSTR,
     FetcherInterface,
     FileInfoModel,
     OCFShortName,
     StorageInterface,
 )
 
-TMP_DIR.mkdir(parents=True, exist_ok=True)
+from .cache import (
+    CACHE_DIR,
+    CACHE_DIR_ZARR,
+    CACHE_DIR_RAW,
+    IT_FULLPATH_ZARR,
+    IT_FOLDER_STRUCTURE_RAW,
+    IT_FOLDER_GLOBSTR_RAW,
+    IT_FOLDER_STRUCTURE_ZARR,
+    IT_FOLDER_GLOBSTR_ZARR,
+    rawCachePath,
+    zarrCachePath,
+)
+

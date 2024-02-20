@@ -95,7 +95,7 @@ class NWPConsumerService:
             fi
             for fi in allWantedFileInfos
             if not self.rawstorer.exists(
-                dst=self.rawdir / fi.it().strftime(internal.IT_FOLDER_FMTSTR) / fi.filename(),
+                dst=self.rawdir / fi.it().strftime(internal.IT_FOLDER_STRUCTURE_RAW) / fi.filename(),
             )
         ]
 
@@ -106,7 +106,7 @@ class NWPConsumerService:
                 endDate=end.strftime("%Y-%m-%d %H:%M"),
             )
             return [
-                self.rawdir / fi.it().strftime(internal.IT_FOLDER_FMTSTR) / fi.filename()
+                self.rawdir / fi.it().strftime(internal.IT_FOLDER_STRUCTURE_RAW) / fi.filename()
                 for fi in allWantedFileInfos
             ]
         else:
@@ -120,14 +120,12 @@ class NWPConsumerService:
         # Create a dask pipeline to download the files
         storedFiles: list[pathlib.Path] = (
             dask.bag.from_sequence(seq=newWantedFileInfos, npartitions=len(newWantedFileInfos))
-            .map(lambda fi: self.fetcher.downloadToTemp(fi=fi))
+            .map(lambda fi: self.fetcher.downloadToCache(fi=fi))
             .filter(lambda infoPathTuple: infoPathTuple[1] != pathlib.Path())
             .map(
                 lambda infoPathTuple: self.rawstorer.store(
                     src=infoPathTuple[1],
-                    dst=self.rawdir
-                    / infoPathTuple[0].it().strftime(internal.IT_FOLDER_FMTSTR)
-                    / (infoPathTuple[0].filename()),
+                    dst=self.rawdir / infoPathTuple[1].relative_to(internal.CACHE_DIR_RAW),
                 ),
             )
             .compute()
@@ -152,13 +150,13 @@ class NWPConsumerService:
         for it in allInitTimes:
             # Don't convert files that already exist
             if self.storer.exists(
-                dst=self.zarrdir / it.strftime(f"{internal.ZARR_FMTSTR}.zarr.zip"),
+                dst=self.zarrdir / it.strftime(f"{internal.IT_FULLPATH_ZARR}.zip"),
             ):
                 log.debug(
                     "zarr for initTime already exists; skipping",
                     inittime=it.strftime("%Y/%m/%d %H:%M"),
                     path=(
-                        self.zarrdir / it.strftime(f"{internal.ZARR_FMTSTR}.zarr.zip")
+                        self.zarrdir / it.strftime(f"{internal.IT_FULLPATH_ZARR}.zip")
                     ).as_posix(),
                 )
                 continue
@@ -172,7 +170,7 @@ class NWPConsumerService:
                 endDate=end.strftime("%Y/%m/%d %H:%M"),
             )
             return [
-                self.zarrdir / it.strftime(f"{internal.ZARR_FMTSTR}.zarr.zip")
+                self.zarrdir / it.strftime(f"{internal.IT_FULLPATH_ZARR}.zip")
                 for it in allInitTimes
                 if start <= it <= end
             ]
@@ -187,16 +185,16 @@ class NWPConsumerService:
         # * Partition the bag by init time
         bag = dask.bag.from_sequence(desiredInitTimes, npartitions=len(desiredInitTimes))
         storedfiles = (
-            bag.map(lambda time: self.rawstorer.copyITFolderToTemp(prefix=self.rawdir, it=time))
-            .filter(lambda temppaths: len(temppaths) != 0)
-            .map(lambda temppaths: [self.fetcher.mapTemp(p=p) for p in temppaths])
+            bag.map(lambda time: self.rawstorer.copyITFolderToCache(prefix=self.rawdir, it=time))
+            .filter(lambda cachedpaths: len(cachedpaths) != 0)
+            .map(lambda cachedpaths: [self.fetcher.mapCachedRaw(p=p) for p in cachedpaths])
             .map(lambda datasets: _mergeDatasets(datasets=datasets))
             .filter(_dataQualityFilter)
-            .map(lambda ds: _saveAsTempZipZarr(ds=ds))
+            .map(lambda ds: _cacheAsZipZarr(ds=ds))
             .map(
                 lambda path: self.storer.store(
                     src=path,
-                    dst=self.zarrdir / path.relative_to(internal.TMP_DIR),
+                    dst=self.zarrdir / path.relative_to(internal.CACHE_DIR_ZARR),
                 ),
             )
             .compute()
@@ -233,7 +231,7 @@ class NWPConsumerService:
         latestInitTime = allInitTimes[-1]
 
         # Load the latest init time as a dataset
-        tempPaths = self.rawstorer.copyITFolderToTemp(it=latestInitTime, prefix=self.rawdir)
+        cachedPaths = self.rawstorer.copyITFolderToCache(it=latestInitTime, prefix=self.rawdir)
         log.info(
             event="creating latest zarr for initTime",
             inittime=latestInitTime.strftime("%Y/%m/%d %H:%M"),
@@ -241,21 +239,21 @@ class NWPConsumerService:
         )
 
         # Create a pipeline to convert the raw files and merge them as a dataset
-        # * Then save the dataset to a temp zarr file and store it in the store
-        bag: dask.bag.Bag = dask.bag.from_sequence(tempPaths)
-        tempZarrs = (
-            bag.map(lambda tfp: self.fetcher.mapTemp(p=tfp))
+        # * Then cache the dataset as a zarr file and store it in the store
+        bag: dask.bag.Bag = dask.bag.from_sequence(cachedPaths)
+        cachedZarrs = (
+            bag.map(lambda tfp: self.fetcher.mapCachedRaw(p=tfp))
             .fold(lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts"))
             .compute()
         )
 
-        datasets = dask.bag.from_sequence([tempZarrs])
+        datasets = dask.bag.from_sequence([cachedZarrs])
 
         # Save as zipped zarr
         if self.storer.exists(dst=self.zarrdir / "latest.zarr.zip"):
             self.storer.delete(p=self.zarrdir / "latest.zarr.zip")
         storedFiles = (
-            datasets.map(lambda ds: _saveAsTempZipZarr(ds=ds))
+            datasets.map(lambda ds: _cacheAsZipZarr(ds=ds))
             .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / "latest.zarr.zip"))
             .compute()
         )
@@ -264,13 +262,13 @@ class NWPConsumerService:
         if self.storer.exists(dst=self.zarrdir / "latest.zarr"):
             self.storer.delete(p=self.zarrdir / "latest.zarr")
         storedFiles += (
-            datasets.map(lambda ds: _saveAsTempRegularZarr(ds=ds))
+            datasets.map(lambda ds: _cacheAsZarr(ds=ds))
             .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / "latest.zarr"))
             .compute()
         )
 
-        # Delete the temporary files
-        for f in tempPaths:
+        # Delete the cached files
+        for f in cachedPaths:
             f.unlink(missing_ok=True)
 
         return storedFiles
@@ -302,24 +300,24 @@ class NWPConsumerService:
         else:
             log.info(event="HEALTH: found zarr directory", path=self.zarrdir.as_posix())
 
-        # Check that the temporary directory is not approaching capacity
-        internal.TMP_DIR.mkdir(parents=True, exist_ok=True)
-        tmp_usage = shutil.disk_usage(internal.TMP_DIR.as_posix())
-        if tmp_usage.free < 1e9:
+        # Check that the cache directory is not approaching capacity
+        internal.CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        cache_usage = shutil.disk_usage(internal.CACHE_DIR.as_posix())
+        if cache_usage.free < 1e9:
             log.error(
-                event="HEALTH: temporary directory is full",
-                free=tmp_usage.free,
-                total=tmp_usage.total,
-                used=tmp_usage.used,
+                event="HEALTH: cache directory is full",
+                free=cache_usage.free,
+                total=cache_usage.total,
+                used=cache_usage.used,
             )
             unhealthy = True
         else:
             log.info(
-                event="HEALTH: found temporary directory",
-                free=tmp_usage.free,
-                total=tmp_usage.total,
-                used=tmp_usage.used,
-                path=internal.TMP_DIR.as_posix(),
+                event="HEALTH: found cache directory",
+                free=cache_usage.free,
+                total=cache_usage.total,
+                used=cache_usage.used,
+                path=internal.CACHE_DIR.as_posix(),
             )
 
         # Check the ram usage
@@ -356,40 +354,40 @@ class NWPConsumerService:
         return 0
 
 
-def _saveAsTempZipZarr(ds: xr.Dataset) -> pathlib.Path:
+def _cacheAsZipZarr(ds: xr.Dataset) -> pathlib.Path:
+    """Save the dataset to the cache as a zipped zarr file."""
     # Get the name of the zarr file from the inittime and the zarr format string
     dt64: np.datetime64 = ds.coords["init_time"].values[0]
     initTime: dt.datetime = dt.datetime.fromtimestamp(dt64.astype(int) / 1e9, tz=dt.UTC)
-    tempZarrPath = internal.TMP_DIR / (initTime.strftime(internal.ZARR_FMTSTR) + ".zarr.zip")
-    # Delete the temporary zarr if it already exists
-    if tempZarrPath.exists():
-        tempZarrPath.unlink()
-    tempZarrPath.parent.mkdir(parents=True, exist_ok=True)
+    cachePath: pathlib.Path = internal.zarrCachePath(it=initTime).with_suffix(".zarr.zip")
+    # Delete the cached zarr if it already exists
+    if cachePath.exists():
+        cachePath.unlink()
+    cachePath.parent.mkdir(parents=True, exist_ok=True)
     # Save the dataset to a zarr file
-    with zarr.ZipStore(path=tempZarrPath.as_posix(), mode="w") as store:
+    with zarr.ZipStore(path=cachePath.as_posix(), mode="w") as store:
         ds.to_zarr(
             store=store,
             encoding=_generate_encoding(ds=ds),
         )
 
-    log.debug("Saved as zipped zarr", path=tempZarrPath.as_posix())
-    return tempZarrPath
+    log.debug("Saved as zipped zarr", path=cachePath.as_posix())
+    return cachePath
 
 
-def _saveAsTempRegularZarr(ds: xr.Dataset) -> pathlib.Path:
-    # Save the dataset to a temp zarr file
+def _cacheAsZarr(ds: xr.Dataset) -> pathlib.Path:
+    """Save the dataset to the cache as a zarr file."""
+    # Get the name of the zarr file from the inittime and the zarr format string
     dt64: np.datetime64 = ds.coords["init_time"].values[0]
     initTime: dt.datetime = dt.datetime.fromtimestamp(dt64.astype(int) / 1e9, tz=dt.UTC)
-    tempZarrPath = internal.TMP_DIR / (
-        initTime.strftime(internal.ZARR_FMTSTR.split("/")[-1]) + ".zarr"
-    )
-    if tempZarrPath.exists() and tempZarrPath.is_dir():
-        shutil.rmtree(tempZarrPath.as_posix())
+    cachePath: pathlib.Path = internal.zarrCachePath(it=initTime)
+    if cachePath.exists() and cachePath.is_dir():
+        shutil.rmtree(cachePath.as_posix())
     ds.to_zarr(
-        store=tempZarrPath.as_posix(),
+        store=cachePath.as_posix(),
         encoding=_generate_encoding(ds=ds),
     )
-    return tempZarrPath
+    return cachePath
 
 
 def _generate_encoding(ds: xr.Dataset) -> dict[str, dict[str, str] | dict[str, Blosc2]]:
@@ -434,7 +432,7 @@ def _mergeDatasets(datasets: list[xr.Dataset]) -> xr.Dataset:
     """Merge a list of datasets into a single dataset."""
     try:
         return xr.merge(objects=datasets, combine_attrs="drop_conflicts")
-    except xr.core.merge.MergeError:
+    except (xr.core.merge.MergeError, ValueError):
         log.warn(
             event="Merging datasets failed, trying to insert zeros for missing variables",
             dataset1={

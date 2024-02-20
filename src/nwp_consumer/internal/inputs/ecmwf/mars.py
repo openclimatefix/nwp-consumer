@@ -199,17 +199,17 @@ class Client(internal.FetcherInterface):
 
         return [ECMWFMarsFileInfo(inittime=it, area=self.area, params=available_params)]
 
-    def downloadToTemp(  # noqa: D102
+    def downloadToCache(  # noqa: D102
         self,
         *,
         fi: internal.FileInfoModel,
     ) -> tuple[internal.FileInfoModel, pathlib.Path]:
-        tfp: pathlib.Path = internal.TMP_DIR / fi.filename()
+        cfp: pathlib.Path = internal.rawCachePath(it=fi.it(), filename=fi.filename())
 
         req: str = self._buildMarsRequest(
             list_only=False,
             it=fi.it(),
-            target=tfp.as_posix(),
+            target=cfp.as_posix(),
             params=fi.variables(),
         )
 
@@ -221,25 +221,25 @@ class Client(internal.FetcherInterface):
         )
 
         try:
-            self.server.execute(req=req, target=tfp.as_posix())
+            self.server.execute(req=req, target=cfp.as_posix())
         except ecmwfapi.api.APIException as e:
             log.warn("error fetching ECMWF MARS data", error=e)
             return fi, pathlib.Path()
 
-        if tfp.exists() is False:
-            log.warn("ECMWF data file does not exist", filepath=tfp.as_posix())
+        if cfp.exists() is False:
+            log.warn("ECMWF data file does not exist", filepath=cfp.as_posix())
             return fi, pathlib.Path()
 
         log.debug(
             event="fetched all data from MARS",
             filename=fi.filename(),
-            filepath=tfp.as_posix(),
-            nbytes=tfp.stat().st_size,
+            filepath=cfp.as_posix(),
+            nbytes=cfp.stat().st_size,
         )
 
-        return fi, tfp
+        return fi, cfp
 
-    def mapTemp(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
+    def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
         if p.suffix != ".grib":
             log.warn(event="cannot map non-grib file to dataset", filepath=p.as_posix())
             return xr.Dataset()

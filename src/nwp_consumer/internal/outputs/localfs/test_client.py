@@ -34,7 +34,7 @@ class TestLocalFSClient(unittest.TestCase):
         initTime = dt.datetime(2021, 1, 1, 0, 0, 0, tzinfo=dt.timezone.utc)
 
         # Create a file in the raw directory
-        path = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_file.grib"
+        path = RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_file.grib"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch()
 
@@ -49,7 +49,7 @@ class TestLocalFSClient(unittest.TestCase):
 
         # Check that the function returns false when the file does not exist
         exists = self.testClient.exists(
-            dst=RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "not_exists.grib",
+            dst=RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "not_exists.grib",
         )
 
         # Assert that the file does not exist
@@ -82,9 +82,10 @@ class TestLocalFSClient(unittest.TestCase):
 
     def test_store(self) -> None:
         initTime = dt.datetime(2021, 1, 2, 0, 0, 0, tzinfo=dt.timezone.utc)
-        dst = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_store.grib"
-        src = internal.TMP_DIR / f"nwpc-{uuid.uuid4()}"
+        dst = RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_store.grib"
+        src = internal.CACHE_DIR / f"nwpc-{uuid.uuid4()}"
         # Create a temporary file to simulate a file to be stored
+        src.parent.mkdir(parents=True, exist_ok=True)
         src.write_bytes(bytes("test_file_contents", "utf-8"))
 
         # Store the file using the function
@@ -105,7 +106,7 @@ class TestLocalFSClient(unittest.TestCase):
         ]
 
         # Create some files in the raw directory
-        dirs = [RAW / t.strftime(internal.IT_FOLDER_FMTSTR) for t in expectedTimes]
+        dirs = [RAW / t.strftime(internal.IT_FOLDER_STRUCTURE_RAW) for t in expectedTimes]
 
         for d in dirs:
             d.mkdir(parents=True, exist_ok=True)
@@ -120,20 +121,20 @@ class TestLocalFSClient(unittest.TestCase):
         for d in dirs:
             shutil.rmtree(d)
 
-    def test_copyITFolderToTemp(self) -> None:
+    def test_copyITFolderToCache(self) -> None:
         # Make some files in the raw directory
         initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc)
         files = [
-            RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp1.grib",
-            RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp2.grib",
-            RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_copyITFolderToTemp3.grib",
+            RAW / f"{initTime:%Y/%m/%d/%H%M}" / "test_copyITFolderToTemp1.grib",
+            RAW / f"{initTime:%Y/%m/%d/%H%M}" / "test_copyITFolderToTemp2.grib",
+            RAW / f"{initTime:%Y/%m/%d/%H%M}" / "test_copyITFolderToTemp3.grib",
         ]
         for f in files:
             f.parent.mkdir(parents=True, exist_ok=True)
             f.write_bytes(bytes("test_file_contents", "utf-8"))
 
         # Test the function
-        paths = self.testClient.copyITFolderToTemp(prefix=RAW, it=initTime)
+        paths = self.testClient.copyITFolderToCache(prefix=RAW, it=initTime)
 
         # Assert the contents of the temp files is correct
         for _i, path in enumerate(paths):
@@ -145,7 +146,7 @@ class TestLocalFSClient(unittest.TestCase):
     def test_delete(self) -> None:
         # Create a file in the raw directory
         initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc)
-        path = RAW / f"{initTime:{internal.IT_FOLDER_FMTSTR}}" / "test_delete.grib"
+        path = RAW / f"{initTime:%Y/%m/%d/%H%M}" / "test_delete.grib"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch()
 

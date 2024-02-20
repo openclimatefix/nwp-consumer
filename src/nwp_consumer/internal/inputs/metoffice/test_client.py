@@ -31,7 +31,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
     def test_convertsCorrectly(self) -> None:
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_knownparam.grib"
 
-        out = testClient.mapTemp(p=testFilePath)
+        out = testClient.mapCachedRaw(p=testFilePath)
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(
@@ -46,7 +46,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
     def test_renamesVariables(self) -> None:
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wrongnameparam.grib"
 
-        out = testClient.mapTemp(p=testFilePath)
+        out = testClient.mapCachedRaw(p=testFilePath)
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(
@@ -61,7 +61,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
     def test_handlesUnknownsInMetOfficeData(self) -> None:
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknownparam1.grib"
 
-        out = testClient.mapTemp(p=testFilePath)
+        out = testClient.mapCachedRaw(p=testFilePath)
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(
@@ -76,7 +76,7 @@ class TestClient_ConvertRawFileToDataset(unittest.TestCase):
 
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknownparam2.grib"
 
-        out = testClient.mapTemp(p=testFilePath)
+        out = testClient.mapCachedRaw(p=testFilePath)
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(

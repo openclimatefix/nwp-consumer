@@ -75,8 +75,7 @@ class Client(internal.StorageInterface):
             dst=(self.__bucket / dst).as_posix(),
         )
         self.__fs.put(lpath=src.as_posix(), rpath=(self.__bucket / dst).as_posix(), recursive=True)
-        # Don't delete temp file as user may want to do further processing locally.
-        # All temp files are deleted at the end of the program.
+        # Don't delete cached file as user may want to do further processing locally.
         nbytes = self.__fs.du((self.__bucket / dst).as_posix())
         if nbytes != src.stat().st_size:
             log.warn(
@@ -99,17 +98,17 @@ class Client(internal.StorageInterface):
         """Overrides the corresponding method in the parent class."""
         allDirs = [
             pathlib.Path(d).relative_to(self.__bucket / prefix)
-            for d in self.__fs.glob(f"{self.__bucket}/{prefix}/{internal.IT_FOLDER_GLOBSTR}")
+            for d in self.__fs.glob(f"{self.__bucket}/{prefix}/{internal.IT_FOLDER_GLOBSTR_RAW}")
             if self.__fs.isdir(d)
         ]
 
         # Get the initTime from the folder pattern
         initTimes = set()
         for dir in allDirs:
-            if dir.match(internal.IT_FOLDER_GLOBSTR):
+            if dir.match(internal.IT_FOLDER_GLOBSTR_RAW):
                 try:
                     # Try to parse the folder name as a datetime
-                    ddt = dt.datetime.strptime(dir.as_posix(), internal.IT_FOLDER_FMTSTR).replace(
+                    ddt = dt.datetime.strptime(dir.as_posix(), internal.IT_FOLDER_STRUCTURE_RAW).replace(
                         tzinfo=dt.UTC,
                     )
                     initTimes.add(ddt)
@@ -128,33 +127,33 @@ class Client(internal.StorageInterface):
         )
         return sortedInitTimes
 
-    def copyITFolderToTemp(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
+    def copyITFolderToCache(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         """Overrides the corresponding method in the parent class."""
-        initTimeDirPath = self.__bucket / prefix / it.strftime(internal.IT_FOLDER_FMTSTR)
+        initTimeDirPath = self.__bucket / prefix / it.strftime(internal.IT_FOLDER_STRUCTURE_RAW)
         paths = [
             pathlib.Path(p).relative_to(self.__bucket)
             for p in self.__fs.ls(initTimeDirPath.as_posix())
         ]
 
         log.debug(
-            event="copying it folder to temporary files",
-            inittime=it.strftime(internal.IT_FOLDER_FMTSTR),
+            event="copying it folder to cache",
+            inittime=it.strftime(internal.IT_FOLDER_STRUCTURE_RAW),
             numfiles=len(paths),
         )
 
-        # Read all files into temporary files
-        tempPaths: list[pathlib.Path] = []
+        # Read all files into cache
+        cachedPaths: list[pathlib.Path] = []
         for path in paths:
-            tfp: pathlib.Path = internal.TMP_DIR / path.name
+            cfp: pathlib.Path = internal.rawCachePath(it=it, filename=path.name)
 
-            # Use existing temp file if it already exists in the temp dir
-            if tfp.exists() and tfp.stat().st_size > 0:
+            # Use existing cached file if it exists and is not empty
+            if cfp.exists() and cfp.stat().st_size > 0:
                 log.debug(
-                    event="file already exists in temporary directory, skipping",
+                    event="file already exists in cache, skipping",
                     filepath=path.as_posix(),
-                    temppath=tfp.as_posix(),
+                    cachepath=cfp.as_posix(),
                 )
-                tempPaths.append(tfp)
+                cachedPaths.append(cfp)
                 continue
 
             # Don't copy file from the store if it is empty
@@ -168,21 +167,21 @@ class Client(internal.StorageInterface):
                 )
                 continue
 
-            # Copy the file from the store to a temporary file
+            # Copy the file from the store to cache
             with self.__fs.open(path=(self.__bucket / path).as_posix(), mode="rb") as infile:
-                with tfp.open("wb") as tmpfile:
+                with cfp.open("wb") as tmpfile:
                     for chunk in iter(lambda: infile.read(16 * 1024), b""):
                         tmpfile.write(chunk)
                         tmpfile.flush()
-                tempPaths.append(tfp)
+                cachedPaths.append(cfp)
 
         log.debug(
-            event="copied it folder to temporary files",
-            nbytes=[p.stat().st_size for p in tempPaths],
+            event="copied it folder to cache",
+            nbytes=[p.stat().st_size for p in cachedPaths],
             inittime=it.strftime("%Y-%m-%d %H:%M"),
         )
 
-        return tempPaths
+        return cachedPaths
 
     def delete(self, *, p: pathlib.Path) -> None:
         """Overrides the corresponding method in the parent class."""
