@@ -359,7 +359,7 @@ def _cacheAsZipZarr(ds: xr.Dataset) -> pathlib.Path:
     # Get the name of the zarr file from the inittime and the zarr format string
     dt64: np.datetime64 = ds.coords["init_time"].values[0]
     initTime: dt.datetime = dt.datetime.fromtimestamp(dt64.astype(int) / 1e9, tz=dt.UTC)
-    cachePath: pathlib.Path = internal.zarrCachePath(it=initTime).replace(".zarr", ".zarr.zip")
+    cachePath: pathlib.Path = internal.zarrCachePath(it=initTime).with_suffix(".zarr.zip")
     # Delete the cached zarr if it already exists
     if cachePath.exists():
         cachePath.unlink()

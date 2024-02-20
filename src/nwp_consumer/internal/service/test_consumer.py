@@ -86,10 +86,13 @@ class DummyFetcher(internal.FetcherInterface):
         *,
         fi: internal.FileInfoModel,
     ) -> tuple[internal.FileInfoModel, pathlib.Path]:
-        return fi, pathlib.Path(f"{fi.it():%Y/%m/%d/%H%M}/{fi.filename()}")
+        return fi, pathlib.Path(f"{internal.CACHE_DIR_RAW}/{fi.it():%Y/%m/%d/%H%M}/{fi.filename()}")
 
     def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:
-        initTime = dt.datetime.strptime(p.parent.as_posix(), "%Y/%m/%d/%H%M").replace(tzinfo=dt.UTC)
+        initTime = dt.datetime.strptime(
+            p.parent.relative_to(internal.CACHE_DIR_RAW).as_posix(),
+            "%Y/%m/%d/%H%M",
+        ).replace(tzinfo=dt.UTC)
         return xr.Dataset(
             data_vars={
                 "UKV": (
@@ -155,7 +158,9 @@ class TestNWPConsumerService(unittest.TestCase):
 
 class TestCacheAsZipZarr(unittest.TestCase):
     def test_createsValidZipZarr(self) -> None:
-        ds = DummyFetcher().mapCachedRaw(p=pathlib.Path("2021/01/01/0000/dswrf.grib"))
+        ds = DummyFetcher().mapCachedRaw(
+            p=pathlib.Path(f"{internal.CACHE_DIR_RAW}/2021/01/01/0000/dswrf.grib"),
+        )
         file = _cacheAsZipZarr(ds=ds)
         outds = xr.open_zarr(f"zip::{file.as_posix()}")
         self.assertEqual(ds.dims, outds.dims)
