@@ -431,10 +431,11 @@ def _dataQualityFilter(ds: xr.Dataset) -> bool:
 def _mergeDatasets(datasets: list[xr.Dataset]) -> xr.Dataset:
     """Merge a list of datasets into a single dataset."""
     try:
-        return xr.merge(objects=datasets, combine_attrs="drop_conflicts")
-    except (xr.core.merge.MergeError, ValueError):
+        ds: xr.Dataset = xr.merge(objects=datasets, combine_attrs="drop_conflicts")
+    except Exception as e:
         log.warn(
             event="Merging datasets failed, trying to insert zeros for missing variables",
+            exception=str(e),
             dataset1={
                 "data_vars": list(datasets[0].data_vars.keys()),
                 "dimensions": datasets[0].sizes,
@@ -444,10 +445,11 @@ def _mergeDatasets(datasets: list[xr.Dataset]) -> xr.Dataset:
                 "dimensions": datasets[1].sizes,
             },
         )
-        return xr.merge(
+        ds = xr.merge(
             objects=datasets,
             combine_attrs="drop_conflicts",
             fill_value=0,
             compat="override",
         )
+    return ds
 
