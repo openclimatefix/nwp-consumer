@@ -432,7 +432,7 @@ def _mergeDatasets(datasets: list[xr.Dataset]) -> xr.Dataset:
     """Merge a list of datasets into a single dataset."""
     try:
         ds: xr.Dataset = xr.merge(objects=datasets, combine_attrs="drop_conflicts")
-    except Exception as e:
+    except (xr.MergeError, ValueError, Exception) as e:
         log.warn(
             event="Merging datasets failed, trying to insert zeros for missing variables",
             exception=str(e),
