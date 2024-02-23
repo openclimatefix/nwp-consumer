@@ -1,20 +1,42 @@
-"""Input covering an OCF-specific use case of pulling ECMWF data from an s3 bucket.
-
-The input files are extensionless, but are in fact grib files containing data for
-multiple regions.
-"""
+"""Input covering an OCF-specific use case of pulling ECMWF data from an s3 bucket."""
 
 import datetime as dt
 import pathlib
 
+import cfgrib
 import s3fs
 import structlog
+import xarray as xr
+import typing
 
 from nwp_consumer import internal
 
 from ._models import ECMWFLiveFileInfo
 
 log = structlog.getLogger()
+
+COORDINATE_ALLOW_LIST: typing.Sequence[str] = ("time", "step", "latitude", "longitude")
+
+PARAMETER_RENAME_MAP: dict[str, str] = {
+    "dsrp": internal.OCFShortName.DirectSolarRadiation.value,
+    "uvb": internal.OCFShortName.DownwardUVRadiationAtSurface.value,
+    "sd": internal.OCFShortName.SnowDepthWaterEquivalent.value,
+    "tcc": internal.OCFShortName.TotalCloudCover.value,
+    "u10": internal.OCFShortName.WindUComponentAGL.value,
+    "v10": internal.OCFShortName.WindVComponentAGL.value,
+    "t2m": internal.OCFShortName.TemperatureAGL.value,
+    "ssrd": internal.OCFShortName.DownwardShortWaveRadiationFlux.value,
+    "strd": internal.OCFShortName.DownwardLongWaveRadiationFlux.value,
+    "lcc": internal.OCFShortName.LowCloudCover.value,
+    "mcc": internal.OCFShortName.MediumCloudCover.value,
+    "hcc": internal.OCFShortName.HighCloudCover.value,
+    "vis": internal.OCFShortName.VisibilityAGL.value,
+    "u200": internal.OCFShortName.WindUComponent200m.value,
+    "v200": internal.OCFShortName.WindVComponent200m.value,
+    "u100": internal.OCFShortName.WindUComponent100m.value,
+    "v100": internal.OCFShortName.WindVComponent100m.value,
+    "tprate": internal.OCFShortName.RainPrecipitationRate.value,
+}
 
 
 class S3Client(internal.FetcherInterface):
@@ -49,7 +71,7 @@ class S3Client(internal.FetcherInterface):
             key: The AWS access key to use for authentication.
             secret: The AWS secret key to use for authentication.
             area: The area for which to fetch data.
-            hours: The number of hours to fetch data for.
+            endpointURL: The endpoint URL to use for the S3 connection.
         """
         if (key, secret) == ("", ""):
             log.info(
@@ -77,7 +99,9 @@ class S3Client(internal.FetcherInterface):
         return initTimeFiles
 
     def downloadToCache(
-        self, *, fi: internal.FileInfoModel
+        self,
+        *,
+        fi: internal.FileInfoModel,
     ) -> tuple[internal.FileInfoModel, pathlib.Path]:
         """Overrides the corresponding method in the parent class."""
         cfp: pathlib.Path = internal.rawCachePath(it=fi.it(), filename=fi.filename())
@@ -88,7 +112,7 @@ class S3Client(internal.FetcherInterface):
 
         if not cfp.exists():
             log.warn(event="Failed to download file", filepath=fi.filepath())
-            return pathlib.Path(), cfp
+            return fi, pathlib.Path()
 
         # Check the sizes are the same
         s3size = self.__fs.info((self.bucket / fi.filepath()).as_posix())["size"]
@@ -98,6 +122,63 @@ class S3Client(internal.FetcherInterface):
                 expected=s3size,
                 actual=cfp.stat().st_size,
             )
-            return pathlib.Path(), cfp
+            return fi, pathlib.Path()
 
         return fi, cfp
+
+    def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:
+        """Overrides the corresponding method in the parent class."""
+        all_dss: list[xr.Dataset] = cfgrib.open_datasets(p.as_posix())
+        area_dss: list[xr.Dataset] = _filterDatasetsByArea(all_dss, self.area)
+        ds: xr.Dataset = xr.merge(area_dss, compat="override", combine_attrs="drop_conflicts")
+        del area_dss, all_dss
+
+        # Rename the variables to the ocf names
+        # * Only do so if they exist in the dataset
+        for oldParamName, newParamName in PARAMETER_RENAME_MAP.items():
+            if oldParamName in ds:
+                ds = ds.rename({oldParamName: newParamName})
+
+        # Delete unwanted coordinates
+        ds = ds.drop_vars(
+            names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST],
+            errors="ignore",
+        )
+
+        # Convert to array with single "variable" dimension
+        ds = (
+            ds.rename({"time": "init_time"})
+            .expand_dims("init_time")
+            .to_array(dim="variable", name=f"ECMWF_{self.area}".upper())
+            .to_dataset()
+            .transpose("variable", "init_time", "step", "latitude", "longitude")
+            .sortby("step")
+            .sortby("variable")
+            .chunk(
+                {
+                    "init_time": 1,
+                    "step": -1,
+                    "variable": -1,
+                    "latitude": len(ds.latitude) // 2,
+                    "longitude": len(ds.longitude) // 2,
+                },
+            )
+        )
+
+        return ds
+
+    def getInitHours(self) -> list[int]:
+        """Overrides the corresponding method in the parent class."""
+        return [0, 6, 12, 18]
+
+
+
+def _filterDatasetsByArea(dss: list[xr.Dataset], area: str) -> list[xr.Dataset]:
+    """Filters a list of datasets by area."""
+    if area == "uk":
+        return list(filter(lambda ds: ds.coords["latitude"].as_numpy().max() == 60, dss))
+    elif area == "nw-india":
+        return list(filter(lambda ds: ds.coords["latitude"].as_numpy().max() == 31, dss))
+    else:
+        log.warn(event="Unknown area", area=area)
+        return []
