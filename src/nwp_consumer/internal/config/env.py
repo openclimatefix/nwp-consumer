@@ -89,6 +89,16 @@ class ECMWFMARSEnv(EnvParser):
     ECMWF_PARAMETER_GROUP: str = "default"
 
 
+class ECMWFS3Env(EnvParser):
+    """Config for ECMWF S3."""
+
+    AWS_S3_BUCKET: str
+    AWS_ACCESS_KEY: str = ""
+    AWS_ACCESS_SECRET: str = ""
+    AWS_REGION: str
+    ECMWF_AREA: str = "uk"
+
+
 class ICONEnv(EnvParser):
     """Config for ICON API."""
 

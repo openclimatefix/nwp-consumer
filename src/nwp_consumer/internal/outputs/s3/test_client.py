@@ -4,6 +4,7 @@ import unittest
 import uuid
 from pathlib import Path
 
+from botocore.client import BaseClient as BotocoreClient
 from botocore.session import Session
 from moto.server import ThreadedMotoServer
 
@@ -22,9 +23,9 @@ ZARR = Path("zarr")
 
 
 class TestS3Client(unittest.TestCase):
-    testS3 = None
-    bucket = None
-    server = None
+    testS3: BotocoreClient
+    client: Client
+    server: ThreadedMotoServer
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -71,11 +72,13 @@ class TestS3Client(unittest.TestCase):
 
     def test_exists(self) -> None:
         # Create a mock file in the raw directory
-        initTime = dt.datetime(2023, 1, 1, tzinfo=dt.timezone.utc)
+        initTime = dt.datetime(2023, 1, 1, tzinfo=dt.UTC)
         fileName = inspect.stack()[0][3] + ".grib"
         filePath = RAW / f"{initTime:%Y/%m/%d/%H%M}" / fileName
         self.testS3.put_object(
-            Bucket=BUCKET, Key=filePath.as_posix(), Body=bytes(fileName, "utf-8"),
+            Bucket=BUCKET,
+            Key=filePath.as_posix(),
+            Body=bytes(fileName, "utf-8"),
         )
 
         # Call the existsInRawDir method
@@ -97,7 +100,7 @@ class TestS3Client(unittest.TestCase):
         )
 
     def test_store(self) -> None:
-        initTime = dt.datetime(2023, 1, 2, tzinfo=dt.timezone.utc)
+        initTime = dt.datetime(2023, 1, 2, tzinfo=dt.UTC)
         fileName = inspect.stack()[0][3] + ".grib"
         dst = RAW / f"{initTime:%Y/%m/%d/%H%M}" / fileName
         src = internal.CACHE_DIR / f"nwpc-{uuid.uuid4()}"
@@ -122,10 +125,14 @@ class TestS3Client(unittest.TestCase):
     def test_listInitTimes(self) -> None:
         # Create mock folders/files in the raw directory
         self.testS3.put_object(
-            Bucket=BUCKET, Key=f"{RAW}/2023/01/03/0000/test_raw_file1.grib", Body=b"test_data",
+            Bucket=BUCKET,
+            Key=f"{RAW}/2023/01/03/0000/test_raw_file1.grib",
+            Body=b"test_data",
         )
         self.testS3.put_object(
-            Bucket=BUCKET, Key=f"{RAW}/2023/01/04/0300/test_raw_file2.grib", Body=b"test_data",
+            Bucket=BUCKET,
+            Key=f"{RAW}/2023/01/04/0300/test_raw_file2.grib",
+            Body=b"test_data",
         )
 
         # Call the listInitTimesInRawDir method
@@ -133,8 +140,8 @@ class TestS3Client(unittest.TestCase):
 
         # Verify the returned list of init times
         expected_init_times = [
-            dt.datetime(2023, 1, 3, 0, 0, tzinfo=dt.timezone.utc),
-            dt.datetime(2023, 1, 4, 3, 0, tzinfo=dt.timezone.utc),
+            dt.datetime(2023, 1, 3, 0, 0, tzinfo=dt.UTC),
+            dt.datetime(2023, 1, 4, 3, 0, tzinfo=dt.UTC),
         ]
         self.assertEqual(init_times, expected_init_times)
 
@@ -150,15 +157,23 @@ class TestS3Client(unittest.TestCase):
 
     def test_copyITFolderToCache(self) -> None:
         # Make some files in the raw directory
-        initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc)
+        initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.UTC)
         files = [
-            RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_copyITFolderToTemp1.grib",
-            RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_copyITFolderToTemp2.grib",
-            RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_copyITFolderToTemp3.grib",
+            RAW
+            / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}"
+            / "test_copyITFolderToTemp1.grib",
+            RAW
+            / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}"
+            / "test_copyITFolderToTemp2.grib",
+            RAW
+            / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}"
+            / "test_copyITFolderToTemp3.grib",
         ]
         for f in files:
             self.testS3.put_object(
-                Bucket=BUCKET, Key=f.as_posix(), Body=bytes("test_file_contents", "utf-8"),
+                Bucket=BUCKET,
+                Key=f.as_posix(),
+                Body=bytes("test_file_contents", "utf-8"),
             )
 
         # Call the copyItFolderToCache method
@@ -176,7 +191,7 @@ class TestS3Client(unittest.TestCase):
             self.testS3.delete_object(Bucket=BUCKET, Key=f.as_posix())
 
         # Make some more RAW files in the raw directory AND in the cache directory
-        initTime2 = dt.datetime(2023, 1, 1, 6, tzinfo=dt.timezone.utc)
+        initTime2 = dt.datetime(2023, 1, 1, 6, tzinfo=dt.UTC)
         files2 = [
             RAW / f"{initTime2:%Y/%m/%d/%H%M}" / "test_copyITFolderToTemp1.grib",
             RAW / f"{initTime2:%Y/%m/%d/%H%M}" / "test_copyITFolderToTemp2.grib",
@@ -184,7 +199,9 @@ class TestS3Client(unittest.TestCase):
         ]
         for f in files2:
             self.testS3.put_object(
-                Bucket=BUCKET, Key=f.as_posix(), Body=bytes("test_file_contents", "utf-8"),
+                Bucket=BUCKET,
+                Key=f.as_posix(),
+                Body=bytes("test_file_contents", "utf-8"),
             )
             with open(internal.CACHE_DIR / f.name, "w") as f:
                 f.write("test_file_contents")
@@ -200,10 +217,12 @@ class TestS3Client(unittest.TestCase):
     @unittest.skip("Broken on github ci")
     def test_delete(self) -> None:
         # Create a file in the raw directory
-        initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc)
+        initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.UTC)
         path = RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_delete.grib"
         self.testS3.put_object(
-            Bucket=BUCKET, Key=path.as_posix(), Body=bytes("test_delete", "utf-8"),
+            Bucket=BUCKET,
+            Key=path.as_posix(),
+            Body=bytes("test_delete", "utf-8"),
         )
 
         # Delete the file using the function

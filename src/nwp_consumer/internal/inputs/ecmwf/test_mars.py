@@ -4,11 +4,11 @@ import datetime as dt
 import pathlib
 import unittest.mock
 
-from .mars import PARAMETER_ECMWFCODE_MAP, Client, _parseAvaliableParams
+from .mars import PARAMETER_ECMWFCODE_MAP, MARSClient, _parseAvaliableParams
 
 # --------- Test setup --------- #
 
-testMARSClient = Client(
+testMARSClient = MARSClient(
     area="uk",
     hours=48,
 )
@@ -51,9 +51,9 @@ class TestECMWFMARSClient(unittest.TestCase):
 
     def test_init(self) -> None:
         with self.assertRaises(KeyError):
-            _ = Client(area="not a valid area", hours=48)
+            _ = MARSClient(area="not a valid area", hours=48)
         with self.assertRaises(KeyError):
-            _ = Client(area="uk", hours=100)
+            _ = MARSClient(area="uk", hours=100)
 
     def test_mapCachedRaw(self) -> None:
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_2params.grib"
@@ -77,7 +77,7 @@ class TestECMWFMARSClient(unittest.TestCase):
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_2params.grib"
 
         # Test that the request is build correctly for the default client
-        testDefaultClient = Client()
+        testDefaultClient = MARSClient()
         out = testDefaultClient._buildMarsRequest(
             list_only=True,
             target=testFilePath.as_posix(),
@@ -99,7 +99,7 @@ class TestECMWFMARSClient(unittest.TestCase):
 
         # Test that the request is build correctly with the basic parameters
 
-        testBasicClient = Client(
+        testBasicClient = MARSClient(
             area="uk",
             hours=4,
             param_group="basic",
