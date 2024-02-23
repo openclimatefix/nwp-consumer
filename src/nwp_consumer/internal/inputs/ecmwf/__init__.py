@@ -1,6 +1,7 @@
 __all__ = [
-    "mars",
-    "s3",
+    "MARSClient",
+    "S3Client",
 ]
 
-from . import mars, s3
+from .mars import MARSClient
+from .s3 import S3Client

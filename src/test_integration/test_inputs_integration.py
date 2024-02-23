@@ -60,7 +60,7 @@ class TestListRawFilesForInitTime(unittest.TestCase):
             tzinfo=dt.UTC,
         )
         c = config.ECMWFMARSEnv()
-        ecmwfMarsClient = inputs.ecmwf.mars.Client(
+        ecmwfMarsClient = inputs.ecmwf.mars.MARSClient(
             area=c.ECMWF_AREA,
             hours=4,
         )

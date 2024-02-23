@@ -19,7 +19,7 @@ Commands:
 Options:
   --from=FROM         Start datetime in YYYY-MM-DDTHH:MM or YYYY-MM-DD format [default: today].
   --to=TO             End datetime in YYYY-MM-DD or YYYY-MM-DDTHH:MM format.
-  --source=SOURCE     Data source (ceda/metoffice/ecmwf-mars/icon/cmc).
+  --source=SOURCE     Data source (ceda/metoffice/ecmwf-mars/ecmwf-s3/icon/cmc).
   --sink=SINK         Data sink (local/s3/huggingface) [default: local].
   --rsink=RSINK       Data sink for raw data, if different (local/s3/huggingface) [default: SINK].
   --rdir=RDIR         Directory of raw data store [default: /tmp/raw].
@@ -214,33 +214,42 @@ def _parse_source(source: str) -> internal.FetcherInterface:
 
     match source:
         case "ceda":
-            env = config.CEDAEnv()
+            env: config.CEDAEnv = config.CEDAEnv()
             fetcher = inputs.ceda.Client(
                 ftpUsername=env.CEDA_FTP_USER,
                 ftpPassword=env.CEDA_FTP_PASS,
             )
         case "metoffice":
-            env = config.MetOfficeEnv()
+            env: config.MetOfficeEnv = config.MetOfficeEnv()
             fetcher = inputs.metoffice.Client(
                 orderID=env.METOFFICE_ORDER_ID,
                 apiKey=env.METOFFICE_API_KEY,
             )
         case "ecmwf-mars":
-            env = config.ECMWFMARSEnv()
-            fetcher = inputs.ecmwf.mars.Client(
+            env: config.ECMWFMARSEnv = config.ECMWFMARSEnv()
+            fetcher = inputs.ecmwf.MARSClient(
                 area=env.ECMWF_AREA,
                 hours=env.ECMWF_HOURS,
                 param_group=env.ECMWF_PARAMETER_GROUP,
             )
+        case "ecmwf-s3":
+            env: config.ECMWFS3Env = config.ECMWFS3Env()
+            fetcher = inputs.ecmwf.S3Client(
+                area=env.ECMWF_AREA,
+                bucket=env.AWS_S3_BUCKET,
+                region=env.AWS_REGION,
+                key=env.AWS_ACCESS_KEY,
+                secret=env.AWS_ACCESS_SECRET,
+            )
         case "icon":
-            env = config.ICONEnv()
+            env: config.ICONEnv = config.ICONEnv()
             fetcher = inputs.icon.Client(
                 model=env.ICON_MODEL,
                 param_group=env.ICON_PARAMETER_GROUP,
                 hours=env.ICON_HOURS,
             )
         case "cmc":
-            env = config.CMCEnv()
+            env: config.CMCEnv = config.CMCEnv()
             fetcher = inputs.cmc.Client(
                 param_group=env.CMC_PARAMETER_GROUP,
                 hours=env.CMC_HOURS,
