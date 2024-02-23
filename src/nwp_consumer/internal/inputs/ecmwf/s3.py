@@ -2,12 +2,12 @@
 
 import datetime as dt
 import pathlib
+import typing
 
 import cfgrib
 import s3fs
 import structlog
 import xarray as xr
-import typing
 
 from nwp_consumer import internal
 
@@ -105,7 +105,9 @@ class S3Client(internal.FetcherInterface):
     ) -> tuple[internal.FileInfoModel, pathlib.Path]:
         """Overrides the corresponding method in the parent class."""
         cfp: pathlib.Path = internal.rawCachePath(it=fi.it(), filename=fi.filename())
-        with open(cfp, "wb") as f, self.__fs.open(fi.filename(), "rb") as s:
+        with open(cfp, "wb") as f, self.__fs.open(
+            (self.bucket / fi.filepath()).as_posix(), "rb"
+        ) as s:
             for chunk in iter(lambda: s.read(12 * 1024), b""):
                 f.write(chunk)
                 f.flush()
@@ -130,7 +132,7 @@ class S3Client(internal.FetcherInterface):
         """Overrides the corresponding method in the parent class."""
         all_dss: list[xr.Dataset] = cfgrib.open_datasets(p.as_posix())
         area_dss: list[xr.Dataset] = _filterDatasetsByArea(all_dss, self.area)
-        ds: xr.Dataset = xr.merge(area_dss, compat="override", combine_attrs="drop_conflicts")
+        ds: xr.Dataset = xr.merge(area_dss, combine_attrs="drop_conflicts")
         del area_dss, all_dss
 
         # Rename the variables to the ocf names
@@ -149,6 +151,7 @@ class S3Client(internal.FetcherInterface):
         ds = (
             ds.rename({"time": "init_time"})
             .expand_dims("init_time")
+            .expand_dims("step")
             .to_array(dim="variable", name=f"ECMWF_{self.area}".upper())
             .to_dataset()
             .transpose("variable", "init_time", "step", "latitude", "longitude")
@@ -170,7 +173,6 @@ class S3Client(internal.FetcherInterface):
     def getInitHours(self) -> list[int]:
         """Overrides the corresponding method in the parent class."""
         return [0, 6, 12, 18]
-
 
 
 def _filterDatasetsByArea(dss: list[xr.Dataset], area: str) -> list[xr.Dataset]:
