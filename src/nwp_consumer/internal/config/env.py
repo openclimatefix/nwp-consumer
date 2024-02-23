@@ -92,10 +92,10 @@ class ECMWFMARSEnv(EnvParser):
 class ECMWFS3Env(EnvParser):
     """Config for ECMWF S3."""
 
-    AWS_S3_BUCKET: str
-    AWS_ACCESS_KEY: str = ""
-    AWS_ACCESS_SECRET: str = ""
-    AWS_REGION: str
+    ECMWF_AWS_S3_BUCKET: str
+    ECMWF_AWS_ACCESS_KEY: str = ""
+    ECMWF_AWS_ACCESS_SECRET: str = ""
+    ECMWF_AWS_REGION: str
     ECMWF_AREA: str = "uk"
 
 

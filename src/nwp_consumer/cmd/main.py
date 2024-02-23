@@ -236,10 +236,10 @@ def _parse_source(source: str) -> internal.FetcherInterface:
             env: config.ECMWFS3Env = config.ECMWFS3Env()
             fetcher = inputs.ecmwf.S3Client(
                 area=env.ECMWF_AREA,
-                bucket=env.AWS_S3_BUCKET,
-                region=env.AWS_REGION,
-                key=env.AWS_ACCESS_KEY,
-                secret=env.AWS_ACCESS_SECRET,
+                bucket=env.ECMWF_AWS_S3_BUCKET,
+                region=env.ECMWF_AWS_REGION,
+                key=env.ECMWF_AWS_ACCESS_KEY,
+                secret=env.ECMWF_AWS_ACCESS_SECRET,
             )
         case "icon":
             env: config.ICONEnv = config.ICONEnv()
