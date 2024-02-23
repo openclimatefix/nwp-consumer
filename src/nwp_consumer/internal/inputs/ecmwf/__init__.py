@@ -1,3 +1,6 @@
-__all__ = ['mars']
+__all__ = [
+    "mars",
+    "s3",
+]
 
-from . import mars
+from . import mars, s3

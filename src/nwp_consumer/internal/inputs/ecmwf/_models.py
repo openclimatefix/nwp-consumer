@@ -32,3 +32,39 @@ class ECMWFMarsFileInfo(internal.FileInfoModel):
     def steps(self) -> list[int]:
         """Overrides the corresponding method in the parent class."""
         raise NotImplementedError()
+
+
+@dataclass
+class ECMWFLiveFileInfo(internal.FileInfoModel):
+    """Dataclass for ECMWF live data files.
+
+    Live ECMWF files are extensionless grib files named e.g. 'A1D02200000022001001'.
+    The files contain data for two areas. The names contain the following information
+
+    A1D%m%d%H%M%m'%d'%H'%M'1, where the first time is the initialisation time
+    and the second the target time.
+    """
+
+    fname: str
+
+    def filename(self) -> str:
+        """Overrides the corresponding method in the parent class."""
+        return self.fname + ".grib"
+
+    def filepath(self) -> str:
+        """Overrides the corresponding method in the parent class."""
+        return f"ecmwf/{self.fname}"
+
+    def it(self) -> dt.datetime:
+        """Overrides the corresponding method in the parent class."""
+        return dt.datetime.strptime(self.fname[3:10], "%m%d%H%M").replace(
+            year=dt.datetime.now(tz=dt.UTC).year, tzinfo=dt.UTC,
+        )
+
+    def variables(self) -> list[str]:
+        """Overrides the corresponding method in the parent class."""
+        raise NotImplementedError()
+
+    def steps(self) -> list[int]:
+        """Overrides the corresponding method in the parent class."""
+        raise NotImplementedError()
