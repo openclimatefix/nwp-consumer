@@ -93,8 +93,11 @@ class S3Client(internal.FetcherInterface):
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
         """Overrides the corresponding method in the parent class."""
         allFiles: list[str] = self.__fs.ls((self.bucket / self.bucketPath).as_posix())
+        # List items are of the form "bucket/folder/filename, so extract just the filename
         initTimeFiles: list[internal.FileInfoModel] = [
-            ECMWFLiveFileInfo(fname=file) for file in allFiles if it.strftime("A1D%m%d%H") in file
+            ECMWFLiveFileInfo(fname=pathlib.Path(file).name)
+            for file in allFiles
+            if it.strftime("A1D%m%d%H") in file
         ]
         return initTimeFiles
 
@@ -106,7 +109,8 @@ class S3Client(internal.FetcherInterface):
         """Overrides the corresponding method in the parent class."""
         cfp: pathlib.Path = internal.rawCachePath(it=fi.it(), filename=fi.filename())
         with open(cfp, "wb") as f, self.__fs.open(
-            (self.bucket / fi.filepath()).as_posix(), "rb"
+            (self.bucket / fi.filepath()).as_posix(),
+            "rb",
         ) as s:
             for chunk in iter(lambda: s.read(12 * 1024), b""):
                 f.write(chunk)
