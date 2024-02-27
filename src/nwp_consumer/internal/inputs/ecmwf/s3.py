@@ -22,6 +22,7 @@ PARAMETER_RENAME_MAP: dict[str, str] = {
     "uvb": internal.OCFShortName.DownwardUVRadiationAtSurface.value,
     "sd": internal.OCFShortName.SnowDepthWaterEquivalent.value,
     "tcc": internal.OCFShortName.TotalCloudCover.value,
+    "clt": internal.OCFShortName.TotalCloudCover.value,
     "u10": internal.OCFShortName.WindUComponentAGL.value,
     "v10": internal.OCFShortName.WindVComponentAGL.value,
     "t2m": internal.OCFShortName.TemperatureAGL.value,
