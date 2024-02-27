@@ -115,6 +115,8 @@ class TestS3Client(unittest.TestCase):
         )
         self.assertEqual(len(out.coords["variable"].to_numpy()), 18)
         self.assertEqual(out.coords["latitude"].to_numpy().max(), 60)
+        self.assertIn("t", list(out.coords["variable"].to_numpy()))
+        self.assertNotIn("t2m", list(out.coords["variable"].to_numpy()))
 
         # Check that setting the area maps only the relevant data
         indiaClient = S3Client(
