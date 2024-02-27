@@ -21,6 +21,7 @@ log = structlog.getLogger()
 
 PARAMETER_RENAME_MAP: dict[str, str] = {
     "tas": internal.OCFShortName.TemperatureAGL.value,
+    "t2m": internal.OCFShortName.TemperatureAGL.value,
     "uas": internal.OCFShortName.WindUComponentAGL.value,
     "vas": internal.OCFShortName.WindVComponentAGL.value,
     "dsrp": internal.OCFShortName.DirectSolarRadiation.value,
