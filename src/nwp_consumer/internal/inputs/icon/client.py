@@ -76,16 +76,28 @@ class Client(internal.FetcherInterface):
             case ("basic", "global"):
                 self.parameters = ["t_2m", "asob_s", "clat", "clon"]
                 self.conform = True
+            case ("single-level", "europe"):
+                self.parameters = EU_SL_VARS
+                self.conform = False
+            case ("single-level", "global"):
+                self.parameters = [*GLOBAL_SL_VARS, "clat", "clon"]
+                self.conform = False
+            case ("multi-level", "europe"):
+                self.parameters = EU_ML_VARS
+                self.conform = False
+            case ("multi-level", "global"):
+                self.parameters = [*GLOBAL_ML_VARS, "clat", "clon"]
+                self.conform = False
             case ("full", "europe"):
                 self.parameters = EU_SL_VARS + EU_ML_VARS
                 self.conform = False
             case ("full", "global"):
-                self.parameters = GLOBAL_SL_VARS + GLOBAL_ML_VARS + ["clat", "clon"]
+                self.parameters = [*GLOBAL_SL_VARS, *GLOBAL_ML_VARS, "clat", "clon"]
                 self.conform = False
             case (_, _):
                 raise ValueError(
                     f"unknown parameter group {param_group}."
-                    "Valid groups are 'default', 'full', 'basic'",
+                    "Valid groups are 'default', 'full', 'basic', 'single-level', 'multi-level'",
                 )
 
         self.model = model
