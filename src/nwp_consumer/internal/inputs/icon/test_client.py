@@ -3,6 +3,8 @@ import pathlib
 import unittest
 from typing import TYPE_CHECKING
 
+import xarray as xr
+
 if TYPE_CHECKING:
     from ._models import IconFileInfo
 
@@ -13,39 +15,55 @@ testClient = Client(model="global")
 
 class TestClient(unittest.TestCase):
     def test_mapCachedRaw(self) -> None:
-        # Test with global file
-        testFilePath: pathlib.Path = (
-            pathlib.Path(__file__).parent / "test_icon_global_001_CLCL.grib2"
-        )
-        out = testClient.mapCachedRaw(p=testFilePath)
+        tests = [
+            {
+                "filename": "test_icon_global_001_CLCL.grib2",
+                "expected_dims": ("variable", "init_time", "step", "values"),
+                "expected_var": "ccl",
+            },
+            {
+                "filename": "test_icon_europe_001_CLCL.grib2",
+                "expected_dims": ("variable", "init_time", "step", "latitude", "longitude"),
+                "expected_var": "ccl",
+            },
+            {
+                "filename": "test_icon_global_001_HTOP_CON.grib2",
+                "expected_dims": ("variable", "init_time", "step", "values"),
+                "expected_var": "hcct",
+            },
+            {
+                "filename": "test_icon_global_001_CLCT_MOD.grib2",
+                "expected_dims": ("variable", "init_time", "step", "values"),
+                "expected_var": "CLCT_MOD",
+            },
+        ]
 
-        # Check latitude and longitude are injected
-        self.assertTrue("latitude" in out.coords)
-        self.assertTrue("longitude" in out.coords)
-        # Check that the dimensions are correctly ordered and renamed
-        self.assertEqual(
-            out[next(iter(out.data_vars.keys()))].dims,
-            ("variable", "init_time", "step", "values"),
-        )
-        # Check that the parameter is renamed
-        self.assertEqual(out["variable"].values[0], "ccl")
+        for tst in tests:
+            with self.subTest(f"test file {tst['filename']}"):
+                out = testClient.mapCachedRaw(p=pathlib.Path(__file__).parent / tst["filename"])
 
-        # Test with europe file
-        testFilePath: pathlib.Path = (
-            pathlib.Path(__file__).parent / "test_icon_europe_001_CLCL.grib2"
-        )
-        out = testClient.mapCachedRaw(p=testFilePath)
+                # Check latitude and longitude are injected
+                self.assertTrue("latitude" in out.coords)
+                self.assertTrue("longitude" in out.coords)
+                # Check that the dimensions are correctly ordered and renamed
+                self.assertEqual(
+                    out[next(iter(out.data_vars.keys()))].dims,
+                    tst["expected_dims"],
+                )
+                # Check that the parameter is renamed
+                self.assertEqual(out["variable"].values[0], tst["expected_var"])
 
-        # Check latitude and longitude are present
-        self.assertTrue("latitude" in out.coords)
-        self.assertTrue("longitude" in out.coords)
-        # Check that the dimensions are correctly ordered and renamed
-        self.assertEqual(
-            out[next(iter(out.data_vars.keys()))].dims,
-            ("variable", "init_time", "step", "latitude", "longitude"),
+    def test_mergeRaw(self) -> None:
+        ds1 = testClient.mapCachedRaw(
+            p=pathlib.Path(__file__).parent / "test_icon_global_001_CLCT_MOD.grib2"
         )
-        # Check that the parameter is renamed
-        self.assertEqual(out["variable"].values[0], "ccl")
+        ds2 = testClient.mapCachedRaw(
+            p=pathlib.Path(__file__).parent / "test_icon_global_001_HTOP_CON.grib2"
+        )
+
+        ds = xr.merge([ds1, ds2])
+        print(ds)
+        self.assertTrue(False)
 
 
 class TestParseIconFilename(unittest.TestCase):
@@ -71,7 +89,7 @@ class TestParseIconFilename(unittest.TestCase):
         )
         self.assertIsNotNone(out)
         self.assertEqual(out.filename(), filename.removesuffix(".bz2"))
-        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
+        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.UTC))
 
     def test_parsesModelLevel(self) -> None:
         filename: str = "icon_global_icosahedral_model-level_2020090100_048_32_CLCL.grib2.bz2"
@@ -83,7 +101,7 @@ class TestParseIconFilename(unittest.TestCase):
         )
         self.assertIsNotNone(out)
         self.assertEqual(out.filename(), filename.removesuffix(".bz2"))
-        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
+        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.UTC))
 
         out: IconFileInfo | None = _parseIconFilename(
             name=filename,
@@ -102,7 +120,7 @@ class TestParseIconFilename(unittest.TestCase):
         )
         self.assertIsNotNone(out)
         self.assertEqual(out.filename(), filename.removesuffix(".bz2"))
-        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.timezone.utc))
+        self.assertEqual(out.it(), dt.datetime(2020, 9, 1, 0, tzinfo=dt.UTC))
 
         out: IconFileInfo | None = _parseIconFilename(
             name=filename,
