@@ -436,14 +436,11 @@ def _mergeDatasets(datasets: list[xr.Dataset]) -> xr.Dataset:
         log.warn(
             event="Merging datasets failed, trying to insert zeros for missing variables",
             exception=str(e),
-            dataset1={
-                "data_vars": list(datasets[0].data_vars.keys()),
-                "dimensions": datasets[0].sizes,
-            },
-            dataset2={
-                "data_vars": list(datasets[1].data_vars.keys()),
-                "dimensions": datasets[1].sizes,
-            },
+            numdatasets=len(datasets),
+            datasets={i: {
+                "data_vars": list(datasets[i].data_vars.keys()),
+                "dimensions": datasets[i].sizes,
+            } for i, ds in enumerate(datasets)},
         )
         ds = xr.merge(
             objects=datasets,
