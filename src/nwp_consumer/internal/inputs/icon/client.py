@@ -206,6 +206,7 @@ class Client(internal.FetcherInterface):
                     "latitude": "auto",
                     "longitude": "auto",
                 },
+                backend_kwargs={"indexpath": ""},
             )
         except Exception as e:
             log.warn(
