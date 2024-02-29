@@ -77,6 +77,7 @@ class TestS3Client(unittest.TestCase):
             "A1D01010000010102011",
             "A1D01010000010103001",
             "A1D01011200010112001",  # Different init time
+            "A1D02191200010112001",  # Leap year on 2024-02-29
         ]
         for file in files:
             # Create files in the mock bucket
