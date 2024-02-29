@@ -188,7 +188,7 @@ class Client(internal.FetcherInterface):
             )
             return xr.Dataset()
 
-        if p.stem.endswith("_CLAT") or p.stem.endswith("_CLON"):
+        if "_CLAT" in p.stem or "_CLON" in p.stem:
             # Ignore the latitude and longitude files
             return xr.Dataset()
 
@@ -206,6 +206,7 @@ class Client(internal.FetcherInterface):
                     "latitude": "auto",
                     "longitude": "auto",
                 },
+                backend_kwargs={"indexpath": ""},
             )
         except Exception as e:
             log.warn(
@@ -289,7 +290,7 @@ class Client(internal.FetcherInterface):
                 ds.rename({"time": "init_time"})
                 .expand_dims("init_time")
                 .expand_dims("step")
-                .transpose( "init_time", "step", ...)
+                .transpose("init_time", "step", ...)
                 .sortby("step")
                 .chunk(
                     {
