@@ -204,7 +204,7 @@ class MARSClient(internal.FetcherInterface):
         self,
         *,
         fi: internal.FileInfoModel,
-    ) -> tuple[internal.FileInfoModel, pathlib.Path]:
+    ) -> pathlib.Path:
         cfp: pathlib.Path = internal.rawCachePath(it=fi.it(), filename=fi.filename())
 
         req: str = self._buildMarsRequest(
@@ -225,11 +225,11 @@ class MARSClient(internal.FetcherInterface):
             self.server.execute(req=req, target=cfp.as_posix())
         except ecmwfapi.api.APIException as e:
             log.warn("error fetching ECMWF MARS data", error=e)
-            return fi, pathlib.Path()
+            return pathlib.Path()
 
         if cfp.exists() is False:
             log.warn("ECMWF data file does not exist", filepath=cfp.as_posix())
-            return fi, pathlib.Path()
+            return pathlib.Path()
 
         log.debug(
             event="fetched all data from MARS",
@@ -238,7 +238,7 @@ class MARSClient(internal.FetcherInterface):
             nbytes=cfp.stat().st_size,
         )
 
-        return fi, cfp
+        return cfp
 
     def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
         if p.suffix != ".grib":

@@ -10,8 +10,8 @@ Usage:
   nwp-consumer --version
 
 Commands:
-  download            Download raw data from source to sink
-  convert             Convert raw data present in sink
+  download            Download raw data from source to raw sink
+  convert             Convert raw data present in raw sink to zarr sink
   consume             Download and convert raw data from source to sink
   check               Perform a healthcheck on the service
   env                 Print the unset environment variables required by the source/sink

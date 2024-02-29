@@ -13,6 +13,7 @@ import structlog
 import xarray as xr
 
 from nwp_consumer import internal
+from nwp_consumer.internal import config
 
 from ._models import CEDAFileInfo, CEDAResponse
 
@@ -125,11 +126,11 @@ class Client(internal.FetcherInterface):
 
     def downloadToCache(
         self, *, fi: internal.FileInfoModel,
-    ) -> tuple[internal.FileInfoModel, pathlib.Path]:
+    ) -> pathlib.Path:
         """Overrides corresponding parent method."""
         if self.__password == "" or self.__username == "":
             log.error(event="all ceda credentials not provided")
-            return fi, pathlib.Path()
+            return pathlib.Path()
 
         log.debug(event="requesting download of file", file=fi.filename(), path=fi.filepath())
         url: str = f"{self.__ftpBase}/{fi.filepath()}"
@@ -142,7 +143,7 @@ class Client(internal.FetcherInterface):
                 filename=fi.filename(),
                 error=e,
             )
-            return fi, pathlib.Path()
+            return pathlib.Path()
 
         # Stream the filedata into a cached file
         cfp: pathlib.Path = internal.rawCachePath(it=fi.it(), filename=fi.filename())
@@ -159,7 +160,7 @@ class Client(internal.FetcherInterface):
             nbytes=cfp.stat().st_size,
         )
 
-        return fi, cfp
+        return cfp
 
 
     def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:

@@ -32,9 +32,8 @@ class Client(internal.StorageInterface):
             return dst
 
         dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(src=src, dst=dst)
-        # Delete cached file to avoid local duplication of file.
-        src.unlink(missing_ok=True)
+        shutil.copy(src=src, dst=dst)
+
         nbytes = os.stat(dst).st_size
         if nbytes != dst.stat().st_size:
             log.warn(

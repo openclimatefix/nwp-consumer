@@ -246,7 +246,7 @@ class Client(internal.FetcherInterface):
         self,
         *,
         fi: internal.FileInfoModel,
-    ) -> tuple[internal.FileInfoModel, pathlib.Path]:
+    ) -> pathlib.Path:
         log.debug(event="requesting download of file", file=fi.filename(), path=fi.filepath())
         # Extract the bz2 file when downloading
         cfp: pathlib.Path = internal.rawCachePath(it=fi.it(), filename=fi.filename())
@@ -261,7 +261,7 @@ class Client(internal.FetcherInterface):
             nbytes=cfp.stat().st_size,
         )
 
-        return fi, cfp
+        return cfp
 
 
 def _parseArpegeFilename(

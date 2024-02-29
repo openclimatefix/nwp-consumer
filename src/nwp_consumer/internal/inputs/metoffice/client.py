@@ -131,12 +131,12 @@ class Client(internal.FetcherInterface):
         self,
         *,
         fi: internal.FileInfoModel,
-    ) -> tuple[internal.FileInfoModel, pathlib.Path]:
+    ) -> pathlib.Path:
         if (
             self.__headers.get("apikey") is None
         ):
             log.error("all metoffice API credentials not provided")
-            return fi, pathlib.Path()
+            return pathlib.Path()
 
         log.debug(
             event="requesting download of file",
@@ -159,7 +159,7 @@ class Client(internal.FetcherInterface):
                     response=response.json(),
                     url=url,
                 )
-                return fi, pathlib.Path()
+                return pathlib.Path()
         except Exception as e:
             log.warn(
                 event="error calling url for file",
@@ -167,7 +167,7 @@ class Client(internal.FetcherInterface):
                 filename=fi.filename(),
                 error=e,
             )
-            return fi, pathlib.Path()
+            return pathlib.Path()
 
         # Stream the filedata into cache
         cfp: pathlib.Path = internal.rawCachePath(it=fi.it(), filename=fi.filename())
@@ -184,7 +184,7 @@ class Client(internal.FetcherInterface):
             nbytes=cfp.stat().st_size,
         )
 
-        return fi, cfp
+        return cfp
 
 
     def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102

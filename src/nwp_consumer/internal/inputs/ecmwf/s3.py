@@ -106,7 +106,7 @@ class S3Client(internal.FetcherInterface):
         self,
         *,
         fi: internal.FileInfoModel,
-    ) -> tuple[internal.FileInfoModel, pathlib.Path]:
+    ) -> pathlib.Path:
         """Overrides the corresponding method in the parent class."""
         cfp: pathlib.Path = internal.rawCachePath(it=fi.it(), filename=fi.filename())
         with open(cfp, "wb") as f, self.__fs.open(
@@ -119,7 +119,7 @@ class S3Client(internal.FetcherInterface):
 
         if not cfp.exists():
             log.warn(event="Failed to download file", filepath=fi.filepath())
-            return fi, pathlib.Path()
+            return pathlib.Path()
 
         # Check the sizes are the same
         s3size = self.__fs.info((self.bucket / fi.filepath()).as_posix())["size"]
@@ -129,9 +129,9 @@ class S3Client(internal.FetcherInterface):
                 expected=s3size,
                 actual=cfp.stat().st_size,
             )
-            return fi, pathlib.Path()
+            return pathlib.Path()
 
-        return fi, cfp
+        return cfp
 
     def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:
         """Overrides the corresponding method in the parent class."""

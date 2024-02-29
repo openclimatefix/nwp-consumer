@@ -88,8 +88,8 @@ class DummyFetcher(internal.FetcherInterface):
         self,
         *,
         fi: internal.FileInfoModel,
-    ) -> tuple[internal.FileInfoModel, pathlib.Path]:
-        return fi, pathlib.Path(f"{internal.CACHE_DIR_RAW}/{fi.it():%Y/%m/%d/%H%M}/{fi.filename()}")
+    ) -> pathlib.Path:
+        return pathlib.Path(f"{internal.CACHE_DIR_RAW}/{fi.it():%Y/%m/%d/%H%M}/{fi.filename()}")
 
     def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:
         initTime = dt.datetime.strptime(
@@ -152,6 +152,11 @@ class TestNWPConsumerService(unittest.TestCase):
 
     def test_createLatestZarr(self) -> None:
         files = self.service.CreateLatestZarr()
+        # 1 zarr, 1 zipped zarr
+        self.assertEqual(2, len(files))
+
+    def test_consumeIT(self) -> None:
+        self.service.ConsumeIT(it=testInitTimes[0])
         # 1 zarr, 1 zipped zarr
         self.assertEqual(2, len(files))
 
