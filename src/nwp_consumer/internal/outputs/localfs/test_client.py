@@ -64,7 +64,7 @@ class TestLocalFSClient(unittest.TestCase):
                 ),
             },
             coords={
-                "init_time": [np.datetime64(initTime, "s")],
+                "init_time": [np.datetime64(initTime)],
                 "variable": ["t", "r"],
                 "step": range(12),
                 "x": range(100),
@@ -166,7 +166,7 @@ class TestLocalFSClient(unittest.TestCase):
                 ),
             },
             coords={
-                "init_time": [np.datetime64(initTime, "s")],
+                "init_time": [np.datetime64(initTime)],
                 "variable": ["t", "r"],
                 "step": range(12),
                 "x": range(100),

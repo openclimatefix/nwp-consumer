@@ -60,7 +60,7 @@ class NWPConsumerService:
         self.rawdir = pathlib.Path(rawdir)
         self.zarrdir = pathlib.Path(zarrdir)
 
-    def Download(self, *, start: dt.datetime, end: dt.datetime) -> list[pathlib.Path]:
+    def DownloadRawDataset(self, *, start: dt.datetime, end: dt.datetime) -> list[pathlib.Path]:
         """Download and convert raw data for a given time range.
 
         Args:
@@ -75,7 +75,7 @@ class NWPConsumerService:
             end=end,
         )
 
-    def Convert(self, *, start: dt.datetime, end: dt.datetime) -> list[pathlib.Path]:
+    def ConvertRawDatasetToZarr(self, *, start: dt.datetime, end: dt.datetime) -> list[pathlib.Path]:
         """Convert raw data for a given time range.
 
         Args:
@@ -220,7 +220,7 @@ class NWPConsumerService:
 
         return 0
 
-    def _downloadSingleInitTime(self, *, it: dt.datetime) -> list[pathlib.Path]:
+    def _downloadSingleInitTime(self, it: dt.datetime) -> list[pathlib.Path]:
         """Download and convert raw data for a given init time.
 
         Args:
@@ -255,7 +255,7 @@ class NWPConsumerService:
             src=p,
             dst=self.rawdir / p.relative_to(internal.CACHE_DIR_RAW),
         ))
-        return rb.compute()
+        return list(rb.compute())
 
     def _convertSingleInitTime(self, it: dt.datetime) -> list[pathlib.Path]:
         """Convert raw data for a single init time to zarr.
@@ -268,24 +268,20 @@ class NWPConsumerService:
         # Get the raw files for the init time
         zbag = dask.bag.from_sequence(self.rawstorer.copyITFolderToCache(prefix=self.rawdir, it=it))
         # Load the raw files as xarray datasets
-        zbag = zbag.map(self.fetcher.mapCachedRaw)
+        zbag = zbag.map(lambda p: self.fetcher.mapCachedRaw(p=p))
         # Merge the datasets into a single dataset for the init time
         # * Bag.fold is a parallelized version of the reduce function, so
         # * in this case, first the partitions are merged, followed by the results
-        zbag = dask.bag.from_sequence([zbag.fold(_mergeDatasets)])
+        zbag = zbag.fold(lambda a, b: _mergeDatasets([a, b]))
+        ds = zbag.compute()
         # Filter out datasets that are not of sufficient quality
-        zbag = zbag.filter(_dataQualityFilter)
-        # Cache the datasets as zarr files
-        zbag = zbag.map(_cacheAsZipZarr)
-        # Store the zarr files using the storer
-        zbag = zbag.map(lambda path: self.storer.store(
-            src=path,
-            dst=self.zarrdir / path.relative_to(internal.CACHE_DIR_ZARR),
-        ))
-        # Execute the pipeline
-        zarrFiles: list[pathlib.Path] = zbag.compute()
+        if _dataQualityFilter(ds=ds):
+            # Cache the dataset as a zarr file
+            zpath = _cacheAsZipZarr(ds=ds)
+            # Store the zarr file using the storer
+            return [self.storer.store(src=zpath, dst=self.zarrdir / zpath.name)]
 
-        return zarrFiles
+        return []
 
     def _performFuncForMultipleInitTimes(
         self,

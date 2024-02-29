@@ -13,7 +13,6 @@ import structlog
 import xarray as xr
 
 from nwp_consumer import internal
-from nwp_consumer.internal import config
 
 from ._models import CEDAFileInfo, CEDAResponse
 

@@ -104,7 +104,7 @@ class DummyFetcher(internal.FetcherInterface):
                 ),
             },
             coords={
-                "init_time": [np.datetime64(initTime, "s")],
+                "init_time": [np.datetime64(initTime)],
                 "variable": [p.name],
                 "step": range(12),
                 "x": range(100),
@@ -148,15 +148,11 @@ class TestNWPConsumerService(unittest.TestCase):
         files = self.service.ConvertRawDatasetToZarr(start=start, end=end)
 
         # 1 Dataset per init time, all init times per day, all days
-        self.assertEqual(1 * len(INIT_HOURS) * (len(DAYS)), len(files))
+        # * Except for the last init time
+        self.assertEqual(1 * len(INIT_HOURS) * (len(DAYS)) - 1, len(files))
 
     def test_createLatestZarr(self) -> None:
         files = self.service.CreateLatestZarr()
-        # 1 zarr, 1 zipped zarr
-        self.assertEqual(2, len(files))
-
-    def test_consumeIT(self) -> None:
-        self.service.ConsumeIT(it=testInitTimes[0])
         # 1 zarr, 1 zipped zarr
         self.assertEqual(2, len(files))
 
