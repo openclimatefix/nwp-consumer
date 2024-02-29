@@ -61,9 +61,8 @@ class TestClient(unittest.TestCase):
             p=pathlib.Path(__file__).parent / "test_icon_global_001_HTOP_CON.grib2"
         )
 
-        ds = xr.merge([ds1, ds2])
-        print(ds)
-        self.assertTrue(False)
+        # This should merge without raising an error
+        _ = xr.merge([ds1, ds2])
 
 
 class TestParseIconFilename(unittest.TestCase):
