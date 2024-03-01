@@ -56,9 +56,15 @@ class ECMWFLiveFileInfo(internal.FileInfoModel):
         return f"ecmwf/{self.fname}"
 
     def it(self) -> dt.datetime:
-        """Overrides the corresponding method in the parent class."""
-        return dt.datetime.strptime(self.fname[3:10], "%m%d%H%M").replace(
-            year=dt.datetime.now(tz=dt.UTC).year, tzinfo=dt.UTC,
+        """Overrides the corresponding method in the parent class.
+
+        The file name doesn't have the year in it, so we've added it.
+        This might be a problem around the new year.
+        """
+        return dt.datetime.strptime(
+            f"{self.fname[3:10]}-{dt.datetime.now().year}", "%m%d%H%M-%Y"
+        ).replace(
+            tzinfo=dt.UTC,
         )
 
     def variables(self) -> list[str]:
