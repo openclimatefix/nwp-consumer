@@ -45,7 +45,7 @@ import structlog
 from docopt import docopt
 
 from nwp_consumer import internal
-from nwp_consumer.internal import config, inputs, outputs
+from nwp_consumer.internal import config
 from nwp_consumer.internal.service import NWPConsumerService
 
 __version__ = "local"
@@ -54,7 +54,6 @@ with contextlib.suppress(importlib.metadata.PackageNotFoundError):
     __version__ = importlib.metadata.version("package-name")
 
 log = structlog.getLogger()
-
 
 def run(argv: list[str]) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
     """Run the CLI.
@@ -79,16 +78,21 @@ def run(argv: list[str]) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
             address=config.ConsumerEnv().DASK_SCHEDULER_ADDRESS,
         )
 
-    # --- Map arguments to service configuration --- #
-
+    # --- Run the service with the desired command --- #
     arguments = docopt(__doc__, argv=argv, version=__version__)
-    storer = _parse_sink(arguments["--sink"])
-    fetcher = _parse_source(arguments["--source"])
-    # Set the raw sink to the same as the zarr sink if not specified
-    rawstorer = storer if arguments["--rsink"] == "SINK" else _parse_sink(arguments["--rsink"])
-    start, end = _parse_from_to(arguments["--from"], arguments["--to"])
+
+    # Logic for the env command
+    if arguments["env"]:
+        parse_actor(source=arguments["--source"], sink=arguments["--sink"]).print_env()
+        return ([], [])
 
     # Create the service using the fetcher and storer
+    fetcher = parse_actor(arguments["--source"], None)().configure_fetcher()
+    storer = parse_actor(None, arguments["--sink"])().configure_storer()
+    if arguments["--rsink"] == "SINK":
+        rawstorer = storer
+    else:
+        rawstorer = parse_actor(None, arguments["--rsink"])().configure_storer()
     service = NWPConsumerService(
         fetcher=fetcher,
         storer=storer,
@@ -97,17 +101,13 @@ def run(argv: list[str]) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
         rawdir=arguments["--rdir"],
     )
 
-    # --- Run the service with the desired command --- #
-
     # Logic for the "check" command
     if arguments["check"]:
         _ = service.Check()
         return ([], [])
 
-    # Logic for the env command
-    if arguments["env"]:
-        # Missing env vars are printed during mapping of source/sink args
-        return ([], [])
+    # Process the from and to arguments
+    start, end = _parse_from_to(arguments["--from"], arguments["--to"])
 
     # Logic for the other commands
     log.info("nwp-consumer service starting", version=__version__, arguments=arguments)
@@ -115,16 +115,15 @@ def run(argv: list[str]) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
     processedFiles: list[pathlib.Path] = []
 
     if arguments["download"]:
-        rawFiles += service.DownloadRawDataset(start=start, end=end)
+        rawFiles = service.DownloadRawDataset(start=start, end=end)
 
     if arguments["convert"]:
-        processedFiles += service.ConvertRawDatasetToZarr(start=start, end=end)
+        processedFiles = service.ConvertRawDatasetToZarr(start=start, end=end)
 
     if arguments["consume"]:
         service.Check()
-        r, p = service.DownloadAndConvert(start=start, end=end)
-        rawFiles += r
-        processedFiles += p
+        rawFiles = service.DownloadRawDataset(start=start, end=end)
+        processedFiles = service.ConvertRawDatasetToZarr(start=start, end=end)
 
     if arguments["--create-latest"]:
         processedFiles += service.CreateLatestZarr()
@@ -203,93 +202,36 @@ def _parse_from_to(fr: str, to: str | None) -> tuple[dt.datetime, dt.datetime]:
     return start, end
 
 
-def _parse_source(source: str) -> internal.FetcherInterface:
-    """Parse the source argument into a fetcher interface."""
-    # Set defaults for fetcher and env for typesafe assignments
-    fetcher: internal.FetcherInterface = inputs.ceda.Client(
-        ftpUsername="not-set",
-        ftpPassword="not-set",
-    )
-    env: config.EnvParser = config.LocalEnv()
+def parse_actor(source: str | None, sink: str | None) -> type[config.EnvParser]:
+    """Parse the actor argument into a class that can parse environment variables."""
+    SOURCE_ENV_MAP: dict[str, type[config.EnvParser]] = {
+        "ceda": config.CEDAEnv,
+        "metoffice": config.MetOfficeEnv,
+        "ecmwf-mars": config.ECMWFMARSEnv,
+        "ecmwf-s3": config.ECMWFS3Env,
+        "icon": config.ICONEnv,
+        "cmc": config.CMCEnv,
+    }
+    SINK_ENV_MAP: dict[str, type[config.EnvParser]] = {
+        "local": config.LocalEnv,
+        "s3": config.S3Env,
+        "huggingface": config.HuggingFaceEnv,
+    }
 
-    match source:
-        case "ceda":
-            env: config.CEDAEnv = config.CEDAEnv()
-            fetcher = inputs.ceda.Client(
-                ftpUsername=env.CEDA_FTP_USER,
-                ftpPassword=env.CEDA_FTP_PASS,
-            )
-        case "metoffice":
-            env: config.MetOfficeEnv = config.MetOfficeEnv()
-            fetcher = inputs.metoffice.Client(
-                orderID=env.METOFFICE_ORDER_ID,
-                apiKey=env.METOFFICE_API_KEY,
-            )
-        case "ecmwf-mars":
-            env: config.ECMWFMARSEnv = config.ECMWFMARSEnv()
-            fetcher = inputs.ecmwf.MARSClient(
-                area=env.ECMWF_AREA,
-                hours=env.ECMWF_HOURS,
-                param_group=env.ECMWF_PARAMETER_GROUP,
-            )
-        case "ecmwf-s3":
-            env: config.ECMWFS3Env = config.ECMWFS3Env()
-            fetcher = inputs.ecmwf.S3Client(
-                area=env.ECMWF_AREA,
-                bucket=env.ECMWF_AWS_S3_BUCKET,
-                region=env.ECMWF_AWS_REGION,
-                key=env.ECMWF_AWS_ACCESS_KEY,
-                secret=env.ECMWF_AWS_ACCESS_SECRET,
-            )
-        case "icon":
-            env: config.ICONEnv = config.ICONEnv()
-            fetcher = inputs.icon.Client(
-                model=env.ICON_MODEL,
-                param_group=env.ICON_PARAMETER_GROUP,
-                hours=env.ICON_HOURS,
-            )
-        case "cmc":
-            env: config.CMCEnv = config.CMCEnv()
-            fetcher = inputs.cmc.Client(
-                param_group=env.CMC_PARAMETER_GROUP,
-                hours=env.CMC_HOURS,
-                model=env.CMC_MODEL,
-            )
-        case None:
-            pass
-        case _:
+    if source:
+        try:
+            return SOURCE_ENV_MAP[source]
+        except KeyError as e:
             raise ValueError(
-                f"unknown source {source}. Exoected one of (ceda/metoffice/ecmwf-mars/icon/cmc)",
-            )
-    return fetcher
-
-
-def _parse_sink(sink: str) -> internal.StorageInterface:
-    """Parse the sink argument into a storer interface."""
-    storer: internal.StorageInterface = outputs.localfs.Client()
-    env: config.EnvParser = config.LocalEnv()
-
-    match sink:
-        case "local":
-            storer = outputs.localfs.Client()
-        case "s3":
-            env = config.S3Env()
-            storer = outputs.s3.Client(
-                bucket=env.AWS_S3_BUCKET,
-                key=env.AWS_ACCESS_KEY,
-                secret=env.AWS_ACCESS_SECRET,
-                region=env.AWS_REGION,
-            )
-        case "huggingface":
-            env = config.HuggingFaceEnv()
-            storer = outputs.huggingface.Client(
-                token=env.HUGGINGFACE_TOKEN,
-                repoID=env.HUGGINGFACE_REPO_ID,
-            )
-        case None:
-            pass
-        case _:
+                f"Unknown source {source}. Expected one of {list(SOURCE_ENV_MAP.keys())}",
+            ) from e
+    if sink:
+        try:
+            return SINK_ENV_MAP[sink]
+        except KeyError as e:
             raise ValueError(
-                f"unknown sink {sink}. Expected one of (local/s3/huggingface)",
-            )
-    return storer
+                f"Unknown sink {sink}. Expected one of {list(SINK_ENV_MAP.keys())}",
+            ) from e
+    raise ValueError("Either source or sink must be specified")
+
+

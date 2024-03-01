@@ -3,7 +3,8 @@
 import datetime as dt
 import pathlib
 import shutil
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import dask.bag
 import pandas as pd
@@ -37,13 +38,13 @@ class NWPConsumerService:
     zarrdir: pathlib.Path
 
     def __init__(
-            self,
-            *,
-            fetcher: internal.FetcherInterface,
-            storer: internal.StorageInterface,
-            rawdir: str,
-            zarrdir: str,
-            rawstorer: internal.StorageInterface | None = None,
+        self,
+        *,
+        fetcher: internal.FetcherInterface,
+        storer: internal.StorageInterface,
+        rawdir: str,
+        zarrdir: str,
+        rawstorer: internal.StorageInterface | None = None,
     ) -> None:
         """Create a consumer service with the given dependencies.
 
@@ -75,7 +76,9 @@ class NWPConsumerService:
             end=end,
         )
 
-    def ConvertRawDatasetToZarr(self, *, start: dt.datetime, end: dt.datetime) -> list[pathlib.Path]:
+    def ConvertRawDatasetToZarr(
+        self, *, start: dt.datetime, end: dt.datetime
+    ) -> list[pathlib.Path]:
         """Convert raw data for a given time range.
 
         Args:
@@ -242,19 +245,25 @@ class NWPConsumerService:
             it=it,
         )
         # Cache any existing files from the raw storer
-        cachedFiles: list[pathlib.Path] = self.rawstorer.copyITFolderToCache(prefix=self.rawdir, it=it)
+        cachedFiles: list[pathlib.Path] = self.rawstorer.copyITFolderToCache(
+            prefix=self.rawdir, it=it
+        )
 
         # Create a dask pipeline from the available files, filtering out cached files
         rb = dask.bag.from_sequence(allSourceFiles).filter(
-            lambda fi: fi.filename() not in [p.name for p in cachedFiles]
+            lambda fi: fi.filename() not in [p.name for p in cachedFiles],
         )
         # Download the files to the cache, filtering any failed downloads
-        rb = rb.map(lambda fi: self.fetcher.downloadToCache(fi=fi)).filter(lambda p: p != pathlib.Path())
+        rb = rb.map(lambda fi: self.fetcher.downloadToCache(fi=fi)).filter(
+            lambda p: p != pathlib.Path()
+        )
         # Store the files using the raw storer
-        rb = rb.map(lambda p: self.rawstorer.store(
-            src=p,
-            dst=self.rawdir / p.relative_to(internal.CACHE_DIR_RAW),
-        ))
+        rb = rb.map(
+            lambda p: self.rawstorer.store(
+                src=p,
+                dst=self.rawdir / p.relative_to(internal.CACHE_DIR_RAW),
+            )
+        )
         return list(rb.compute())
 
     def _convertSingleInitTime(self, it: dt.datetime) -> list[pathlib.Path]:
@@ -291,7 +300,6 @@ class NWPConsumerService:
         end: dt.datetime,
     ):
         """Perform a function for each init time in the fetcher's range."""
-
         allInitTimes: list[dt.datetime] = [
             pdt.to_pydatetime()
             for pdt in pd.date_range(
