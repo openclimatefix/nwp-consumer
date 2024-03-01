@@ -100,7 +100,7 @@ class TestS3Client(unittest.TestCase):
         )
 
         # Test the downloadRawFile method
-        _, out = self.client.downloadToCache(fi=ECMWFLiveFileInfo(fname="A1D01010000010100001"))
+        out = self.client.downloadToCache(fi=ECMWFLiveFileInfo(fname="A1D01010000010100001"))
         self.assertEqual(out.read_bytes(), b"test")
 
         out.unlink()
