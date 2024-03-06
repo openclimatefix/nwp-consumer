@@ -57,7 +57,9 @@ class Client(internal.StorageInterface):
         """Overrides the corresponding method in the parent class."""
         # List all the inittime folders in the given directory
         dirs = [
-            f.relative_to(prefix) for f in prefix.glob(internal.IT_FOLDER_GLOBSTR_RAW) if f.suffix == ""
+            f.relative_to(prefix)
+            for f in prefix.glob(internal.IT_FOLDER_GLOBSTR_RAW)
+            if f.suffix == ""
         ]
 
         initTimes = set()
@@ -95,11 +97,19 @@ class Client(internal.StorageInterface):
 
     def copyITFolderToCache(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         """Overrides the corresponding method in the parent class."""
-        # Local FS already has access to files, so just return the paths
-        initTimeDirPath = prefix / it.strftime(internal.IT_FOLDER_STRUCTURE_RAW)
-        paths: list[pathlib.Path] = list(initTimeDirPath.iterdir())
+        filesInFolder = list((prefix / it.strftime(internal.IT_FOLDER_STRUCTURE_RAW)).iterdir())
+        if prefix is internal.CACHE_DIR_RAW or prefix is internal.CACHE_DIR_ZARR:
+            # The data is already in the cache
+            return filesInFolder
 
-        return paths
+        cfps: list[pathlib.Path] = []
+        for file in filesInFolder:
+            # Copy the file to the cache
+            dst: pathlib.Path = internal.rawCachePath(it=it, filename=file.name)
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            cfps.append(shutil.copy2(src=file, dst=dst))
+
+        return cfps
 
     def delete(self, *, p: pathlib.Path) -> None:
         """Overrides the corresponding method in the parent class."""
