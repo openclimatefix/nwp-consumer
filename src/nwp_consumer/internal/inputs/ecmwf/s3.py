@@ -12,32 +12,11 @@ import xarray as xr
 from nwp_consumer import internal
 
 from ._models import ECMWFLiveFileInfo
+from ... import OCFParameter
 
 log = structlog.getLogger()
 
 COORDINATE_ALLOW_LIST: typing.Sequence[str] = ("time", "step", "latitude", "longitude")
-
-PARAMETER_RENAME_MAP: dict[str, str] = {
-    "dsrp": internal.OCFShortName.DirectSolarRadiation.value,
-    "uvb": internal.OCFShortName.DownwardUVRadiationAtSurface.value,
-    "sd": internal.OCFShortName.SnowDepthWaterEquivalent.value,
-    "tcc": internal.OCFShortName.TotalCloudCover.value,
-    "clt": internal.OCFShortName.TotalCloudCover.value,
-    "u10": internal.OCFShortName.WindUComponentAGL.value,
-    "v10": internal.OCFShortName.WindVComponentAGL.value,
-    "t2m": internal.OCFShortName.TemperatureAGL.value,
-    "ssrd": internal.OCFShortName.DownwardShortWaveRadiationFlux.value,
-    "strd": internal.OCFShortName.DownwardLongWaveRadiationFlux.value,
-    "lcc": internal.OCFShortName.LowCloudCover.value,
-    "mcc": internal.OCFShortName.MediumCloudCover.value,
-    "hcc": internal.OCFShortName.HighCloudCover.value,
-    "vis": internal.OCFShortName.VisibilityAGL.value,
-    "u200": internal.OCFShortName.WindUComponent200m.value,
-    "v200": internal.OCFShortName.WindVComponent200m.value,
-    "u100": internal.OCFShortName.WindUComponent100m.value,
-    "v100": internal.OCFShortName.WindVComponent100m.value,
-    "tprate": internal.OCFShortName.RainPrecipitationRate.value,
-}
 
 
 class S3Client(internal.FetcherInterface):
@@ -52,13 +31,13 @@ class S3Client(internal.FetcherInterface):
     bucketPath: str = "ecmwf"
 
     def __init__(
-        self,
-        bucket: str,
-        region: str,
-        area: str = "uk",
-        key: str | None = "",
-        secret: str | None = "",
-        endpointURL: str = "",
+            self,
+            bucket: str,
+            region: str,
+            area: str = "uk",
+            key: str | None = "",
+            secret: str | None = "",
+            endpointURL: str = "",
     ) -> None:
         """Creates a new ECMWF S3 client.
 
@@ -91,6 +70,10 @@ class S3Client(internal.FetcherInterface):
         self.area = area
         self.bucket = pathlib.Path(bucket)
 
+    def datasetName(self) -> str:
+        """Overrides the corresponding method in the parent class."""
+        return f"ECMWF_{self.area}".upper()
+
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
         """Overrides the corresponding method in the parent class."""
         allFiles: list[str] = self.__fs.ls((self.bucket / self.bucketPath).as_posix())
@@ -103,15 +86,15 @@ class S3Client(internal.FetcherInterface):
         return initTimeFiles
 
     def downloadToCache(
-        self,
-        *,
-        fi: internal.FileInfoModel,
+            self,
+            *,
+            fi: internal.FileInfoModel,
     ) -> pathlib.Path:
         """Overrides the corresponding method in the parent class."""
         cfp: pathlib.Path = internal.rawCachePath(it=fi.it(), filename=fi.filename())
         with open(cfp, "wb") as f, self.__fs.open(
-            (self.bucket / fi.filepath()).as_posix(),
-            "rb",
+                (self.bucket / fi.filepath()).as_posix(),
+                "rb",
         ) as s:
             for chunk in iter(lambda: s.read(12 * 1024), b""):
                 f.write(chunk)
@@ -140,33 +123,19 @@ class S3Client(internal.FetcherInterface):
         ds: xr.Dataset = xr.merge(area_dss, combine_attrs="drop_conflicts")
         del area_dss, all_dss
 
-        # Rename the variables to the ocf names
-        # * Only do so if they exist in the dataset
-        for oldParamName, newParamName in PARAMETER_RENAME_MAP.items():
-            if oldParamName in ds:
-                ds = ds.rename({oldParamName: newParamName})
-
-        # Delete unwanted coordinates
-        ds = ds.drop_vars(
-            names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST],
-            errors="ignore",
-        )
-
-        # Convert to array with single "variable" dimension
+        # Map the data to the internal dataset representation
+        # * Transpose the Dataset so that the dimensions are correctly ordered
+        # * Rechunk the data to a more optimal size
         ds = (
             ds.rename({"time": "init_time"})
             .expand_dims("init_time")
             .expand_dims("step")
-            .to_array(dim="variable", name=f"ECMWF_{self.area}".upper())
-            .to_dataset()
-            .transpose("variable", "init_time", "step", "latitude", "longitude")
+            .transpose("init_time", "step", "latitude", "longitude")
             .sortby("step")
-            .sortby("variable")
             .chunk(
                 {
                     "init_time": 1,
                     "step": -1,
-                    "variable": -1,
                     "latitude": len(ds.latitude) // 2,
                     "longitude": len(ds.longitude) // 2,
                 },
@@ -178,6 +147,30 @@ class S3Client(internal.FetcherInterface):
     def getInitHours(self) -> list[int]:
         """Overrides the corresponding method in the parent class."""
         return [0, 6, 12, 18]
+
+    def parameterConformMap(self) -> dict[str, OCFParameter]:
+        """Overrides the corresponding method in the parent class."""
+        return {
+            "dsrp": internal.OCFParameter.DirectSolarRadiation,
+            "uvb": internal.OCFParameter.DownwardUVRadiationAtSurface,
+            "sd": internal.OCFParameter.SnowDepthWaterEquivalent,
+            "tcc": internal.OCFParameter.TotalCloudCover,
+            "clt": internal.OCFParameter.TotalCloudCover,
+            "u10": internal.OCFParameter.WindUComponentAGL,
+            "v10": internal.OCFParameter.WindVComponentAGL,
+            "t2m": internal.OCFParameter.TemperatureAGL,
+            "ssrd": internal.OCFParameter.DownwardShortWaveRadiationFlux,
+            "strd": internal.OCFParameter.DownwardLongWaveRadiationFlux,
+            "lcc": internal.OCFParameter.LowCloudCover,
+            "mcc": internal.OCFParameter.MediumCloudCover,
+            "hcc": internal.OCFParameter.HighCloudCover,
+            "vis": internal.OCFParameter.VisibilityAGL,
+            "u200": internal.OCFParameter.WindUComponent200m,
+            "v200": internal.OCFParameter.WindVComponent200m,
+            "u100": internal.OCFParameter.WindUComponent100m,
+            "v100": internal.OCFParameter.WindVComponent100m,
+            "tprate": internal.OCFParameter.RainPrecipitationRate,
+        }
 
 
 def _filterDatasetsByArea(dss: list[xr.Dataset], area: str) -> list[xr.Dataset]:

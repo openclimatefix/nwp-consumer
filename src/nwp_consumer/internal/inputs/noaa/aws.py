@@ -17,18 +17,6 @@ from ._models import NOAAFileInfo
 
 log = structlog.getLogger()
 
-# See https://www.nco.ncep.noaa.gov/pmb/products/gfs/gfs.t00z.pgrb2.0p25.f003.shtml for a list of NOAA GFS parameters
-PARAMETER_RENAME_MAP: dict[str, str] = {
-    "t2m_instant": internal.OCFShortName.TemperatureAGL.value,
-    "tcc": internal.OCFShortName.HighCloudCover.value,
-    "dswrf_surface_avg": internal.OCFShortName.DownwardShortWaveRadiationFlux.value,
-    "dlwrf_surface_avg": internal.OCFShortName.DownwardLongWaveRadiationFlux.value,
-    "sdwe_surface_instant": internal.OCFShortName.SnowDepthWaterEquivalent.value,
-    "r": internal.OCFShortName.RelativeHumidityAGL.value,
-    "u10_instant": internal.OCFShortName.WindUComponentAGL.value,
-    "v10_instant": internal.OCFShortName.WindVComponentAGL.value,
-}
-
 COORDINATE_ALLOW_LIST: typing.Sequence[str] = ("time", "step", "latitude", "longitude")
 
 
@@ -38,7 +26,6 @@ class Client(internal.FetcherInterface):
     baseurl: str  # The base URL for the NOAA model
     model: str  # The model to fetch data for
     parameters: list[str]  # The parameters to fetch
-    conform: bool  # Whether to rename parameters to OCF names and clear unwanted coordinates
 
     def __init__(self, model: str, hours: int = 48, param_group: str = "default") -> None:
         """Create a new NOAA Client.
@@ -54,14 +41,11 @@ class Client(internal.FetcherInterface):
 
         match (param_group, model):
             case ("default", _):
-                self.parameters = list(PARAMETER_RENAME_MAP.keys())
-                self.conform = True
+                self.parameters = ["t2m_instant", "tcc", "dswrf_surface_avg", "dlwrf_surface_avg", "sdwe_surface_instant", "r", "u10_instant", "v10_instant"]
             case ("basic", "global"):
-                self.parameters = ["t2m_instant", "tcc"]
-                self.conform = True
+                self.parameters = ["t2m_instant", "dswrf_surface_avg"]
             case ("full", "global"):
                 self.parameters = GFS_VARIABLES
-                self.conform = False
             case (_, _):
                 raise ValueError(
                     f"unknown parameter group {param_group}."
@@ -70,6 +54,10 @@ class Client(internal.FetcherInterface):
 
         self.model = model
         self.hours = hours
+
+    def datasetName(self) -> str:
+        """Overrides the corresponding method in the parent class."""
+        return f"NOAA_{self.model}".upper()
 
     def getInitHours(self) -> list[int]:  # noqa: D102
         return [0, 6, 12, 18]
@@ -113,11 +101,11 @@ class Client(internal.FetcherInterface):
             fi = _parseAWSFilename(
                 name=refmatch.groups()[0],
                 baseurl=f"{self.baseurl}/gfs.{it.strftime('%Y%m%d')}/{it.strftime('%H')}",
-                match_aux=not self.conform,
+                match_aux=True,
                 it=it,
             )
-            # Ignore the file if it is not for today's date or has a step > 48 (when conforming)
-            if fi is None or (fi.step > self.hours and self.conform):
+            # Ignore the file if it is not for today's date or has a step > desired hours
+            if fi is None or (fi.step > self.hours):
                 continue
 
             # Add the file to the list
@@ -180,60 +168,22 @@ class Client(internal.FetcherInterface):
 
         ds = xr.merge([surface, heightAboveGround, isobaricInhPa])
 
-        # Only conform the dataset if requested (defaults to True)
-        if self.conform:
-            # Rename the parameters to the OCF names
-            # Drop variables that are not in the OCF list first
-            ds = ds.drop_vars(
-                names=[v for v in ds.data_vars if v not in PARAMETER_RENAME_MAP.keys()],
-                errors="ignore",
+        # Map the data to the internal dataset representation
+        # * Transpose the Dataset so that the dimensions are correctly ordered
+        # * Rechunk the data to a more optimal size
+        ds = (
+            ds.rename({"time": "init_time"})
+            .expand_dims("init_time")
+            .expand_dims("step")
+            .transpose("init_time", "step", ...)
+            .sortby("step")
+            .chunk(
+                {
+                    "init_time": 1,
+                    "step": -1,
+                },
             )
-            # * Only do so if they exist in the dataset
-            for oldParamName, newParamName in PARAMETER_RENAME_MAP.items():
-                if oldParamName in ds:
-                    ds = ds.rename({oldParamName: newParamName})
-
-            # Delete unwanted coordinates
-            ds = ds.drop_vars(
-                names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST],
-                errors="ignore",
-            )
-
-        # * Each chunk is a single time step
-        # Does not use teh "variable" dimension, as this makes a 86GiB dataset for a single timestamp
-        # Keeping variables separate keeps the dataset small enough to fit in memory
-        if self.conform:
-            ds = (
-                ds.rename({"time": "init_time"})
-                .expand_dims("init_time")
-                .expand_dims("step")
-                .to_array(dim="variable", name=f"NOAA_{self.model}".upper())
-                .to_dataset()
-                .transpose("variable", "init_time", "step", ...)
-                .sortby("step")
-                .sortby("variable")
-                .chunk(
-                    {
-                        "init_time": 1,
-                        "step": -1,
-                        "variable": -1,
-                    },
-                )
-            )
-        else:
-            ds = (
-                ds.rename({"time": "init_time"})
-                .expand_dims("init_time")
-                .expand_dims("step")
-                .transpose("init_time", "step", ...)
-                .sortby("step")
-                .chunk(
-                    {
-                        "init_time": 1,
-                        "step": -1,
-                    },
-                )
-            )
+        )
 
         return ds
 
@@ -277,6 +227,20 @@ class Client(internal.FetcherInterface):
         )
 
         return cfp
+
+    def parameterConformMap(self) -> dict[str, internal.OCFParameter]:
+        """Overrides the corresponding method in the parent class."""
+        # See https://www.nco.ncep.noaa.gov/pmb/products/gfs/gfs.t00z.pgrb2.0p25.f003.shtml for a list of NOAA GFS
+        return {
+            "t2m_instant": internal.OCFParameter.TemperatureAGL,
+            "tcc": internal.OCFParameter.HighCloudCover,
+            "dswrf_surface_avg": internal.OCFParameter.DownwardShortWaveRadiationFlux,
+            "dlwrf_surface_avg": internal.OCFParameter.DownwardLongWaveRadiationFlux,
+            "sdwe_surface_instant": internal.OCFParameter.SnowDepthWaterEquivalent,
+            "r": internal.OCFParameter.RelativeHumidityAGL,
+            "u10_instant": internal.OCFParameter.WindUComponentAGL,
+            "v10_instant": internal.OCFParameter.WindVComponentAGL,
+        }
 
 
 def _parseAWSFilename(

@@ -1,7 +1,7 @@
 """The internal package contains code not intended for external import."""
 
 __all__ = [
-    "OCFShortName",
+    "OCFParameter",
     "FetcherInterface",
     "StorageInterface",
     "FileInfoModel",
@@ -32,6 +32,6 @@ from .cache import (
 from .models import (
     FetcherInterface,
     FileInfoModel,
-    OCFShortName,
+    OCFParameter,
     StorageInterface,
 )

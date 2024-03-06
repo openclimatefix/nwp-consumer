@@ -1,6 +1,5 @@
 import datetime as dt
 import pathlib
-import shutil
 import unittest
 
 import numpy as np
@@ -8,16 +7,12 @@ import structlog
 import xarray as xr
 
 from nwp_consumer import internal
-
 from .consumer import NWPConsumerService, _cacheAsZipZarr, _mergeDatasets
 
-# Two days, four init times per day -> 8 init times
-DAYS = [1, 2]
-INIT_HOURS = [0, 6, 12, 18]
-INIT_TIME_FILES = ["dswrf.grib", "prate.grib"]
-testInitTimes = [dt.datetime(2021, 1, d, h, 0, 0, tzinfo=dt.UTC) for h in INIT_HOURS for d in DAYS]
-
 log = structlog.getLogger()
+
+IT = dt.datetime(2021, 1, 1, tzinfo=dt.UTC)
+FILES = ["dswrf.grib", "prate.grib", "t2m.grib"]
 
 
 class DummyStorer(internal.StorageInterface):
@@ -25,34 +20,22 @@ class DummyStorer(internal.StorageInterface):
         return "dummy"
 
     def exists(self, *, dst: pathlib.Path) -> bool:
-        log.info("exists", dst=dst)
-        if "exists" in dst.name:
-            return True
-        return False
+        return True
 
     def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:
-        if src.exists():
-            if src.is_dir():
-                shutil.rmtree(src.as_posix(), ignore_errors=True)
-            else:
-                src.unlink(missing_ok=True)
         return dst
 
     def listInitTimes(self, prefix: pathlib.Path) -> list[dt.datetime]:
-        return testInitTimes
+        return [IT]
 
     def copyITFolderToCache(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         return [
-            pathlib.Path(f"{internal.CACHE_DIR_RAW}/{it:%Y/%m/%d/%H%M}/{f}.grib")
-            for f in INIT_TIME_FILES
+            pathlib.Path(internal.rawCachePath(it=it, filename=f))
+            for f in FILES
         ]
 
     def delete(self, *, p: pathlib.Path) -> None:
-        if p.exists():
-            if p.is_dir():
-                shutil.rmtree(p.as_posix(), ignore_errors=True)
-            else:
-                p.unlink(missing_ok=True)
+        pass
 
 
 class DummyFileInfo(internal.FileInfoModel):
@@ -78,18 +61,16 @@ class DummyFileInfo(internal.FileInfoModel):
 
 class DummyFetcher(internal.FetcherInterface):
     def getInitHours(self) -> list[int]:
-        return INIT_HOURS
+        return [0, 6, 12, 18]
+
+    def datasetName(self) -> str:
+        return "dummy"
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
-        raw_files = [DummyFileInfo(file, it) for file in INIT_TIME_FILES if it in testInitTimes]
-        return raw_files
+        return [DummyFileInfo(file, it) for file in FILES]
 
-    def downloadToCache(
-        self,
-        *,
-        fi: internal.FileInfoModel,
-    ) -> pathlib.Path:
-        return pathlib.Path(f"{internal.CACHE_DIR_RAW}/{fi.it():%Y/%m/%d/%H%M}/{fi.filename()}")
+    def downloadToCache(self, *, fi: internal.FileInfoModel) -> pathlib.Path:
+        return internal.rawCachePath(it=fi.it(), filename=fi.filename())
 
     def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:
         initTime = dt.datetime.strptime(
@@ -98,19 +79,23 @@ class DummyFetcher(internal.FetcherInterface):
         ).replace(tzinfo=dt.UTC)
         return xr.Dataset(
             data_vars={
-                "UKV": (
-                    ("init_time", "variable", "step", "x", "y"),
-                    np.random.rand(1, 1, 12, 100, 100),
-                ),
+                f"{p.stem}": (
+                    ("init_time", "step", "x", "y"),
+                    np.random.rand(1, 12, 100, 100),
+                )
             },
             coords={
                 "init_time": [np.datetime64(initTime)],
-                "variable": [p.name],
                 "step": range(12),
                 "x": range(100),
                 "y": range(100),
             },
         )
+
+    def parameterConformMap(self) -> dict[str, internal.OCFParameter]:
+        return {
+            "t2m": internal.OCFParameter.TemperatureAGL,
+        }
 
 
 # ------------- Client Methods -------------- #
@@ -131,25 +116,13 @@ class TestNWPConsumerService(unittest.TestCase):
             zarrdir="zarr",
         )
 
-    def test_downloadRawDataset(self) -> None:
-        start = testInitTimes[0]
-        end = testInitTimes[-1]
+    def test_downloadSingleInitTime(self) -> None:
+        files = self.service._downloadSingleInitTime(it=IT)
+        self.assertEqual(3, len(files))
 
-        files = self.service.DownloadRawDataset(start=start, end=end)
-
-        # 2 files per init time, all init times except the last
-        # one so none of the init time files for that one
-        self.assertEqual((2 * len(INIT_HOURS) * len(DAYS)) - 1 * len(INIT_TIME_FILES), len(files))
-
-    def test_convertRawDataset(self) -> None:
-        start = testInitTimes[0]
-        end = testInitTimes[-1]
-
-        files = self.service.ConvertRawDatasetToZarr(start=start, end=end)
-
-        # 1 Dataset per init time, all init times per day, all days
-        # * Except for the last init time
-        self.assertEqual(1 * len(INIT_HOURS) * (len(DAYS)) - 1, len(files))
+    def test_convertSingleInitTime(self) -> None:
+        files = self.service._convertSingleInitTime(it=IT)
+        self.assertEqual(1, len(files))
 
     def test_createLatestZarr(self) -> None:
         files = self.service.CreateLatestZarr()

@@ -25,6 +25,8 @@ Options:
   --rdir=RDIR         Directory of raw data store [default: /tmp/raw].
   --zdir=ZDIR         Directory of zarr data store [default: /tmp/zarr].
   --create-latest     Create a zarr of the dataset with the latest init time [default: False].
+  --rename-params     Rename parameters to standard names [default: True].
+  --variable-dim      Stack data variables into a single dimension [default: True].
 
 Generic Options:
   --version           Show version.

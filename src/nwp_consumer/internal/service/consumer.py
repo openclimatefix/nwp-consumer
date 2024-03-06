@@ -36,6 +36,9 @@ class NWPConsumerService:
     # Configuration options
     rawdir: pathlib.Path
     zarrdir: pathlib.Path
+    rename_vars: bool
+    variable_dim: bool
+
 
     def __init__(
         self,
@@ -45,6 +48,8 @@ class NWPConsumerService:
         rawdir: str,
         zarrdir: str,
         rawstorer: internal.StorageInterface | None = None,
+        rename_vars: bool = True,
+        variable_dim: bool = True,
     ) -> None:
         """Create a consumer service with the given dependencies.
 
@@ -60,6 +65,8 @@ class NWPConsumerService:
         self.rawstorer = rawstorer if rawstorer is not None else storer
         self.rawdir = pathlib.Path(rawdir)
         self.zarrdir = pathlib.Path(zarrdir)
+        self.rename_vars = rename_vars
+        self.variable_dim = variable_dim
 
     def DownloadRawDataset(self, *, start: dt.datetime, end: dt.datetime) -> list[pathlib.Path]:
         """Download and convert raw data for a given time range.
@@ -249,12 +256,14 @@ class NWPConsumerService:
             prefix=self.rawdir, it=it
         )
 
-        # Create a dask pipeline from the available files, filtering out cached files
-        rb = dask.bag.from_sequence(allSourceFiles).filter(
-            lambda fi: fi.filename() not in [p.name for p in cachedFiles],
-        )
-        # Download the files to the cache, filtering any failed downloads
-        rb = rb.map(lambda fi: self.fetcher.downloadToCache(fi=fi)).filter(
+        # Create a dask pipeline from the available files
+        rb = dask.bag.from_sequence(allSourceFiles)
+        # Download the files to the cache, filtering any already cached or failed downloads
+        rb = rb.map(
+                lambda fi: self.fetcher.downloadToCache(fi=fi)
+                if fi.filename() not in [cf.name for cf in cachedFiles]
+                else cachedFiles.pop(cachedFiles.index(internal.rawCachePath(it=it, filename=fi.filename())))
+            ).filter(
             lambda p: p != pathlib.Path()
         )
         # Store the files using the raw storer
@@ -264,7 +273,8 @@ class NWPConsumerService:
                 dst=self.rawdir / p.relative_to(internal.CACHE_DIR_RAW),
             )
         )
-        return list(rb.compute())
+        storedFiles: list[pathlib.Path] = rb.compute()
+        return storedFiles
 
     def _convertSingleInitTime(self, it: dt.datetime) -> list[pathlib.Path]:
         """Convert raw data for a single init time to zarr.
@@ -283,14 +293,27 @@ class NWPConsumerService:
         # * in this case, first the partitions are merged, followed by the results
         zbag = zbag.fold(lambda a, b: _mergeDatasets([a, b]))
         ds = zbag.compute()
-        # Filter out datasets that are not of sufficient quality
-        if _dataQualityFilter(ds=ds):
-            # Cache the dataset as a zarr file
-            zpath = _cacheAsZipZarr(ds=ds)
-            # Store the zarr file using the storer
-            return [self.storer.store(src=zpath, dst=self.zarrdir / zpath.name)]
 
-        return []
+        # Filter out datasets that are not of sufficient quality
+        if not _dataQualityFilter(ds=ds):
+            return []
+
+        if self.rename_vars:
+            for var in ds.data_vars:
+                if var in self.fetcher.parameterConformMap():
+                    ds = ds.rename({var: self.fetcher.parameterConformMap()[var].value})
+
+        if self.variable_dim:
+            ds = (
+                ds.to_array(dim="variable", name=self.fetcher.datasetName())
+                .to_dataset()
+                .transpose("variable", ...)
+            )
+        # Cache the dataset as a zarr file
+        zpath = _cacheAsZipZarr(ds=ds)
+        # Store the zarr file using the storer
+        return [self.storer.store(src=zpath, dst=self.zarrdir / zpath.name)]
+
 
     def _performFuncForMultipleInitTimes(
         self,
@@ -376,26 +399,12 @@ def _dataQualityFilter(ds: xr.Dataset) -> bool:
         return False
 
     # Carry out a basic data quality check
-    if "variable" not in dict(ds.coords.items()):
-        log.warn(
-            event="Dataset for is missing variable coord, checking other data variables",
-            initTime=str(ds.coords["init_time"].values[0])[:16],
-            coords=dict(ds.coords.items()),
-        )
-        for data_var in ds.data_vars.keys():
-            if True in ds[f"{data_var}"].isnull():
-                log.warn(
-                    event=f"Dataset has NaNs in variable {data_var}",
-                    initTime=str(ds.coords["init_time"].values[0])[:16],
-                    variable=data_var,
-                )
-
-    for var in ds.coords["variable"].values:
-        if True in ds.sel(variable=var).isnull():
+    for data_var in ds.data_vars:
+        if True in ds[f"{data_var}"].isnull():
             log.warn(
-                event=f"Dataset has NaNs in variable {var}",
+                event=f"Dataset has NaNs in variable {data_var}",
                 initTime=str(ds.coords["init_time"].values[0])[:16],
-                variable=var,
+                variable=data_var,
             )
 
     return True
@@ -418,8 +427,8 @@ def _mergeDatasets(datasets: list[xr.Dataset]) -> xr.Dataset:
                 for i, ds in enumerate(datasets)
             },
         )
-        ds = xr.merge(
-            objects=datasets,
+        ds = xr.combine_by_coords(
+            data_objects=datasets,
             combine_attrs="drop_conflicts",
             fill_value=0,
             compat="override",

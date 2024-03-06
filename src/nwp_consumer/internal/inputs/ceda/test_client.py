@@ -40,15 +40,13 @@ class TestClient_MapCachedRaw(unittest.TestCase):
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(
-            {"init_time": 1, "variable": 6, "step": 4, "y": 704, "x": 548},
+            {"init_time": 1, "step": 4, "y": 704, "x": 548},
             dict(out.sizes.items()),
         )
-        # Ensure the dimensions of the variables are in the correct order
-        self.assertEqual(("variable", "init_time", "step", "y", "x"), out["UKV"].dims)
         # Ensure the correct variables are in the variable dimension
-        self.assertListEqual(
+        self.assertCountEqual(
             ["prate", "r", "si10", "t", "vis", "wdir10"],
-            sorted(out.coords["variable"].values),
+            list(out.data_vars.keys()),
         )
 
     def test_convertsWholesale2FileCorrectly(self) -> None:
@@ -58,15 +56,13 @@ class TestClient_MapCachedRaw(unittest.TestCase):
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(
-            {"init_time": 1, "variable": 6, "step": 4, "y": 704, "x": 548},
+            {"init_time": 1, "step": 4, "y": 704, "x": 548},
             dict(out.sizes.items()),
         )
-        # Ensure the dimensions of the variables are in the correct order
-        self.assertEqual(("variable", "init_time", "step", "y", "x"), out["UKV"].dims)
         # Ensure the correct variables are in the variable dimension
-        self.assertListEqual(
+        self.assertCountEqual(
             ["dlwrf", "dswrf", "hcc", "lcc", "mcc", "sde"],
-            sorted(out.coords["variable"].values),
+            list(out.data_vars.keys()),
         )
 
 # --------- Static methods --------- #

@@ -19,28 +19,6 @@ from ._models import ECMWFMarsFileInfo
 
 log = structlog.getLogger()
 
-PARAMETER_RENAME_MAP: dict[str, str] = {
-    "tas": internal.OCFShortName.TemperatureAGL.value,
-    "t2m": internal.OCFShortName.TemperatureAGL.value,
-    "uas": internal.OCFShortName.WindUComponentAGL.value,
-    "vas": internal.OCFShortName.WindVComponentAGL.value,
-    "dsrp": internal.OCFShortName.DirectSolarRadiation.value,
-    "uvb": internal.OCFShortName.DownwardUVRadiationAtSurface.value,
-    "hcc": internal.OCFShortName.HighCloudCover.value,
-    "mcc": internal.OCFShortName.MediumCloudCover.value,
-    "lcc": internal.OCFShortName.LowCloudCover.value,
-    "clt": internal.OCFShortName.TotalCloudCover.value,
-    "ssrd": internal.OCFShortName.DownwardShortWaveRadiationFlux.value,
-    "strd": internal.OCFShortName.DownwardLongWaveRadiationFlux.value,
-    "tprate": internal.OCFShortName.RainPrecipitationRate.value,
-    "sd": internal.OCFShortName.SnowDepthWaterEquivalent.value,
-    "u100": internal.OCFShortName.WindUComponent100m.value,
-    "v100": internal.OCFShortName.WindVComponent100m.value,
-    "u200": internal.OCFShortName.WindUComponent200m.value,
-    "v200": internal.OCFShortName.WindVComponent200m.value,
-    "vis": internal.OCFShortName.VisibilityAGL.value,
-}
-
 # Mapping from ECMWF eccode to ECMWF short name
 # * https://codes.ecmwf.int/grib/param-db/?filter=All
 PARAMETER_ECMWFCODE_MAP: dict[str, str] = {
@@ -98,10 +76,10 @@ class MARSClient(internal.FetcherInterface):
     desired_params: list[str]
 
     def __init__(
-        self,
-        area: str = "uk",
-        hours: int = 48,
-        param_group: str = "default",
+            self,
+            area: str = "uk",
+            hours: int = 48,
+            param_group: str = "default",
     ) -> None:
         """Create a new ECMWF Mars Client.
 
@@ -132,6 +110,10 @@ class MARSClient(internal.FetcherInterface):
                 self.desired_params = ["167.128", "169.128"]  # 2 Metre Temperature, Dswrf
             case _:
                 self.desired_params = list(PARAMETER_ECMWFCODE_MAP.keys())
+
+    def datasetName(self) -> str:
+        """Overrides the corresponding method in the parent class."""
+        return f"ECMWF_{self.area.upper()}"
 
     def getInitHours(self) -> list[int]:  # noqa: D102
         return [0, 12]
@@ -240,7 +222,8 @@ class MARSClient(internal.FetcherInterface):
 
         return cfp
 
-    def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
+    def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:
+        """Overrides the corresponding method in the parent class."""
         if p.suffix != ".grib":
             log.warn(event="cannot map non-grib file to dataset", filepath=p.as_posix())
             return xr.Dataset()
@@ -256,7 +239,6 @@ class MARSClient(internal.FetcherInterface):
                 chunks={
                     "time": 1,
                     "step": -1,
-                    "variable": -1,
                     "longitude": "auto",
                     "latitude": "auto",
                 },
@@ -266,67 +248,65 @@ class MARSClient(internal.FetcherInterface):
             log.warn(event="error converting raw file to dataset", filepath=p.as_posix(), error=e)
             return xr.Dataset()
 
-        for i, ds in enumerate(datasets):
-            # Rename the parameters to the OCF names
-            # * Only do so if they exist in the dataset
-            for oldParamName, newParamName in PARAMETER_RENAME_MAP.items():
-                if oldParamName in ds:
-                    ds = ds.rename({oldParamName: newParamName})
-
-            # Delete unwanted coordinates
-            ds = ds.drop_vars(
-                names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST],
-                errors="ignore",
-            )
-
-            # Put the modified dataset back in the list
-            datasets[i] = ds
-
         # Merge the datasets back into one
         wholesaleDataset = xr.merge(
             objects=datasets,
             compat="override",
             combine_attrs="drop_conflicts",
         )
+        del datasets
 
-        # Create a chunked Dask Dataset from the input multi-variate Dataset.
-        # *  Converts the input multivariate DataSet (with different DataArrays for
-        #     each NWP variable) to a single DataArray with a `variable` dimension.
-        # * This allows each Zarr chunk to hold multiple variables (useful for loading
-        #     many/all variables at once from disk).
-        # * The chunking is done in such a way that each chunk is a single time step
-        #     for a single variable.
+        # Map the data to the internal dataset representation
         # * Transpose the Dataset so that the dimensions are correctly ordered
+        # * Rechunk the data to a more optimal size
         wholesaleDataset = (
             wholesaleDataset.rename({"time": "init_time"})
             .expand_dims("init_time")
-            .to_array(dim="variable", name=f"ECMWF_{self.area}".upper())
-            .to_dataset()
-            .transpose("variable", "init_time", "step", "latitude", "longitude")
+            .transpose("init_time", "step", "latitude", "longitude")
             .sortby("step")
-            .sortby("variable")
             .chunk(
                 {
                     "init_time": 1,
                     "step": -1,
-                    "variable": -1,
                     "latitude": len(wholesaleDataset.latitude) // 2,
                     "longitude": len(wholesaleDataset.longitude) // 2,
                 },
             )
         )
 
-        del datasets
-
         return wholesaleDataset
 
+    def parameterConformMap(self) -> dict[str, internal.OCFParameter]:
+        """Overrides the corresponding method in the parent class."""
+        return {
+            "tas": internal.OCFParameter.TemperatureAGL,
+            "t2m": internal.OCFParameter.TemperatureAGL,
+            "uas": internal.OCFParameter.WindUComponentAGL,
+            "vas": internal.OCFParameter.WindVComponentAGL,
+            "dsrp": internal.OCFParameter.DirectSolarRadiation,
+            "uvb": internal.OCFParameter.DownwardUVRadiationAtSurface,
+            "hcc": internal.OCFParameter.HighCloudCover,
+            "mcc": internal.OCFParameter.MediumCloudCover,
+            "lcc": internal.OCFParameter.LowCloudCover,
+            "clt": internal.OCFParameter.TotalCloudCover,
+            "ssrd": internal.OCFParameter.DownwardShortWaveRadiationFlux,
+            "strd": internal.OCFParameter.DownwardLongWaveRadiationFlux,
+            "tprate": internal.OCFParameter.RainPrecipitationRate,
+            "sd": internal.OCFParameter.SnowDepthWaterEquivalent,
+            "u100": internal.OCFParameter.WindUComponent100m,
+            "v100": internal.OCFParameter.WindVComponent100m,
+            "u200": internal.OCFParameter.WindUComponent200m,
+            "v200": internal.OCFParameter.WindVComponent200m,
+            "vis": internal.OCFParameter.VisibilityAGL,
+        }
+
     def _buildMarsRequest(
-        self,
-        *,
-        list_only: bool,
-        it: dt.datetime,
-        target: str,
-        params: list[str],
+            self,
+            *,
+            list_only: bool,
+            it: dt.datetime,
+            target: str,
+            params: list[str],
     ) -> str:
         """Build a MARS request according to the parameters of the client.
 
@@ -353,7 +333,7 @@ class MARSClient(internal.FetcherInterface):
                 time     = {it.strftime("%H")},
                 type     = fc,
                 area     = {AREA_MAP[self.area]},
-                grid     = 0.05/0.05,
+                grid     = 0.1/0.1,
                 target   = "{target}"
         """
 
@@ -398,4 +378,3 @@ def _parseAvaliableParams(fileData: str) -> list[str]:
         tablelines: list[str] = tablematch.group(0).split("\n")
         return list({line.split()[4] for line in tablelines if len(line.split()) > 4})
     return []
-

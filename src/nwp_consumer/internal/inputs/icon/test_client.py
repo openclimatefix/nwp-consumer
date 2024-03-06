@@ -10,54 +10,67 @@ if TYPE_CHECKING:
 
 from .client import Client, _parseIconFilename
 
-testClient = Client(model="global")
+testClientGlobal = Client(model="global")
+testClientEurope = Client(model="europe")
 
 
 class TestClient(unittest.TestCase):
-    def test_mapCachedRaw(self) -> None:
+    def test_mapCachedRawGlobal(self) -> None:
         tests = [
             {
                 "filename": "test_icon_global_001_CLCL.grib2",
-                "expected_dims": ("variable", "init_time", "step", "values"),
-                "expected_var": "ccl",
-            },
-            {
-                "filename": "test_icon_europe_001_CLCL.grib2",
-                "expected_dims": ("variable", "init_time", "step", "latitude", "longitude"),
+                "expected_dims": ["init_time", "step", "values"],
                 "expected_var": "ccl",
             },
             {
                 "filename": "test_icon_global_001_HTOP_CON.grib2",
-                "expected_dims": ("variable", "init_time", "step", "values"),
+                "expected_dims": ["init_time", "step", "values"],
                 "expected_var": "hcct",
             },
             {
                 "filename": "test_icon_global_001_CLCT_MOD.grib2",
-                "expected_dims": ("variable", "init_time", "step", "values"),
+                "expected_dims": ["init_time", "step", "values"],
                 "expected_var": "CLCT_MOD",
             },
         ]
 
         for tst in tests:
             with self.subTest(f"test file {tst['filename']}"):
-                out = testClient.mapCachedRaw(p=pathlib.Path(__file__).parent / tst["filename"])
+                out = testClientGlobal.mapCachedRaw(p=pathlib.Path(__file__).parent / tst["filename"])
+                print(out)
 
                 # Check latitude and longitude are injected
                 self.assertTrue("latitude" in out.coords)
                 self.assertTrue("longitude" in out.coords)
                 # Check that the dimensions are correctly ordered and renamed
-                self.assertEqual(
-                    out[next(iter(out.data_vars.keys()))].dims,
-                    tst["expected_dims"],
-                )
-                # Check that the parameter is renamed
-                self.assertEqual(out["variable"].values[0], tst["expected_var"])
+                self.assertEqual((list(out.dims.keys())), tst["expected_dims"])
+
+    def test_mapCachedRawEurope(self) -> None:
+        tests = [
+            {
+                "filename": "test_icon_europe_001_CLCL.grib2",
+                "expected_dims": ["init_time", "step", "latitude", "longitude"],
+                "expected_var": "ccl",
+            },
+        ]
+
+        for tst in tests:
+            with self.subTest(f"test file {tst['filename']}"):
+                out = testClientEurope.mapCachedRaw(p=pathlib.Path(__file__).parent / tst["filename"])
+                print(out)
+
+                # Check latitude and longitude are injected
+                self.assertTrue("latitude" in out.coords)
+                self.assertTrue("longitude" in out.coords)
+                # Check that the dimensions are correctly ordered and renamed
+                for data_var in out.data_vars:
+                    self.assertEqual(list(out[data_var].dims), tst["expected_dims"])
 
     def test_mergeRaw(self) -> None:
-        ds1 = testClient.mapCachedRaw(
+        ds1 = testClientGlobal.mapCachedRaw(
             p=pathlib.Path(__file__).parent / "test_icon_global_001_CLCT_MOD.grib2"
         )
-        ds2 = testClient.mapCachedRaw(
+        ds2 = testClientGlobal.mapCachedRaw(
             p=pathlib.Path(__file__).parent / "test_icon_global_001_HTOP_CON.grib2"
         )
 

@@ -62,16 +62,16 @@ class TestECMWFMARSClient(unittest.TestCase):
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(
-            {"init_time": 1, "variable": 2, "step": 49, "latitude": 241, "longitude": 301},
+            {"init_time": 1, "step": 49, "latitude": 241, "longitude": 301},
             dict(out.sizes.items()),
         )
         # Ensure the dimensions of the variables are in the correct order
         self.assertEqual(
-            ("variable", "init_time", "step", "latitude", "longitude"),
+            ("init_time", "step", "latitude", "longitude"),
             out[next(iter(out.data_vars.keys()))].dims,
         )
-        # Ensure the correct variables are in the variable dimension
-        self.assertListEqual(["prate", "sde"], sorted(out.coords["variable"].values))
+        # Ensure the correct datavars are in the dataset
+        self.assertCountEqual(["tprate", "sd"], list(out.data_vars.keys()))
 
     def test_buildMarsRequest(self) -> None:
         testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_2params.grib"

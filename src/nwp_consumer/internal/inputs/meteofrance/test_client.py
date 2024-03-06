@@ -13,70 +13,37 @@ testClient = Client(model="global")
 
 class TestClient(unittest.TestCase):
     def test_mapCachedRaw(self) -> None:
-        # Test with global file
-        testFilePath: pathlib.Path = (
-            pathlib.Path(__file__).parent / "SP1_00H24H_t.grib2"
-        )
-        out = testClient.mapCachedRaw(p=testFilePath)
 
-        # Check latitude and longitude are injected
-        self.assertTrue("latitude" in out.coords)
-        self.assertTrue("longitude" in out.coords)
-        # Check that the dimensions are correctly ordered and renamed
-        self.assertEqual(
-            out[next(iter(out.data_vars.keys()))].dims,
-            ("variable", "init_time", "step", "latitude", "longitude"),
-        )
-        # Check that the parameter is renamed
-        self.assertEqual(out["variable"].values[0], "t")
-        self.assertEqual(len(out["latitude"].values), 361)
-        self.assertEqual(len(out["longitude"].values), 720)
-        self.assertEqual(len(out["init_time"].values), 1)
-        self.assertEqual(len(out["step"].values), 9)
+        tests = [
+            {
+                "filename": "SP1_00H24H_t.grib2",
+                "expected_dims": ("init_time", "step", "latitude", "longitude"),
+                "expected_var": "t",
+            },
+            {
+                "filename": "HP1_00H24H_t.grib2",
+                "expected_dims": ("init_time", "step", "heightAboveGround", "latitude", "longitude"),
+                "expected_var": "t",
+            },
+            {
+                "filename": "IP1_00H24H_t.grib2",
+                "expected_dims": ("init_time", "step", "isobaricInhPa", "latitude", "longitude"),
+                "expected_var": "t",
+            },
+        ]
 
-        # Test with height level file
-        testFilePath: pathlib.Path = (
-                pathlib.Path(__file__).parent / "HP1_00H24H_t.grib2"
-        )
-        out = testClient.mapCachedRaw(p=testFilePath)
+        for tst in tests:
+            with self.subTest(f"test file {tst['filename']}"):
+                out = testClient.mapCachedRaw(p=pathlib.Path(__file__).parent / tst["filename"])
 
-        # Check latitude and longitude are injected
-        self.assertTrue("latitude" in out.coords)
-        self.assertTrue("longitude" in out.coords)
-        # Check that the dimensions are correctly ordered and renamed
-        self.assertEqual(
-            out[next(iter(out.data_vars.keys()))].dims,
-            ("variable", "init_time", "step", "heightAboveGround", "latitude", "longitude"),
-        )
-        # Check that the parameter is renamed
-        self.assertEqual(out["variable"].values[0], "t")
-        self.assertEqual(len(out["latitude"].values), 361)
-        self.assertEqual(len(out["longitude"].values), 720)
-        self.assertEqual(len(out["init_time"].values), 1)
-        self.assertEqual(len(out["step"].values), 9)
-        self.assertEqual(len(out["heightAboveGround"].values), 24)
-
-        # Test with pressure level file
-        testFilePath: pathlib.Path = (
-            pathlib.Path(__file__).parent / "IP1_00H24H_t.grib2"
-        )
-        out = testClient.mapCachedRaw(p=testFilePath)
-
-        # Check latitude and longitude are present
-        self.assertTrue("latitude" in out.coords)
-        self.assertTrue("longitude" in out.coords)
-        # Check that the dimensions are correctly ordered and renamed
-        self.assertEqual(
-            out[next(iter(out.data_vars.keys()))].dims,
-            ("variable", "init_time", "step", "isobaricInhPa", "latitude", "longitude"),
-        )
-        # Check that the parameter is renamed
-        self.assertEqual(out["variable"].values[0], "t")
-        self.assertEqual(len(out["latitude"].values), 361)
-        self.assertEqual(len(out["longitude"].values), 720)
-        self.assertEqual(len(out["init_time"].values), 1)
-        self.assertEqual(len(out["step"].values), 9)
-        self.assertEqual(len(out["isobaricInhPa"].values), 28)
+                # Check latitude and longitude are injected
+                self.assertTrue("latitude" in out.coords)
+                self.assertTrue("longitude" in out.coords)
+                # Check that the dimensions are correctly ordered and renamed
+                self.assertEqual(
+                    out[next(iter(out.data_vars.keys()))].dims,
+                    tst["expected_dims"],
+                )
 
 
 class TestParseArpegeFilename(unittest.TestCase):

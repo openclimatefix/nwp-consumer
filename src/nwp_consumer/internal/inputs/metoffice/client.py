@@ -15,24 +15,6 @@ from ._models import MetOfficeFileInfo, MetOfficeResponse
 
 log = structlog.getLogger()
 
-# Defines the mapping from MetOffice parameter names to OCF parameter names
-PARAMETER_RENAME_MAP: dict[str, str] = {
-    "t2m": internal.OCFShortName.TemperatureAGL.value,
-    "si10": internal.OCFShortName.WindSpeedSurfaceAdjustedAGL.value,
-    "wdir10": internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL.value,
-    "hcc": internal.OCFShortName.HighCloudCover.value,
-    "mcc": internal.OCFShortName.MediumCloudCover.value,
-    "lcc": internal.OCFShortName.LowCloudCover.value,
-    "vis": internal.OCFShortName.VisibilityAGL.value,
-    "r2": internal.OCFShortName.RelativeHumidityAGL.value,
-    "rprate": internal.OCFShortName.RainPrecipitationRate.value,
-    "tprate": internal.OCFShortName.RainPrecipitationRate.value,
-    "sd": internal.OCFShortName.SnowDepthWaterEquivalent.value,
-    "dswrf": internal.OCFShortName.DownwardShortWaveRadiationFlux.value,
-    "dlwrf": internal.OCFShortName.DownwardLongWaveRadiationFlux.value,
-}
-
-
 class Client(internal.FetcherInterface):
     """Implements a client to fetch the data from the MetOffice API."""
 
@@ -64,6 +46,10 @@ class Client(internal.FetcherInterface):
             "apikey": apiKey,
         }
 
+    def datasetName(self) -> str:
+        """Overrides the corresponding method in FetcherInterface."""
+        return "UKV"
+
     def getInitHours(self) -> list[int]:  # noqa: D102
         # NOTE: This will depend on the order you have with the MetOffice.
         # Technically they can provide data for every hour of the day,
@@ -72,7 +58,7 @@ class Client(internal.FetcherInterface):
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
         if (
-            self.__headers.get("apikey") is None
+                self.__headers.get("apikey") is None
         ):
             log.error("all metoffice API credentials not provided")
             return []
@@ -128,12 +114,12 @@ class Client(internal.FetcherInterface):
         return wantedFileInfos
 
     def downloadToCache(  # noqa: D102
-        self,
-        *,
-        fi: internal.FileInfoModel,
+            self,
+            *,
+            fi: internal.FileInfoModel,
     ) -> pathlib.Path:
         if (
-            self.__headers.get("apikey") is None
+                self.__headers.get("apikey") is None
         ):
             log.error("all metoffice API credentials not provided")
             return pathlib.Path()
@@ -186,7 +172,6 @@ class Client(internal.FetcherInterface):
 
         return cfp
 
-
     def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:  # noqa: D102
         if p.suffix != ".grib":
             log.warn(
@@ -204,15 +189,13 @@ class Client(internal.FetcherInterface):
         # Load the GRIB file as a cube
         try:
             # Read the file as a dataset, also reading the values of the keys in 'read_keys'
-            # * Can also set backend_kwargs={"indexpath": ""}, to avoid the index file
             parameterDataset: xr.Dataset = xr.open_dataset(
                 p.as_posix(),
                 engine="cfgrib",
-                backend_kwargs={"read_keys": ["name", "parameterNumber"]},
+                backend_kwargs={"read_keys": ["name", "parameterNumber"], "indexpath": ""},
                 chunks={
                     "time": 1,
                     "step": -1,
-                    "variable": -1,
                     "x": "auto",
                     "y": "auto",
                 },
@@ -238,34 +221,17 @@ class Client(internal.FetcherInterface):
             case "unknown", 194:
                 parameterDataset = parameterDataset.rename(
                     {
-                        currentName: internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL.value,
+                        currentName: internal.OCFParameter.WindDirectionFromWhichBlowingSurfaceAdjustedAGL.value,
                     },
                 )
             case "unknown", 195:
                 parameterDataset = parameterDataset.rename(
-                    {currentName: internal.OCFShortName.WindSpeedSurfaceAdjustedAGL.value},
+                    {currentName: internal.OCFParameter.WindSpeedSurfaceAdjustedAGL.value},
                 )
-            case x, int() if x in PARAMETER_RENAME_MAP:
-                parameterDataset = parameterDataset.rename({x: PARAMETER_RENAME_MAP[x]})
-            case _, _:
-                log.warn(
-                    event="encountered unknown parameter; ignoring file",
-                    unknownparamname=currentName,
-                    unknownparamnumber=parameterNumber,
-                    filepath=p.as_posix(),
-                )
-                return xr.Dataset()
 
-        # 2. Remove unneeded variables
-        # 3. Rename and Expand the init_time dimension
-        # 4. Create a chunked Dask Dataset from the input multi-variate Dataset.
-        # *  Converts the input multivariate DataSet (with different DataArrays for
-        #     each NWP variable) to a single DataArray with a `variable` dimension.
-        # * This allows each Zarr chunk to hold multiple variables (useful for loading
-        #     many/all variables at once from disk).
-        # * The chunking is done in such a way that each chunk is a single time step
-        #     for a single variable.
+        # Map the data to the internal dataset representation
         # * Transpose the Dataset so that the dimensions are correctly ordered
+        # * Rechunk the data to a more optimal size
         # * Reverse `latitude` so it's top-to-bottom via reindexing.
         parameterDataset = (
             parameterDataset.drop_vars(
@@ -285,15 +251,11 @@ class Client(internal.FetcherInterface):
             )
             .rename({"time": "init_time"})
             .expand_dims(["init_time"])
-            .to_array(dim="variable", name="UKV")
             .sortby("y", ascending=False)
-            .to_dataset()
-            .transpose("variable", "init_time", "step", "y", "x")
+            .transpose("init_time", "step", "y", "x")
             .sortby("step")
-            .sortby("variable")
             .chunk(
                 {
-                    "variable": -1,
                     "init_time": 1,
                     "step": -1,
                     "y": len(parameterDataset.y) // 2,
@@ -328,6 +290,24 @@ class Client(internal.FetcherInterface):
         )
 
         return parameterDataset
+
+    def parameterConformMap(self) -> dict[str, internal.OCFParameter]:
+        """Overrides the corresponding method in the parent class."""
+        return {
+            "t2m": internal.OCFParameter.TemperatureAGL,
+            "si10": internal.OCFParameter.WindSpeedSurfaceAdjustedAGL,
+            "wdir10": internal.OCFParameter.WindDirectionFromWhichBlowingSurfaceAdjustedAGL,
+            "hcc": internal.OCFParameter.HighCloudCover,
+            "mcc": internal.OCFParameter.MediumCloudCover,
+            "lcc": internal.OCFParameter.LowCloudCover,
+            "vis": internal.OCFParameter.VisibilityAGL,
+            "r2": internal.OCFParameter.RelativeHumidityAGL,
+            "rprate": internal.OCFParameter.RainPrecipitationRate,
+            "tprate": internal.OCFParameter.RainPrecipitationRate,
+            "sd": internal.OCFParameter.SnowDepthWaterEquivalent,
+            "dswrf": internal.OCFParameter.DownwardShortWaveRadiationFlux,
+            "dlwrf": internal.OCFParameter.DownwardLongWaveRadiationFlux,
+        }
 
 
 def _isWantedFile(*, fi: MetOfficeFileInfo, dit: dt.datetime) -> bool:

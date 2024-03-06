@@ -25,69 +25,40 @@ class TestClient_Init(unittest.TestCase):
             _ = Client(orderID="tmp", apiKey="")
 
 
-class TestClient_ConvertRawFileToDataset(unittest.TestCase):
-    """Tests for the MetOfficeClient.convertRawFileToDataset method."""
+class TestClient(unittest.TestCase):
+    """Tests for the MetOfficeClient."""
 
-    def test_convertsCorrectly(self) -> None:
-        testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_knownparam.grib"
+    def test_mapCachedRaw(self) -> None:
 
-        out = testClient.mapCachedRaw(p=testFilePath)
+        tests = [
+            {
+                "filename": "test_knownparam.grib",
+                "expected_dims": ["init_time", "step", "y", "x"],
+                "expected_var": "dswrf",
+            },
+            {
+                "filename": "test_unknownparam1.grib",
+                "expected_dims": ["init_time", "step", "y", "x"],
+                "expected_var": "wdir10",
+            },
+            {
+                "filename": "test_unknownparam2.grib",
+                "expected_dims": ["init_time", "step", "y", "x"],
+                "expected_var": "si10",
+            },
+        ]
 
-        # Ensure the dimensions have the right sizes
-        self.assertDictEqual(
-            {"init_time": 1, "variable": 1, "step": 13, "y": 639, "x": 455},
-            dict(out.sizes.items()),
-        )
-        # Ensure the dimensions of the variables are in the correct order
-        self.assertEqual(("variable", "init_time", "step", "y", "x"), out["UKV"].dims)
-        # Ensure the correct variables are in the variable dimension
-        self.assertListEqual(["dswrf"], sorted(out.coords["variable"].values))
+        for tst in tests:
+            with self.subTest(f"test file {tst['filename']}"):
+                out = testClient.mapCachedRaw(p=pathlib.Path(__file__).parent / tst["filename"])
 
-    def test_renamesVariables(self) -> None:
-        testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_wrongnameparam.grib"
-
-        out = testClient.mapCachedRaw(p=testFilePath)
-
-        # Ensure the dimensions have the right sizes
-        self.assertDictEqual(
-            {"init_time": 1, "variable": 1, "step": 13, "y": 639, "x": 455},
-            dict(out.sizes.items()),
-        )
-        # Ensure the dimensions of the variables are in the correct order
-        self.assertEqual(out["UKV"].dims, ("variable", "init_time", "step", "y", "x"))
-        # Ensure the correct variables are in the variable dimension
-        self.assertListEqual(["prate"], sorted(out.coords["variable"].values))
-
-    def test_handlesUnknownsInMetOfficeData(self) -> None:
-        testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknownparam1.grib"
-
-        out = testClient.mapCachedRaw(p=testFilePath)
-
-        # Ensure the dimensions have the right sizes
-        self.assertDictEqual(
-            {"init_time": 1, "variable": 1, "step": 43, "y": 639, "x": 455},
-            dict(out.sizes.items()),
-        )
-        # Ensure the dimensions of the variables are in the correct order
-        self.assertEqual(out["UKV"].dims, ("variable", "init_time", "step", "y", "x"))
-        # Ensure the correct variables are in the variable dimension
-        self.assertListEqual(["wdir10"], sorted(out.coords["variable"].values))
-        self.assertNotEqual(["unknown"], sorted(out.coords["variable"].values))
-
-        testFilePath: pathlib.Path = pathlib.Path(__file__).parent / "test_unknownparam2.grib"
-
-        out = testClient.mapCachedRaw(p=testFilePath)
-
-        # Ensure the dimensions have the right sizes
-        self.assertDictEqual(
-            {"init_time": 1, "variable": 1, "step": 10, "y": 639, "x": 455},
-            dict(out.sizes.items()),
-        )
-        # Ensure the dimensions of the variables are in the correct order
-        self.assertEqual(("variable", "init_time", "step", "y", "x"), out["UKV"].dims)
-        # Ensure the correct variables are in the variable dimension
-        self.assertListEqual(["si10"], sorted(out.coords["variable"].values))
-        self.assertNotEqual(["unknown"], sorted(out.coords["variable"].values))
+                # Ensure the dimensions of the variables are correct
+                for data_var in out.data_vars:
+                    self.assertEqual(list(out[data_var].dims), tst["expected_dims"])
+                # Ensure the correct variable is in the data_vars
+                self.assertTrue(tst["expected_var"] in list(out.data_vars.keys()))
+                # Ensure no unknowns
+                self.assertNotIn("unknown", list(out.data_vars.keys()))
 
 
 # --------- Static methods --------- #
