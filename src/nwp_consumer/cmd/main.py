@@ -101,6 +101,8 @@ def run(argv: list[str]) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
         rawstorer=rawstorer,
         zarrdir=arguments["--zdir"],
         rawdir=arguments["--rdir"],
+        rename_vars=arguments["--rename-params"],
+        variable_dim=arguments["--variable-dim"],
     )
 
     # Logic for the "check" command
