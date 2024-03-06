@@ -57,6 +57,7 @@ with contextlib.suppress(importlib.metadata.PackageNotFoundError):
 
 log = structlog.getLogger()
 
+
 def run(argv: list[str]) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
     """Run the CLI.
 
@@ -86,7 +87,7 @@ def run(argv: list[str]) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
     # Logic for the env command
     if arguments["env"]:
         parse_actor(source=arguments["--source"], sink=arguments["--sink"]).print_env()
-        return ([], [])
+        return [], []
 
     # Create the service using the fetcher and storer
     fetcher = parse_actor(arguments["--source"], None)().configure_fetcher()
@@ -108,7 +109,7 @@ def run(argv: list[str]) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
     # Logic for the "check" command
     if arguments["check"]:
         _ = service.Check()
-        return ([], [])
+        return [], []
 
     # Process the from and to arguments
     start, end = _parse_from_to(arguments["--from"], arguments["--to"])
@@ -175,11 +176,11 @@ def _parse_from_to(fr: str, to: str | None) -> tuple[dt.datetime, dt.datetime]:
     # If --from specifies a date, and --to is not set, set --to to the next day
     if len(fr) == 10 and to is None:
         to = (
-            dt.datetime.strptime(
-                fr,
-                "%Y-%m-%d",
-            ).replace(tzinfo=dt.UTC)
-            + dt.timedelta(days=1)
+                dt.datetime.strptime(
+                    fr,
+                    "%Y-%m-%d",
+                ).replace(tzinfo=dt.UTC)
+                + dt.timedelta(days=1)
         ).strftime("%Y-%m-%d")
     # Otherwise, --from specifies a datetime,
     # so if --to is not set, set --to to the same time
@@ -237,5 +238,3 @@ def parse_actor(source: str | None, sink: str | None) -> type[config.EnvParser]:
                 f"Unknown sink {sink}. Expected one of {list(SINK_ENV_MAP.keys())}",
             ) from e
     raise ValueError("Either source or sink must be specified")
-
-
