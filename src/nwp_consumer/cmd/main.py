@@ -25,8 +25,8 @@ Options:
   --rdir=RDIR         Directory of raw data store [default: /tmp/raw].
   --zdir=ZDIR         Directory of zarr data store [default: /tmp/zarr].
   --create-latest     Create a zarr of the dataset with the latest init time [default: False].
-  --rename-vars       Rename parameters to standard names [default: True].
-  --variable-dim      Stack data variables into a single dimension [default: True].
+  --no-rename-vars    Don't rename parameters to standard names.
+  --no-variable-dim   Don't stack data variables into a single dimension.
 
 Generic Options:
   --version           Show version.
@@ -36,11 +36,11 @@ Generic Options:
 
 import contextlib
 import datetime as dt
-from distutils.util import strtobool
 import importlib.metadata
 import pathlib
 import shutil
 import sys
+from distutils.util import strtobool
 
 import dask
 import dask.distributed
@@ -103,8 +103,8 @@ def run(argv: list[str]) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
         rawstorer=rawstorer,
         zarrdir=arguments["--zdir"],
         rawdir=arguments["--rdir"],
-        rename_vars=strtobool(arguments["--rename-vars"]),
-        variable_dim=strtobool(arguments["--variable-dim"]),
+        rename_vars=not arguments["--no-rename-vars"],
+        variable_dim=not arguments["--no-variable-dim"],
     )
 
     # Logic for the "check" command
@@ -177,11 +177,11 @@ def _parse_from_to(fr: str, to: str | None) -> tuple[dt.datetime, dt.datetime]:
     # If --from specifies a date, and --to is not set, set --to to the next day
     if len(fr) == 10 and to is None:
         to = (
-                dt.datetime.strptime(
-                    fr,
-                    "%Y-%m-%d",
-                ).replace(tzinfo=dt.UTC)
-                + dt.timedelta(days=1)
+            dt.datetime.strptime(
+                fr,
+                "%Y-%m-%d",
+            ).replace(tzinfo=dt.UTC)
+            + dt.timedelta(days=1)
         ).strftime("%Y-%m-%d")
     # Otherwise, --from specifies a datetime,
     # so if --to is not set, set --to to the same time
