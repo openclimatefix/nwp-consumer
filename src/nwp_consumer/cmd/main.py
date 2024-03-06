@@ -2,8 +2,8 @@
 
 Usage:
   nwp-consumer download --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR --create-latest]
-  nwp-consumer convert --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR --rsink=RSINK --create-latest]
-  nwp-consumer consume --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR --rsink=RSINK --create-latest]
+  nwp-consumer convert --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR --rsink=RSINK --rename-vars --variable-dim --create-latest]
+  nwp-consumer consume --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR --rsink=RSINK --rename-vars --variable-dim --create-latest]
   nwp-consumer env (--source=SOURCE | --sink=SINK)
   nwp-consumer check [--sink=SINK] [--rdir=RDIR] [--zdir=ZDIR]
   nwp-consumer (-h | --help)
@@ -25,7 +25,7 @@ Options:
   --rdir=RDIR         Directory of raw data store [default: /tmp/raw].
   --zdir=ZDIR         Directory of zarr data store [default: /tmp/zarr].
   --create-latest     Create a zarr of the dataset with the latest init time [default: False].
-  --rename-params     Rename parameters to standard names [default: True].
+  --rename-vars       Rename parameters to standard names [default: True].
   --variable-dim      Stack data variables into a single dimension [default: True].
 
 Generic Options:
@@ -103,7 +103,7 @@ def run(argv: list[str]) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
         rawstorer=rawstorer,
         zarrdir=arguments["--zdir"],
         rawdir=arguments["--rdir"],
-        rename_vars=strtobool(arguments["--rename-params"]),
+        rename_vars=strtobool(arguments["--rename-vars"]),
         variable_dim=strtobool(arguments["--variable-dim"]),
     )
 
