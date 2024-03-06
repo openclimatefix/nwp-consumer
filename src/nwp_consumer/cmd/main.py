@@ -36,6 +36,7 @@ Generic Options:
 
 import contextlib
 import datetime as dt
+from distutils.util import strtobool
 import importlib.metadata
 import pathlib
 import shutil
@@ -102,8 +103,8 @@ def run(argv: list[str]) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
         rawstorer=rawstorer,
         zarrdir=arguments["--zdir"],
         rawdir=arguments["--rdir"],
-        rename_vars=arguments["--rename-params"],
-        variable_dim=arguments["--variable-dim"],
+        rename_vars=strtobool(arguments["--rename-params"]),
+        variable_dim=strtobool(arguments["--variable-dim"]),
     )
 
     # Logic for the "check" command
