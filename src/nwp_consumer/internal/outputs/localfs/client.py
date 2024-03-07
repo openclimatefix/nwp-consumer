@@ -97,6 +97,13 @@ class Client(internal.StorageInterface):
 
     def copyITFolderToCache(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         """Overrides the corresponding method in the parent class."""
+        # Check if the folder exists
+        if not (prefix / it.strftime(internal.IT_FOLDER_STRUCTURE_RAW)).exists():
+            log.debug(
+                event="Init time folder not present",
+                path=(prefix / it.strftime(internal.IT_FOLDER_STRUCTURE_RAW)).as_posix(),
+            )
+            return []
         filesInFolder = list((prefix / it.strftime(internal.IT_FOLDER_STRUCTURE_RAW)).iterdir())
         if prefix is internal.CACHE_DIR_RAW or prefix is internal.CACHE_DIR_ZARR:
             # The data is already in the cache
