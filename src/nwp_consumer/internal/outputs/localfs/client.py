@@ -105,16 +105,15 @@ class Client(internal.StorageInterface):
             )
             return []
         filesInFolder = list((prefix / it.strftime(internal.IT_FOLDER_STRUCTURE_RAW)).iterdir())
-        if prefix is internal.CACHE_DIR_RAW or prefix is internal.CACHE_DIR_ZARR:
-            # The data is already in the cache
-            return filesInFolder
 
         cfps: list[pathlib.Path] = []
         for file in filesInFolder:
-            # Copy the file to the cache
+            # Copy the file to the cache if it isn't already there
             dst: pathlib.Path = internal.rawCachePath(it=it, filename=file.name)
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            cfps.append(shutil.copy2(src=file, dst=dst))
+            if not dst.exists():
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src=file, dst=dst)
+            cfps.append(dst)
 
         return cfps
 
