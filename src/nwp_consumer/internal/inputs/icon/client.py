@@ -3,10 +3,8 @@ import bz2
 import datetime as dt
 import pathlib
 import re
-import typing
 import urllib.request
 
-import numpy as np
 import requests
 import structlog
 import xarray as xr
@@ -33,6 +31,7 @@ class Client(internal.FetcherInterface):
 
         Args:
             model: The model to fetch data for. Valid models are "europe" and "global".
+            hours: The number of hours to fetch data for.
             param_group: The set of parameters to fetch.
                 Valid groups are "default", "full", and "basic".
         """
@@ -51,8 +50,18 @@ class Client(internal.FetcherInterface):
         match (param_group, model):
             case ("default", _):
                 self.parameters = [
-                    "t_2m", "clch", "clcm", "clcl", "asob_s", "athb_s",
-                    "w_snow", "relhum_2m", "u_10m", "v_10m", "clat", "clon",
+                    "t_2m",
+                    "clch",
+                    "clcm",
+                    "clcl",
+                    "asob_s",
+                    "athb_s",
+                    "w_snow",
+                    "relhum_2m",
+                    "u_10m",
+                    "v_10m",
+                    "clat",
+                    "clon",
                 ]
             case ("basic", "europe"):
                 self.parameters = ["t_2m", "asob_s"]
@@ -214,6 +223,7 @@ class Client(internal.FetcherInterface):
         ds = (
             ds.rename({"time": "init_time"})
             .expand_dims("init_time")
+            .drop_vars(["valid_time", "number", "surface"], errors="ignore")
             .sortby("step")
             .transpose("init_time", "step", ...)
             .chunk(
@@ -227,9 +237,9 @@ class Client(internal.FetcherInterface):
         return ds
 
     def downloadToCache(  # noqa: D102
-            self,
-            *,
-            fi: internal.FileInfoModel,
+        self,
+        *,
+        fi: internal.FileInfoModel,
     ) -> pathlib.Path:
         log.debug(event="requesting download of file", file=fi.filename(), path=fi.filepath())
         try:
@@ -299,12 +309,12 @@ class Client(internal.FetcherInterface):
 
 
 def _parseIconFilename(
-        name: str,
-        baseurl: str,
-        match_sl: bool = True,
-        match_ti: bool = True,
-        match_ml: bool = False,
-        match_pl: bool = False,
+    name: str,
+    baseurl: str,
+    match_sl: bool = True,
+    match_ti: bool = True,
+    match_ml: bool = False,
+    match_pl: bool = False,
 ) -> IconFileInfo | None:
     """Parse a string of HTML into an IconFileInfo object, if it contains one.
 

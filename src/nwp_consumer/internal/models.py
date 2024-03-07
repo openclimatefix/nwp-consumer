@@ -7,6 +7,7 @@ from enum import Enum
 
 import xarray as xr
 
+
 # ------- Domain models ------- #
 
 
@@ -77,15 +78,6 @@ class FileInfoModel(abc.ABC):
         pass
 
 
-COORDS_SCHEMA = {
-    "latitude": {"dims": ("latitude",), "attrs": {"units": "degrees_north"}, "dtype": "float32"},
-    "longitude": {"dims": ("longitude",), "attrs": {"units": "degrees_east"}, "dtype": "float32"},
-    "init_time": {"dims": ("init_time",), "attrs": {"units": "hours since 1970-01-01 00:00:00"}, "dtype": "float64"},
-    "step": {"dims": ("step",), "attrs": {"units": "hours"}, "dtype": "float32"},
-    "x": {"dims": ("x",), "attrs": {"units": "m"}, "dtype": "float32"},
-    "y": {"dims": ("y",), "attrs": {"units": "m"}, "dtype": "float32"},
-}
-
 # ------- Interfaces ------- #
 # Represent ports in the hexagonal architecture pattern
 
@@ -126,7 +118,6 @@ class FetcherInterface(abc.ABC):
         :return: Dataset created from the raw data
         """
         pass
-
 
     @abc.abstractmethod
     def getInitHours(self) -> list[int]:
