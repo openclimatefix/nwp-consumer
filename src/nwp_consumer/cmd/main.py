@@ -2,8 +2,8 @@
 
 Usage:
   nwp-consumer download --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR --create-latest]
-  nwp-consumer convert --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR --rsink=RSINK --rename-vars --variable-dim --create-latest]
-  nwp-consumer consume --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR --rsink=RSINK --rename-vars --variable-dim --create-latest]
+  nwp-consumer convert --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR --rsink=RSINK --no-rename-vars --no-variable-dim --create-latest]
+  nwp-consumer consume --source=SOURCE [--sink=SINK --from=FROM --to=TO --rdir=RDIR --zdir=ZDIR --rsink=RSINK --no-rename-vars --no-variable-dim --create-latest]
   nwp-consumer env (--source=SOURCE | --sink=SINK)
   nwp-consumer check [--sink=SINK] [--rdir=RDIR] [--zdir=ZDIR]
   nwp-consumer (-h | --help)
