@@ -223,7 +223,7 @@ class Client(internal.FetcherInterface):
             ds.rename({"time": "init_time"})
             .expand_dims("init_time")
             .expand_dims("step")
-            .drop_vars(["valid_time", "number", "surface"], errors="ignore")
+            .drop_vars(["valid_time", "number", "surface", "heightAboveGround"], errors="ignore")
             .sortby("step")
             .transpose("init_time", "step", ...)
             .chunk(
