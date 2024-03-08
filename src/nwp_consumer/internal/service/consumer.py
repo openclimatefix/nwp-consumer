@@ -434,4 +434,5 @@ def _mergeDatasets(datasets: list[xr.Dataset]) -> xr.Dataset:
             fill_value=0,
             compat="override",
         )
+    del datasets
     return ds
