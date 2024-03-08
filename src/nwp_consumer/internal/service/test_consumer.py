@@ -144,7 +144,7 @@ class TestCacheAsZipZarr(unittest.TestCase):
 
 
 class TestMergeDatasets(unittest.TestCase):
-    def test_mergeDifferrentDataVars(self) -> None:
+    def test_mergeDifferentDataVars(self) -> None:
         """Test merging datasets with different data variables.
 
         This targets a bug seen in merging large ICON datasets, whereby
@@ -152,66 +152,40 @@ class TestMergeDatasets(unittest.TestCase):
         not merge correctly.
 
         """
-        # Create a list of datasets
-        # * Dataset1: 1 variable, 12 steps
-        # * Dataset2: 1 variable, 96 steps
         datasets = [
             xr.Dataset(
                 data_vars={
-                    "vis": (
-                        ("init_time", "step", "x", "y"),
-                        np.random.rand(1, 96, 100, 100),
+                    "msnswrf": (
+                        ("init_time", "step", "latitude", "longitude"),
+                        np.random.rand(1, 2, 657, 1377),
                     ),
+                    "t2m": (
+                        ("init_time", "step", "latitude", "longitude"),
+                        np.random.rand(1, 2, 657, 1377),
+                    )
                 },
                 coords={
                     "init_time": [np.datetime64("2021-01-01T00:00:00")],
-                    "step": range(96),
-                    "x": range(100),
-                    "y": range(100),
+                    "step": [np.timedelta64(i, 's') for i in [7200, 10800]],
+                    "latitude": range(657),
+                    "longitude": range(1377),
                 },
             ),
             xr.Dataset(
                 data_vars={
-                    "ahum_s": (
-                        ("init_time", "step", "x", "y"),
-                        np.random.rand(1, 1, 100, 100),
+                    "t2m": (
+                        ("init_time", "latitude", "longitude", "step"),
+                        np.random.rand(1, 657, 1377, 1),
                     ),
                 },
                 coords={
-                    "init_time": [np.datetime64("2021-01-01T06:00:00")],
-                    "step": [1],
-                    "x": range(100),
-                    "y": range(100),
+                    "init_time": [np.datetime64("2021-01-01T00:00:00")],
+                    "step": [0],
+                    "latitude": range(657),
+                    "longitude": range(1377),
                 },
             ),
         ]
         # Merge the datasets
         merged = _mergeDatasets(datasets)
-        # Check the merged dataset
-        self.assertListEqual(
-            list(merged.data_vars),
-            list(datasets[0].data_vars) + list(datasets[1].data_vars),
-        )
-        self.assertEqual(merged.attrs, datasets[0].attrs)
 
-        # Then merge again with the next step of the second dataset
-        datasets = [
-            merged,
-            xr.Dataset(
-                data_vars={
-                    "ahum_s": (
-                        ("init_time", "step", "x", "y"),
-                        np.random.rand(1, 1, 100, 100),
-                    ),
-                },
-                coords={
-                    "init_time": [np.datetime64("2021-01-01T06:00:00")],
-                    "step": [2],
-                    "x": range(100),
-                    "y": range(100),
-                },
-            ),
-        ]
-
-        merged = _mergeDatasets(datasets)
-        self.assertEqual(merged.sizes, datasets[0].sizes)

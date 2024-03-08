@@ -5,6 +5,7 @@ import pathlib
 import re
 import urllib.request
 
+import numpy as np
 import requests
 import structlog
 import xarray as xr
@@ -205,12 +206,10 @@ class Client(internal.FetcherInterface):
             )
             return xr.Dataset()
 
-        # Make sure 'step' is a dimension
-        ds = ds.expand_dims("step")
-
-        # Ensure step is a coordinate as well as a dimension
-        if "step" not in ds.dims:
-            ds = ds.assign_coords({"step": ds.step.values})
+        # Most datasets are opened as xarray datasets with "step" as a scalar (nonindexed) coordinate
+        # Some do not, so add it in manually
+        if "step" not in ds.coords:
+            ds = ds.assign_coords({"step": np.timedelta64(0, 'ns')})
 
         # The global data is stacked as a 1D values array without lat or long data
         # * Manually add it in from the CLAT and CLON files
@@ -223,6 +222,7 @@ class Client(internal.FetcherInterface):
         ds = (
             ds.rename({"time": "init_time"})
             .expand_dims("init_time")
+            .expand_dims("step")
             .drop_vars(["valid_time", "number", "surface"], errors="ignore")
             .sortby("step")
             .transpose("init_time", "step", ...)

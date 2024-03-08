@@ -400,7 +400,7 @@ def _dataQualityFilter(ds: xr.Dataset) -> bool:
 
     # Carry out a basic data quality check
     for data_var in ds.data_vars:
-        if True in ds[f"{data_var}"].isnull():
+        if ds[f"{data_var}"].isnull().any():
             log.warn(
                 event=f"Dataset has NaNs in variable {data_var}",
                 initTime=str(ds.coords["init_time"].values[0])[:16],
@@ -423,12 +423,13 @@ def _mergeDatasets(datasets: list[xr.Dataset]) -> xr.Dataset:
                 i: {
                     "data_vars": list(datasets[i].data_vars.keys()),
                     "dimensions": datasets[i].sizes,
+                    "indexes": list(datasets[i].indexes.keys()),
                 }
                 for i, ds in enumerate(datasets)
             },
         )
-        ds = xr.combine_by_coords(
-            data_objects=datasets,
+        ds = xr.merge(
+            objects=datasets,
             combine_attrs="drop_conflicts",
             fill_value=0,
             compat="override",
