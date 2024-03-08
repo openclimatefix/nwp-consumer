@@ -68,14 +68,6 @@ class Client(internal.FetcherInterface):
                 self.parameters = ["t_2m", "asob_s"]
             case ("basic", "global"):
                 self.parameters = ["t_2m", "asob_s", "clat", "clon"]
-            case ("single-level", "europe"):
-                self.parameters = EU_SL_VARS
-            case ("single-level", "global"):
-                self.parameters = [*GLOBAL_SL_VARS, "clat", "clon"]
-            case ("multi-level", "europe"):
-                self.parameters = EU_ML_VARS
-            case ("multi-level", "global"):
-                self.parameters = [*GLOBAL_ML_VARS, "clat", "clon"]
             case ("full", "europe"):
                 self.parameters = EU_SL_VARS + EU_ML_VARS
             case ("full", "global"):
@@ -216,14 +208,20 @@ class Client(internal.FetcherInterface):
         if self.model == "global":
             ds = _addLatLon(ds=ds, p=p)
 
+        # Rename variables to match their listing online to prevent single/multi overlap
+        # * This assumes the name of the file locally is the same as online
+        pmatch = re.search(r"_\d{3}_([A-Z0-9_]+).grib", p.name)
+        if pmatch is not None:
+            var_name = pmatch.groups()[0]
+            ds = ds.rename({list(ds.data_vars.keys())[0]: var_name.lower()})
+
         # Map the data to the internal dataset representation
         # * Transpose the Dataset so that the dimensions are correctly ordered
         # * Rechunk the data to a more optimal size
         ds = (
             ds.rename({"time": "init_time"})
-            .expand_dims("init_time")
-            .expand_dims("step")
-            .drop_vars(["valid_time", "number", "surface", "heightAboveGround"], errors="ignore")
+            .expand_dims(["init_time", "step"])
+            .drop_vars(["valid_time", "number", "surface", "heightAboveGround", "level"], errors="ignore")
             .sortby("step")
             .transpose("init_time", "step", ...)
             .chunk(
