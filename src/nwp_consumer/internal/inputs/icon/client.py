@@ -68,6 +68,14 @@ class Client(internal.FetcherInterface):
                 self.parameters = ["t_2m", "asob_s"]
             case ("basic", "global"):
                 self.parameters = ["t_2m", "asob_s", "clat", "clon"]
+            case ("single-level", "europe"):
+                self.parameters = EU_SL_VARS
+            case ("single-level", "global"):
+                self.parameters = [*GLOBAL_SL_VARS, "clat", "clon"]
+            case ("multi-level", "europe"):
+                self.parameters = EU_ML_VARS
+            case ("multi-level", "global"):
+                self.parameters = [*GLOBAL_ML_VARS, "clat", "clon"]
             case ("full", "europe"):
                 self.parameters = EU_SL_VARS + EU_ML_VARS
             case ("full", "global"):
