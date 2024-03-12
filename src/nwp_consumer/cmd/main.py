@@ -165,10 +165,6 @@ def main() -> None:
             exit(1)
 
 
-if __name__ == "__main__":
-    main()
-
-
 def _parse_from_to(fr: str, to: str | None) -> tuple[dt.datetime, dt.datetime]:
     """Process the from and to arguments."""
     # Modify the default "today" argument to today's date
@@ -239,3 +235,7 @@ def parse_actor(source: str | None, sink: str | None) -> type[config.EnvParser]:
                 f"Unknown sink {sink}. Expected one of {list(SINK_ENV_MAP.keys())}",
             ) from e
     raise ValueError("Either source or sink must be specified")
+
+
+if __name__ == "__main__":
+    main()
