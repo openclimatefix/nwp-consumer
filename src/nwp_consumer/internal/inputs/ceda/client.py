@@ -32,20 +32,7 @@ PARAMETER_IGNORE_LIST: typing.Sequence[str] = (
 COORDINATE_ALLOW_LIST: typing.Sequence[str] = ("time", "step", "x", "y")
 
 # Defines the mapping from CEDA parameter names to OCF parameter names
-PARAMETER_RENAME_MAP: dict[str, str] = {
-    "10wdir": internal.OCFShortName.WindDirectionFromWhichBlowingSurfaceAdjustedAGL.value,
-    "10si": internal.OCFShortName.WindSpeedSurfaceAdjustedAGL.value,
-    "prate": internal.OCFShortName.RainPrecipitationRate.value,
-    "r": internal.OCFShortName.RelativeHumidityAGL.value,
-    "t": internal.OCFShortName.TemperatureAGL.value,
-    "vis": internal.OCFShortName.VisibilityAGL.value,
-    "dswrf": internal.OCFShortName.DownwardShortWaveRadiationFlux.value,
-    "dlwrf": internal.OCFShortName.DownwardLongWaveRadiationFlux.value,
-    "hcc": internal.OCFShortName.HighCloudCover.value,
-    "mcc": internal.OCFShortName.MediumCloudCover.value,
-    "lcc": internal.OCFShortName.LowCloudCover.value,
-    "sde": internal.OCFShortName.SnowDepthWaterEquivalent.value,
-}
+
 
 
 class Client(internal.FetcherInterface):
@@ -70,6 +57,10 @@ class Client(internal.FetcherInterface):
         self.__username: str = urllib.parse.quote(ftpUsername)
         self.__password: str = urllib.parse.quote(ftpPassword)
         self.__ftpBase: str = f"ftp://{self.__username}:{self.__password}@ftp.ceda.ac.uk"
+
+    def datasetName(self) -> str:
+        """Overrides corresponding parent method."""
+        return "UKV"
 
     def getInitHours(self) -> list[int]:
         """Overrides corresponding parent method."""
@@ -125,11 +116,11 @@ class Client(internal.FetcherInterface):
 
     def downloadToCache(
         self, *, fi: internal.FileInfoModel,
-    ) -> tuple[internal.FileInfoModel, pathlib.Path]:
+    ) -> pathlib.Path:
         """Overrides corresponding parent method."""
         if self.__password == "" or self.__username == "":
             log.error(event="all ceda credentials not provided")
-            return fi, pathlib.Path()
+            return pathlib.Path()
 
         log.debug(event="requesting download of file", file=fi.filename(), path=fi.filepath())
         url: str = f"{self.__ftpBase}/{fi.filepath()}"
@@ -142,7 +133,7 @@ class Client(internal.FetcherInterface):
                 filename=fi.filename(),
                 error=e,
             )
-            return fi, pathlib.Path()
+            return pathlib.Path()
 
         # Stream the filedata into a cached file
         cfp: pathlib.Path = internal.rawCachePath(it=fi.it(), filename=fi.filename())
@@ -159,8 +150,7 @@ class Client(internal.FetcherInterface):
             nbytes=cfp.stat().st_size,
         )
 
-        return fi, cfp
-
+        return cfp
 
     def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:
         """Overrides corresponding parent method."""
@@ -191,12 +181,6 @@ class Client(internal.FetcherInterface):
             return xr.Dataset()
 
         for i, ds in enumerate(datasets):
-            # Rename the parameters to the OCF names
-            # * Only do so if they exist in the dataset
-            for oldParamName, newParamName in PARAMETER_RENAME_MAP.items():
-                if oldParamName in ds:
-                    ds = ds.rename({oldParamName: newParamName})
-
             # Ensure the temperature is defined at 1 meter above ground level
             # * In the early NWPs (definitely in the 2016-03-22 NWPs):
             #   - `heightAboveGround` only has one entry ("1" meter above ground)
@@ -232,6 +216,8 @@ class Client(internal.FetcherInterface):
             combine_attrs="drop_conflicts",
         )
 
+        del datasets
+
         # Add in x and y coordinates
         try:
             wholesaleDataset = _reshapeTo2DGrid(ds=wholesaleDataset)
@@ -239,36 +225,42 @@ class Client(internal.FetcherInterface):
             log.warn(event="error reshaping to 2D grid", filepath=p.as_posix(), error=e)
             return xr.Dataset()
 
-        # Create a chunked Dask Dataset from the input multi-variate Dataset.
-        # *  Converts the input multivariate DataSet (with different DataArrays for
-        #     each NWP variable) to a single DataArray with a `variable` dimension.
-        # * This allows each Zarr chunk to hold multiple variables (useful for loading
-        #     many/all variables at once from disk).
-        # * The chunking is done in such a way that each chunk is a single time step
-        #     for a single variable.
+        # Map the data to the internal dataset representation
         # * Transpose the Dataset so that the dimensions are correctly ordered
+        # * Rechunk the data to a more optimal size
         wholesaleDataset = (
             wholesaleDataset.rename({"time": "init_time"})
             .expand_dims("init_time")
-            .to_array(dim="variable", name="UKV")
-            .to_dataset()
-            .transpose("variable", "init_time", "step", "y", "x")
+            .transpose("init_time", "step", "y", "x")
             .sortby("step")
-            .sortby("variable")
             .chunk(
                 {
                     "init_time": 1,
                     "step": -1,
-                    "variable": -1,
                     "y": len(wholesaleDataset.y) // 2,
                     "x": len(wholesaleDataset.x) // 2,
                 },
             )
         )
 
-        del datasets
-
         return wholesaleDataset
+
+    def parameterConformMap(self) -> dict[str, internal.OCFParameter]:
+        """Overrides corresponding parent method."""
+        return {
+            "10wdir": internal.OCFParameter.WindDirectionFromWhichBlowingSurfaceAdjustedAGL,
+            "10si": internal.OCFParameter.WindSpeedSurfaceAdjustedAGL,
+            "prate": internal.OCFParameter.RainPrecipitationRate,
+            "r": internal.OCFParameter.RelativeHumidityAGL,
+            "t": internal.OCFParameter.TemperatureAGL,
+            "vis": internal.OCFParameter.VisibilityAGL,
+            "dswrf": internal.OCFParameter.DownwardShortWaveRadiationFlux,
+            "dlwrf": internal.OCFParameter.DownwardLongWaveRadiationFlux,
+            "hcc": internal.OCFParameter.HighCloudCover,
+            "mcc": internal.OCFParameter.MediumCloudCover,
+            "lcc": internal.OCFParameter.LowCloudCover,
+            "sde": internal.OCFParameter.SnowDepthWaterEquivalent,
+        }
 
 
 def _isWantedFile(*, fi: CEDAFileInfo, dit: dt.datetime) -> bool:

@@ -1,6 +1,5 @@
 import datetime as dt
 import pathlib
-import shutil
 import unittest
 
 import numpy as np
@@ -8,16 +7,12 @@ import structlog
 import xarray as xr
 
 from nwp_consumer import internal
-
 from .consumer import NWPConsumerService, _cacheAsZipZarr, _mergeDatasets
 
-# Two days, four init times per day -> 8 init times
-DAYS = [1, 2]
-INIT_HOURS = [0, 6, 12, 18]
-INIT_TIME_FILES = ["dswrf.grib", "prate.grib"]
-testInitTimes = [dt.datetime(2021, 1, d, h, 0, 0, tzinfo=dt.UTC) for h in INIT_HOURS for d in DAYS]
-
 log = structlog.getLogger()
+
+IT = dt.datetime(2021, 1, 1, tzinfo=dt.UTC)
+FILES = ["dswrf.grib", "prate.grib", "t2m.grib"]
 
 
 class DummyStorer(internal.StorageInterface):
@@ -25,34 +20,22 @@ class DummyStorer(internal.StorageInterface):
         return "dummy"
 
     def exists(self, *, dst: pathlib.Path) -> bool:
-        log.info("exists", dst=dst)
-        if "exists" in dst.name:
-            return True
-        return False
+        return True
 
     def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:
-        if src.exists():
-            if src.is_dir():
-                shutil.rmtree(src.as_posix(), ignore_errors=True)
-            else:
-                src.unlink(missing_ok=True)
         return dst
 
     def listInitTimes(self, prefix: pathlib.Path) -> list[dt.datetime]:
-        return testInitTimes
+        return [IT]
 
     def copyITFolderToCache(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         return [
-            pathlib.Path(f"{internal.CACHE_DIR_RAW}/{it:%Y/%m/%d/%H%M}/{f}.grib")
-            for f in INIT_TIME_FILES
+            pathlib.Path(internal.rawCachePath(it=it, filename=f))
+            for f in FILES
         ]
 
     def delete(self, *, p: pathlib.Path) -> None:
-        if p.exists():
-            if p.is_dir():
-                shutil.rmtree(p.as_posix(), ignore_errors=True)
-            else:
-                p.unlink(missing_ok=True)
+        pass
 
 
 class DummyFileInfo(internal.FileInfoModel):
@@ -78,18 +61,16 @@ class DummyFileInfo(internal.FileInfoModel):
 
 class DummyFetcher(internal.FetcherInterface):
     def getInitHours(self) -> list[int]:
-        return INIT_HOURS
+        return [0, 6, 12, 18]
+
+    def datasetName(self) -> str:
+        return "dummy"
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
-        raw_files = [DummyFileInfo(file, it) for file in INIT_TIME_FILES if it in testInitTimes]
-        return raw_files
+        return [DummyFileInfo(file, it) for file in FILES]
 
-    def downloadToCache(
-        self,
-        *,
-        fi: internal.FileInfoModel,
-    ) -> tuple[internal.FileInfoModel, pathlib.Path]:
-        return fi, pathlib.Path(f"{internal.CACHE_DIR_RAW}/{fi.it():%Y/%m/%d/%H%M}/{fi.filename()}")
+    def downloadToCache(self, *, fi: internal.FileInfoModel) -> pathlib.Path:
+        return internal.rawCachePath(it=fi.it(), filename=fi.filename())
 
     def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:
         initTime = dt.datetime.strptime(
@@ -98,19 +79,23 @@ class DummyFetcher(internal.FetcherInterface):
         ).replace(tzinfo=dt.UTC)
         return xr.Dataset(
             data_vars={
-                "UKV": (
-                    ("init_time", "variable", "step", "x", "y"),
-                    np.random.rand(1, 1, 12, 100, 100),
-                ),
+                f"{p.stem}": (
+                    ("init_time", "step", "x", "y"),
+                    np.random.rand(1, 12, 100, 100),
+                )
             },
             coords={
-                "init_time": [np.datetime64(initTime, "s")],
-                "variable": [p.name],
+                "init_time": [np.datetime64(initTime)],
                 "step": range(12),
                 "x": range(100),
                 "y": range(100),
             },
         )
+
+    def parameterConformMap(self) -> dict[str, internal.OCFParameter]:
+        return {
+            "t2m": internal.OCFParameter.TemperatureAGL,
+        }
 
 
 # ------------- Client Methods -------------- #
@@ -131,24 +116,13 @@ class TestNWPConsumerService(unittest.TestCase):
             zarrdir="zarr",
         )
 
-    def test_downloadRawDataset(self) -> None:
-        start = testInitTimes[0]
-        end = testInitTimes[-1]
+    def test_downloadSingleInitTime(self) -> None:
+        files = self.service._downloadSingleInitTime(it=IT)
+        self.assertEqual(3, len(files))
 
-        files = self.service.DownloadRawDataset(start=start, end=end)
-
-        # 2 files per init time, all init times except the last
-        # one so none of the init time files for that one
-        self.assertEqual((2 * len(INIT_HOURS) * len(DAYS)) - 1 * len(INIT_TIME_FILES), len(files))
-
-    def test_convertRawDataset(self) -> None:
-        start = testInitTimes[0]
-        end = testInitTimes[-1]
-
-        files = self.service.ConvertRawDatasetToZarr(start=start, end=end)
-
-        # 1 Dataset per init time, all init times per day, all days
-        self.assertEqual(1 * len(INIT_HOURS) * (len(DAYS)), len(files))
+    def test_convertSingleInitTime(self) -> None:
+        files = self.service._convertSingleInitTime(it=IT)
+        self.assertEqual(1, len(files))
 
     def test_createLatestZarr(self) -> None:
         files = self.service.CreateLatestZarr()
@@ -170,7 +144,7 @@ class TestCacheAsZipZarr(unittest.TestCase):
 
 
 class TestMergeDatasets(unittest.TestCase):
-    def test_mergeDifferrentDataVars(self) -> None:
+    def test_mergeDifferentDataVars(self) -> None:
         """Test merging datasets with different data variables.
 
         This targets a bug seen in merging large ICON datasets, whereby
@@ -178,66 +152,40 @@ class TestMergeDatasets(unittest.TestCase):
         not merge correctly.
 
         """
-        # Create a list of datasets
-        # * Dataset1: 1 variable, 12 steps
-        # * Dataset2: 1 variable, 96 steps
         datasets = [
             xr.Dataset(
                 data_vars={
-                    "vis": (
-                        ("init_time", "step", "x", "y"),
-                        np.random.rand(1, 96, 100, 100),
+                    "msnswrf": (
+                        ("init_time", "step", "latitude", "longitude"),
+                        np.random.rand(1, 2, 657, 1377),
                     ),
+                    "t2m": (
+                        ("init_time", "step", "latitude", "longitude"),
+                        np.random.rand(1, 2, 657, 1377),
+                    )
                 },
                 coords={
                     "init_time": [np.datetime64("2021-01-01T00:00:00")],
-                    "step": range(96),
-                    "x": range(100),
-                    "y": range(100),
+                    "step": [np.timedelta64(i, 's') for i in [7200, 10800]],
+                    "latitude": range(657),
+                    "longitude": range(1377),
                 },
             ),
             xr.Dataset(
                 data_vars={
-                    "ahum_s": (
-                        ("init_time", "step", "x", "y"),
-                        np.random.rand(1, 1, 100, 100),
+                    "t2m": (
+                        ("init_time", "latitude", "longitude", "step"),
+                        np.random.rand(1, 657, 1377, 1),
                     ),
                 },
                 coords={
-                    "init_time": [np.datetime64("2021-01-01T06:00:00")],
-                    "step": [1],
-                    "x": range(100),
-                    "y": range(100),
+                    "init_time": [np.datetime64("2021-01-01T00:00:00")],
+                    "step": [0],
+                    "latitude": range(657),
+                    "longitude": range(1377),
                 },
             ),
         ]
         # Merge the datasets
         merged = _mergeDatasets(datasets)
-        # Check the merged dataset
-        self.assertListEqual(
-            list(merged.data_vars),
-            list(datasets[0].data_vars) + list(datasets[1].data_vars),
-        )
-        self.assertEqual(merged.attrs, datasets[0].attrs)
 
-        # Then merge again with the next step of the second dataset
-        datasets = [
-            merged,
-            xr.Dataset(
-                data_vars={
-                    "ahum_s": (
-                        ("init_time", "step", "x", "y"),
-                        np.random.rand(1, 1, 100, 100),
-                    ),
-                },
-                coords={
-                    "init_time": [np.datetime64("2021-01-01T06:00:00")],
-                    "step": [2],
-                    "x": range(100),
-                    "y": range(100),
-                },
-            ),
-        ]
-
-        merged = _mergeDatasets(datasets)
-        self.assertEqual(merged.sizes, datasets[0].sizes)

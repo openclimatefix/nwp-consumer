@@ -32,9 +32,9 @@ class Client(internal.StorageInterface):
             return dst
 
         dst.parent.mkdir(parents=True, exist_ok=True)
+        # Delete the cache to avoid double storage
         shutil.move(src=src, dst=dst)
-        # Delete cached file to avoid local duplication of file.
-        src.unlink(missing_ok=True)
+
         nbytes = os.stat(dst).st_size
         if nbytes != dst.stat().st_size:
             log.warn(
@@ -57,7 +57,9 @@ class Client(internal.StorageInterface):
         """Overrides the corresponding method in the parent class."""
         # List all the inittime folders in the given directory
         dirs = [
-            f.relative_to(prefix) for f in prefix.glob(internal.IT_FOLDER_GLOBSTR_RAW) if f.suffix == ""
+            f.relative_to(prefix)
+            for f in prefix.glob(internal.IT_FOLDER_GLOBSTR_RAW)
+            if f.suffix == ""
         ]
 
         initTimes = set()
@@ -95,11 +97,25 @@ class Client(internal.StorageInterface):
 
     def copyITFolderToCache(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         """Overrides the corresponding method in the parent class."""
-        # Local FS already has access to files, so just return the paths
-        initTimeDirPath = prefix / it.strftime(internal.IT_FOLDER_STRUCTURE_RAW)
-        paths: list[pathlib.Path] = list(initTimeDirPath.iterdir())
+        # Check if the folder exists
+        if not (prefix / it.strftime(internal.IT_FOLDER_STRUCTURE_RAW)).exists():
+            log.debug(
+                event="Init time folder not present",
+                path=(prefix / it.strftime(internal.IT_FOLDER_STRUCTURE_RAW)).as_posix(),
+            )
+            return []
+        filesInFolder = list((prefix / it.strftime(internal.IT_FOLDER_STRUCTURE_RAW)).iterdir())
 
-        return paths
+        cfps: list[pathlib.Path] = []
+        for file in filesInFolder:
+            # Copy the file to the cache if it isn't already there
+            dst: pathlib.Path = internal.rawCachePath(it=it, filename=file.name)
+            if not dst.exists():
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src=file, dst=dst)
+            cfps.append(dst)
+
+        return cfps
 
     def delete(self, *, p: pathlib.Path) -> None:
         """Overrides the corresponding method in the parent class."""

@@ -3,6 +3,7 @@
 import datetime as dt
 import pathlib
 import shutil
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 import dask.bag
@@ -35,6 +36,9 @@ class NWPConsumerService:
     # Configuration options
     rawdir: pathlib.Path
     zarrdir: pathlib.Path
+    rename_vars: bool
+    variable_dim: bool
+
 
     def __init__(
         self,
@@ -44,6 +48,8 @@ class NWPConsumerService:
         rawdir: str,
         zarrdir: str,
         rawstorer: internal.StorageInterface | None = None,
+        rename_vars: bool = True,
+        variable_dim: bool = True,
     ) -> None:
         """Create a consumer service with the given dependencies.
 
@@ -59,167 +65,40 @@ class NWPConsumerService:
         self.rawstorer = rawstorer if rawstorer is not None else storer
         self.rawdir = pathlib.Path(rawdir)
         self.zarrdir = pathlib.Path(zarrdir)
+        self.rename_vars = rename_vars
+        self.variable_dim = variable_dim
 
     def DownloadRawDataset(self, *, start: dt.datetime, end: dt.datetime) -> list[pathlib.Path]:
-        """Fetch raw data for each initTime in the given range.
+        """Download and convert raw data for a given time range.
 
-        :param start: The start date of the time range to download
-        :param end: The end date of the time range to download
+        Args:
+            start: The start of the time range
+            end: The end of the time range
+        Returns:
+            A list of the paths to the downloaded files
         """
-        # Get the list of init times valid for the fetcher
-        # between the start and end times (inclusive)
-        allInitTimes: list[dt.datetime] = [
-            pdt.to_pydatetime()
-            for pdt in pd.date_range(
-                start=start,
-                end=end,
-                inclusive="left",
-                freq="h",
-                tz=dt.UTC,
-            ).tolist()
-            if pdt.to_pydatetime().hour in self.fetcher.getInitHours()
-        ]
-
-        # For each init time, get the list of files that need to be downloaded
-        # * Itertools chain is used to flatten the list of lists
-        allWantedFileInfos: list[internal.FileInfoModel] = (
-            dask.bag.from_sequence(allInitTimes, npartitions=len(allInitTimes))
-            .map(lambda it: self.fetcher.listRawFilesForInitTime(it=it))
-            .flatten()
-            .compute()
+        return self._performFuncForMultipleInitTimes(
+            func=self._downloadSingleInitTime,
+            start=start,
+            end=end,
         )
-
-        # Check which files are already downloaded
-        # * If the file is already downloaded, remove it from the list of files to download
-        newWantedFileInfos: list[internal.FileInfoModel] = [
-            fi
-            for fi in allWantedFileInfos
-            if not self.rawstorer.exists(
-                dst=self.rawdir / fi.it().strftime(internal.IT_FOLDER_STRUCTURE_RAW) / fi.filename(),
-            )
-        ]
-
-        if not newWantedFileInfos:
-            log.info(
-                event="no new files to download",
-                startDate=start.strftime("%Y-%m-%d %H:%M"),
-                endDate=end.strftime("%Y-%m-%d %H:%M"),
-            )
-            return [
-                self.rawdir / fi.it().strftime(internal.IT_FOLDER_STRUCTURE_RAW) / fi.filename()
-                for fi in allWantedFileInfos
-            ]
-        else:
-            log.info(
-                event="downloading files",
-                startDate=start.strftime("%Y-%m-%d %H:%M"),
-                endDate=end.strftime("%Y-%m-%d %H:%M"),
-                numFiles=len(newWantedFileInfos),
-            )
-
-        # Create a dask pipeline to download the files
-        storedFiles: list[pathlib.Path] = (
-            dask.bag.from_sequence(seq=newWantedFileInfos, npartitions=len(newWantedFileInfos))
-            .map(lambda fi: self.fetcher.downloadToCache(fi=fi))
-            .filter(lambda infoPathTuple: infoPathTuple[1] != pathlib.Path())
-            .map(
-                lambda infoPathTuple: self.rawstorer.store(
-                    src=infoPathTuple[1],
-                    dst=self.rawdir / infoPathTuple[1].relative_to(internal.CACHE_DIR_RAW),
-                ),
-            )
-            .compute()
-        )
-
-        return storedFiles
 
     def ConvertRawDatasetToZarr(
-        self,
-        *,
-        start: dt.datetime,
-        end: dt.datetime,
+        self, *, start: dt.datetime, end: dt.datetime
     ) -> list[pathlib.Path]:
-        """Convert raw data for the given time range to Zarr.
+        """Convert raw data for a given time range.
 
-        :param start: The start date of the time range to convert
-        :param end: The end date of the time range to convert
+        Args:
+            start: The start of the time range
+            end: The end of the time range
+        Returns:
+            A list of the paths to the converted files
         """
-        # Get a list of all the init times that are stored locally between the start and end dates
-        desiredInitTimes: list[dt.datetime] = []
-        allInitTimes: list[dt.datetime] = self.rawstorer.listInitTimes(prefix=self.rawdir)
-        for it in allInitTimes:
-            # Don't convert files that already exist
-            if self.storer.exists(
-                dst=self.zarrdir / it.strftime(f"{internal.IT_FULLPATH_ZARR}.zip"),
-            ):
-                log.debug(
-                    "zarr for initTime already exists; skipping",
-                    inittime=it.strftime("%Y/%m/%d %H:%M"),
-                    path=(
-                        self.zarrdir / it.strftime(f"{internal.IT_FULLPATH_ZARR}.zip")
-                    ).as_posix(),
-                )
-                continue
-            if start <= it <= end:
-                desiredInitTimes.append(it)
-
-        if not desiredInitTimes:
-            log.info(
-                "no new files to convert to zarr",
-                startDate=start.strftime("%Y/%m/%d %H:%M"),
-                endDate=end.strftime("%Y/%m/%d %H:%M"),
-            )
-            return [
-                self.zarrdir / it.strftime(f"{internal.IT_FULLPATH_ZARR}.zip")
-                for it in allInitTimes
-                if start <= it <= end
-            ]
-        else:
-            log.info(
-                event=f"converting {len(desiredInitTimes)} init times to zarr.",
-                num=len(desiredInitTimes),
-            )
-
-        # Create a pipeline to carry out the conversion
-        # * Build a bag from the sequence of init times
-        # * Partition the bag by init time
-        bag = dask.bag.from_sequence(desiredInitTimes, npartitions=len(desiredInitTimes))
-        storedfiles = (
-            bag.map(lambda time: self.rawstorer.copyITFolderToCache(prefix=self.rawdir, it=time))
-            .filter(lambda cachedpaths: len(cachedpaths) != 0)
-            .map(lambda cachedpaths: [self.fetcher.mapCachedRaw(p=p) for p in cachedpaths])
-            .map(lambda datasets: _mergeDatasets(datasets=datasets))
-            .filter(_dataQualityFilter)
-            .map(lambda ds: _cacheAsZipZarr(ds=ds))
-            .map(
-                lambda path: self.storer.store(
-                    src=path,
-                    dst=self.zarrdir / path.relative_to(internal.CACHE_DIR_ZARR),
-                ),
-            )
-            .compute()
+        return self._performFuncForMultipleInitTimes(
+            func=self._convertSingleInitTime,
+            start=start,
+            end=end,
         )
-
-        if not isinstance(storedfiles, list):
-            storedfiles = [storedfiles]
-
-        return storedfiles
-
-    def DownloadAndConvert(
-        self,
-        *,
-        start: dt.datetime,
-        end: dt.datetime,
-    ) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
-        """Fetch and save as Zarr a dataset for each initTime in the given time range.
-
-        :param start: The start date of the time range to download and convert
-        :param end: The end date of the time range to download and convert
-        """
-        downloadedFiles = self.DownloadRawDataset(start=start, end=end)
-        convertedFiles = self.ConvertRawDatasetToZarr(start=start, end=end)
-
-        return downloadedFiles, convertedFiles
 
     def CreateLatestZarr(self) -> list[pathlib.Path]:
         """Create a Zarr file for the latest init time."""
@@ -246,9 +125,7 @@ class NWPConsumerService:
             .fold(lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts"))
             .compute()
         )
-
         datasets = dask.bag.from_sequence([cachedZarrs])
-
         # Save as zipped zarr
         if self.storer.exists(dst=self.zarrdir / "latest.zarr.zip"):
             self.storer.delete(p=self.zarrdir / "latest.zarr.zip")
@@ -353,6 +230,125 @@ class NWPConsumerService:
 
         return 0
 
+    def _downloadSingleInitTime(self, it: dt.datetime) -> list[pathlib.Path]:
+        """Download and convert raw data for a given init time.
+
+        Args:
+            it: The init time to download
+        Returns:
+            A list of the paths to the downloaded files
+        """
+        # Check the init time is valid for the fetcher
+        if it.hour not in self.fetcher.getInitHours():
+            log.error(
+                event="init time not valid for chosen source",
+                inittime=it.strftime("%Y-%m-%d %H:%M"),
+                validHours=self.fetcher.getInitHours(),
+            )
+            return []
+
+        # Get the list of files available from the source
+        allSourceFiles: list[internal.FileInfoModel] = self.fetcher.listRawFilesForInitTime(
+            it=it,
+        )
+        # Cache any existing files from the raw storer
+        cachedFiles: list[pathlib.Path] = self.rawstorer.copyITFolderToCache(
+            prefix=self.rawdir, it=it
+        )
+
+        # Create a dask pipeline from the available files
+        rb = dask.bag.from_sequence(allSourceFiles)
+        # Download the files to the cache, filtering any already cached or failed downloads
+        rb = rb.map(
+                lambda fi: self.fetcher.downloadToCache(fi=fi)
+                if fi.filename() not in [cf.name for cf in cachedFiles]
+                else cachedFiles.pop(cachedFiles.index(internal.rawCachePath(it=it, filename=fi.filename())))
+            ).filter(
+            lambda p: p != pathlib.Path()
+        )
+        # Store the files using the raw storer
+        rb = rb.map(
+            lambda p: self.rawstorer.store(
+                src=p,
+                dst=self.rawdir / p.relative_to(internal.CACHE_DIR_RAW),
+            )
+        )
+        storedFiles: list[pathlib.Path] = rb.compute()
+        return storedFiles
+
+    def _convertSingleInitTime(self, it: dt.datetime) -> list[pathlib.Path]:
+        """Convert raw data for a single init time to zarr.
+
+        Args:
+            it: The init time to convert
+        Returns:
+            List of paths to converted files
+        """
+        # Get the raw files for the init time
+        zbag = dask.bag.from_sequence(self.rawstorer.copyITFolderToCache(prefix=self.rawdir, it=it))
+        # Load the raw files as xarray datasets
+        zbag = zbag.map(lambda p: self.fetcher.mapCachedRaw(p=p))
+        # Merge the datasets into a single dataset for the init time
+        # * Bag.fold is a parallelized version of the reduce function, so
+        # * in this case, first the partitions are merged, followed by the results
+        zbag = zbag.fold(lambda a, b: _mergeDatasets([a, b]))
+        ds = zbag.compute()
+
+        # Filter out datasets that are not of sufficient quality
+        if not _dataQualityFilter(ds=ds):
+            return []
+
+        if self.rename_vars:
+            for var in ds.data_vars:
+                if var in self.fetcher.parameterConformMap():
+                    ds = ds.rename({var: self.fetcher.parameterConformMap()[var].value})
+
+        if self.variable_dim:
+            ds = (
+                ds.to_array(dim="variable", name=self.fetcher.datasetName())
+                .to_dataset()
+                .transpose("variable", ...)
+            )
+        # Cache the dataset as a zarr file
+        zpath = _cacheAsZipZarr(ds=ds)
+        # Store the zarr file using the storer
+        return [self.storer.store(src=zpath, dst=self.zarrdir / zpath.name)]
+
+
+    def _performFuncForMultipleInitTimes(
+        self,
+        *,
+        func=Callable[[dt.datetime], list[pathlib.Path]],
+        start: dt.datetime,
+        end: dt.datetime,
+    ):
+        """Perform a function for each init time in the fetcher's range."""
+        allInitTimes: list[dt.datetime] = [
+            pdt.to_pydatetime()
+            for pdt in pd.date_range(
+                start=start,
+                end=end,
+                inclusive="left",
+                freq="h",
+                tz=dt.UTC,
+            ).tolist()
+            if pdt.to_pydatetime().hour in self.fetcher.getInitHours()
+        ]
+
+        log.info(
+            event="Carrying out function for multiple init times",
+            func=func.__name__,
+            start=start.strftime("%Y-%m-%d %H:%M"),
+            end=end.strftime("%Y-%m-%d %H:%M"),
+            num=len(allInitTimes),
+        )
+
+        paths: list[pathlib.Path] = []
+        for it in allInitTimes:
+            paths.extend(func(it))
+
+        return paths
+
 
 def _cacheAsZipZarr(ds: xr.Dataset) -> pathlib.Path:
     """Save the dataset to the cache as a zipped zarr file."""
@@ -403,26 +399,12 @@ def _dataQualityFilter(ds: xr.Dataset) -> bool:
         return False
 
     # Carry out a basic data quality check
-    if "variable" not in dict(ds.coords.items()):
-        log.warn(
-            event="Dataset for is missing variable coord, checking other data variables",
-            initTime=str(ds.coords["init_time"].values[0])[:16],
-            coords=dict(ds.coords.items()),
-        )
-        for data_var in ds.data_vars.keys():
-            if True in ds[f"{data_var}"].isnull():
-                log.warn(
-                    event=f"Dataset has NaNs in variable {data_var}",
-                    initTime=str(ds.coords["init_time"].values[0])[:16],
-                    variable=data_var,
-                )
-
-    for var in ds.coords["variable"].values:
-        if True in ds.sel(variable=var).isnull():
+    for data_var in ds.data_vars:
+        if ds[f"{data_var}"].isnull().any():
             log.warn(
-                event=f"Dataset has NaNs in variable {var}",
+                event=f"Dataset has NaNs in variable {data_var}",
                 initTime=str(ds.coords["init_time"].values[0])[:16],
-                variable=var,
+                variable=data_var,
             )
 
     return True
@@ -437,10 +419,14 @@ def _mergeDatasets(datasets: list[xr.Dataset]) -> xr.Dataset:
             event="Merging datasets failed, trying to insert zeros for missing variables",
             exception=str(e),
             numdatasets=len(datasets),
-            datasets={i: {
-                "data_vars": list(datasets[i].data_vars.keys()),
-                "dimensions": datasets[i].sizes,
-            } for i, ds in enumerate(datasets)},
+            datasets={
+                i: {
+                    "data_vars": list(datasets[i].data_vars.keys()),
+                    "dimensions": datasets[i].sizes,
+                    "indexes": list(datasets[i].indexes.keys()),
+                }
+                for i, ds in enumerate(datasets)
+            },
         )
         ds = xr.merge(
             objects=datasets,
@@ -448,5 +434,5 @@ def _mergeDatasets(datasets: list[xr.Dataset]) -> xr.Dataset:
             fill_value=0,
             compat="override",
         )
+    del datasets
     return ds
-

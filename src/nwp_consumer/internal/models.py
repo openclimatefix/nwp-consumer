@@ -7,10 +7,11 @@ from enum import Enum
 
 import xarray as xr
 
+
 # ------- Domain models ------- #
 
 
-class OCFShortName(str, Enum):
+class OCFParameter(str, Enum):
     """Short names for the OCF parameters."""
 
     LowCloudCover = "lcc"
@@ -101,11 +102,11 @@ class FetcherInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def downloadToCache(self, *, fi: FileInfoModel) -> tuple[FileInfoModel, pathlib.Path]:
+    def downloadToCache(self, *, fi: FileInfoModel) -> pathlib.Path:
         """Fetch the bytes of a single raw file from source and save to a cache file.
 
         :param fi: File Info object describing the file to fetch
-        :return: Tuple of the File Info object and a path to the local cache file
+        :return: Path to the local cache file, or pathlib.Path() if the file was not fetched
         """
         pass
 
@@ -118,12 +119,27 @@ class FetcherInterface(abc.ABC):
         """
         pass
 
-
     @abc.abstractmethod
     def getInitHours(self) -> list[int]:
         """Get the forecast init hours available from the source.
 
         :return: List of forecast init hours
+        """
+        pass
+
+    @abc.abstractmethod
+    def parameterConformMap(self) -> dict[str, OCFParameter]:
+        """The mapping from the source's parameter names to the OCF short names.
+
+        :return: Dictionary of parameter mappings
+        """
+        pass
+
+    @abc.abstractmethod
+    def datasetName(self) -> str:
+        """Return the name of the dataset.
+
+        :return: Name of the dataset
         """
         pass
 
@@ -146,7 +162,7 @@ class StorageInterface(abc.ABC):
 
         :param src: Path to file to store
         :param dst: Desired path in store
-        :return: Number of bytes copied
+        :return: Location in raw store
         """
         pass
 

@@ -13,20 +13,10 @@ from nwp_consumer import internal
 
 from ._consts import GDPS_VARIABLES, GEPS_VARIABLES
 from ._models import CMCFileInfo
+from ... import OCFParameter
 
 log = structlog.getLogger()
 
-# See https://eccc-msc.github.io/open-data/msc-data/nwp_gdps/readme_gdps-datamart_en/ for a list of CMC parameters
-PARAMETER_RENAME_MAP: dict[str, str] = {
-    "t": internal.OCFShortName.TemperatureAGL.value,
-    "tclc": internal.OCFShortName.LowCloudCover.value,  # TODO: Check this is okay
-    "dswrf": internal.OCFShortName.DownwardShortWaveRadiationFlux.value,
-    "dlwrf": internal.OCFShortName.DownwardLongWaveRadiationFlux.value,
-    "snod": internal.OCFShortName.SnowDepthWaterEquivalent.value,
-    "rh": internal.OCFShortName.RelativeHumidityAGL.value,
-    "u": internal.OCFShortName.WindUComponentAGL.value,
-    "v": internal.OCFShortName.WindVComponentAGL.value,
-}
 
 COORDINATE_ALLOW_LIST: typing.Sequence[str] = ("time", "step", "latitude", "longitude")
 
@@ -37,7 +27,6 @@ class Client(internal.FetcherInterface):
     baseurl: str  # The base URL for the GDPS/GEPS model
     model: str  # The model to fetch data for
     parameters: list[str]  # The parameters to fetch
-    conform: bool  # Whether to rename parameters to OCF names and clear unwanted coordinates
 
     def __init__(self, model: str, hours: int = 48, param_group: str = "default") -> None:
         """Create a new GDPS Client.
@@ -63,20 +52,15 @@ class Client(internal.FetcherInterface):
 
         match (param_group, model):
             case ("default", _):
-                self.parameters = list(PARAMETER_RENAME_MAP.keys())
-                self.conform = True
+                self.parameters = ["t", "tclc", "dswrf", "dlwrf", "snod", "rh", "u", "v"]
             case ("full", "geps"):
                 self.parameters = GEPS_VARIABLES
-                self.conform = False
             case ("full", "gdps"):
                 self.parameters = GDPS_VARIABLES
-                self.conform = False
             case ("basic", "geps"):
                 self.parameters = GEPS_VARIABLES[:2]
-                self.conform = False
             case ("basic", "gdps"):
                 self.parameters = GDPS_VARIABLES[:2]
-                self.conform = False
             case (_, _):
                 raise ValueError(
                     f"unknown parameter group {param_group}."
@@ -86,16 +70,19 @@ class Client(internal.FetcherInterface):
         self.model = model
         self.hours = hours
 
+    def datasetName(self) -> str:
+        """Overrides the corresponding method in the parent class."""
+        return f"CMC_{self.model}".upper()
+
     def getInitHours(self) -> list[int]:  # noqa: D102
         return [0, 12]
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
-        # GDPS data is only available for today's and yesterdays's date.
+        # GDPS data is only available for today's and yesterday's date.
         # If data hasn't been uploaded for that inittime yet,
         # then yesterday's data will still be present on the server.
         if it.date() != dt.datetime.now(dt.UTC).date():
             raise ValueError("GDPS/GEPS data is only available on today's date")
-            return []
 
         # Ignore inittimes that don't correspond to valid hours
         if it.hour not in self.getInitHours():
@@ -133,13 +120,13 @@ class Client(internal.FetcherInterface):
 
                 # The href contains the name of a file - parse this into a FileInfo object
                 fi: CMCFileInfo | None = None
-                # If not conforming, match all files
+                # If downloading all variables, match all files
                 # * Otherwise only match single level and time invariant
                 fi = _parseCMCFilename(
                     name=refmatch.groups()[0],
                     baseurl=self.baseurl,
-                    match_pl=not self.conform,
-                    match_hl=not self.conform,
+                    match_pl=self.parameters in ["t", "tclc", "dswrf", "dlwrf", "snod", "rh", "u", "v"],
+                    match_hl=self.parameters in ["t", "tclc", "dswrf", "dlwrf", "snod", "rh", "u", "v"],
                 )
                 # Ignore the file if it is not for today's date or has a step > 48 (when conforming)
                 if fi is None or fi.it() != it or (fi.step > self.hours and self.conform):
@@ -179,7 +166,6 @@ class Client(internal.FetcherInterface):
                 chunks={
                     "time": 1,
                     "step": 1,
-                    "variable": -1,
                     "latitude": "auto",
                     "longitude": "auto",
                 },
@@ -215,61 +201,31 @@ class Client(internal.FetcherInterface):
                 ds = ds.rename({"isobaricInhPa": "isobaricInhPa_humidity"})
             if "absv" in list(ds.data_vars.keys()) or "vvel" in list(ds.data_vars.keys()):
                 ds = ds.rename({"isobaricInhPa": "isobaricInhPa_absv_vvel"})
-        # Only conform the dataset if requested (defaults to True)
-        if self.conform:
-            # Rename the parameters to the OCF names
-            # * Only do so if they exist in the dataset
-            for oldParamName, newParamName in PARAMETER_RENAME_MAP.items():
-                if oldParamName in ds:
-                    ds = ds.rename({oldParamName: newParamName})
 
-            # Delete unwanted coordinates
-            ds = ds.drop_vars(
-                names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST],
-                errors="ignore",
+        # Map the data to the internal dataset representation
+        # * Transpose the Dataset so that the dimensions are correctly ordered
+        # * Rechunk the data to a more optimal size
+        ds = (
+            ds.rename({"time": "init_time"})
+            .expand_dims("init_time")
+            .expand_dims("step")
+            .transpose("init_time", "step", ...)
+            .sortby("step")
+            .chunk(
+                {
+                    "init_time": 1,
+                    "step": -1,
+                },
             )
+        )
 
-        # Create chunked Dask dataset with a single "variable" dimension
-        # * Each chunk is a single time step
-        if self.conform:
-            ds = (
-                ds.rename({"time": "init_time"})
-                .expand_dims("init_time")
-                .expand_dims("step")
-                .to_array(dim="variable", name=f"CMC_{self.model}".upper())
-                .to_dataset()
-                .transpose("variable", "init_time", "step", ...)
-                .sortby("step")
-                .sortby("variable")
-                .chunk(
-                    {
-                        "init_time": 1,
-                        "step": -1,
-                        "variable": -1,
-                    },
-                )
-            )
-        else:
-            ds = (
-                ds.rename({"time": "init_time"})
-                .expand_dims("init_time")
-                .expand_dims("step")
-                .transpose("init_time", "step", ...)
-                .sortby("step")
-                .chunk(
-                    {
-                        "init_time": 1,
-                        "step": -1,
-                    },
-                )
-            )
         return ds
 
     def downloadToCache(  # noqa: D102
         self,
         *,
         fi: internal.FileInfoModel,
-    ) -> tuple[internal.FileInfoModel, pathlib.Path]:
+    ) -> pathlib.Path:
         log.debug(event="requesting download of file", file=fi.filename(), path=fi.filepath())
         try:
             response = urllib.request.urlopen(fi.filepath())
@@ -280,7 +236,7 @@ class Client(internal.FetcherInterface):
                 filename=fi.filename(),
                 error=e,
             )
-            return fi, pathlib.Path()
+            return pathlib.Path()
 
         if response.status != 200:
             log.warn(
@@ -289,7 +245,7 @@ class Client(internal.FetcherInterface):
                 url=fi.filepath(),
                 filename=fi.filename(),
             )
-            return fi, pathlib.Path()
+            return pathlib.Path()
 
         cfp: pathlib.Path = internal.rawCachePath(it=fi.it(), filename=fi.filename())
         with open(cfp, "wb") as f:
@@ -303,7 +259,23 @@ class Client(internal.FetcherInterface):
             nbytes=cfp.stat().st_size,
         )
 
-        return fi, cfp
+        return cfp
+
+    def parameterConformMap(self) -> dict[str, OCFParameter]:
+        """Overrides the corresponding method in the parent class."""
+        # See https://eccc-msc.github.io/open-data/msc-data/nwp_gdps/readme_gdps-datamart_en/
+        # for a list of CMC parameters
+        return {
+            "t": internal.OCFParameter.TemperatureAGL,
+            "tclc": internal.OCFParameter.TotalCloudCover,
+            "dswrf": internal.OCFParameter.DownwardShortWaveRadiationFlux,
+            "dlwrf": internal.OCFParameter.DownwardLongWaveRadiationFlux,
+            "snod": internal.OCFParameter.SnowDepthWaterEquivalent,
+            "rh": internal.OCFParameter.RelativeHumidityAGL,
+            "u": internal.OCFParameter.WindUComponentAGL,
+            "v": internal.OCFParameter.WindVComponentAGL,
+        }
+
 
 
 def _parseCMCFilename(

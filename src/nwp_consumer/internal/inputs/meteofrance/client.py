@@ -16,18 +16,6 @@ from ._models import ArpegeFileInfo
 
 log = structlog.getLogger()
 
-# See https://mf-models-on-aws.org/en/doc/datasets/v1/ for a list of Arpege parameters
-PARAMETER_RENAME_MAP: dict[str, str] = {
-    "t2m": internal.OCFShortName.TemperatureAGL.value,
-    "hcc": internal.OCFShortName.HighCloudCover.value,
-    "mcc": internal.OCFShortName.MediumCloudCover.value,
-    "lcc": internal.OCFShortName.LowCloudCover.value,
-    "ssrd": internal.OCFShortName.DownwardShortWaveRadiationFlux.value,
-    "d2m": internal.OCFShortName.RelativeHumidityAGL.value,
-    "u10": internal.OCFShortName.WindUComponentAGL.value,
-    "v10": internal.OCFShortName.WindVComponentAGL.value,
-}
-
 COORDINATE_ALLOW_LIST: typing.Sequence[str] = ("time", "step", "latitude", "longitude")
 
 
@@ -37,7 +25,6 @@ class Client(internal.FetcherInterface):
     baseurl: str  # The base URL for the Argpege model
     model: str  # The model to fetch data for
     parameters: list[str]  # The parameters to fetch
-    conform: bool  # Whether to rename parameters to OCF names and clear unwanted coordinates
 
     def __init__(self, model: str, hours: int = 48, param_group: str = "default") -> None:
         """Create a new Arpege Client.
@@ -64,20 +51,15 @@ class Client(internal.FetcherInterface):
 
         match (param_group, model):
             case ("default", _):
-                self.parameters = list(PARAMETER_RENAME_MAP.keys())
-                self.conform = True
+                self.parameters = ["t2m", "hcc", "mcc", "lcc", "ssrd", "d2m", "u10", "v10"]
             case ("basic", "europe"):
-                self.parameters = ARPEGE_GLOBAL_VARIABLES[:2]
-                self.conform = True
+                self.parameters = ["t2m", "ssrd"]
             case ("basic", "global"):
-                self.parameters = ARPEGE_GLOBAL_VARIABLES[:2]
-                self.conform = True
+                self.parameters = ["t2m", "ssrd"]
             case ("full", "europe"):
                 self.parameters = ARPEGE_GLOBAL_VARIABLES
-                self.conform = False
             case ("full", "global"):
                 self.parameters = ARPEGE_GLOBAL_VARIABLES
-                self.conform = False
             case (_, _):
                 raise ValueError(
                     f"unknown parameter group {param_group}."
@@ -86,6 +68,10 @@ class Client(internal.FetcherInterface):
 
         self.model = model
         self.hours = hours
+
+    def datasetName(self) -> str:
+        """Overrides the corresponding method in the parent class."""
+        return f"MeteoFrance_{self.model}".upper()
 
     def getInitHours(self) -> list[int]:  # noqa: D102
         return [0, 6, 12, 18]
@@ -115,16 +101,14 @@ class Client(internal.FetcherInterface):
                     continue
                 # The href contains the name of a file - parse this into a FileInfo object
                 fi: ArpegeFileInfo | None = None
-                # If not conforming, match all files
-                # * Otherwise only match single level
                 fi = _parseArpegeFilename(
                     name=f.split("/")[-1],
                     baseurl=f"{self.baseurl}{it.strftime('%Y-%m-%d')}/{it.strftime('%H')}/{parameter_set}/",
                     match_hl=not self.conform,
                     match_pl=not self.conform,
                 )
-                # Ignore the file if it is not for today's date or has a step > 48 (when conforming)
-                if fi is None or fi.it() != it or (fi.step > self.hours and self.conform):
+                # Ignore the file if it is not for today's date or has a step > desired
+                if fi is None or fi.it() != it or (fi.step > self.hours):
                     continue
 
                 # Add the file to the list
@@ -194,59 +178,29 @@ class Client(internal.FetcherInterface):
             ds = ds[0]
         ds = ds.drop_vars("unknown", errors="ignore")
 
-        # Only conform the dataset if requested (defaults to True)
-        if self.conform:
-            # Rename the parameters to the OCF names
-            # * Only do so if they exist in the dataset
-            for oldParamName, newParamName in PARAMETER_RENAME_MAP.items():
-                if oldParamName in ds:
-                    ds = ds.rename({oldParamName: newParamName})
-
-            # Delete unwanted coordinates
-            ds = ds.drop_vars(
-                names=[c for c in ds.coords if c not in COORDINATE_ALLOW_LIST],
-                errors="ignore",
+        # Map the data to the internal dataset representation
+        # * Transpose the Dataset so that the dimensions are correctly ordered
+        # * Rechunk the data to a more optimal size
+        ds = (
+            ds.rename({"time": "init_time"})
+            .expand_dims("init_time")
+            .transpose("init_time", "step", ...)
+            .sortby("step")
+            .chunk(
+                {
+                    "init_time": 1,
+                    "step": -1,
+                },
             )
-        # Create chunked Dask dataset with a single "variable" dimension
-        # * Each chunk is a single time step
-        if self.conform:
-            ds = (
-                ds.rename({"time": "init_time"})
-                .expand_dims("init_time")
-                .to_array(dim="variable", name=f"MeteoFrance_{self.model}".upper())
-                .to_dataset()
-                .transpose("variable", "init_time", "step", ...)
-                .sortby("step")
-                .sortby("variable")
-                .chunk(
-                    {
-                        "init_time": 1,
-                        "step": -1,
-                        "variable": -1,
-                    },
-                )
-            )
-        else:
-            ds = (
-                ds.rename({"time": "init_time"})
-                .expand_dims("init_time")
-                .transpose("init_time", "step", ...)
-                .sortby("step")
-                .chunk(
-                    {
-                        "init_time": 1,
-                        "step": -1,
-                    },
-                )
-            )
+        )
 
         return ds
 
     def downloadToCache(  # noqa: D102
-        self,
-        *,
-        fi: internal.FileInfoModel,
-    ) -> tuple[internal.FileInfoModel, pathlib.Path]:
+            self,
+            *,
+            fi: internal.FileInfoModel,
+    ) -> pathlib.Path:
         log.debug(event="requesting download of file", file=fi.filename(), path=fi.filepath())
         # Extract the bz2 file when downloading
         cfp: pathlib.Path = internal.rawCachePath(it=fi.it(), filename=fi.filename())
@@ -261,15 +215,30 @@ class Client(internal.FetcherInterface):
             nbytes=cfp.stat().st_size,
         )
 
-        return fi, cfp
+        return cfp
+
+    def parameterConformMap(self) -> dict[str, internal.OCFParameter]:
+        """Overrides the corresponding method in the parent class."""
+        # See https://mf-models-on-aws.org/en/doc/datasets/v1/
+        # for a list of Arpege parameters
+        return {
+            "t2m": internal.OCFParameter.TemperatureAGL,
+            "hcc": internal.OCFParameter.HighCloudCover,
+            "mcc": internal.OCFParameter.MediumCloudCover,
+            "lcc": internal.OCFParameter.LowCloudCover,
+            "ssrd": internal.OCFParameter.DownwardShortWaveRadiationFlux,
+            "d2m": internal.OCFParameter.RelativeHumidityAGL,
+            "u10": internal.OCFParameter.WindUComponentAGL,
+            "v10": internal.OCFParameter.WindVComponentAGL,
+        }
 
 
 def _parseArpegeFilename(
-    name: str,
-    baseurl: str,
-    match_sl: bool = True,
-    match_hl: bool = True,
-    match_pl: bool = False,
+        name: str,
+        baseurl: str,
+        match_sl: bool = True,
+        match_hl: bool = True,
+        match_pl: bool = False,
 ) -> ArpegeFileInfo | None:
     """Parse a string of HTML into an ArpegeFileInfo object, if it contains one.
 

@@ -56,3 +56,20 @@ the methods of which are the business use cases of the consumer.
 
 `src/nwp_consumer/internal/outputs` contains the adaptors for the driven actors.
 
+## Core
+
+The core business logic is contained in the `service` module.
+According to the hexagonal pattern, the core logic is agnostic to the driving and driven actors.
+As such, there is an internal data representation of the NWP data that the core logic acts upon.
+Due to the multidimensional data of the NWP data, it is hard to define a schema for this.
+
+Internal data is stored an xarray dataset.
+This dataset effectively acts as an array of `DataArrays` for each parameter or variable.
+It should have the following dimensions and coordinates:
+
+- `time` dimension
+- `step` dimension
+- `latitude` or `x` dimension
+- `longitude` or `y` dimension
+
+Parameters should be stored as DataArrays in the dataset.

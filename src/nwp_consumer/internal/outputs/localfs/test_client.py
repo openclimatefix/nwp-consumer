@@ -31,7 +31,7 @@ class TestLocalFSClient(unittest.TestCase):
         shutil.rmtree(ZARR.as_posix())
 
     def test_exists(self) -> None:
-        initTime = dt.datetime(2021, 1, 1, 0, 0, 0, tzinfo=dt.timezone.utc)
+        initTime = dt.datetime(2021, 1, 1, 0, 0, 0, tzinfo=dt.UTC)
 
         # Create a file in the raw directory
         path = RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_file.grib"
@@ -64,7 +64,7 @@ class TestLocalFSClient(unittest.TestCase):
                 ),
             },
             coords={
-                "init_time": [np.datetime64(initTime, "s")],
+                "init_time": [np.datetime64(initTime)],
                 "variable": ["t", "r"],
                 "step": range(12),
                 "x": range(100),
@@ -81,7 +81,7 @@ class TestLocalFSClient(unittest.TestCase):
         self.assertTrue(exists)
 
     def test_store(self) -> None:
-        initTime = dt.datetime(2021, 1, 2, 0, 0, 0, tzinfo=dt.timezone.utc)
+        initTime = dt.datetime(2021, 1, 2, 0, 0, 0, tzinfo=dt.UTC)
         dst = RAW / f"{initTime:{internal.IT_FOLDER_STRUCTURE_RAW}}" / "test_store.grib"
         src = internal.CACHE_DIR / f"nwpc-{uuid.uuid4()}"
         # Create a temporary file to simulate a file to be stored
@@ -100,9 +100,9 @@ class TestLocalFSClient(unittest.TestCase):
 
     def test_listInitTimes(self) -> None:
         expectedTimes = [
-            dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc),
-            dt.datetime(2023, 1, 2, 6, tzinfo=dt.timezone.utc),
-            dt.datetime(2023, 1, 3, 9, tzinfo=dt.timezone.utc),
+            dt.datetime(2023, 1, 1, 3, tzinfo=dt.UTC),
+            dt.datetime(2023, 1, 2, 6, tzinfo=dt.UTC),
+            dt.datetime(2023, 1, 3, 9, tzinfo=dt.UTC),
         ]
 
         # Create some files in the raw directory
@@ -123,7 +123,7 @@ class TestLocalFSClient(unittest.TestCase):
 
     def test_copyITFolderToCache(self) -> None:
         # Make some files in the raw directory
-        initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc)
+        initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.UTC)
         files = [
             RAW / f"{initTime:%Y/%m/%d/%H%M}" / "test_copyITFolderToTemp1.grib",
             RAW / f"{initTime:%Y/%m/%d/%H%M}" / "test_copyITFolderToTemp2.grib",
@@ -145,7 +145,7 @@ class TestLocalFSClient(unittest.TestCase):
 
     def test_delete(self) -> None:
         # Create a file in the raw directory
-        initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.timezone.utc)
+        initTime = dt.datetime(2023, 1, 1, 3, tzinfo=dt.UTC)
         path = RAW / f"{initTime:%Y/%m/%d/%H%M}" / "test_delete.grib"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch()
@@ -166,7 +166,7 @@ class TestLocalFSClient(unittest.TestCase):
                 ),
             },
             coords={
-                "init_time": [np.datetime64(initTime, "s")],
+                "init_time": [np.datetime64(initTime)],
                 "variable": ["t", "r"],
                 "step": range(12),
                 "x": range(100),
