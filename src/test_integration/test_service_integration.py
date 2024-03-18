@@ -140,7 +140,7 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
                     "variable": 2,
                     "init_time": 1,
                     "step": 4,
-                    "latitude": 121,
+                    "latitude": 141,
                     "longitude": 151,
                 },
                 dict(ds.sizes.items()),

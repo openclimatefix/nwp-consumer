@@ -104,8 +104,8 @@ class Client(internal.FetcherInterface):
                 fi = _parseArpegeFilename(
                     name=f.split("/")[-1],
                     baseurl=f"{self.baseurl}{it.strftime('%Y-%m-%d')}/{it.strftime('%H')}/{parameter_set}/",
-                    match_hl=not self.conform,
-                    match_pl=not self.conform,
+                    match_hl=len(self.parameters) > 6,
+                    match_pl=len(self.parameters) > 6,
                 )
                 # Ignore the file if it is not for today's date or has a step > desired
                 if fi is None or fi.it() != it or (fi.step > self.hours):
