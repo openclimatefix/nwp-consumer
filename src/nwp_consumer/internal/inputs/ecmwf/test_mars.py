@@ -81,6 +81,7 @@ class TestECMWFMARSClient(unittest.TestCase):
             target=testFilePath.as_posix(),
             it=dt.datetime(2020, 1, 1, tzinfo=dt.UTC),
             params=testDefaultClient.desired_params,
+            steps=range(4),
         )
 
         out.replace(" ", "")
@@ -108,6 +109,7 @@ class TestECMWFMARSClient(unittest.TestCase):
             target=testFilePath.as_posix(),
             it=dt.datetime(2020, 1, 1, tzinfo=dt.UTC),
             params=testBasicClient.desired_params,
+            steps=range(4),
         )
 
         out.replace(" ", "")
@@ -145,10 +147,11 @@ class TestParseAvailableParams(unittest.TestCase):
 
         out = _parseListing(fileData=filedata)
 
+        self.maxDiff = None
         self.assertDictEqual(
             {
                 "params": ["141.128","164.128","165.128","166.128","167.128","169.128","175.128","186.128","187.128","188.128","20.3","246.228","247.228","47.128","57.128"],
-                "steps": range(49),
+                "steps": list(range(0, 49)),
             },
             out,
         )
