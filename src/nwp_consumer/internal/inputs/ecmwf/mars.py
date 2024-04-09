@@ -1,4 +1,5 @@
 """Implements a client to fetch data from ECMWF."""
+
 import datetime as dt
 import inspect
 import os
@@ -76,10 +77,10 @@ class MARSClient(internal.FetcherInterface):
     desired_params: list[str]
 
     def __init__(
-            self,
-            area: str = "uk",
-            hours: int = 48,
-            param_group: str = "default",
+        self,
+        area: str = "uk",
+        hours: int = 48,
+        param_group: str = "default",
     ) -> None:
         """Create a new ECMWF Mars Client.
 
@@ -136,6 +137,7 @@ class MARSClient(internal.FetcherInterface):
                 it=it,
                 target=tf.name,
                 params=self.desired_params,
+                steps=list(range(0, self.hours)),
             )
 
             log.debug(event="listing ECMWF MARS inittime data", request=req, inittime=it)
@@ -158,9 +160,9 @@ class MARSClient(internal.FetcherInterface):
         # `available_params` list according to the result of the list request
         with open(tf.name) as f:
             file_contents: str = f.read()
-            available_params: list[str] = _parseAvaliableParams(fileData=file_contents)
+            available_data = _parseListing(fileData=file_contents)
             for parameter in self.desired_params:
-                if parameter not in available_params:
+                if parameter not in available_data["params"]:
                     log.warn(
                         event=f"ECMWF MARS inittime data does not contain parameter {parameter}",
                         parameter=parameter,
@@ -170,14 +172,21 @@ class MARSClient(internal.FetcherInterface):
         log.debug(
             event="Listed raw files for ECMWF MARS inittime",
             inittime=it,
-            available_params=available_params,
+            available_params=available_data["params"],
         )
 
         # Clean up the temporary file
         tf.close()
         os.unlink(tf.name)
 
-        return [ECMWFMarsFileInfo(inittime=it, area=self.area, params=available_params)]
+        return [
+            ECMWFMarsFileInfo(
+                inittime=it,
+                area=self.area,
+                params=available_data["params"],
+                steps=available_data["steps"],
+            )
+        ]
 
     def downloadToCache(  # noqa: D102
         self,
@@ -191,6 +200,7 @@ class MARSClient(internal.FetcherInterface):
             it=fi.it(),
             target=cfp.as_posix(),
             params=fi.variables(),
+            steps=fi.steps(),
         )
 
         log.debug(
@@ -298,12 +308,13 @@ class MARSClient(internal.FetcherInterface):
         }
 
     def _buildMarsRequest(
-            self,
-            *,
-            list_only: bool,
-            it: dt.datetime,
-            target: str,
-            params: list[str],
+        self,
+        *,
+        list_only: bool,
+        it: dt.datetime,
+        target: str,
+        params: list[str],
+        steps: list[int],
     ) -> str:
         """Build a MARS request according to the parameters of the client.
 
@@ -314,6 +325,7 @@ class MARSClient(internal.FetcherInterface):
             it: The initialisation time to request data for.
             target: The path to the target file to write the data to.
             params: The parameters to request data for.
+            steps: The steps to request data for.
 
         Returns:
             The MARS request.
@@ -325,7 +337,7 @@ class MARSClient(internal.FetcherInterface):
                 expver   = 1,
                 levtype  = sfc,
                 param    = {'/'.join(params)},
-                step     = 0/to/{self.hours}/by/1,
+                step     = {'/'.join(map(str, steps))},
                 stream   = oper,
                 time     = {it.strftime("%H")},
                 type     = fc,
@@ -337,7 +349,7 @@ class MARSClient(internal.FetcherInterface):
         return inspect.cleandoc(marsReq)
 
 
-def _parseAvaliableParams(fileData: str) -> list[str]:
+def _parseListing(fileData: str) -> dict[str, list[str] | list[int]]:
     """Parse the response from a MARS list request.
 
     When calling LIST to MARS, the response is a file containing the available
@@ -359,19 +371,24 @@ def _parseAvaliableParams(fileData: str) -> list[str]:
 
     This function uses positive lookahead and lookbehind regex to extract the
     lines between the table header and the "Grand Total" line. The fourth
-    column of each line is the parameter.
+    column of each line is the parameter. The fifth is the step.
 
     Args:
         fileData: The data from the file.
 
     Returns:
-        A list of parameters specified in the fileData.
+        A dict of parameters and steps available in the remote file.
     """
     tablematch = re.search(
         pattern=r"(?<!step)[\s\.\d]*?(?=\n.*?\nGrand)",
         string=fileData,
     )
+    out = {"steps": set(), "params": set()}
     if tablematch:
         tablelines: list[str] = tablematch.group(0).split("\n")
-        return list({line.split()[4] for line in tablelines if len(line.split()) > 4})
-    return []
+        for line in tablelines:
+            if len(line.split()) > 4:
+                out["steps"].add(int(line.split()[5]))
+                out["params"].add(line.split()[4])
+    out = {k: sorted(list(v)) for k, v in out.items()}
+    return out
