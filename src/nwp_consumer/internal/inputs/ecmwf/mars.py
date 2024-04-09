@@ -98,10 +98,6 @@ class MARSClient(internal.FetcherInterface):
             raise KeyError(f"area must be one of {list(AREA_MAP.keys())}")
         self.area = area
 
-        if hours > 90:
-            raise KeyError(
-                "ECMWF operational archive only goes out to 90 hours in hourly increments",
-            )
         self.hours = hours
 
         match param_group:
@@ -116,6 +112,7 @@ class MARSClient(internal.FetcherInterface):
         return f"ECMWF_{self.area.upper()}"
 
     def getInitHours(self) -> list[int]:  # noqa: D102
+        # MARS data of the operational archive is available at 00 and 12 UTC
         return [0, 12]
 
     def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:  # noqa: D102
