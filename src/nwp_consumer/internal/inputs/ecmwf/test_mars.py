@@ -4,7 +4,7 @@ import datetime as dt
 import pathlib
 import unittest.mock
 
-from .mars import PARAMETER_ECMWFCODE_MAP, MARSClient, _parseAvaliableParams
+from .mars import PARAMETER_ECMWFCODE_MAP, MARSClient, _parseListing
 
 # --------- Test setup --------- #
 
@@ -128,7 +128,7 @@ class TestECMWFMARSClient(unittest.TestCase):
 
 class TestParseAvailableParams(unittest.TestCase):
     def test_parsesSmallFileCorrectly(self) -> None:
-        out = _parseAvaliableParams(fileData=test_list_response)
+        out = _parseListing(fileData=test_list_response)
 
         self.assertDictEqual(
             {
@@ -143,7 +143,7 @@ class TestParseAvailableParams(unittest.TestCase):
 
         filedata: str = testFilePath.read_text()
 
-        out = _parseAvaliableParams(fileData=filedata)
+        out = _parseListing(fileData=filedata)
 
         self.assertDictEqual(
             {
