@@ -111,6 +111,25 @@ jobs:
           show: "fail, skip"
         if: always()
 
+  # Define an autotagger job that runs on merge requests and pushes to main
+  # * Only runs if unit tests passed
+  tag:
+    runs-on: ubuntu-latest
+    needs: test-unit
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Bump version and push tag
+        uses: RueLaLa/auto-tagger@master
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            GITHUB_PR_NUMBER: ${{ github.event.number }}
+
+
   # Define an integration test job that runs only on version on main tags
   test-integration:
     runs-on: ubuntu-latest
