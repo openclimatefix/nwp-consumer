@@ -3,9 +3,14 @@
 import abc
 import datetime as dt
 import pathlib
+
 from result import Result
 
-from ..domain import SourceFileMetadata, ProducerRepositoryMetadata
+from ..domain import (
+    DataRequest,
+    ProducerRepositoryMetadata,
+    SourceFileMetadata,
+)
 
 
 class NWPConsumerService(abc.ABC):
@@ -17,11 +22,8 @@ class NWPConsumerService(abc.ABC):
     @abc.abstractmethod
     def consume(
         self,
-        init_time: dt.datetime,
         zarr_filename: str,
-        parameters: list[str],
-        steps: list[int],
-        area: str,
+        request: DataRequest,
     ) -> pathlib.Path:
         """Consume NWP data to Zarr format for desired init time."""
         pass
@@ -47,30 +49,43 @@ class SourceRepository(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def validate_request(
+        self,
+        request: DataRequest,
+    ) -> Result[DataRequest, str]:
+        """Validate requested data is available from source."""
+        pass
+
+    @abc.abstractmethod
     def initialize_store(
         self,
-        init_time: dt.datetime,
-        parameters: list[str],
-        steps: list[int],
+        request: DataRequest,
     ) -> pathlib.Path:
-        """Initialize an empty Zarr file for a given init time, parameters, and steps."""
+        """Initialize an empty Zarr file for a given request."""
         pass
 
     @abc.abstractmethod
     def list_fileset(
-        self, it: dt.datetime, parameters: list[str], steps: list[int], area: str,
+        self,
+        it: dt.datetime,
+        request: DataRequest,
     ) -> Result[list[SourceFileMetadata], str]:
         """List available NWP files for a given init time, parameters, steps, and area."""
         pass
 
     @abc.abstractmethod
-    def download_file(self, file: SourceFileMetadata) -> Result[SourceFileMetadata, str]:
+    def download_file(
+        self,
+        file: SourceFileMetadata
+    ) -> Result[SourceFileMetadata, str]:
         """Download a single source NWP file."""
         pass
 
     @abc.abstractmethod
     def map_file(
-        self, cached_file: SourceFileMetadata, store_path: pathlib.Path,
+        self,
+        cached_file: SourceFileMetadata,
+        store_path: pathlib.Path,
     ) -> Result[SourceFileMetadata, str]:
         """Process cached source NWP data, persisting into the store file."""
         pass
@@ -79,14 +94,12 @@ class ZarrRepository(abc.ABC):
     """Interface for a repository that stores Zarr NWP data."""
 
     @abc.abstractmethod
-    def save(self, src: pathlib.Path, dst: pathlib.Path) -> Result[str, str]:
+    def save(
+        self,
+        src: pathlib.Path,
+        dst: pathlib.Path
+    ) -> Result[str, str]:
         """Save NWP store data in the repository."""
         pass
-
-class CacheRepository(abc.ABC):
-    """Interface for a repository that manages cache."""
-
-    @abc.abstractmethod
-    def create(self, filename: str) -> b
 
 

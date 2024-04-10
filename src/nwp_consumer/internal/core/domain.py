@@ -5,9 +5,18 @@ Not every struct is a domain model! Only those involved in the business logic.
 
 import datetime as dt
 import pathlib
+from enum import Enum
 
 import attrs
 
+
+class Area(str, Enum):
+    """Requestable areas of data."""
+
+    GLOBAL = "global"
+    EUROPE = "eu"
+    NW_INDIA = "nw_india"
+    UK = "uk"
 
 @attrs.frozen
 class SourceRepositoryMetadata:
@@ -32,8 +41,16 @@ class SourceRepositoryMetadata:
     is_order_based: bool
     running_hours: list[int]
     available_steps: list[int]
-    available_areas: list[str]
+    available_areas: list[Area]
 
+@attrs.frozen
+class DataRequest:
+    """A request for data from a source repository."""
+
+    area: Area
+    steps: list[int]
+    parameters: list[str]
+    init_time: dt.datetime
 
 @attrs.frozen
 class SourceFileMetadata:
@@ -44,6 +61,6 @@ class SourceFileMetadata:
     extension: str
     size: int
     steps: list[int]
-    parameters: dict[str, str]
+    parameters: list[str]
     init_time: dt.datetime
 
