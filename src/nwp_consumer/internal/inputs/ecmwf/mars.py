@@ -200,7 +200,7 @@ class MARSClient(internal.FetcherInterface):
             it=fi.it(),
             target=cfp.as_posix(),
             params=fi.variables(),
-            steps=fi.steps(),
+            steps=fi.steps,
         )
 
         log.debug(
