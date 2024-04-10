@@ -68,6 +68,11 @@ plugins = [
     'numpy.typing.mypy_plugin'
 ]
 
+[tool.pyslp-mypy]
+enabled = true
+dmypy = true
+strict = true
+
 # Ruff configuration
 # * See https://beta.ruff.rs/docs/
 [tool.ruff]

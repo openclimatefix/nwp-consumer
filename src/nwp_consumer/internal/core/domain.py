@@ -1,10 +1,12 @@
 """Struct definitions for core domain objects."""
 
-from dataclasses import dataclass
 import datetime as dt
 import pathlib
 
-@dataclass
+import attrs
+
+
+@attrs.frozen
 class RawRepositoryMetadata:
     """Metadata for a raw repository."""
 
@@ -16,6 +18,7 @@ class RawRepositoryMetadata:
     available_areas: list[str]
 
 
+@attrs.frozen
 class RawFileMetadata:
     """Metadata for a raw file."""
 
@@ -24,4 +27,5 @@ class RawFileMetadata:
     steps: list[int]
     parameters: dict[str, str]
     init_time: dt.datetime
+
 
