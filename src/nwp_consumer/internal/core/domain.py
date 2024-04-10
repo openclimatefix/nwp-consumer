@@ -1,4 +1,7 @@
-"""Struct definitions for core domain objects."""
+"""Struct definitions for core domain objects.
+
+Not every struct is a domain model! Only those involved in the business logic.
+"""
 
 import datetime as dt
 import pathlib
@@ -37,15 +40,10 @@ class SourceFileMetadata:
     """Metadata for a raw file."""
 
     name: str
+    path: pathlib.Path
+    extension: str
     size: int
     steps: list[int]
     parameters: dict[str, str]
     init_time: dt.datetime
-
-@attrs.frozen
-class CachedSourceFileMetadata(SourceFileMetadata):
-    """Metadata for a cached file."""
-
-    path: pathlib.Path
-
 
