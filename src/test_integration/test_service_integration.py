@@ -139,7 +139,7 @@ class TestNWPConverterService_ECMWFMARS(unittest.TestCase):
                 {
                     "variable": 2,
                     "init_time": 1,
-                    "step": 4,
+                    "step": 3,
                     "latitude": 141,
                     "longitude": 151,
                 },
