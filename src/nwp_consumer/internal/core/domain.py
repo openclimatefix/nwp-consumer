@@ -28,4 +28,10 @@ class RawFileMetadata:
     parameters: dict[str, str]
     init_time: dt.datetime
 
+@attrs.frozen
+class CachedFileMetadata(RawFileMetadata):
+    """Metadata for a cached file."""
+
+    path: pathlib.Path
+
 
