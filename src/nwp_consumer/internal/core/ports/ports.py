@@ -4,7 +4,7 @@ import abc
 import datetime as dt
 import pathlib
 
-from ..domain import CachedFileMetadata, RawRepositoryMetadata
+from ..domain import CachedSourceFileMetadata, ProducerRepositoryMetadata
 
 
 class NWPConsumerService(abc.ABC):
@@ -18,15 +18,17 @@ class NWPConsumerService(abc.ABC):
         parameters: list[str],
         steps: list[int],
         area: str,
+        source_repository: "RawRepository",
+        zarr_repository: "ZarrRepository",
     ) -> pathlib.Path:
         """Consume NWP data to Zarr format for desired init time."""
         pass
 
-class RawRepository(abc.ABC):
+class SourceRepository(abc.ABC):
     """Interface for a repository that stores raw NWP data."""
 
     @abc.abstractmethod
-    def metadata(self) -> RawRepositoryMetadata:
+    def metadata(self) -> ProducerRepositoryMetadata:
         """Get metadata about the raw repository."""
         pass
 
@@ -43,12 +45,12 @@ class RawRepository(abc.ABC):
     @abc.abstractmethod
     def download_to_cache(
         self, it: dt.datetime, parameters: list[str], steps: list[int], area: str,
-    ) -> list[CachedFileMetadata]:
+    ) -> list[CachedSourceFileMetadata]:
         """Download NWP data for a given init time, parameters, steps, and area to cache."""
         pass
 
     @abc.abstractmethod
-    def process(self, cached_file: CachedFileMetadata, store_path: pathlib.Path) -> pathlib.Path:
+    def process(self, cached_file: CachedSourceFileMetadata, store_path: pathlib.Path) -> pathlib.Path:
         """Process NWP data into a single zipped zarr file."""
         pass
 

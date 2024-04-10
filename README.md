@@ -22,33 +22,14 @@ Microservice for consuming NWP data.
 <br>
 
 A microservice for multi-source consumption of NWP data, storing it in a common format. Built with inspiration 
-from the [Hexagonal Architecture](https://alistair.cockburn.us/hexagonal-architecture) pattern, the nwp-consumer is 
-currently packaged with adapters for pulling and converting `.grib` data from: 
+from the [Hexagonal Architecture](https://alistair.cockburn.us/hexagonal-architecture) pattern.
 
-- [MetOffice Atmospheric API](https://gridded-data-ui.cda.api.metoffice.gov.uk)
-- [CEDA Atmospheric Archive](https://catalogue.ceda.ac.uk)
-- [ECMWF MARS API](https://apps.ecmwf.int/mars-catalogue)
-- [DWD's ICON Model from the Opendata API](https://opendata.dwd.de)
-- [CMC's GDPS Model from the Opendata API](https://dd.weather.gc.ca/)
-- [NOAA's GFS Model from AWS Open Data](https://noaa-gfs-bdp-pds.s3.amazonaws.com)
-- [NOAA's GFS Model from NCAR's Archive](https://rda.ucar.edu/datasets/ds084.1/)
+## Quickstart
 
-Similarly, the service can write to multiple sinks:
+TODO
 
-- Local filesystem
-- [AWS S3](https://aws.amazon.com/s3/)
-- [HuggingFace Datasets](https://huggingface.co/docs/datasets/index)
+## Architecture
 
-Its modular nature enables straightforward extension to alternate future sources.
-
-## Running the service
-
-The service uses environment variables to configure sources and sinks in accordance with
-the [Twelve-Factor App methodology](https://12factor.net/config).
-The program will inform you of missing env vars when using an adaptor, but you can also check the 
-[config](src/nwp_consumer/internal/config/config.py) for the given module, or use the `env` command.
-
-### Using Docker
 
 This service is designed to be run as a Docker container. The `Containerfile` is the Dockerfile for the service.
 It is recommended to run it this way due to the dependency on external non-python binaries, which at the moment
