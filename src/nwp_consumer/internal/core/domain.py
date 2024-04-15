@@ -6,17 +6,63 @@ Not every struct is a domain model! Only those involved in the business logic.
 import datetime as dt
 import pathlib
 from enum import Enum
+from typing import Any
 
 import attrs
+import numpy as np
 
 
-class Area(str, Enum):
+@attrs.frozen
+class Area:
+    """A geographical area, with bounding box in NWSE format.
+
+    Lat/Long coordinates are in decimal degrees and must be given as signed floats as follows:
+    - Latitudes north of the equator are *positive*.
+    - Latitudes south of the equator are *negative*.
+    - Longitudes east of the prime meridian are *positive*.
+    - Longitudes west of the prime meridian are *negative*.
+    """
+
+    name: str
+    north: float = attrs.field(validator=[attrs.validators.ge(-90), attrs.validators.le(90)])
+    west: float = attrs.field(validator=[attrs.validators.ge(-180), attrs.validators.le(180)])
+    south: float = attrs.field(validator=[attrs.validators.ge(-90), attrs.validators.le(90)])
+    east: float = attrs.field(validator=[attrs.validators.ge(-180), attrs.validators.le(180)])
+
+    def __str__(self) -> str:
+        """String representation of the area."""
+        return self.name + " (" + self.nwse() + ")"
+
+    def nwse(self) -> str:
+        """Return the bounding box as north/west/south/east string."""
+        return "/".join([str(x) for x in (self.north, self.west, self.south, self.east)])
+
+    def lats(self, resolution_degrees: float) -> list[float]:
+        """Return the latitudes of the area."""
+        return [self.north - i * resolution_degrees for i in range(self.nlats(resolution_degrees))]
+
+    def lons(self, resolution_degrees: float) -> list[float]:
+        """Return the longitudes of the area."""
+        return [self.west + i * resolution_degrees for i in range(self.nlons(resolution_degrees))]
+
+    def nlats(self, resolution_degrees: float) -> int:
+        """Return the number of latitudes in the area at a given resolution."""
+        return round((self.north - self.south) / resolution_degrees)
+
+    def nlons(self, resolution_degrees: float) -> int:
+        """Return the number of longitudes in the area at a given resolution."""
+        return round((self.east - self.west) / resolution_degrees)
+
+
+class Areas(Area, Enum):
     """Requestable areas of data."""
 
-    GLOBAL = "global"
-    EUROPE = "eu"
-    NW_INDIA = "nw_india"
-    UK = "uk"
+    GLOBAL = Area("global", 90, -180, -90, 180)
+    EUROPE = Area("eu", 73.5, -27, 33, 45)
+    NW_INDIA = Area("nw_india", 31, 68, 20, 79)
+    UK = Area("uk", 62, -12, 48, 3)
+    MALTA = Area("malta", 37, 68, 20, 79)
+
 
 @attrs.frozen
 class SourceRepositoryMetadata:
@@ -41,16 +87,39 @@ class SourceRepositoryMetadata:
     is_order_based: bool
     running_hours: list[int]
     available_steps: list[int]
-    available_areas: list[Area]
+    available_areas: list[Areas]
+
 
 @attrs.frozen
 class DataRequest:
     """A request for data from a source repository."""
 
-    area: Area
-    steps: list[int]
-    parameters: list[str]
+    area: Areas
+    steps: list[int] = attrs.field(validator=attrs.validators.min_len(1))
+    parameters: list[str] = attrs.field(validator=attrs.validators.min_len(1))
     init_time: dt.datetime
+
+    def ds_coords(self) -> dict[str, list[Any]]:
+        """Return the request as a dictionary of dataset coordinates."""
+        return {
+            "init_time": [np.datetime64(self.init_time)],
+            "step": [np.timedelta64(i, "h") for i in self.steps],
+            "latitude": self.area.lats(resolution_degrees=0.1),
+            "longitude": self.area.lons(resolution_degrees=0.1),
+        }
+
+    def nvals(self, resolution_degrees: float) -> int:
+        """Return the number of values in the request."""
+        return (
+            len(self.steps)
+            * self.area.nlats(resolution_degrees)
+            * self.area.nlons(resolution_degrees)
+            * len(self.parameters)
+        )
+
+    def shape(self, resolution_degrees: float) -> dict[str, int]:
+        """Return the shape of the request."""
+        return {k: len(v) for k, v in self.ds_coords().items()}
 
 @attrs.frozen
 class SourceFileMetadata:
@@ -63,4 +132,3 @@ class SourceFileMetadata:
     steps: list[int]
     parameters: list[str]
     init_time: dt.datetime
-

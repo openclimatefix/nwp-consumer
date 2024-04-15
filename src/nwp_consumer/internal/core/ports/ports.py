@@ -28,6 +28,7 @@ class NWPConsumerService(abc.ABC):
         """Consume NWP data to Zarr format for desired init time."""
         pass
 
+
 class SourceRepository(abc.ABC):
     """Interface for a repository that produces raw NWP data.
 
@@ -35,8 +36,9 @@ class SourceRepository(abc.ABC):
     a SourceRepository needs to define its own download and processing methods.
 
     A source may provide one or more files for a given init time.
-    To keep memory usage at a minimum, the data from each file is persisted to disk on conversion.
-    In this manner, writes can be done in parallel.
+    To keep memory usage at a minimum, when converting raw data to zarr,
+    converted data is persisted to disk in a store.
+    In this manner, writes can be done in parallel, but a schema needs to be known in advance.
 
     As such, an important distinction is made between:
         - the *fileset*: Raw store data for an init time
@@ -60,7 +62,7 @@ class SourceRepository(abc.ABC):
     def initialize_store(
         self,
         request: DataRequest,
-    ) -> pathlib.Path:
+    ) -> Result[pathlib.Path, str]:
         """Initialize an empty Zarr file for a given request."""
         pass
 
@@ -76,7 +78,7 @@ class SourceRepository(abc.ABC):
     @abc.abstractmethod
     def download_file(
         self,
-        file: SourceFileMetadata
+        file: SourceFileMetadata,
     ) -> Result[SourceFileMetadata, str]:
         """Download a single source NWP file."""
         pass
@@ -90,16 +92,11 @@ class SourceRepository(abc.ABC):
         """Process cached source NWP data, persisting into the store file."""
         pass
 
+
 class ZarrRepository(abc.ABC):
     """Interface for a repository that stores Zarr NWP data."""
 
     @abc.abstractmethod
-    def save(
-        self,
-        src: pathlib.Path,
-        dst: pathlib.Path
-    ) -> Result[str, str]:
+    def save(self, src: pathlib.Path, dst: pathlib.Path) -> Result[str, str]:
         """Save NWP store data in the repository."""
         pass
-
-
