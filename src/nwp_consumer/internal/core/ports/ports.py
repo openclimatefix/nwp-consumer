@@ -8,8 +8,8 @@ from result import Result
 
 from ..domain import (
     DataRequest,
-    ProducerRepositoryMetadata,
     SourceFileMetadata,
+    SourceRepositoryMetadata,
 )
 
 
@@ -46,7 +46,7 @@ class SourceRepository(abc.ABC):
     """
 
     @abc.abstractmethod
-    def metadata(self) -> ProducerRepositoryMetadata:
+    def metadata(self) -> SourceRepositoryMetadata:
         """Get metadata about the raw repository."""
         pass
 

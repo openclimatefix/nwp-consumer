@@ -47,21 +47,20 @@ class Area:
 
     def nlats(self, resolution_degrees: float) -> int:
         """Return the number of latitudes in the area at a given resolution."""
-        return round((self.north - self.south) / resolution_degrees)
+        # Add one to include the last latitude
+        return round((self.north - self.south) / resolution_degrees) + 1
 
     def nlons(self, resolution_degrees: float) -> int:
         """Return the number of longitudes in the area at a given resolution."""
-        return round((self.east - self.west) / resolution_degrees)
+        # Add one to include the last longitude
+        return round((self.east - self.west) / resolution_degrees) + 1
 
-
-class Areas(Area, Enum):
-    """Requestable areas of data."""
-
-    GLOBAL = Area("global", 90, -180, -90, 180)
-    EUROPE = Area("eu", 73.5, -27, 33, 45)
-    NW_INDIA = Area("nw_india", 31, 68, 20, 79)
-    UK = Area("uk", 62, -12, 48, 3)
-    MALTA = Area("malta", 37, 68, 20, 79)
+# Predefined areas
+GLOBAL = Area("global", 90, -180, -90, 180)
+EUROPE = Area("eu", 73.5, -27, 33, 45)
+NW_INDIA = Area("nw_india", 31, 68, 20, 79)
+UK = Area("uk", 62, -12, 48, 3)
+MALTA = Area("malta", 37, 68, 20, 79)
 
 
 @attrs.frozen
@@ -87,14 +86,13 @@ class SourceRepositoryMetadata:
     is_order_based: bool
     running_hours: list[int]
     available_steps: list[int]
-    available_areas: list[Areas]
-
+    available_areas: list[Area]
 
 @attrs.frozen
 class DataRequest:
     """A request for data from a source repository."""
 
-    area: Areas
+    area: Area
     steps: list[int] = attrs.field(validator=attrs.validators.min_len(1))
     parameters: list[str] = attrs.field(validator=attrs.validators.min_len(1))
     init_time: dt.datetime
@@ -102,8 +100,10 @@ class DataRequest:
     def ds_coords(self) -> dict[str, list[Any]]:
         """Return the request as a dictionary of dataset coordinates."""
         return {
-            "init_time": [np.datetime64(self.init_time)],
-            "step": [np.timedelta64(i, "h") for i in self.steps],
+            # Convert to UTC and remove timezone info to prevent numpy complaints
+            "init_time": [np.datetime64(self.init_time.astimezone(tz=dt.UTC).replace(tzinfo=None), "ns")],
+            # Manually specify as timedelta64[ns] to prevent xarray complaints
+            "step": [np.timedelta64(np.timedelta64(i, "h"), "ns") for i in self.steps],
             "latitude": self.area.lats(resolution_degrees=0.1),
             "longitude": self.area.lons(resolution_degrees=0.1),
         }
@@ -120,6 +120,7 @@ class DataRequest:
     def shape(self, resolution_degrees: float) -> dict[str, int]:
         """Return the shape of the request."""
         return {k: len(v) for k, v in self.ds_coords().items()}
+
 
 @attrs.frozen
 class SourceFileMetadata:
