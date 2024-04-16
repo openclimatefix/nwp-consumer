@@ -79,14 +79,16 @@ class SourceRepositoryMetadata:
         running_hours: The running hours or the source.
         available_steps: The available steps of the repository.
         available_areas: The available areas of the repository.
+        required_env: Environmant variables required for usage.
     """
 
-    name: str
+    name: str = attrs.field(validator=attrs.validators.min_len(3), type=str)
     is_archive: bool
     is_order_based: bool
     running_hours: list[int]
     available_steps: list[int]
     available_areas: list[Area]
+    required_env: list[str]
 
 @attrs.frozen
 class DataRequest:
@@ -97,15 +99,15 @@ class DataRequest:
     parameters: list[str] = attrs.field(validator=attrs.validators.min_len(1))
     init_time: dt.datetime
 
-    def ds_coords(self) -> dict[str, list[Any]]:
+    def ds_coords(self, resolution_degrees: float) -> dict[str, list[Any]]:
         """Return the request as a dictionary of dataset coordinates."""
         return {
             # Convert to UTC and remove timezone info to prevent numpy complaints
             "init_time": [np.datetime64(self.init_time.astimezone(tz=dt.UTC).replace(tzinfo=None), "ns")],
             # Manually specify as timedelta64[ns] to prevent xarray complaints
             "step": [np.timedelta64(np.timedelta64(i, "h"), "ns") for i in self.steps],
-            "latitude": self.area.lats(resolution_degrees=0.1),
-            "longitude": self.area.lons(resolution_degrees=0.1),
+            "latitude": self.area.lats(resolution_degrees),
+            "longitude": self.area.lons(resolution_degrees),
         }
 
     def nvals(self, resolution_degrees: float) -> int:
@@ -119,7 +121,7 @@ class DataRequest:
 
     def shape(self, resolution_degrees: float) -> dict[str, int]:
         """Return the shape of the request."""
-        return {k: len(v) for k, v in self.ds_coords().items()}
+        return {k: len(v) for k, v in self.ds_coords(resolution_degrees).items()}
 
 
 @attrs.frozen

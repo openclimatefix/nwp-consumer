@@ -65,13 +65,8 @@ python_version = "3.12"
 warn_return_any = true
 disallow_untyped_defs = true
 plugins = [
-    'numpy.typing.mypy_plugin'
+    'numpy.typing.mypy_plugin',
 ]
-
-[tool.pyslp-mypy]
-enabled = true
-dmypy = true
-strict = true
 
 # Ruff configuration
 # * See https://beta.ruff.rs/docs/
