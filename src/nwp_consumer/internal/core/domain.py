@@ -5,11 +5,38 @@ Not every struct is a domain model! Only those involved in the business logic.
 
 import datetime as dt
 import pathlib
-from enum import Enum
 from typing import Any
 
 import attrs
 import numpy as np
+import pint
+
+
+@attrs.frozen
+class Parameter:
+    """A parameter that can be requested from a source repository.
+
+    Attributes:
+        longname: The full name of the parameter.
+        shortname: A short name for the parameter.
+        units: The units of the parameter.
+        level: The level of the parameter.
+        levelunits: The units of the level.
+    """
+
+    longname: str = attrs.field(validator=attrs.validators.min_len(3))
+    shortname: str = attrs.field(validator=attrs.validators.max_len(10))
+    units: pint.Unit
+    level: int = attrs.field(validator=attrs.validators.ge(0))
+    levelunits: pint.Unit
+
+    def __repr__(self) -> str:
+        """Return a representation of the parameter."""
+        levelrepr = f"_{self.level}{self.levelunits}" if self.level > 0 else "_agl"
+        return f"{self.longname}{levelrepr}:{self.units}"
+
+LCC = Parameter("low_cloud_cover", "lcc", pint.Unit("fraction"), 0, pint.Unit("meter"))
+TEMPERATURE_2M = Parameter("temperature", "t", pint.Unit("kelvin"), 2, pint.Unit("meters"))
 
 
 @attrs.frozen
@@ -103,8 +130,10 @@ class DataRequest:
         """Return the request as a dictionary of dataset coordinates."""
         return {
             # Convert to UTC and remove timezone info to prevent numpy complaints
-            "init_time": [np.datetime64(self.init_time.astimezone(tz=dt.UTC).replace(tzinfo=None), "ns")],
-            # Manually specify as timedelta64[ns] to prevent xarray complaints
+            "init_time": [
+                np.datetime64(self.init_time.astimezone(tz=dt.UTC).replace(tzinfo=None), "ns"),
+            ],
+            # Manually specify as timedelta64[ns] to prevent xarray complaints
             "step": [np.timedelta64(np.timedelta64(i, "h"), "ns") for i in self.steps],
             "latitude": self.area.lats(resolution_degrees),
             "longitude": self.area.lons(resolution_degrees),
