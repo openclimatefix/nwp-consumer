@@ -161,7 +161,9 @@ class Client(internal.FetcherInterface):
         log.debug(event="mapping raw file to xarray dataset", filepath=p.as_posix())
 
         # Check the file has the right name
-        if not any(setname in p.name.lower() for setname in ["wholesale1.grib", "wholesale2.grib"]):
+        if not any(setname in p.name.lower() for setname in [
+            "wholesale1.grib", "wholesale2.grib", "wholesale1t54.grib", "wholesale2t54.grib",
+        ]):
             log.debug(
                 event="skipping file as it does not match expected name",
                 filepath=p.as_posix(),
@@ -271,8 +273,8 @@ def _isWantedFile(*, fi: CEDAFileInfo, dit: dt.datetime) -> bool:
     """
     if fi.it().date() != dit.date() or fi.it().time() != dit.time():
         return False
-    # False if item doesn't correspond to Wholesale1 or Wholesale2 files
-    if not any(setname in fi.filename() for setname in ["Wholesale1.grib", "Wholesale2.grib"]):
+    # False if item doesn't correspond to Wholesale1 or Wholesale2 files up to 54 time steps
+    if not any(setname in fi.filename() for setname in ["Wholesale1.grib", "Wholesale2.grib", "Wholesale1T54.grib", "Wholesale2T54.grib"]):
         return False
 
     return True
