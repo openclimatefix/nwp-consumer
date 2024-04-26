@@ -12,6 +12,13 @@ import dask.array
 import numpy as np
 import pint
 import xarray as xr
+from argparse import Namespace
+
+# Custom units
+ureg = pint.UnitRegistry()
+ureg.define("unit_interval = [] = ui")
+ureg.define("octas = unit_interval * 1/8")
+ureg.define("percent = unit_interval * 0.01")
 
 
 @attrs.frozen
@@ -49,13 +56,29 @@ class Parameter:
         if self.level_type == "multi" and value is None:
             raise ValueError(f"{attribute.name} must be defined if level_type is 'multi'.")
 
+    def at_level(self, level_value: int, level_units: pint.Unit) -> "Parameter":
+        """Return a new multi-level parameter with the given level specification."""
+        return attrs.evolve(
+            self,
+            level_type="multi",
+            level_value=level_value,
+            level_units=level_units
+        )
+
     def __repr__(self) -> str:
         """Return a representation of the parameter."""
         level_repr = f"_{self.level_value}{self.level_units}" if self.level_type == "multi" else ""
         return f"{self.longname}{level_repr}:{self.units}"
 
-LCC = Parameter("low_cloud_cover", "lcc", pint.Unit("fraction"))
-TEMPERATURE_2M = Parameter("temperature", "t", pint.Unit("kelvin"))
+ps = Namespace(
+    # Single level parameters
+    lcc=Parameter("low_cloud_cover", "lcc", ureg.ui),
+    mcc=Parameter("medium_cloud_cover", "mcc", ureg.ui),
+    hcc=Parameter("high_cloud_cover", "hcc", ureg.ui),
+    t=Parameter("temperature", "t", ureg.kelvin),
+)
+
+
 
 
 @attrs.frozen

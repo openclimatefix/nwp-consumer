@@ -44,40 +44,6 @@ class MARSOperationalArchive(SourceRepository):
         """Overrides corresponding method in parent class."""
         return Err("Not implemented")
 
-    def initialize_store(self, request: domain.DataRequest) -> Result[pathlib.Path, str]:
-        """Overrides corresponding method in parent class."""
-        path = pathlib.Path("~/.local/cache/nwp_consumer") / request.init_time.strftime(
-            "%Y%m%dT%H%M-mars.zarr",
-        )
-
-        # Create empty store, chunking as follows:
-        # * Every init time and step in their own chunk
-        # * Latitude and longitude in 2 chunks
-        coords = request.as_datasetcoords()
-        shape = (
-            len(coords["init_time"]),
-            len(coords["step"]),
-            len(coords["latitude"]),
-            len(coords["longitude"]),
-        )
-        data_vars = {
-            param: (
-                ("init_time", "step", "latitude", "longitude"),
-                dask.array.zeros(
-                    shape,
-                    chunks=(shape[0], shape[1], 2, 2),
-                ),
-            )
-            for param in request.parameters
-        }
-        ds = xr.Dataset(coords=coords, data_vars=data_vars)
-        try:
-            # Create the store. Mode "w" will overwrite any existing store.
-            ds.to_zarr(path, compute=False, mode="w")
-        except Exception as e:
-            return Err(f"Failed to initialize store: {e}")
-        return Ok(path)
-
     def download_file(
         self,
         file: domain.SourceFileMetadata,

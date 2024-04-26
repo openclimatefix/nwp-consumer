@@ -59,14 +59,6 @@ class SourceRepository(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def initialize_store(
-        self,
-        request: DataRequest,
-    ) -> Result[pathlib.Path, str]:
-        """Initialize an empty Zarr store for a given request."""
-        pass
-
-    @abc.abstractmethod
     def list_fileset(
         self,
         it: dt.datetime,

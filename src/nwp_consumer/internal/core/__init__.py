@@ -1,1 +1,1 @@
-
+"""Core of the package."""
