@@ -46,5 +46,5 @@ class TestECMWF_MARS(unittest.TestCase):
         self.assertEqual(result.unwrap(), pathlib.Path("~/.local/cache/nwp_consumer/20210101T0000-mars.zarr"))
         ds = xr.open_zarr(result.unwrap())
         self.assertEqual(
-            ds.coords.sizes, {"init_time": 1, "latitude": 141, "longitude": 151, "step": 3}
+            ds.coords.sizes, {"init_time": 1, "latitude": 141, "longitude": 151, "step": 3},
         )

@@ -17,6 +17,7 @@ authors = [
 ]
 classifiers = ["Programming Language :: Python :: 3"]
 dependencies = [
+    "attrs >= 23.2.0",
     "cfgrib >= 0.9.10.4",
     "ecmwf-api-client >= 1.6.3",
     "numpy >= 1.23.2",

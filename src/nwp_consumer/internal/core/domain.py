@@ -18,27 +18,44 @@ import xarray as xr
 class Parameter:
     """A parameter that can be requested from a source repository.
 
+    The level-based parameters must be set if parameter is 'multilevel'.
+
     Attributes:
         longname: The full name of the parameter.
         shortname: A short name for the parameter.
         units: The units of the parameter.
-        level: The level of the parameter.
-        levelunits: The units of the level.
+        level_type: The type of level the parameter is defined on (singlelevel or multilevel).
+        level_value: The number preceding the unit definining the level of the parameter.
+        level_units: The units of the level value.
     """
 
     longname: str = attrs.field(validator=attrs.validators.min_len(3))
     shortname: str = attrs.field(validator=attrs.validators.max_len(10))
     units: pint.Unit
-    level: int = attrs.field(validator=attrs.validators.ge(0))
-    levelunits: pint.Unit
+    level_type: str = attrs.field(
+        default="single",
+        validator=attrs.validators.in_(["single", "multi"]),
+    )
+    level_value: int | None = attrs.field(default=None)
+    level_units: pint.Unit | None = attrs.field(default=None)
+
+    @level_value.validator
+    @level_units.validator
+    def _defined_if_multilevel(
+            self,
+            attribute: attrs.Attribute,
+            value: Any | None, # noqa: ANN401
+        ) -> None:
+        if self.level_type == "multi" and value is None:
+            raise ValueError(f"{attribute.name} must be defined if level_type is 'multi'.")
 
     def __repr__(self) -> str:
         """Return a representation of the parameter."""
-        levelrepr = f"_{self.level}{self.levelunits}" if self.level > 0 else "_agl"
-        return f"{self.longname}{levelrepr}:{self.units}"
+        level_repr = f"_{self.level_value}{self.level_units}" if self.level_type == "multi" else ""
+        return f"{self.longname}{level_repr}:{self.units}"
 
-LCC = Parameter("low_cloud_cover", "lcc", pint.Unit("fraction"), 0, pint.Unit("meter"))
-TEMPERATURE_2M = Parameter("temperature", "t", pint.Unit("kelvin"), 2, pint.Unit("meters"))
+LCC = Parameter("low_cloud_cover", "lcc", pint.Unit("fraction"))
+TEMPERATURE_2M = Parameter("temperature", "t", pint.Unit("kelvin"))
 
 
 @attrs.frozen
@@ -120,6 +137,29 @@ class SourceRepositoryMetadata:
     required_env: list[str]
 
 @attrs.frozen
+class DatasetDimensionMap:
+    """Mapping of dimension labels to coordinate values for an NWP dataset.
+
+    Can reasonably be thought of as a map of axis labels to the labels of
+    each tick along that axis of a graph of the dataset.
+    """
+
+    init_time: list[np.datetime64]
+    step: list[np.timedelta64]
+    latitude: list[float]
+    longitude: list[float]
+
+    def shape(self) -> dict[str, int]:
+        """Return the shape specified by the dimension mapping.
+
+        Returns:
+            Dictionary with keys corresponding to the coordinate names
+            and values corresponding to the number of ticks along the
+            coordinate axis.
+        """
+        return {k: len(v) for k, v in attrs.asdict(self).items()}
+
+@attrs.frozen
 class DataRequest:
     """A request for data for an init time from a source repository."""
 
@@ -128,61 +168,62 @@ class DataRequest:
     parameters: list[str] = attrs.field(validator=attrs.validators.min_len(1))
     init_time: dt.datetime
 
-    def to_dummy_dataset(self, resolution_degrees: float) -> xr.Dataset:
-        """Return a dummy dataset according to the request's shape.
+    def as_dataset(self, resolution_degrees: float) -> xr.Dataset:
+        """Return a dummy dataset according to the request.
 
-        The dataset definition will contain only the coordinates and the parameters
-        dependence on them. Storing it as a zarr using the `compute=False` arg
-        will result in a zarr store containing only the metadata.
-        Converted raw files can then be written in parallel to specific regions of the store.
+        The request is used to define the dimension labels and tick values of the output
+        dataset object, as well as the data variables tracked within the dataset and
+        their dependence on the dimensions.
 
-        Dataset writes can never occur at a sub-chunk level, so in order to be able to
-        perform parallel writes to the dataset, we need to ensure that the chunks are
-        such to cover any possible raw data write we could reasonably expect from a store.
-        the following assumptions are made:
+        No actual data is defined on the produced dataset. As such, storing it as a zarr via
+        ```
+        dataset.to_zarr('dummy.zarr', compute=False)
+        ```
+        will result in a zarr store containing the metadata alone. The utility of this is
+        to enable region-based writing of new data to the store, which can be done using
+        parallel processes.
+
+        There is a gotcha: regional writes can never be done in parallel to the same chunk,
+        so writes must always be done at the chunk level or higher (as a chunk is an
+        individual file in the store). In this manner chunks are chosen to cover as small
+        a unit of data as could reasonbaly be expected to be provided by an NWP source:
         - Raw data files will always contain the full grid of data, hence 1 chunk per
-          grid coordinate axis is sufficient.
-        - Raw data files may contain as little as one step, so equate the number of chunks
-          to the number of steps.
+          grid dimension (lat/lon/x/y axes) is sufficient.
+        - Raw data files may contain as little as one step for a single parameter, so equate
+          the number of chunks to the number of steps along the step dimension.
         """
-        coords = self.ds_coords(resolution_degrees)
-        shape = self.shape(resolution_degrees)
-
+        coords = self.as_dataset_dimension_map(resolution_degrees)
         data_vars = {
             p: (
                     ("init_time", "step", "latitude", "longitude"),
-                    dask.array.zeros(shape, chunks=(1, len(self.steps), 1, 1),
+                    dask.array.zeros(coords.shape(), chunks=(1, len(self.steps), 1, 1),
                 ),
             ) for p in self.parameters
         }
 
-        return xr.Dataset(data_vars=data, coords=coords)
+        return xr.Dataset(data_vars=data_vars, coords=attrs.asdict(coords))
 
-    def ds_coords(self, resolution_degrees: float) -> dict[str, list[Any]]:
-        """Return the request as a dictionary of dataset coordinates."""
-        return {
+    def as_dataset_dimension_map(self, resolution_degrees: float) -> DatasetDimensionMap:
+        """Return the request as a mapping of dataset dimension labels to values."""
+        return DatasetDimensionMap(
             # Convert to UTC and remove timezone info to prevent numpy complaints
-            "init_time": [
+            init_time=[
                 np.datetime64(self.init_time.astimezone(tz=dt.UTC).replace(tzinfo=None), "ns"),
             ],
             # Manually specify as timedelta64[ns] to prevent xarray complaints
-            "step": [np.timedelta64(np.timedelta64(i, "h"), "ns") for i in self.steps],
-            "latitude": self.area.lats(resolution_degrees),
-            "longitude": self.area.lons(resolution_degrees),
-        }
+            step=[np.timedelta64(np.timedelta64(i, "h"), "ns") for i in self.steps],
+            latitude=self.area.lats(resolution_degrees),
+            longitude=self.area.lons(resolution_degrees),
+        )
 
-    def nvals(self, resolution_degrees: float) -> int:
-        """Return the number of values in the request."""
+    def total_values(self, resolution_degrees: float) -> int:
+        """Return the total number of data points specified by the request definition."""
         return (
             len(self.steps)
             * self.area.nlats(resolution_degrees)
             * self.area.nlons(resolution_degrees)
             * len(self.parameters)
         )
-
-    def shape(self, resolution_degrees: float) -> dict[str, int]:
-        """Return the shape of the request."""
-        return {k: len(v) for k, v in self.ds_coords(resolution_degrees).items()}
 
 
 @attrs.frozen
@@ -196,3 +237,4 @@ class SourceFileMetadata:
     steps: list[int]
     parameters: list[str]
     init_time: dt.datetime
+

@@ -53,7 +53,7 @@ class MARSOperationalArchive(SourceRepository):
         # Create empty store, chunking as follows:
         # * Every init time and step in their own chunk
         # * Latitude and longitude in 2 chunks
-        coords = request.ds_coords()
+        coords = request.as_datasetcoords()
         shape = (
             len(coords["init_time"]),
             len(coords["step"]),
