@@ -92,7 +92,16 @@ PARAMS = Namespace(
     prate=Parameter("precipitation_rate", "prate", ureg.Unit("kg m ** -2 s ** -1")),
     sdepth=Parameter("snow_depth", "sdepth", ureg.Unit("m")),
     dswrf=Parameter("downward_shortwave_radiation_flux", "dswrf", ureg.Unit("W m ** -2")),
+    dlwrf=Parameter("downward_longwave_radiation_flux", "dlwrf", ureg.Unit("W m ** -2")),
     t=Parameter("temperature", "t", ureg.Unit("kelvin")),
+    si10=Parameter("10m_wind_speed", "si10", ureg.Unit("m s ** -1")),
+    wdir10=Parameter("10m_wind_direction", "wdir10", ureg.Unit("degrees")),
+    u10=Parameter("10m_wind_u_component", "u10", ureg.Unit("m s ** -1")),
+    v10=Parameter("10m_wind_v_component", "v10", ureg.Unit("m s ** -1")),
+    u100=Parameter("100m_wind_u_component", "u100", ureg.Unit("m s ** -1")),
+    v100=Parameter("100m_wind_v_component", "v100", ureg.Unit("m s ** -1")),
+    u200=Parameter("200m_wind_u_component", "u200", ureg.Unit("m s ** -1")),
+    v200=Parameter("200m_wind_v_component", "v200", ureg.Unit("m s ** -1")),
 )
 
 
