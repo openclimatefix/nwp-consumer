@@ -25,7 +25,18 @@ ureg.define("percent = unit_interval * 0.01")
 class Parameter:
     """A parameter that can be requested from a source repository.
 
-    The level-based parameters must be set if parameter is 'multilevel'.
+    The level-based parameters must be set if parameter is multi-level.
+
+    In OCF's case, some seeminlgy multi-level parameters will be specified as single-level
+    (e.g. 10, 100, 200 meter wind speed). This is because the single/multi-level distinction
+    is technically determining how the parameter is stored in the dataset, and isn't a
+    semantic specifier.
+
+    Multi-level parameters are often read from datasets by loading all levels at once
+    (as this is more efficient and desirable from an ML perspective), and as such are stored
+    with all levels in the same chunk. Wind speed however is more useful as a single-level-
+    stored parameter, with different chunks for each height, as that is how it is typically
+    used in forecasting.
 
     Attributes:
         longname: The full name of the parameter.
@@ -62,7 +73,7 @@ class Parameter:
             self,
             level_type="multi",
             level_value=level_value,
-            level_units=level_units
+            level_units=level_units,
         )
 
     def __repr__(self) -> str:
@@ -70,15 +81,19 @@ class Parameter:
         level_repr = f"_{self.level_value}{self.level_units}" if self.level_type == "multi" else ""
         return f"{self.longname}{level_repr}:{self.units}"
 
-ps = Namespace(
-    # Single level parameters
-    lcc=Parameter("low_cloud_cover", "lcc", ureg.ui),
-    mcc=Parameter("medium_cloud_cover", "mcc", ureg.ui),
-    hcc=Parameter("high_cloud_cover", "hcc", ureg.ui),
-    t=Parameter("temperature", "t", ureg.kelvin),
+# Default parameters and units
+PARAMS = Namespace(
+    lcc=Parameter("low_cloud_cover", "lcc", ureg.Unit("ui")),
+    mcc=Parameter("medium_cloud_cover", "mcc", ureg.Unit("ui")),
+    hcc=Parameter("high_cloud_cover", "hcc", ureg.Unit("ui")),
+    tcc=Parameter("total_cloud_cover", "tcc", ureg.Unit("ui")),
+    vis=Parameter("visibility", "vis", ureg.Unit("m")),
+    relhum=Parameter("relative_humidity", "r", ureg.Unit("percent")),
+    prate=Parameter("precipitation_rate", "prate", ureg.Unit("kg m ** -2 s ** -1")),
+    sdepth=Parameter("snow_depth", "sdepth", ureg.Unit("m")),
+    dswrf=Parameter("downward_shortwave_radiation_flux", "dswrf", ureg.Unit("W m ** -2")),
+    t=Parameter("temperature", "t", ureg.Unit("kelvin")),
 )
-
-
 
 
 @attrs.frozen
@@ -107,11 +122,11 @@ class Area:
         return "/".join([str(x) for x in (self.north, self.west, self.south, self.east)])
 
     def lats(self, resolution_degrees: float) -> list[float]:
-        """Return the latitudes of the area."""
+        """Return the latitudes of the area at a given resolution."""
         return [self.north - i * resolution_degrees for i in range(self.nlats(resolution_degrees))]
 
     def lons(self, resolution_degrees: float) -> list[float]:
-        """Return the longitudes of the area."""
+        """Return the longitudes of the area at a given resolution."""
         return [self.west + i * resolution_degrees for i in range(self.nlons(resolution_degrees))]
 
     def nlats(self, resolution_degrees: float) -> int:
@@ -125,39 +140,13 @@ class Area:
         return round((self.east - self.west) / resolution_degrees) + 1
 
 # Predefined areas
-GLOBAL = Area("global", 90, -180, -90, 180)
-EUROPE = Area("eu", 73.5, -27, 33, 45)
-NW_INDIA = Area("nw_india", 31, 68, 20, 79)
-UK = Area("uk", 62, -12, 48, 3)
-MALTA = Area("malta", 37, 68, 20, 79)
-
-
-@attrs.frozen
-class SourceRepositoryMetadata:
-    """Metadata for a source repository.
-
-    Attributes:
-        name: The name of the repository.
-        is_archive: Whether the repository is a complete archival set.
-            Archival datasets are able to be used to backfill old data.
-            Non archival datasets only provide a limited window of data.
-        is_order_based: Whether the repository is order-based.
-            This means parameters cannot be chosen freely,
-            but rather are defined by pre-selected agreements
-            with the provider.
-        running_hours: The running hours or the source.
-        available_steps: The available steps of the repository.
-        available_areas: The available areas of the repository.
-        required_env: Environmant variables required for usage.
-    """
-
-    name: str = attrs.field(validator=attrs.validators.min_len(3), type=str)
-    is_archive: bool
-    is_order_based: bool
-    running_hours: list[int]
-    available_steps: list[int]
-    available_areas: list[Area]
-    required_env: list[str]
+AREAS = Namespace(
+    gl=Area("global", 90, -180, -90, 180),
+    eu=Area("eu", 73.5, -27, 33, 45),
+    nw_india=Area("nw_india", 31, 68, 20, 79),
+    uk=Area("uk", 62, -12, 48, 3),
+    malta=Area("malta", 37, 68, 20, 79),
+)
 
 @attrs.frozen
 class DatasetDimensionMap:
@@ -218,9 +207,8 @@ class DataRequest:
         coords = self.as_dataset_dimension_map(resolution_degrees)
         data_vars = {
             p: (
-                    ("init_time", "step", "latitude", "longitude"),
-                    dask.array.zeros(coords.shape(), chunks=(1, len(self.steps), 1, 1),
-                ),
+                ("init_time", "step", "latitude", "longitude"),
+                dask.array.zeros(coords.shape(), chunks=(1, len(self.steps), 1, 1)),
             ) for p in self.parameters
         }
 
@@ -248,6 +236,32 @@ class DataRequest:
             * len(self.parameters)
         )
 
+@attrs.frozen
+class SourceRepositoryMetadata:
+    """Metadata for a source repository.
+
+    Attributes:
+        name: The name of the repository.
+        is_archive: Whether the repository is a complete archival set.
+            Archival datasets are able to be used to backfill old data.
+            Non archival datasets only provide a limited window of data.
+        is_order_based: Whether the repository is order-based.
+            This means parameters cannot be chosen freely,
+            but rather are defined by pre-selected agreements
+            with the provider.
+        running_hours: The running hours or the source.
+        available_steps: The available steps of the repository.
+        available_areas: The available areas of the repository.
+        required_env: Environmant variables required for usage.
+    """
+
+    name: str = attrs.field(validator=attrs.validators.min_len(3), type=str)
+    is_archive: bool
+    is_order_based: bool
+    running_hours: list[int]
+    available_steps: list[int]
+    available_areas: list[Area]
+    required_env: list[str]
 
 @attrs.frozen
 class SourceFileMetadata:
