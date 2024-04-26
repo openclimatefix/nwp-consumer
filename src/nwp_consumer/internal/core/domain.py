@@ -8,8 +8,10 @@ import pathlib
 from typing import Any
 
 import attrs
+import dask.array
 import numpy as np
 import pint
+import xarray as xr
 
 
 @attrs.frozen
@@ -119,12 +121,42 @@ class SourceRepositoryMetadata:
 
 @attrs.frozen
 class DataRequest:
-    """A request for data from a source repository."""
+    """A request for data for an init time from a source repository."""
 
     area: Area
     steps: list[int] = attrs.field(validator=attrs.validators.min_len(1))
     parameters: list[str] = attrs.field(validator=attrs.validators.min_len(1))
     init_time: dt.datetime
+
+    def to_dummy_dataset(self, resolution_degrees: float) -> xr.Dataset:
+        """Return a dummy dataset according to the request's shape.
+
+        The dataset definition will contain only the coordinates and the parameters
+        dependence on them. Storing it as a zarr using the `compute=False` arg
+        will result in a zarr store containing only the metadata.
+        Converted raw files can then be written in parallel to specific regions of the store.
+
+        Dataset writes can never occur at a sub-chunk level, so in order to be able to
+        perform parallel writes to the dataset, we need to ensure that the chunks are
+        such to cover any possible raw data write we could reasonably expect from a store.
+        the following assumptions are made:
+        - Raw data files will always contain the full grid of data, hence 1 chunk per
+          grid coordinate axis is sufficient.
+        - Raw data files may contain as little as one step, so equate the number of chunks
+          to the number of steps.
+        """
+        coords = self.ds_coords(resolution_degrees)
+        shape = self.shape(resolution_degrees)
+
+        data_vars = {
+            p: (
+                    ("init_time", "step", "latitude", "longitude"),
+                    dask.array.zeros(shape, chunks=(1, len(self.steps), 1, 1),
+                ),
+            ) for p in self.parameters
+        }
+
+        return xr.Dataset(data_vars=data, coords=coords)
 
     def ds_coords(self, resolution_degrees: float) -> dict[str, list[Any]]:
         """Return the request as a dictionary of dataset coordinates."""

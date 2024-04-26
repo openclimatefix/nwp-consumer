@@ -63,7 +63,7 @@ class SourceRepository(abc.ABC):
         self,
         request: DataRequest,
     ) -> Result[pathlib.Path, str]:
-        """Initialize an empty Zarr file for a given request."""
+        """Initialize an empty Zarr store for a given request."""
         pass
 
     @abc.abstractmethod
