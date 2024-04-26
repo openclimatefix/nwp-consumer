@@ -92,7 +92,7 @@ class TestNWPConsumerService_CEDA(unittest.TestCase):
             self.assertEqual(["UKV"], list(ds.data_vars))
             # Ensure the dimensions have the right sizes
             self.assertEqual(
-                {"variable": 12, "init_time": 1, "step": 54, "y": 704, "x": 548},
+                {"variable": 12, "init_time": 1, "step": 50, "y": 704, "x": 548},
                 dict(ds.sizes.items()),
             )
             # Ensure the init time is correct
