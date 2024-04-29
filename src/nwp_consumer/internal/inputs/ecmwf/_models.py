@@ -9,7 +9,7 @@ class ECMWFMarsFileInfo(internal.FileInfoModel):
     inittime: dt.datetime
     area: str
     params: list[str]
-    steps: list[int]
+    steplist: list[int]
 
     def filename(self) -> str:
         """Overrides the corresponding method in the parent class."""
@@ -32,7 +32,7 @@ class ECMWFMarsFileInfo(internal.FileInfoModel):
 
     def steps(self) -> list[int]:
         """Overrides the corresponding method in the parent class."""
-        raise self.steps
+        return self.steps
 
 
 @dataclass
