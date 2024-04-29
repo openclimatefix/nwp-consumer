@@ -224,10 +224,13 @@ jobs:
 
       # Build and push the Container image to the registry
       # * Creates a multiplatform-aware image
-      # * Semantic versioning is handled via the meta action
-      # * The image layers are cached between action runs
-      - name: Build and push Container image
+      # * Semantic versioning is handled via the metadata action
+      # * The image layers are cached between action runs with the following strategy
+      # * - On push to main, also push build cache
+      # * - On push to other branches, only pull build cache
+      - name: Build and push Container image and cache
         uses: docker/build-push-action@v4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           context: .
           file: Containerfile
@@ -235,8 +238,19 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
+      - name: Build and push container image
+        uses: docker/build-push-action@v4
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        with:
+          context: .
+          file: Containerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
 
   # Define a "build-wheel" job that runs on version tags
   # * Only runs if integration test job passes
