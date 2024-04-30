@@ -151,13 +151,12 @@ class Area:
 
 
 # Predefined areas
-AREAS = Namespace(
-    gl=Area("global", 90, -180, -90, 180),
-    eu=Area("eu", 73.5, -27, 33, 45),
-    nw_india=Area("nw_india", 31, 68, 20, 79),
-    uk=Area("uk", 62, -12, 48, 3),
-    malta=Area("malta", 37, 68, 20, 79),
-)
+class AREAS:
+    gl = Area("global", 90, -180, -90, 180)
+    eu = Area("eu", 73.5, -27, 33, 45)
+    nw_india = Area("nw_india", 31, 68, 20, 79)
+    uk = Area("uk", 62, -12, 48, 3)
+    malta = Area("malta", 37, 68, 20, 79)
 
 
 @attrs.frozen
@@ -266,17 +265,18 @@ class SourceRepositoryMetadata:
         running_hours: The running hours or the source.
         available_steps: The available steps of the repository.
         available_areas: The available areas of the repository.
-        required_env: Environmant variables required for usage.
+        required_env: Environment variables required for usage.
+        optional_env: Optional environment variables.
     """
 
-    name: str = attrs.field(validator=attrs.validators.min_len(3), type=str)
+    name: str = attrs.field(validator=attrs.validators.min_len(3))
     is_archive: bool
     is_order_based: bool
     running_hours: list[int]
     available_steps: list[int]
     available_areas: list[Area]
     required_env: list[str]
-    optional_env: list[str]
+    optional_env: dict[str, str]
 
 
 @attrs.frozen
@@ -290,3 +290,17 @@ class SourceFileMetadata:
     steps: list[int]
     parameters: list[str]
     init_time: dt.datetime
+
+
+@attrs.frozen
+class PostProcessOptions:
+    """Options for post-processing NWP data.
+
+    Attributes:
+        create_variable_dimension: Whether to create a variable dimension.
+            Squashes all data variables into their own "variable" dimension.
+        rename_variables: Whether to rename variables.
+    """
+
+    create_variable_dimension: bool = False
+    rename_variables: bool = False

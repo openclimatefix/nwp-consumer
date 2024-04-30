@@ -9,6 +9,9 @@ from result import Result
 class SourceRepository(abc.ABC):
     """Interface for a repository that produces raw NWP data.
 
+    Class methods are used to distinguish between calls that require authentication
+    and those that do not.
+
     Since different producers of NWP data have different data storage implementations,
     a SourceRepository needs to define its own download and processing methods.
 
@@ -22,14 +25,26 @@ class SourceRepository(abc.ABC):
         - the *store*: The Zarr store containing the processed data
     """
 
+    @classmethod
     @abc.abstractmethod
-    def from_env(self) -> "SourceRepository":
+    def from_env(cls) -> "SourceRepository":
         """Create a class instance, configuring from environment variables."""
         pass
 
+    @classmethod
     @abc.abstractmethod
-    def metadata(self) -> domain.SourceRepositoryMetadata:
+    def metadata(cls) -> domain.SourceRepositoryMetadata:
         """Get metadata about the raw repository."""
+        pass
+
+    @classmethod
+    @abc.abstractmethod
+    def map_file(
+        cls,
+        cached_file: domain.SourceFileMetadata,
+        store_path: pathlib.Path,
+    ) -> Result[domain.SourceFileMetadata, str]:
+        """Process cached source NWP data, persisting into the store file."""
         pass
 
     @abc.abstractmethod
@@ -57,14 +72,6 @@ class SourceRepository(abc.ABC):
         """Download a single source NWP file."""
         pass
 
-    @abc.abstractmethod
-    def map_file(
-        self,
-        cached_file: domain.SourceFileMetadata,
-        store_path: pathlib.Path,
-    ) -> Result[domain.SourceFileMetadata, str]:
-        """Process cached source NWP data, persisting into the store file."""
-        pass
 
 
 class ZarrRepository(abc.ABC):

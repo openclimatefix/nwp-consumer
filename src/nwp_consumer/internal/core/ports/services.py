@@ -2,6 +2,7 @@
 
 import abc
 import pathlib
+from typing import Literal
 
 from nwp_consumer.internal.core import domain
 from result import Result
@@ -14,15 +15,6 @@ class NWPConsumerService(abc.ABC):
     """
 
     @abc.abstractmethod
-    def initialize_archive(
-        self,
-        request: domain.DataRequest,
-        archive_type: str,
-    ) -> Result[str, str]:
-        """Initialize a Zarr archive to store data for the given request."""
-        pass
-
-    @abc.abstractmethod
     def consume(
         self,
         source: str,
@@ -32,11 +24,17 @@ class NWPConsumerService(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def postprocess_archive(
+    def postprocess(
         self,
-        zarr_filename: str,
-        request: domain.DataRequest,
+        options: domain.PostProcessOptions,
     ) -> Result[str, str]:
-        """Postprocess the Zarr archive to make it ready for use."""
+        """Postprocess the produced Zarr according to given options."""
         pass
 
+    @abc.abstractmethod
+    def append_to_archive(
+        self,
+        archive_period: Literal["yearly", "monthly"],
+    ) -> Result[str, str]:
+        """Append the Zarr archive to a larger archive."""
+        pass
