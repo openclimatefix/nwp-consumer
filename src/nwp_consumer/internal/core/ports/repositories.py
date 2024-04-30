@@ -1,50 +1,9 @@
-"""Defines interfaces used by actors."""
-
 import abc
 import datetime as dt
 import pathlib
 
+from nwp_consumer.internal.core import domain
 from result import Result
-
-from ..domain import (
-    DataRequest,
-    SourceFileMetadata,
-    SourceRepositoryMetadata,
-)
-
-
-class NWPConsumerService(abc.ABC):
-    """Interface for a service that consumes NWP data.
-
-    Defines the business-critical methods that an NWP service must implement.
-    """
-
-    @abc.abstractmethod
-    def initialize_archive(
-        self,
-        request: DataRequest,
-        archive_type: str,
-    ) -> Result[str, str]:
-        """Initialize a Zarr archive to store data for the given request."""
-        pass
-
-    @abc.abstractmethod
-    def consume(
-        self,
-        source: str,
-        request: DataRequest,
-    ) -> pathlib.Path:
-        """Consume NWP data to Zarr format for desired init time."""
-        pass
-
-    @abc.abstractmethod
-    def postprocess_archive(
-        self,
-        zarr_filename: str,
-        request: DataRequest,
-    ) -> Result[str, str]:
-        """Postprocess the Zarr archive to make it ready for use."""
-        pass
 
 
 class SourceRepository(abc.ABC):
@@ -64,15 +23,20 @@ class SourceRepository(abc.ABC):
     """
 
     @abc.abstractmethod
-    def metadata(self) -> SourceRepositoryMetadata:
+    def from_env(self) -> "SourceRepository":
+        """Create a class instance, configuring from environment variables."""
+        pass
+
+    @abc.abstractmethod
+    def metadata(self) -> domain.SourceRepositoryMetadata:
         """Get metadata about the raw repository."""
         pass
 
     @abc.abstractmethod
     def validate_request(
         self,
-        request: DataRequest,
-    ) -> Result[DataRequest, str]:
+        request: domain.DataRequest,
+    ) -> Result[domain.DataRequest, str]:
         """Validate requested data is available from source."""
         pass
 
@@ -80,25 +44,25 @@ class SourceRepository(abc.ABC):
     def list_fileset(
         self,
         it: dt.datetime,
-        request: DataRequest,
-    ) -> Result[list[SourceFileMetadata], str]:
+        request: domain.DataRequest,
+    ) -> Result[list[domain.SourceFileMetadata], str]:
         """List available NWP files for a given init time, parameters, steps, and area."""
         pass
 
     @abc.abstractmethod
     def download_file(
         self,
-        file: SourceFileMetadata,
-    ) -> Result[SourceFileMetadata, str]:
+        file: domain.SourceFileMetadata,
+    ) -> Result[domain.SourceFileMetadata, str]:
         """Download a single source NWP file."""
         pass
 
     @abc.abstractmethod
     def map_file(
         self,
-        cached_file: SourceFileMetadata,
+        cached_file: domain.SourceFileMetadata,
         store_path: pathlib.Path,
-    ) -> Result[SourceFileMetadata, str]:
+    ) -> Result[domain.SourceFileMetadata, str]:
         """Process cached source NWP data, persisting into the store file."""
         pass
 

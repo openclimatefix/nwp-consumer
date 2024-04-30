@@ -5,6 +5,7 @@ Not every struct is a domain model! Only those involved in the business logic.
 
 import datetime as dt
 import pathlib
+from argparse import Namespace
 from typing import Any
 
 import attrs
@@ -12,7 +13,6 @@ import dask.array
 import numpy as np
 import pint
 import xarray as xr
-from argparse import Namespace
 
 # Custom units
 ureg = pint.UnitRegistry()
@@ -27,7 +27,7 @@ class Parameter:
 
     The level-based parameters must be set if parameter is multi-level.
 
-    In OCF's case, some seeminlgy multi-level parameters will be specified as single-level
+    In OCF's case, some seeming multi-level parameters will be specified as single-level
     (e.g. 10, 100, 200 meter wind speed). This is because the single/multi-level distinction
     is technically determining how the parameter is stored in the dataset, and isn't a
     semantic specifier.
@@ -43,7 +43,7 @@ class Parameter:
         shortname: A short name for the parameter.
         units: The units of the parameter.
         level_type: The type of level the parameter is defined on (singlelevel or multilevel).
-        level_value: The number preceding the unit definining the level of the parameter.
+        level_value: The number preceding the unit defining the level of the parameter.
         level_units: The units of the level value.
     """
 
@@ -62,8 +62,8 @@ class Parameter:
     def _defined_if_multilevel(
             self,
             attribute: attrs.Attribute,
-            value: Any | None, # noqa: ANN401
-        ) -> None:
+            value: Any | None,  # noqa: ANN401
+    ) -> None:
         if self.level_type == "multi" and value is None:
             raise ValueError(f"{attribute.name} must be defined if level_type is 'multi'.")
 
@@ -80,6 +80,7 @@ class Parameter:
         """Return a representation of the parameter."""
         level_repr = f"_{self.level_value}{self.level_units}" if self.level_type == "multi" else ""
         return f"{self.longname}{level_repr}:{self.units}"
+
 
 # Default parameters and units
 PARAMS = Namespace(
@@ -148,6 +149,7 @@ class Area:
         # Add one to include the last longitude
         return round((self.east - self.west) / resolution_degrees) + 1
 
+
 # Predefined areas
 AREAS = Namespace(
     gl=Area("global", 90, -180, -90, 180),
@@ -156,6 +158,7 @@ AREAS = Namespace(
     uk=Area("uk", 62, -12, 48, 3),
     malta=Area("malta", 37, 68, 20, 79),
 )
+
 
 @attrs.frozen
 class DatasetDimensionMap:
@@ -179,6 +182,7 @@ class DatasetDimensionMap:
             coordinate axis.
         """
         return {k: len(v) for k, v in attrs.asdict(self).items()}
+
 
 @attrs.frozen
 class DataRequest:
@@ -213,7 +217,7 @@ class DataRequest:
         - Raw data files may contain as little as one step for a single parameter, so equate
           the number of chunks to the number of steps along the step dimension.
         """
-        coords = self.as_dataset_dimension_map(resolution_degrees)
+        coords: DatasetDimensionMap = self.as_dataset_dimension_map(resolution_degrees)
         data_vars = {
             p: (
                 ("init_time", "step", "latitude", "longitude"),
@@ -239,11 +243,12 @@ class DataRequest:
     def total_values(self, resolution_degrees: float) -> int:
         """Return the total number of data points specified by the request definition."""
         return (
-            len(self.steps)
-            * self.area.nlats(resolution_degrees)
-            * self.area.nlons(resolution_degrees)
-            * len(self.parameters)
+                len(self.steps)
+                * self.area.nlats(resolution_degrees)
+                * self.area.nlons(resolution_degrees)
+                * len(self.parameters)
         )
+
 
 @attrs.frozen
 class SourceRepositoryMetadata:
@@ -271,6 +276,8 @@ class SourceRepositoryMetadata:
     available_steps: list[int]
     available_areas: list[Area]
     required_env: list[str]
+    optional_env: list[str]
+
 
 @attrs.frozen
 class SourceFileMetadata:
@@ -283,4 +290,3 @@ class SourceFileMetadata:
     steps: list[int]
     parameters: list[str]
     init_time: dt.datetime
-

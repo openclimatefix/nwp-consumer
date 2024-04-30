@@ -5,7 +5,7 @@ import unittest
 import xarray as xr
 from nwp_consumer.internal.core import domain
 
-from .ecmwf_mars import MARSOperationalArchive
+from ecmwf_mars import MARSOperationalArchive
 
 
 class TestECMWF_MARS(unittest.TestCase):

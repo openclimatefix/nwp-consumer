@@ -2,20 +2,34 @@
 
 import datetime as dt
 import pathlib
+import os
 
-import dask.array
-import xarray as xr
 from ecmwfapi.api import ECMWFService
 from nwp_consumer.internal.core import domain
 from nwp_consumer.internal.core.ports import SourceRepository
 from result import Err, Ok, Result
-
 
 class MARSOperationalArchive(SourceRepository):
     """ECMWF MARS API adaptor for the Operational Archive."""
 
     service: ECMWFService
 
+    # Authentication
+    _api_key: str
+
+    def __init__(self, api_key: str):
+        """Create a new instance."""
+        self._api_key = api_key
+        self.service = ECMWFService("mars", url=os.environ["ECMWF_API_URL"], key=api_key)
+
+    @classmethod
+    def from_env(cls) -> "SourceRepository":
+        """Create a new instance from environment variables."""
+        os.getenv("ECMWF_API_URL", "https://api.ecmwf.int/v1")
+        api_key = os.environ["ECMWF_API_KEY"]
+        # Email needs to be set in the environment but isn't directly used
+        _ = os.environ["ECMWF_API_EMAIl"]
+        return cls(api_key=api_key)
 
     def metadata(self) -> domain.SourceRepositoryMetadata:
         """Overrides corresponding method in parent class."""
@@ -34,7 +48,8 @@ class MARSOperationalArchive(SourceRepository):
                 domain.NW_INDIA,
                 domain.MALTA,
             ],
-            required_env=["ECMWF_API_KEY", "ECMWF_API_EMAIL", "ECMWF_API_URL"],
+            required_env=["ECMWF_API_KEY", "ECMWF_API_EMAIL"],
+            optional_env=["ECMWF_API_URL"]
         )
 
     def validate_request(
