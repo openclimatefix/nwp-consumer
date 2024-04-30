@@ -4,8 +4,8 @@ import pathlib
 
 import meteomatics.api
 import pandas as pd
+import structlog
 import xarray as xr
-from internal import FileInfoModel, OCFParameter
 
 from nwp_consumer import internal
 
@@ -17,6 +17,7 @@ from ._models import (
     wind_parameters,
 )
 
+log = structlog.getLogger()
 
 class Client(internal.FetcherInterface):
     """Client to fetch data from Meteomatics."""
@@ -32,9 +33,15 @@ class Client(internal.FetcherInterface):
     _subscription_max_requestable_parameters: int = 10
     _subscription_min_date = dt.datetime(2019, 3, 19, tzinfo=dt.UTC)
 
-    def __init__(self, area: str, resource_type: str) -> None:
+    def __init__(self, username: str, password: str, area: str, resource_type: str) -> None:
         """Initialize the client."""
+        self._username = username
+        self._password = password
+
         self.area = area
+        if resource_type not in ["solar", "wind"]:
+            raise ValueError("Resource type must be either 'solar' or 'wind'.")
+
         self.resource_type = resource_type
 
     def datasetName(self) -> str:
@@ -46,7 +53,7 @@ class Client(internal.FetcherInterface):
         # This should follow ECMWF's initialization hours as we fetch the ECMWF-IFS data
         return [0, 6, 12, 18]
 
-    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[FileInfoModel]:
+    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
         """Overrides the corresponding method in the parent class."""
         return [
             MeteomaticsFileInfo(
@@ -58,7 +65,7 @@ class Client(internal.FetcherInterface):
             ),
         ]
 
-    def downloadToCache(self, *, fi: FileInfoModel) -> pathlib.Path:
+    def downloadToCache(self, *, fi: internal.FileInfoModel) -> pathlib.Path:
         """Query the Meteomatics API for NWP data and add to cache."""
         # Ensure subscription limits are respected
         # * Split the parameters into groups of max size
@@ -71,6 +78,12 @@ class Client(internal.FetcherInterface):
         if not isinstance(fi, MeteomaticsFileInfo):
             raise ValueError("FileInfoModel must be a MeteomaticsFileInfo instance.")
 
+        p: pathlib.Path = internal.rawCachePath(it=fi.it(), filename=fi.filename())
+        # Check if the file already exists in the cache
+        if p.exists():
+            return p
+
+        log.debug("Querying Meteomatics API", it=fi.it())
         dfs: list[pd.DataFrame] = []
         try:
             for param_group in groups:
@@ -94,8 +107,8 @@ class Client(internal.FetcherInterface):
             cdf = cdf.join(dfs[1:])
 
         # Save the dataframe to a file
-        p: pathlib.Path = internal.rawCachePath(it=fi.it(), filename=fi.filename())
         cdf.to_csv(p)
+        log.debug("Saved Meteomatics data to cache", p=p, cols=cdf.columns())
 
         return p
 
@@ -103,12 +116,10 @@ class Client(internal.FetcherInterface):
         """Map DataFrame as CSV to xarray Dataset."""
         # Read the CSV file into a DataFrame
         try:
-            df: pd.DataFrame = pd.read_csv(p, index_col=0, parse_dates=True)
+            df: pd.DataFrame = pd.read_csv(p, parse_dates=["validdate"])
         except Exception as e:
             raise RuntimeError(f"Failed to read CSV file: {e}") from e
 
-        # Reset index to create columns for lat, lon, and validdate
-        df = df.reset_index(level=["lat", "lon", "validdate"])
         # Create a station_id column based on the coordinates
         df["station_id"] = df.groupby(["lat", "lon"], sort=False).ngroup() + 1
         # Create a time_utc column based on the validdate
@@ -120,8 +131,10 @@ class Client(internal.FetcherInterface):
         # Ensure time_utc is a timestamp object
         ds["time_utc"] = pd.to_datetime(ds["time_utc"])
 
+        ds = ds.assign_coords(init_time=ds["time_utc"].values.min()).expand_dims("init_time")
+
         return ds
 
-    def parameterConformMap(self) -> dict[str, OCFParameter]:
+    def parameterConformMap(self) -> dict[str, internal.OCFParameter]:
         """Overrides the corresponding method in the parent class."""
         raise NotImplementedError()

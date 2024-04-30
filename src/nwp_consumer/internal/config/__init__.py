@@ -10,6 +10,7 @@ __all__ = [
     "ICONEnv",
     "HuggingFaceEnv",
     "MetOfficeEnv",
+    "MeteomaticsEnv",
     "S3Env",
     "LocalEnv",
 ]
@@ -24,6 +25,7 @@ from .env import (
     HuggingFaceEnv,
     ICONEnv,
     LocalEnv,
+    MeteomaticsEnv,
     MetOfficeEnv,
     S3Env,
 )
