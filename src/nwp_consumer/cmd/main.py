@@ -97,6 +97,13 @@ def run(argv: list[str]) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
         rawstorer = storer
     else:
         rawstorer = parse_actor(None, arguments["--rsink"])().configure_storer()
+
+    # Special logic for meteomatics
+    if arguments["--source"] == "meteomatics":
+        log.info("--no-rename-vars and --no-variable-dim are always true for meteomatics")
+        arguments["--no-rename-vars"] = True
+        arguments["--no-variable-dim"] = True
+
     service = NWPConsumerService(
         fetcher=fetcher,
         storer=storer,
@@ -213,6 +220,7 @@ def parse_actor(source: str | None, sink: str | None) -> type[config.EnvParser]:
         "ecmwf-s3": config.ECMWFS3Env,
         "icon": config.ICONEnv,
         "cmc": config.CMCEnv,
+        "meteomatics": config.MeteomaticsEnv,
     }
     SINK_ENV_MAP: dict[str, type[config.EnvParser]] = {
         "local": config.LocalEnv,

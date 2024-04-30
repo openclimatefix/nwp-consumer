@@ -7,6 +7,7 @@ __all__ = [
     "icon",
     "cmc",
     "meteofrance",
+    "meteomatics",
     "noaa",
 ]
 
@@ -16,6 +17,7 @@ from . import (
     ecmwf,
     icon,
     meteofrance,
+    meteomatics,
     metoffice,
     noaa,
 )

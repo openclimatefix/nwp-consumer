@@ -184,8 +184,8 @@ class MARSClient(internal.FetcherInterface):
                 inittime=it,
                 area=self.area,
                 params=available_data["params"],
-                steps=available_data["steps"],
-            )
+                steplist=available_data["steps"],
+            ),
         ]
 
     def downloadToCache(  # noqa: D102
@@ -200,7 +200,7 @@ class MARSClient(internal.FetcherInterface):
             it=fi.it(),
             target=cfp.as_posix(),
             params=fi.variables(),
-            steps=fi.steps,
+            steps=fi.steps(),
         )
 
         log.debug(
@@ -383,7 +383,7 @@ def _parseListing(fileData: str) -> dict[str, list[str] | list[int]]:
         pattern=r"(?<!step)[\s\.\d]*?(?=\n.*?\nGrand)",
         string=fileData,
     )
-    out = {"steps": set(), "params": set()}
+    out: dict = {"steps": set(), "params": set()}
     if tablematch:
         tablelines: list[str] = tablematch.group(0).split("\n")
         for line in tablelines:

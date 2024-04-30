@@ -186,6 +186,22 @@ class CMCEnv(EnvParser):
             param_group=self.CMC_PARAMETER_GROUP,
         )
 
+class MeteomaticsEnv(EnvParser):
+    """Config for Meteomatics API."""
+
+    METEOMATICS_USERNAME: str
+    METEOMATICS_PASSWORD: str
+    METEOMATICS_AREA: str = "nw-india"
+    METEOMATICS_RESOURCE_TYPE: str = "solar"
+
+    def configure_fetcher(self) -> internal.FetcherInterface:
+        """Overrides the corresponding method in the parent class."""
+        return inputs.meteomatics.Client(
+            username=self.METEOMATICS_USERNAME,
+            password=self.METEOMATICS_PASSWORD,
+            area=self.METEOMATICS_AREA,
+            resource_type=self.METEOMATICS_RESOURCE_TYPE,
+        )
 
 # --- Outputs environment variables --- #
 
