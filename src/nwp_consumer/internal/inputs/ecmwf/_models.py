@@ -32,7 +32,7 @@ class ECMWFMarsFileInfo(internal.FileInfoModel):
 
     def steps(self) -> list[int]:
         """Overrides the corresponding method in the parent class."""
-        return self.steps
+        return self.steplist
 
 
 @dataclass
