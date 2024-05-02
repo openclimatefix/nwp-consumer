@@ -13,6 +13,7 @@ import dask.array
 import numpy as np
 import pint
 import xarray as xr
+from result import Err, Ok, Result
 
 # Custom units
 ureg = pint.UnitRegistry()
@@ -152,6 +153,8 @@ class Area:
 
 # Predefined areas
 class AREAS:
+    """Predefined areas available from sources."""
+
     gl = Area("global", 90, -180, -90, 180)
     eu = Area("eu", 73.5, -27, 33, 45)
     nw_india = Area("nw_india", 31, 68, 20, 79)
@@ -167,10 +170,9 @@ class DatasetDimensionMap:
     each tick along that axis of a graph of the dataset.
     """
 
-    init_time: list[np.datetime64]
-    step: list[np.timedelta64]
-    latitude: list[float]
-    longitude: list[float]
+    def asdict(self) -> dict[str, list]:
+        """Return the dimension map as a dictionary."""
+        return attrs.asdict(self)
 
     def shape(self) -> dict[str, int]:
         """Return the shape specified by the dimension mapping.
@@ -180,7 +182,90 @@ class DatasetDimensionMap:
             and values corresponding to the number of ticks along the
             coordinate axis.
         """
-        return {k: len(v) for k, v in attrs.asdict(self).items()}
+        return {k: len(v) for k, v in self.asdict().items()}
+
+    def as_slices_of(self, base: "DatasetDimensionMap") -> Result[dict[str, slice], str]:
+        """Return the index slices of this mapping with regards to the base map.
+
+        A number of requirements must be met for this operation to be successful:
+        - The instance must be a subset of the base mapping.
+        - The subset must be contiguous along each dimension.
+        - The subset must be of the same dimension map type as the base map.
+
+        Args:
+            base: The base dimension map to slice against.
+
+        Returns:
+            Dictionary with keys corresponding to the coordinate names
+            and values corresponding to the slices of the base map that
+            are represented by the ticks along the instance's dimensions.
+        """
+        if type(base) != type(self):
+            return Err(
+                f"Cannot find slices of {type(self)} in non-matching dimension map type {type(base)}.",
+            )
+
+        slices = {}
+        for k, v in self.asdict().items():
+            if not set(v).issubset(set(getattr(base, k))):
+                return Err(f"Subset {k} dimension values not in base dimension map.")
+            # Get index of values in base map
+            k_indices = sorted([getattr(base, k).index(i) for i in v])
+            # Ensure a continuous slice is specified
+            if k_indices != list(range(k_indices[0], k_indices[-1])):
+                return Err(f"Subset {k} values not contiguous in base dimension map.")
+            slices[k] = slice(k_indices[0], k_indices[-1] + 1)
+
+        return Ok({
+            k: slice(getattr(self, k).index(v[0]), getattr(self, k).index(v[-1]) + 1)
+            for k, v in subset.asdict().items()
+        })
+
+
+class ISLLDatasetDimensionMap(DatasetDimensionMap):
+    """Mapping of dimension labels to coordinate values for an ISLL NWP dataset.
+
+    The ISLL dataset is a dataset with the following dimensions:
+    - init_time: The initial time of the forecast.
+    - step: The time step of the forecast.
+    - latitude: The latitude of the grid cell.
+    - longitude: The longitude of the grid cell.
+    """
+
+    init_time: list[np.datetime64]
+    step: list[np.timedelta64]
+    latitude: list[float]
+    longitude: list[float]
+
+class ISXYDatasetDimensionMap(DatasetDimensionMap):
+    """Mapping of dimension labels to coordinate values for an ISXY NWP dataset.
+
+    The ISXY dataset is a dataset with the following dimensions:
+    - init_time: The initial time of the forecast.
+    - step: The time step of the forecast.
+    - x: The x coordinate of the grid cell.
+    - y: The y coordinate of the grid cell.
+    """
+
+    init_time: list[np.datetime64]
+    step: list[np.timedelta64]
+    x: list[float]
+    y: list[float]
+
+class ISIDatasetDimensionMap(DatasetDimensionMap):
+    """Mapping of dimension labels to coordinate values for an ISI NWP dataset.
+
+    The ISI dataset is a dataset with the following dimensions:
+    - init_time: The initial time of the forecast.
+    - step: The time step of the forecast.
+    - station_id: The id of the station.
+
+    The ISI dataset is not gridded.
+    """
+
+    init_time: list[np.datetime64]
+    step: list[np.timedelta64]
+    station_id: list[int]
 
 
 @attrs.frozen
@@ -216,7 +301,7 @@ class DataRequest:
         - Raw data files may contain as little as one step for a single parameter, so equate
           the number of chunks to the number of steps along the step dimension.
         """
-        coords: DatasetDimensionMap = self.as_dataset_dimension_map(resolution_degrees)
+        coords: DatasetDimensionMap = self.as_isll_dataset_dimension_map(resolution_degrees)
         data_vars = {
             p: (
                 ("init_time", "step", "latitude", "longitude"),
@@ -226,9 +311,9 @@ class DataRequest:
 
         return xr.Dataset(data_vars=data_vars, coords=attrs.asdict(coords))
 
-    def as_dataset_dimension_map(self, resolution_degrees: float) -> DatasetDimensionMap:
+    def as_isll_dataset_dimension_map(self, resolution_degrees: float) -> ISLLDatasetDimensionMap:
         """Return the request as a mapping of dataset dimension labels to values."""
-        return DatasetDimensionMap(
+        return ISLLDatasetDimensionMap(
             # Convert to UTC and remove timezone info to prevent numpy complaints
             init_time=[
                 np.datetime64(self.init_time.astimezone(tz=dt.UTC).replace(tzinfo=None), "ns"),
@@ -263,6 +348,8 @@ class SourceRepositoryMetadata:
             but rather are defined by pre-selected agreements
             with the provider.
         running_hours: The running hours or the source.
+        delay_minutes: The delay in minutes between init time and the
+            time to which the data is actually available.
         available_steps: The available steps of the repository.
         available_areas: The available areas of the repository.
         required_env: Environment variables required for usage.
@@ -273,6 +360,7 @@ class SourceRepositoryMetadata:
     is_archive: bool
     is_order_based: bool
     running_hours: list[int]
+    delay_minutes: int
     available_steps: list[int]
     available_areas: list[Area]
     required_env: list[str]

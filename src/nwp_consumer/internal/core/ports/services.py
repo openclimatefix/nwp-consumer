@@ -19,7 +19,7 @@ class NWPConsumerService(abc.ABC):
         self,
         source: str,
         request: domain.DataRequest,
-    ) -> pathlib.Path:
+    ) -> Result[pathlib.Path, str]:
         """Consume NWP data to Zarr format for desired init time."""
         pass
 
