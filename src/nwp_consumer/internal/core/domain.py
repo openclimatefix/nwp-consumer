@@ -162,7 +162,7 @@ class AREAS:
     malta = Area("malta", 37, 68, 20, 79)
 
 
-@attrs.frozen
+@attrs.define
 class DatasetDimensionMap:
     """Mapping of dimension labels to coordinate values for an NWP dataset.
 
@@ -192,6 +192,9 @@ class DatasetDimensionMap:
         - The subset must be contiguous along each dimension.
         - The subset must be of the same dimension map type as the base map.
 
+        The returned dictionary of slices defines the region of the base map covered
+        by the instances dimension mapping.
+
         Args:
             base: The base dimension map to slice against.
 
@@ -206,20 +209,17 @@ class DatasetDimensionMap:
             )
 
         slices = {}
+        k: str
+        v: list
         for k, v in self.asdict().items():
             if not set(v).issubset(set(getattr(base, k))):
                 return Err(f"Subset {k} dimension values not in base dimension map.")
-            # Get index of values in base map
             k_indices = sorted([getattr(base, k).index(i) for i in v])
-            # Ensure a continuous slice is specified
             if k_indices != list(range(k_indices[0], k_indices[-1])):
                 return Err(f"Subset {k} values not contiguous in base dimension map.")
             slices[k] = slice(k_indices[0], k_indices[-1] + 1)
 
-        return Ok({
-            k: slice(getattr(self, k).index(v[0]), getattr(self, k).index(v[-1]) + 1)
-            for k, v in subset.asdict().items()
-        })
+        return Ok(slices)
 
 
 class ISLLDatasetDimensionMap(DatasetDimensionMap):
