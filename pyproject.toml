@@ -108,3 +108,15 @@ convention = "google"
 
 [tool.ruff.per-file-ignores]
 "test*" = ["D", "ANN"]
+
+# --- DOCUMENTATION CONFIGURATION --- #
+
+[tool.pydoctor]
+add-package = ["src/nwp_consumer"]
+docformat = "google"
+html-output = "docs"
+theme = "classic"
+privacy = [
+    "HIDDEN:**.test_*",
+]
+

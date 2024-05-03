@@ -58,10 +58,11 @@ class DataRequest:
         so writes must always be done at the chunk level or higher (as a chunk is an
         individual file in the store). In this manner chunks are chosen to cover as small
         a unit of data as could reasonably be expected to be provided by an NWP source:
-            - Raw data files will always contain the full grid of data, hence 1 chunk per
-              grid dimension (lat/lon/x/y axes) is sufficient.
-            - Raw data files may contain as little as one step for a single parameter, so equate
-              the number of chunks to the number of steps along the step dimension.
+
+        - Raw data files will always contain the full grid of data, hence 1 chunk per
+          grid dimension (lat/lon/x/y axes) is sufficient.
+        - Raw data files may contain as little as one step for a single parameter, so equate
+          the number of chunks to the number of steps along the step dimension.
 
         Args:
             resolution_degrees: The resolution of the grid in degrees.

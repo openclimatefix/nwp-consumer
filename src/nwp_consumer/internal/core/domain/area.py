@@ -14,10 +14,12 @@ class Area:
     """A geographical area, with bounding box in NWSE format.
 
     Lat/Long coordinates are in decimal degrees and must be given as signed floats as follows:
-        - Latitudes north of the equator are *positive*.
-        - Latitudes south of the equator are *negative*.
-        - Longitudes east of the prime meridian are *positive*.
-        - Longitudes west of the prime meridian are *negative*.
+
+    - Latitudes north of the equator are *positive*.
+    - Latitudes south of the equator are *negative*.
+    - Longitudes east of the prime meridian are *positive*.
+    - Longitudes west of the prime meridian are *negative*.
+
     """
 
     name: str

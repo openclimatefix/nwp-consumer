@@ -31,68 +31,85 @@ dimension axes are known, as opposed to the indexes the represent. This mapping
 then enables insertion that data into the correct regions of the tensor, which is
 a key part of parallel writing.
 """
+import abc
 
 import attrs
 import numpy as np
 from result import Err, Ok, Result
 
 
-@attrs.define
-class TensorDimensionMap:
+class TensorDimensionMap(abc.ABC):
     """Mapping of dimension labels to coordinate values for an NWP tensor.
 
     Can reasonably be thought of as a map of axis labels to the labels of
     each tick along that axis of a graph of the dataset.
     """
 
-    def asdict(self) -> dict[str, list]:
+    @abc.abstractmethod
+    def as_dict(self) -> dict[str, list]:
         """Return the dimension map as a dictionary."""
-        return attrs.asdict(self)
+        pass
 
     def shape(self) -> dict[str, int]:
         """Return the shape specified by the dimension mapping.
+
+        Shape does not make assumptions about the ordering of the dimensions,
+        hence returning a dictionary instead of a tuple.
 
         Returns:
             Dictionary with keys corresponding to the coordinate names
             and values corresponding to the number of ticks along the
             coordinate axis.
         """
-        return {k: len(v) for k, v in self.asdict().items()}
+        return {k: len(v) for k, v in self.as_dict().items()}
 
-    def as_slices_of(self, base: "TensorDimensionMap") -> Result[dict[str, slice], str]:
-        """Return the index slices of this mapping with regards to the base map.
+    def as_slices_of(self, outer: "TensorDimensionMap") -> Result[dict[str, slice], str]:
+        """Return the index slices of this mapping relative to the outer map.
 
+        The calling instance is the "inner", that is, the smaller dimension map
+        that is a subset of the argument-provided "outer" dimension map.
         A number of requirements must be met for this operation to be successful:
-            - The instance must be a subset of the base mapping.
-            - The subset must be contiguous along each dimension.
-            - The subset must be of the same dimension map type as the base map.
+
+        - The inner must be a subset of the outer mapping along all dimensions.
+        - The inner must be contiguous along each dimension.
+        - The inner must be of the same dimension map type as the base map
+          (i.e. must have exactly the same dimension labels).
 
         The returned dictionary of slices defines the region of the base map covered
         by the instances dimension mapping.
 
         Args:
-            base: The base dimension map to slice against.
+            outer: The larger outer dimension map to slice against.
 
         Returns:
             Dictionary with keys corresponding to the coordinate names
             and values corresponding to the slices of the base map that
             are represented by the ticks along the instance's dimensions.
         """
-        if type(base) != type(self):
+        if outer.__class__.__name__ != self.__class__.__name__:
             return Err(
-                f"Cannot find slices of {type(self)} in non-matching dimension map type {type(base)}.",
+                f"Cannot find slices of <{self.__class__.__name__}> in non-matching dimension map "
+                f"<{outer.__class__.__name__}>. Both objects must have identical dimensions "
+                f"(rank and labels).",
             )
 
         slices = {}
-        k: str
-        v: list
-        for k, v in self.asdict().items():
-            if not set(v).issubset(set(getattr(base, k))):
-                return Err(f"Subset {k} dimension values not in base dimension map.")
-            k_indices = sorted([getattr(base, k).index(i) for i in v])
-            if k_indices != list(range(k_indices[0], k_indices[-1])):
-                return Err(f"Subset {k} values not contiguous in base dimension map.")
-            slices[k] = slice(k_indices[0], k_indices[-1] + 1)
+        inner_dim_label: str
+        inner_dim_coords: list
+        for inner_dim_label, inner_dim_coords in self.as_dict().items():
+            if not set(inner_dim_coords).issubset(set(getattr(outer, inner_dim_label))):
+                return Err(f"Coordinate values for dimension <{inner_dim_label}> not all present "
+                           f"within outer dimension map. The inner map must be entirely contained "
+                           f"within the outer map along every dimension.")
+
+            outer_dim_indices = sorted([getattr(outer, inner_dim_label).index(i) for i in inner_dim_coords])
+            contiguous_index_run = list(range(outer_dim_indices[0], outer_dim_indices[-1] + 1))
+            if outer_dim_indices != contiguous_index_run:
+                return Err(f"Coordinate values for dimension <{inner_dim_label}> do not correspond "
+                           f"with a contiguous index set in the outer dimension map. "
+                           f"Got <{outer_dim_indices}>.")
+
+            slices[inner_dim_label] = slice(outer_dim_indices[0], outer_dim_indices[-1] + 1)
 
         return Ok(slices)
 
@@ -117,6 +134,9 @@ class ISLLTensorDimensionMap(TensorDimensionMap):
     longitude: list[float]
     """Longitude coordinates of the grid cells."""
 
+    def as_dict(self) -> dict[str, list]:  # noqa: D102
+        return attrs.asdict(self)
+
 
 @attrs.frozen
 class ISXYTensorDimensionMap(TensorDimensionMap):
@@ -138,6 +158,9 @@ class ISXYTensorDimensionMap(TensorDimensionMap):
     y: list[float]
     """Y coordinates of the grid cells."""
 
+    def as_dict(self) -> dict[str, list]:  # noqa: D102
+        return attrs.asdict(self)
+
 
 @attrs.frozen
 class ISITensorDimensionMap(TensorDimensionMap):
@@ -157,3 +180,6 @@ class ISITensorDimensionMap(TensorDimensionMap):
 
     station_id: list[int]
     """The station IDs of the data points."""
+
+    def as_dict(self) -> dict[str, list]:  # noqa: D102
+        return attrs.asdict(self)
