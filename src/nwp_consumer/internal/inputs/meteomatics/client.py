@@ -108,7 +108,7 @@ class Client(internal.FetcherInterface):
 
         # Save the dataframe to a file
         cdf.to_csv(p)
-        log.debug("Saved Meteomatics data to cache", p=p, cols=cdf.columns())
+        log.debug("Saved Meteomatics data to cache", p=p, cols=cdf.columns.values.tolist())
 
         return p
 
