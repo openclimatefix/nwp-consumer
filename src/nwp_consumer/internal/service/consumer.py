@@ -122,7 +122,7 @@ class NWPConsumerService:
         bag: dask.bag.Bag = dask.bag.from_sequence(cachedPaths)
         cachedZarrs = (
             bag.map(lambda tfp: self.fetcher.mapCachedRaw(p=tfp))
-            .fold(lambda ds1, ds2: xr.merge([ds1, ds2], combine_attrs="drop_conflicts"))
+            .fold(lambda ds1, ds2: _mergeDatasets([ds1, ds2]))
             .compute()
         )
         datasets = dask.bag.from_sequence([cachedZarrs])
