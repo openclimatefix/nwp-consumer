@@ -7,14 +7,20 @@ import xarray as xr
 
 from .area import Area
 from .tensor import (
-    DatasetDimensionMap,
-    ISLLDatasetDimensionMap,
+    TensorDimensionMap,
+    ISLLTensorDimensionMap,
 )
 
 
 @attrs.frozen
 class DataRequest:
-    """A request for data for an init time from a source repository."""
+    """A request for data for an init time from a source repository.
+
+    :param area: The desired Area of the data
+    :param steps: The desired steps of the data.
+    :param parameters: The desired parameters of the data.
+    :param init_time: The init time of the data.
+    """
 
     area: Area
     steps: list[int] = attrs.field(validator=attrs.validators.min_len(1))
@@ -39,13 +45,15 @@ class DataRequest:
         There is a gotcha: regional writes can never be done in parallel to the same chunk,
         so writes must always be done at the chunk level or higher (as a chunk is an
         individual file in the store). In this manner chunks are chosen to cover as small
-        a unit of data as could reasonbaly be expected to be provided by an NWP source:
+        a unit of data as could reasonably be expected to be provided by an NWP source:
         - Raw data files will always contain the full grid of data, hence 1 chunk per
           grid dimension (lat/lon/x/y axes) is sufficient.
         - Raw data files may contain as little as one step for a single parameter, so equate
           the number of chunks to the number of steps along the step dimension.
+
+        :param resolution_degrees: The resolution of the grid in degrees.
         """
-        coords: DatasetDimensionMap = self.as_isll_dataset_dimension_map(resolution_degrees)
+        coords: ISLLTensorDimensionMap = self.as_isll_dataset_dimension_map(resolution_degrees)
         data_vars = {
             p: (
                 ("init_time", "step", "latitude", "longitude"),
@@ -53,11 +61,14 @@ class DataRequest:
             ) for p in self.parameters
         }
 
-        return xr.Dataset(data_vars=data_vars, coords=attrs.asdict(coords))
+        return xr.Dataset(data_vars=data_vars, coords=coords.asdict())
 
-    def as_isll_dataset_dimension_map(self, resolution_degrees: float) -> ISLLDatasetDimensionMap:
-        """Return the request as a mapping of dataset dimension labels to values."""
-        return ISLLDatasetDimensionMap(
+    def as_isll_dataset_dimension_map(self, resolution_degrees: float) -> ISLLTensorDimensionMap:
+        """Return the request as an ISLL mapping of dataset dimension labels to values.
+
+        :param resolution_degrees: The resolution of the lat/long grid in degrees.
+        """
+        return ISLLTensorDimensionMap(
             # Convert to UTC and remove timezone info to prevent numpy complaints
             init_time=[
                 np.datetime64(self.init_time.astimezone(tz=dt.UTC).replace(tzinfo=None), "ns"),
@@ -69,7 +80,10 @@ class DataRequest:
         )
 
     def total_values(self, resolution_degrees: float) -> int:
-        """Return the total number of data points specified by the request definition."""
+        """Return the total number of data points specified by the request definition.
+
+        :param resolution_degrees: The resolution of the lat/long grid in degrees.
+        """
         num: int = len(self.steps) \
                    * self.area.nlats(resolution_degrees) \
                    * self.area.nlons(resolution_degrees) \

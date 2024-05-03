@@ -5,26 +5,26 @@ import attrs
 
 from .area import Area
 
+
 @attrs.frozen
 class SourceRepositoryMetadata:
     """Metadata for a source repository.
 
-    Attributes:
-        name: The name of the repository.
-        is_archive: Whether the repository is a complete archival set.
-            Archival datasets are able to be used to backfill old data.
+    :param name: The name of the repository.
+    :param is_archive: Whether the repository is a complete archival set.
+            Archival datasets are able to backfill old data.
             Non-archival datasets only provide a limited window of data.
-        is_order_based: Whether the repository is order-based.
+    :param is_order_based: Whether the repository is order-based.
             This means parameters cannot be chosen freely,
             but rather are defined by pre-selected agreements
             with the provider.
-        running_hours: The running hours or the source.
-        delay_minutes: The delay in minutes between init time and the
+    :param running_hours: The running hours or the source.
+    :param delay_minutes: The delay in minutes between init time and the
             time to which the data is actually available.
-        available_steps: The available steps of the repository.
-        available_areas: The available areas of the repository.
-        required_env: Environment variables required for usage.
-        optional_env: Optional environment variables.
+    :param available_steps: The available steps of the repository.
+    :param available_areas: The available areas of the repository.
+    :param required_env: Environment variables required for usage.
+    :param optional_env: Optional environment variables.
     """
 
     name: str = attrs.field(validator=attrs.validators.min_len(3))
@@ -40,12 +40,21 @@ class SourceRepositoryMetadata:
 
 @attrs.frozen
 class SourceFileMetadata:
-    """Metadata for a raw file."""
+    """Metadata for a raw file.
+
+    :param name: The name of the file.
+    :param path: The relevant (remote or local) path to the file.
+    :param extension: The file extension, including the dot (e.g. '.grib').
+    :param size_bytes: The size of the file in bytes.
+    :param steps: The steps within the file.
+    :param parameters: The parameters within the file.
+    :param init_time: The init time of the file.
+    """
 
     name: str
     path: pathlib.Path
     extension: str
-    size: int
+    size_bytes: int
     steps: list[int]
     parameters: list[str]
     init_time: dt.datetime
@@ -55,10 +64,9 @@ class SourceFileMetadata:
 class PostProcessOptions:
     """Options for post-processing NWP data.
 
-    Attributes:
-        create_variable_dimension: Whether to create a variable dimension.
+    :param create_variable_dimension: Whether to create a variable dimension.
             Squashes all data variables into their own "variable" dimension.
-        rename_variables: Whether to rename variables.
+    :param rename_variables: Whether to rename variables.
     """
 
     create_variable_dimension: bool = False

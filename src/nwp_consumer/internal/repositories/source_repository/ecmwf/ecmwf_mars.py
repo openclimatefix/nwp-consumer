@@ -83,7 +83,7 @@ class MARSOperationalArchive(SourceRepository):
             path=pathlib.Path("~/.local/cache/nwp_consumer") / it.strftime(
                 "%Y%m%dT%H%M-mars.zarr",
             ),
-            size=0,
+            size_bytes=0,
             parameters=request.parameters,
         )])
 

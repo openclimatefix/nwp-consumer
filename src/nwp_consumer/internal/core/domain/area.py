@@ -1,3 +1,11 @@
+"""Domain models for geographical areas.
+
+NWP data often comes in a grid format, with data points at regular geospatial intervals.
+Some sources enable a choice of area at request time, others require it to be specified
+in a predetermined order. In order to keep consistency between different sources covering
+similar regions, we define a set of areas with bounding boxes in NWSE format.
+"""
+
 import attrs
 
 
@@ -10,6 +18,12 @@ class Area:
     - Latitudes south of the equator are *negative*.
     - Longitudes east of the prime meridian are *positive*.
     - Longitudes west of the prime meridian are *negative*.
+
+    :param name: Name of the area.
+    :param north: Northernmost latitude.
+    :param west: Westernmost longitude.
+    :param south: Southernmost latitude.
+    :param east: Easternmost longitude.
     """
 
     name: str
@@ -45,7 +59,6 @@ class Area:
         return round((self.east - self.west) / resolution_degrees) + 1
 
 
-# Predefined areas
 class AREAS:
     """Predefined areas available from sources."""
 
