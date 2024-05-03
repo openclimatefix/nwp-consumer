@@ -22,7 +22,6 @@ class NWPConsumerService(abc.ABC):
     @abc.abstractmethod
     def consume(
         self,
-        source: str,
         request: domain.DataRequest,
     ) -> Result[pathlib.Path, str]:
         """Consume NWP data to Zarr format for desired init time."""
