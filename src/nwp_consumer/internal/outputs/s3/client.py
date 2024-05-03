@@ -130,6 +130,14 @@ class Client(internal.StorageInterface):
     def copyITFolderToCache(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
         """Overrides the corresponding method in the parent class."""
         initTimeDirPath = self.__bucket / prefix / it.strftime(internal.IT_FOLDER_STRUCTURE_RAW)
+
+        if not self.__fs.exists(initTimeDirPath.as_posix()) or not self.__fs.isdir(initTimeDirPath.as_posix()):
+            log.warn(
+                event="init time folder does not exist in store",
+                path=it.strftime(internal.IT_FOLDER_STRUCTURE_RAW),
+            )
+            return []
+
         paths = [
             pathlib.Path(p).relative_to(self.__bucket)
             for p in self.__fs.ls(initTimeDirPath.as_posix())
