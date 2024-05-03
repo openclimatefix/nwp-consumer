@@ -2,8 +2,9 @@ import abc
 import datetime as dt
 import pathlib
 
-from nwp_consumer.internal.core import domain
 from result import Result
+
+from nwp_consumer.internal.core import domain
 
 
 class SourceRepository(abc.ABC):
