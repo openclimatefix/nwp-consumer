@@ -16,10 +16,10 @@ from .tensor import (
 class DataRequest:
     """A request for data for an init time from a source repository.
 
-    :param area: The desired Area of the data
-    :param steps: The desired steps of the data.
-    :param parameters: The desired parameters of the data.
-    :param init_time: The init time of the data.
+    :var area: The desired Area of the data
+    :var steps: The desired steps of the data.
+    :var parameters: The desired parameters of the data.
+    :var init_time: The init time of the data.
     """
 
     area: Area

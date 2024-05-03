@@ -19,11 +19,11 @@ class Area:
     - Longitudes east of the prime meridian are *positive*.
     - Longitudes west of the prime meridian are *negative*.
 
-    :param name: Name of the area.
-    :param north: Northernmost latitude.
-    :param west: Westernmost longitude.
-    :param south: Southernmost latitude.
-    :param east: Easternmost longitude.
+    :var name: Name of the area.
+    :var north: Northernmost latitude.
+    :var west: Westernmost longitude.
+    :var south: Southernmost latitude.
+    :var east: Easternmost longitude.
     """
 
     name: str
@@ -41,20 +41,32 @@ class Area:
         return "/".join([str(x) for x in (self.north, self.west, self.south, self.east)])
 
     def lats(self, resolution_degrees: float) -> list[float]:
-        """Return the latitudes of the area at a given resolution."""
+        """Return the latitudes of the area at a given resolution.
+
+        :param resolution_degrees: The resolution of the grid in degrees.
+        """
         return [self.north - i * resolution_degrees for i in range(self.nlats(resolution_degrees))]
 
     def lons(self, resolution_degrees: float) -> list[float]:
-        """Return the longitudes of the area at a given resolution."""
+        """Return the longitudes of the area at a given resolution.
+
+        :param resolution_degrees: The resolution of the grid in degrees.
+        """
         return [self.west + i * resolution_degrees for i in range(self.nlons(resolution_degrees))]
 
     def nlats(self, resolution_degrees: float) -> int:
-        """Return the number of latitudes in the area at a given resolution."""
+        """Return the number of latitudes in the area at a given resolution.
+
+        :param resolution_degrees: The resolution of the grid in degrees.
+        """
         # Add one to include the last latitude
         return round((self.north - self.south) / resolution_degrees) + 1
 
     def nlons(self, resolution_degrees: float) -> int:
-        """Return the number of longitudes in the area at a given resolution."""
+        """Return the number of longitudes in the area at a given resolution.
+
+        :param resolution_degrees: The resolution of the grid in degrees.
+        """
         # Add one to include the last longitude
         return round((self.east - self.west) / resolution_degrees) + 1
 

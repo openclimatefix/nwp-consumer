@@ -28,12 +28,12 @@ class Parameter:
     stored parameter, with different chunks for each height, as that is how it is typically
     used in forecasting.
 
-    :param longname: The full name of the parameter.
-    :param shortname: A short name for the parameter.
-    :param units: The units of the parameter.
-    :param level_type: The type of level the parameter is defined on (singlelevel or multilevel).
-    :param level_value: The number preceding the unit defining the level of the parameter.
-    :param level_units: The units of the level value.
+    :var longname: The full name of the parameter.
+    :var shortname: A short name for the parameter.
+    :var units: The units of the parameter.
+    :var level_type: The type of level the parameter is defined on (singlelevel or multilevel).
+    :var level_value: The number preceding the unit defining the level of the parameter.
+    :var level_units: The units of the level value.
     """
 
     longname: str = attrs.field(validator=attrs.validators.min_len(3))

@@ -100,12 +100,12 @@ class ISLLTensorDimensionMap(TensorDimensionMap):
     """Mapping of dimension labels to coordinate values for an ISLL NWP tensor.
 
     The ISLL tensor has dimension labels and index maps according to
-    the respective names and values of the corresponding parameters:
+    the respective names and values of the corresponding variables:
 
-    :param init_time: Initialization times of the forecast.
-    :param step: Time steps of the forecast data.
-    :param latitude: Latitude coordinates of the grid cells.
-    :param longitude: Longitude coordinates of the grid cells.
+    :var init_time: Initialization times of the forecast.
+    :var step: Time steps of the forecast data.
+    :var latitude: Latitude coordinates of the grid cells.
+    :var longitude: Longitude coordinates of the grid cells.
     """
 
     init_time: list[np.datetime64]
@@ -119,12 +119,12 @@ class ISXYTensorDimensionMap(TensorDimensionMap):
     """Mapping of dimension labels to coordinate values for an ISXY NWP tensor.
 
     The ISXY tensor has dimension labels and index maps according to
-    the respective names and values of the corresponding parameters:
+    the respective names and values of the corresponding variables:
 
-    :param init_time: Initialization times of the forecast.
-    :param step: Time steps of the forecast data.
-    :param x: X coordinates of the grid cells.
-    :param y: Y coordinates of the grid cells.
+    :var init_time: Initialization times of the forecast.
+    :var step: Time steps of the forecast data.
+    :var x: X coordinates of the grid cells.
+    :var y: Y coordinates of the grid cells.
     """
 
     init_time: list[np.datetime64]
@@ -138,11 +138,11 @@ class ISITensorDimensionMap(TensorDimensionMap):
     """Mapping of dimension labels to coordinate values for an ISI NWP tensor.
 
     The ISI tensor has dimension labels and index maps according to
-    the respective names and values of the corresponding parameters:
+    the respective names and values of the corresponding variables:
 
-    :param init_time: Initialization times of the forecast.
-    :param step: Time steps of the forecast data.
-    :param station_id: The station IDs of the data points.
+    :var init_time: Initialization times of the forecast.
+    :var step: Time steps of the forecast data.
+    :var station_id: The station IDs of the data points.
 
     The ISI dataset is not gridded.
     """
