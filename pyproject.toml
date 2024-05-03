@@ -94,13 +94,7 @@ select = [
 ]
 line-length = 100
 indent-width = 4
-# Use pydocstyle Google convention
-# See https://www.pydocstyle.org/en/stable/error_codes.html
-ignore = [
-    "D203", "D213", "D215", "D400", "D401", "D404", "D406",
-    "D407", "D408", "D409", "D413",
-    "ANN101",
-]
+ignore = ["ANN101"]
 exclude = ["__init__.py"]
 fixable = ["ALL"]
 
@@ -108,6 +102,9 @@ fixable = ["ALL"]
 quote-style = "double"
 indent-style = "space"
 line-ending = "auto"
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.ruff.per-file-ignores]
 "test*" = ["D", "ANN"]

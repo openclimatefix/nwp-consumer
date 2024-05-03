@@ -63,16 +63,18 @@ class TensorDimensionMap:
         """Return the index slices of this mapping with regards to the base map.
 
         A number of requirements must be met for this operation to be successful:
-        - The instance must be a subset of the base mapping.
-        - The subset must be contiguous along each dimension.
-        - The subset must be of the same dimension map type as the base map.
+            - The instance must be a subset of the base mapping.
+            - The subset must be contiguous along each dimension.
+            - The subset must be of the same dimension map type as the base map.
 
         The returned dictionary of slices defines the region of the base map covered
         by the instances dimension mapping.
 
-        :param base: The base dimension map to slice against.
+        Args:
+            base: The base dimension map to slice against.
 
-        :return: Dictionary with keys corresponding to the coordinate names
+        Returns:
+            Dictionary with keys corresponding to the coordinate names
             and values corresponding to the slices of the base map that
             are represented by the ticks along the instance's dimensions.
         """

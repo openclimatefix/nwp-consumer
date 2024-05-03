@@ -1,3 +1,11 @@
+"""Domain model for a NWP Parameters.
+
+NWP forecasts have to forecast something, and that something is the value
+of one or more parameters. Often referred to as variables (or even
+channels once stored in a tensor), these parameters are physical, measurable
+quantities that are forecasted by the model.
+"""
+
 from argparse import Namespace
 from typing import Any
 
@@ -63,8 +71,9 @@ class Parameter:
     def at_level(self, level_value: int, level_units: pint.Unit) -> "Parameter":
         """Return a new multi-level parameter with the given level specification.
 
-        :param level_value: The number preceding the unit defining the level of the parameter.
-        :param level_units: The units that anchor the level value in measurable space.
+        Args:
+            level_value: The number preceding the unit defining the level of the parameter.
+            level_units: The units that anchor the level value in measurable space.
         """
         return attrs.evolve(
             self,
@@ -73,13 +82,12 @@ class Parameter:
             level_units=level_units,
         )
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         """Return a representation of the parameter."""
         level_repr = f"_{self.level_value}{self.level_units}" if self.level_type == "multi" else ""
         return f"{self.longname}{level_repr}:{self.units}"
 
 
-# Default parameters and units
 PARAMS = Namespace(
     lcc=Parameter("low_cloud_cover", "lcc", ureg.Unit("ui")),
     mcc=Parameter("medium_cloud_cover", "mcc", ureg.Unit("ui")),
