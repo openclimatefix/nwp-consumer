@@ -78,6 +78,25 @@ class TensorDimensionMap(abc.ABC):
         The returned dictionary of slices defines the region of the base map covered
         by the instances dimension mapping.
 
+        Examples:
+            Getting the inner map slices relative to the outer map:
+
+            >>> outer = ISLLTensorDimensionMap(
+            >>>    init_time=[np.datetime64("2021-01-01T00:00:00")],
+            >>>    step=[np.timedelta64(i, "h") for i in range(48)],
+            >>>    latitude=[68.0, 69.0, 70.0],
+            >>>    longitude=[-10.0, -9.0, -8.0])
+            >>>
+            >>> inner = attrs.evolve(outer, step=[np.timedelta64(i, "h") for i in range(24)])
+            >>>
+            >>> inner.as_slices_of(outer)
+            Ok({
+                "init_time": slice(0, 1),
+                "step": slice(0, 24),
+                "latitude": slice(0, 3),
+                "longitude": slice(0, 3),
+            })
+
         Args:
             outer: The larger outer dimension map to slice against.
 

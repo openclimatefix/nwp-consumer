@@ -94,7 +94,7 @@ select = [
 ]
 line-length = 100
 indent-width = 4
-ignore = ["ANN101"]
+ignore = ["ANN101", "ANN102"]
 exclude = ["__init__.py"]
 fixable = ["ALL"]
 

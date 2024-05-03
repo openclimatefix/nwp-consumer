@@ -21,10 +21,12 @@ class GriddedConsumer(ports.NWPConsumerService):
         self._source_repository = src_repo
         self._zarr_repository = zarr_repo
 
-    def consume(self, source: str, request: domain.DataRequest) -> Result[pathlib.Path, str]:
+    def consume(self, request: domain.DataRequest) -> Result[pathlib.Path, str]:  # noqa: D102
         
         # Create the store for the processed data
-        store = pathlib.Path(f'~/.local/cache/nwp/{source}/{request.init_time.strftime("%Y%m%d%H")}.zarr')
+        store = pathlib.Path('~/.local/cache/nwp') \
+                / self._source_repository.metadata().name \
+                / request.init_time.strftime("%Y%m%d%H.zarr")
         request.as_dataset(resolution_degrees=0.1).to_zarr(store, compute=False)
 
         # Get each file available to download

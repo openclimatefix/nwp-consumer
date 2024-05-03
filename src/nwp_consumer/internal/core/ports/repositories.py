@@ -1,3 +1,10 @@
+"""Repository interfaces for NWP data sources and stores.
+
+These interfaces define the signatures that driven actors must conform to
+in order to interact with the core. These interfaces include providers of
+NWP data (`SourceRepository`) and stores for processed data (`ZarrRepository`).
+"""
+
 import abc
 import datetime as dt
 import pathlib

@@ -1,6 +1,7 @@
 import dataclasses
 import unittest
 
+import attrs
 import numpy as np
 
 from .tensor import (

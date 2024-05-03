@@ -1,11 +1,16 @@
-"""Defines interfaces used by actors."""
+"""Service interfaces for consumer services.
+
+These interfaces define the signatures that driving actors must conform to
+in order to interact with the core.
+"""
 
 import abc
 import pathlib
 from typing import Literal
 
-from nwp_consumer.internal.core import domain
 from result import Result
+
+from nwp_consumer.internal.core import domain
 
 
 class NWPConsumerService(abc.ABC):
