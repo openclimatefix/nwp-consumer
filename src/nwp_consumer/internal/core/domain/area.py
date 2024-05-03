@@ -9,7 +9,6 @@ similar regions, we define a set of areas with bounding boxes in NWSE format.
 import attrs
 
 
-@attrs.frozen
 class Area:
     """A geographical area, with bounding box in NWSE format.
 
@@ -18,19 +17,22 @@ class Area:
     - Latitudes south of the equator are *negative*.
     - Longitudes east of the prime meridian are *positive*.
     - Longitudes west of the prime meridian are *negative*.
-
-    :var name: Name of the area.
-    :var north: Northernmost latitude.
-    :var west: Westernmost longitude.
-    :var south: Southernmost latitude.
-    :var east: Easternmost longitude.
     """
 
     name: str
+    """Name of the area."""
+
     north: float = attrs.field(validator=[attrs.validators.ge(-90), attrs.validators.le(90)])
+    """Northernmost latitude."""
+
     west: float = attrs.field(validator=[attrs.validators.ge(-180), attrs.validators.le(180)])
+    """Westernmost longitude."""
+
     south: float = attrs.field(validator=[attrs.validators.ge(-90), attrs.validators.le(90)])
+    """Southernmost latitude."""
+
     east: float = attrs.field(validator=[attrs.validators.ge(-180), attrs.validators.le(180)])
+    """Easternmost longitude."""
 
     def __str__(self) -> str:
         """String representation of the area."""

@@ -100,18 +100,20 @@ class ISLLTensorDimensionMap(TensorDimensionMap):
     """Mapping of dimension labels to coordinate values for an ISLL NWP tensor.
 
     The ISLL tensor has dimension labels and index maps according to
-    the respective names and values of the corresponding variables:
-
-    :var init_time: Initialization times of the forecast.
-    :var step: Time steps of the forecast data.
-    :var latitude: Latitude coordinates of the grid cells.
-    :var longitude: Longitude coordinates of the grid cells.
+    the respective names and values of the class variables.
     """
 
     init_time: list[np.datetime64]
+    """Initialization times of the forecast."""
+
     step: list[np.timedelta64]
+    """Time steps of the forecast data."""
+
     latitude: list[float]
+    """Latitude coordinates of the grid cells."""
+
     longitude: list[float]
+    """Longitude coordinates of the grid cells."""
 
 
 @attrs.frozen
@@ -119,18 +121,20 @@ class ISXYTensorDimensionMap(TensorDimensionMap):
     """Mapping of dimension labels to coordinate values for an ISXY NWP tensor.
 
     The ISXY tensor has dimension labels and index maps according to
-    the respective names and values of the corresponding variables:
-
-    :var init_time: Initialization times of the forecast.
-    :var step: Time steps of the forecast data.
-    :var x: X coordinates of the grid cells.
-    :var y: Y coordinates of the grid cells.
+    the respective names and values of the class variables.
     """
 
     init_time: list[np.datetime64]
+    """Initialization times of the forecast."""
+
     step: list[np.timedelta64]
+    """Time steps of the forecast data."""
+
     x: list[float]
+    """X coordinates of the grid cells."""
+
     y: list[float]
+    """Y coordinates of the grid cells."""
 
 
 @attrs.frozen
@@ -138,15 +142,16 @@ class ISITensorDimensionMap(TensorDimensionMap):
     """Mapping of dimension labels to coordinate values for an ISI NWP tensor.
 
     The ISI tensor has dimension labels and index maps according to
-    the respective names and values of the corresponding variables:
-
-    :var init_time: Initialization times of the forecast.
-    :var step: Time steps of the forecast data.
-    :var station_id: The station IDs of the data points.
+    the respective names and values of the class variables.
 
     The ISI dataset is not gridded.
     """
 
     init_time: list[np.datetime64]
+    """Initialization times of the forecast."""
+
     step: list[np.timedelta64]
+    """Time steps of the forecast data."""
+
     station_id: list[int]
+    """The station IDs of the data points."""

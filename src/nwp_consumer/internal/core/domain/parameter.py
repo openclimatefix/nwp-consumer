@@ -27,24 +27,28 @@ class Parameter:
     with all levels in the same chunk. Wind speed however is more useful as a single-level-
     stored parameter, with different chunks for each height, as that is how it is typically
     used in forecasting.
-
-    :var longname: The full name of the parameter.
-    :var shortname: A short name for the parameter.
-    :var units: The units of the parameter.
-    :var level_type: The type of level the parameter is defined on (singlelevel or multilevel).
-    :var level_value: The number preceding the unit defining the level of the parameter.
-    :var level_units: The units of the level value.
     """
 
     longname: str = attrs.field(validator=attrs.validators.min_len(3))
+    """The full name of the parameter."""
+
     shortname: str = attrs.field(validator=attrs.validators.max_len(10))
+    """A short name for the parameter."""
+
     units: pint.Unit
+    """The units of the parameter."""
+
     level_type: str = attrs.field(
         default="single",
         validator=attrs.validators.in_(["single", "multi"]),
     )
+    """The type of level the parameter is defined on (singlelevel or multilevel)."""
+
     level_value: int | None = attrs.field(default=None)
+    """The number preceding the unit defining the level of the parameter."""
+
     level_units: pint.Unit | None = attrs.field(default=None)
+    """The units grounding the level value into measurable space."""
 
     @level_value.validator
     @level_units.validator

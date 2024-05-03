@@ -14,18 +14,19 @@ from .tensor import (
 
 @attrs.frozen
 class DataRequest:
-    """A request for data for an init time from a source repository.
-
-    :var area: The desired Area of the data
-    :var steps: The desired steps of the data.
-    :var parameters: The desired parameters of the data.
-    :var init_time: The init time of the data.
-    """
+    """A request for data for an init time from a source repository."""
 
     area: Area
+    """The desired Area of the data."""
+
     steps: list[int] = attrs.field(validator=attrs.validators.min_len(1))
+    """The desired steps of the data."""
+
     parameters: list[str] = attrs.field(validator=attrs.validators.min_len(1))
+    """The desired parameters of the data."""
+
     init_time: dt.datetime
+    """The init time of the data."""
 
     def as_dataset(self, resolution_degrees: float) -> xr.Dataset:
         """Return a dummy dataset according to the request.
