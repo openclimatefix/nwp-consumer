@@ -304,6 +304,7 @@ class NWPConsumerService:
                     ds = ds.rename({var: self.fetcher.parameterConformMap()[var].value})
 
         if self.variable_dim:
+            log.debug("Flattening variables to single dimension")
             ds = (
                 ds.to_array(dim="variable", name=self.fetcher.datasetName())
                 .to_dataset()
