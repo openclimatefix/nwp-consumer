@@ -1,6 +1,6 @@
 import structlog
 
-processors = [
+structlog.configure(processors=[
     structlog.stdlib.PositionalArgumentsFormatter(),
     structlog.processors.CallsiteParameterAdder(
         [
@@ -14,6 +14,4 @@ processors = [
     structlog.processors.EventRenamer("message", replace_by="_event"),
     structlog.processors.dict_tracebacks,
     structlog.processors.JSONRenderer(sort_keys=True),
-]
-
-structlog.configure(processors=processors)
+])
