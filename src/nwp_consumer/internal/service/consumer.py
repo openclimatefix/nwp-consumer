@@ -102,6 +102,7 @@ class NWPConsumerService:
 
     def CreateLatestZarr(self) -> list[pathlib.Path]:
         """Create a Zarr file for the latest init time."""
+        # TODO: This is basically the same as _convertSingleInitTime. They should be merged.
         # Get the latest init time
         allInitTimes: list[dt.datetime] = self.rawstorer.listInitTimes(prefix=self.rawdir)
         if not allInitTimes:
@@ -109,44 +110,48 @@ class NWPConsumerService:
             return []
         latestInitTime = allInitTimes[-1]
 
-        # Load the latest init time as a dataset
-        cachedPaths = self.rawstorer.copyITFolderToCache(it=latestInitTime, prefix=self.rawdir)
-        log.info(
-            event="creating latest zarr for initTime",
-            inittime=latestInitTime.strftime("%Y/%m/%d %H:%M"),
-            path=(self.zarrdir / "latest.zarr.zip").as_posix(),
+        # Get the raw files for the init time
+        zbag = dask.bag.from_sequence(
+            self.rawstorer.copyITFolderToCache(prefix=self.rawdir, it=latestInitTime)
         )
+        # Load the raw files as xarray datasets
+        zbag = zbag.map(lambda p: self.fetcher.mapCachedRaw(p=p))
+        # Merge the datasets into a single dataset for the init time
+        # * Bag.fold is a parallelized version of the reduce function, so
+        # * in this case, first the partitions are merged, followed by the results
+        zbag = zbag.fold(lambda a, b: _mergeDatasets([a, b]))
+        ds = zbag.compute()
 
-        # Create a pipeline to convert the raw files and merge them as a dataset
-        # * Then cache the dataset as a zarr file and store it in the store
-        bag: dask.bag.Bag = dask.bag.from_sequence(cachedPaths)
-        cachedZarrs = (
-            bag.map(lambda tfp: self.fetcher.mapCachedRaw(p=tfp))
-            .fold(lambda ds1, ds2: _mergeDatasets([ds1, ds2]))
-            .compute()
-        )
-        datasets = dask.bag.from_sequence([cachedZarrs])
-        # Save as zipped zarr
-        if self.storer.exists(dst=self.zarrdir / "latest.zarr.zip"):
-            self.storer.delete(p=self.zarrdir / "latest.zarr.zip")
-        storedFiles = (
-            datasets.map(lambda ds: _cacheAsZipZarr(ds=ds))
-            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / "latest.zarr.zip"))
-            .compute()
-        )
+        # Filter out datasets that are not of sufficient quality
+        if not _dataQualityFilter(ds=ds):
+            return []
 
+        if self.rename_vars:
+            for var in ds.data_vars:
+                if var in self.fetcher.parameterConformMap():
+                    ds = ds.rename({var: self.fetcher.parameterConformMap()[var].value})
+
+        if self.variable_dim:
+            ds = (
+                ds.to_array(dim="variable", name=self.fetcher.datasetName())
+                .to_dataset()
+                .transpose("variable", ...)
+            )
+
+        storedFiles: list[pathlib.Path] = []
         # Save as regular zarr
         if self.storer.exists(dst=self.zarrdir / "latest.zarr"):
             self.storer.delete(p=self.zarrdir / "latest.zarr")
-        storedFiles += (
-            datasets.map(lambda ds: _cacheAsZarr(ds=ds))
-            .map(lambda path: self.storer.store(src=path, dst=self.zarrdir / "latest.zarr"))
-            .compute()
-        )
+        cachedZarrPath = _cacheAsZarr(ds=ds)
+        storedFiles.append(self.storer.store(src=cachedZarrPath, dst=self.zarrdir / "latest.zarr"))
+        shutil.rmtree(cachedZarrPath.as_posix())
 
-        # Delete the cached files
-        for f in cachedPaths:
-            f.unlink(missing_ok=True)
+        # Save as zipped Zarr
+        if self.storer.exists(dst=self.zarrdir / "latest.zarr.zip"):
+            self.storer.delete(p=self.zarrdir / "latest.zarr.zip")
+        cachedZarrZipPath = _cacheAsZipZarr(ds=ds)
+        storedFiles.append(self.storer.store(src=cachedZarrZipPath, dst=self.zarrdir / "latest.zarr.zip"))
+        cachedZarrZipPath.unlink(missing_ok=True)
 
         return storedFiles
 
