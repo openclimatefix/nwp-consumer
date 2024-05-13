@@ -46,6 +46,7 @@ PARAMETER_ECMWFCODE_MAP: dict[str, str] = {
 AREA_MAP: dict[str, str] = {
     "uk": "62/-12/48/3",
     "nw-india": "31/68/20/79",
+    "india": "35/67/6/97",
     "malta": "37/13/35/15",
     "eu": "E",
     "global": "G",
