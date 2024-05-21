@@ -41,6 +41,7 @@ class MARSOperationalArchive(SourceRepository):
             is_archive=True,
             is_order_based=False,
             running_hours=[0, 12],
+            delay_minutes=180,
             available_steps=[
                 *list(range(90)),
                 *list(range(90, 144, 3)),
@@ -49,6 +50,7 @@ class MARSOperationalArchive(SourceRepository):
             available_areas=[
                 domain.AREAS.uk,
                 domain.AREAS.nw_india,
+                domain.AREAS.india,
                 domain.AREAS.malta,
             ],
             required_env=["ECMWF_API_KEY", "ECMWF_API_EMAIL"],

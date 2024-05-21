@@ -30,6 +30,11 @@ It is far more likely that for incoming data the coordinate values along the
 dimension axes are known, as opposed to the indexes the represent. This mapping
 then enables insertion that data into the correct regions of the tensor, which is
 a key part of parallel writing.
+
+
+This module defines firstly an abstract base class to represent the shape of a
+dimension map object, and thereafter concrete implementations of the dimension
+map for different types of grid.
 """
 import abc
 

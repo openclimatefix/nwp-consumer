@@ -39,6 +39,7 @@ class SourceRepository(abc.ABC):
         """Create a class instance, configuring from environment variables."""
         pass
 
+
     @classmethod
     @abc.abstractmethod
     def metadata(cls) -> domain.SourceRepositoryMetadata:
@@ -48,38 +49,42 @@ class SourceRepository(abc.ABC):
     @classmethod
     @abc.abstractmethod
     def map_file(
-        cls,
-        cached_file: domain.SourceFileMetadata,
-        store_path: pathlib.Path,
+            cls,
+            cached_file: domain.SourceFileMetadata,
+            store_path: pathlib.Path,
     ) -> Result[domain.SourceFileMetadata, str]:
         """Process cached source NWP data, persisting into the store file."""
         pass
 
     @abc.abstractmethod
+    def map_parameter(self, parameter: domain.Parameter) -> domain.Parameter:
+        """Map a parameter to a new parameter."""
+        pass
+
+    @abc.abstractmethod
     def validate_request(
-        self,
-        request: domain.DataRequest,
+            self,
+            request: domain.DataRequest,
     ) -> Result[domain.DataRequest, str]:
         """Validate requested data is available from source."""
         pass
 
     @abc.abstractmethod
     def list_fileset(
-        self,
-        it: dt.datetime,
-        request: domain.DataRequest,
+            self,
+            it: dt.datetime,
+            request: domain.DataRequest,
     ) -> Result[list[domain.SourceFileMetadata], str]:
         """List available NWP files for a given init time, parameters, steps, and area."""
         pass
 
     @abc.abstractmethod
     def download_file(
-        self,
-        file: domain.SourceFileMetadata,
+            self,
+            file: domain.SourceFileMetadata,
     ) -> Result[domain.SourceFileMetadata, str]:
         """Download a single source NWP file."""
         pass
-
 
 
 class ZarrRepository(abc.ABC):
@@ -88,4 +93,20 @@ class ZarrRepository(abc.ABC):
     @abc.abstractmethod
     def save(self, src: pathlib.Path, dst: pathlib.Path) -> Result[str, str]:
         """Save NWP store data in the repository."""
+        pass
+
+
+class NotificationRepository(abc.ABC):
+    """Interface for a repository that sends notifications.
+
+    Adaptors for this port enable sending notifications to
+    a desired notification channel.
+    """
+
+    @abc.abstractmethod
+    def notify(
+            self,
+            message: domain.StoreAppendedNotification | domain.StoreCreatedNotification,
+    ) -> Result[str, str]:
+        """Send a notification."""
         pass

@@ -102,7 +102,7 @@ class TestTensorDimensionMap(unittest.TestCase):
         ]
 
         for t in tests:
-            with self.subTest(test=t.name):
+            with self.subTest(name=t.name):
                 result = t.inner.as_slices_of(outer)
                 if t.should_error:
                     self.assertTrue(result.is_err(), msg="Expected error to be returned.")

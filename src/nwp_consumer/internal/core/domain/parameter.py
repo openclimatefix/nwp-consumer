@@ -43,7 +43,7 @@ class Parameter:
     shortname: str = attrs.field(validator=attrs.validators.max_len(10))
     """A short name for the parameter."""
 
-    units: pint.Unit
+    units: pint.Unit = attrs.field()
     """The units of the parameter."""
 
     level_type: str = attrs.field(

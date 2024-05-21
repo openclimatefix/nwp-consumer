@@ -20,6 +20,7 @@ class Area:
     - Longitudes east of the prime meridian are *positive*.
     - Longitudes west of the prime meridian are *negative*.
 
+    Longitudes are bounded between -180 and 180, and latitudes are bounded between -90 and 90.
     """
 
     name: str
@@ -86,5 +87,6 @@ class AREAS:
     gl = Area("global", 90, -180, -90, 180)
     eu = Area("eu", 73.5, -27, 33, 45)
     nw_india = Area("nw_india", 31, 68, 20, 79)
+    india = Area("india", 35, 67, 6, 97)
     uk = Area("uk", 62, -12, 48, 3)
     malta = Area("malta", 37, 68, 20, 79)

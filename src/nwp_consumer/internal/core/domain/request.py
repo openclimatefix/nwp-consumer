@@ -18,6 +18,7 @@ import numpy as np
 import xarray as xr
 
 from .area import Area
+from .parameter import Parameter
 from .tensor import (
     ISLLTensorDimensionMap,
 )
@@ -33,7 +34,7 @@ class DataRequest:
     steps: list[int] = attrs.field(validator=attrs.validators.min_len(1))
     """The desired steps of the data."""
 
-    parameters: list[str] = attrs.field(validator=attrs.validators.min_len(1))
+    parameters: list[Parameter] = attrs.field(validator=attrs.validators.min_len(1))
     """The desired parameters of the data."""
 
     init_time: dt.datetime
@@ -78,7 +79,7 @@ class DataRequest:
             ) for p in self.parameters
         }
 
-        return xr.Dataset(data_vars=data_vars, coords=coords.asdict())
+        return xr.Dataset(data_vars=data_vars, coords=coords.as_dict())
 
     def as_isll_dataset_dimension_map(self, resolution_degrees: float) -> ISLLTensorDimensionMap:
         """Return the request as an ISLL mapping of dataset dimension labels to values.

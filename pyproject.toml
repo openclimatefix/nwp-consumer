@@ -22,7 +22,9 @@ dependencies = [
     "ecmwf-api-client >= 1.6.3",
     "numpy >= 1.23.2",
     "ocf-blosc2 >= 0.0.3",
+    "pint >= 0.23",
     "psutil >= 5.9.6",
+    "result >= 0.16.1",
     "requests >= 2.31.0",
     "structlog >= 23.2.0",
     "xarray >= 2023.11.0",
@@ -42,7 +44,8 @@ lint = [
     "ruff >= 0.1.7",
 ]
 dev = [
-    "nwp-consumer[test,lint]"
+    "nwp-consumer[test,lint]",
+    "pydoctor >= 24.3.0",
 ]
 
 [project.scripts]

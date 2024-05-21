@@ -14,6 +14,7 @@ import pathlib
 import attrs
 
 from .area import Area
+from .parameter import Parameter
 
 
 @attrs.frozen
@@ -76,7 +77,7 @@ class SourceFileMetadata:
     steps: list[int]
     """The steps within the file."""
 
-    parameters: list[str]
+    parameters: list[Parameter]
     """The parameters within the file."""
 
     init_time: dt.datetime

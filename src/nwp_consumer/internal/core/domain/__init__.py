@@ -8,3 +8,4 @@ from .request import *
 from .tensor import *
 from .parameter import *
 from .repometadata import *
+from .notification import *
