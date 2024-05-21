@@ -12,8 +12,8 @@ from typing import Any
 import attrs
 import pint
 
-# Custom units
 ureg = pint.UnitRegistry()
+"""Unit registry for the service."""
 ureg.define("unit_interval = [] = ui")
 ureg.define("octas = unit_interval * 1/8")
 ureg.define("percent = unit_interval * 0.01")

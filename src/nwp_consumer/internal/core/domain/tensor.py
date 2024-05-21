@@ -13,13 +13,13 @@ would represent the runner's time at lap 2. In this instance the indexes are
 dimension indices to coordinate values must be consulted, for instance:
 
 x index: [0, 1, 2, 3, 4]
-x value: [0, 1, 2, 3, 4]
+x value: [lap 1, lap 2, lap 3, lap 4, lap 5]
 
 y index: [0, 1, 2, 3, 4]
 y value: [0 seconds, 30 seconds, 60 seconds, 90 seconds, 120 seconds]
 
 Now by consulting the mapping we can see that the point (2, 4) in the tensor
-represents that the runners time at lap two was 60 seconds.
+represents that the runners time at lap three was 60 seconds.
 
 
 This formalisation is useful also in the reverse case: inserting data into a
@@ -34,13 +34,60 @@ a key part of parallel writing.
 
 This module defines firstly an abstract base class to represent the shape of a
 dimension map object, and thereafter concrete implementations of the dimension
-map for different types of grid.
+map for different types of gridded and non gridded data arrangements.
 """
 import abc
+import datetime as dt
 
 import attrs
 import numpy as np
 from result import Err, Ok, Result
+
+
+def _safe_as_datetime64ns(datetimes: list[dt.datetime] | list[np.datetime64]) -> list[np.datetime64]:
+    """Convert a datetime object to a numpy datetime64 object.
+
+    This function performs the conversion in a manner that does not throw errors
+    when the output value is used as a coordinate in an xarray dataset.
+    Enabling either datetime64 or datetime objects as input allows for the
+    function to be used as an attrs converter that enables both types to
+    be passed into the init function.
+
+    Args:
+        datetimes: The datetime object to convert.
+
+    Returns:
+        The numpy datetime64 object.
+    """
+    return [
+        np.datetime64(d.astimezone(tz=dt.UTC).replace(tzinfo=None), "ns")
+        if isinstance(d, dt.datetime)
+        else np.datetime64(d, "ns")
+        for d in datetimes
+    ]
+
+
+def _safe_as_timedelta64ns(hours: list[int] | list[np.timedelta64]) -> list[np.timedelta64]:
+    """Convert an integer number of hours to a numpy timedelta64 object.
+
+    This function performs the conversion in a manner that does not throw errors
+    when the output value is used as a coordinate in an xarray dataset.
+    Enabling either timedelta64 or int objects as input allows for the
+    function to be used as an attrs converter that enables both types to
+    be passed into the init function.
+
+    Args:
+        hours: The number of hours to convert.
+
+    Returns:
+        The numpy timedelta64 object.
+    """
+    return [
+        np.timedelta64(np.timedelta64(h, "h"), "ns")
+        if isinstance(h, int)
+        else np.timedelta64(h, "ns")
+        for h in hours
+    ]
 
 
 class TensorDimensionMap(abc.ABC):
@@ -146,10 +193,10 @@ class ISLLTensorDimensionMap(TensorDimensionMap):
     the respective names and values of the class variables.
     """
 
-    init_time: list[np.datetime64]
+    init_time: list[np.datetime64] = attrs.field(converter=_safe_as_datetime64ns)
     """Initialization times of the forecast."""
 
-    step: list[np.timedelta64]
+    step: list[np.timedelta64] = attrs.field(converter=_safe_as_timedelta64ns)
     """Time steps of the forecast data."""
 
     latitude: list[float]
@@ -170,10 +217,10 @@ class ISXYTensorDimensionMap(TensorDimensionMap):
     the respective names and values of the class variables.
     """
 
-    init_time: list[np.datetime64]
+    init_time: list[np.datetime64] = attrs.field(converter=_safe_as_datetime64ns)
     """Initialization times of the forecast."""
 
-    step: list[np.timedelta64]
+    step: list[np.timedelta64] = attrs.field(converter=_safe_as_timedelta64ns)
     """Time steps of the forecast data."""
 
     x: list[float]
@@ -187,23 +234,41 @@ class ISXYTensorDimensionMap(TensorDimensionMap):
 
 
 @attrs.frozen
-class ISITensorDimensionMap(TensorDimensionMap):
-    """Mapping of dimension labels to coordinate values for an ISI NWP tensor.
+class ISVTensorDimensionMap(TensorDimensionMap):
+    """Mapping of dimension labels to coordinate values for an ISV NWP tensor.
 
-    The ISI tensor has dimension labels and index maps according to
+    The ISV tensor has dimension labels and index maps according to
     the respective names and values of the class variables.
 
-    The ISI dataset is not gridded.
+    The ISV dataset is not gridded - instead, the latitude and longitude
+    coordinates are represented as individual points in the dataset. It is
+    often desirable to postprocess the data such that latitude and longitude
+    are promoted to coordinate objects when using xarray.
     """
 
-    init_time: list[np.datetime64]
+    init_time: list[np.datetime64] = attrs.field(converter=_safe_as_datetime64ns)
     """Initialization times of the forecast."""
 
-    step: list[np.timedelta64]
+    step: list[np.timedelta64] = attrs.field(converter=_safe_as_timedelta64ns)
     """Time steps of the forecast data."""
 
-    station_id: list[int]
-    """The station IDs of the data points."""
+    values: list[int]
+    """The values of the data."""
 
     def as_dict(self) -> dict[str, list]:  # noqa: D102
         return attrs.asdict(self)
+
+
+class StoreMetadata:
+    """Metadata for a Zarr store.
+
+    When downloading data for an init time, the data is stored in a Zarr store.
+    This metadata class provides information about the store, such as the path
+    to the store and the dimension map describing the shape of the store.
+    """
+
+    path: str
+    """The path to the Zarr store."""
+
+    dimension_map: TensorDimensionMap
+    """The dimension map describing the shape of the Zarr store."""

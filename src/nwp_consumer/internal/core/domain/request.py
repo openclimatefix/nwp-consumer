@@ -21,6 +21,7 @@ from .area import Area
 from .parameter import Parameter
 from .tensor import (
     ISLLTensorDimensionMap,
+    ISVTensorDimensionMap,
 )
 
 
@@ -91,14 +92,22 @@ class DataRequest:
             The ISLL dimension map for the request.
         """
         return ISLLTensorDimensionMap(
-            # Convert to UTC and remove timezone info to prevent numpy complaints
-            init_time=[
-                np.datetime64(self.init_time.astimezone(tz=dt.UTC).replace(tzinfo=None), "ns"),
-            ],
-            # Manually specify as timedelta64[ns] to prevent xarray complaints
-            step=[np.timedelta64(np.timedelta64(i, "h"), "ns") for i in self.steps],
+            init_time=[self.init_time],
+            step=self.steps,
             latitude=self.area.lats(resolution_degrees),
             longitude=self.area.lons(resolution_degrees),
+        )
+
+    def as_isv_dataset_dimension_map(self) -> ISVTensorDimensionMap:
+        """Return the request as an ISV mapping of dataset dimension labels to values.
+
+        Returns:
+            The ISV dimension map for the request.
+        """
+        return ISVTensorDimensionMap(
+            init_time=[self.init_time],
+            step=self.steps,
+            values=self.parameters,
         )
 
     def total_values(self, resolution_degrees: float) -> int:

@@ -15,6 +15,7 @@ import attrs
 
 from .area import Area
 from .parameter import Parameter
+from .tensor import TensorDimensionMap
 
 
 @attrs.frozen
@@ -68,20 +69,20 @@ class SourceFileMetadata:
     path: pathlib.Path
     """The relevant (remote or local) path to the file."""
 
+    scheme: str
+    """The scheme of the path (e.g. 'https', 'ftp', 'file')."""
+
     extension: str
     """The file extension, including the dot (e.g. '.grib')."""
 
     size_bytes: int
     """The size of the file in bytes."""
 
-    steps: list[int]
-    """The steps within the file."""
-
     parameters: list[Parameter]
     """The parameters within the file."""
 
-    init_time: dt.datetime
-    """The init time of the file."""
+    coordinates: TensorDimensionMap
+    """The coordinates of the data contained within the file."""
 
 
 @attrs.frozen

@@ -51,14 +51,9 @@ class SourceRepository(abc.ABC):
     def map_file(
             cls,
             cached_file: domain.SourceFileMetadata,
-            store_path: pathlib.Path,
+            store_metadata: domain.StoreMetadata,
     ) -> Result[domain.SourceFileMetadata, str]:
         """Process cached source NWP data, persisting into the store file."""
-        pass
-
-    @abc.abstractmethod
-    def map_parameter(self, parameter: domain.Parameter) -> domain.Parameter:
-        """Map a parameter to a new parameter."""
         pass
 
     @abc.abstractmethod
