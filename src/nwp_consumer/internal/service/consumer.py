@@ -120,12 +120,26 @@ class NWPConsumerService:
         # Create a pipeline to convert the raw files and merge them as a dataset
         # * Then cache the dataset as a zarr file and store it in the store
         bag: dask.bag.Bag = dask.bag.from_sequence(cachedPaths)
-        cachedZarrs = (
+        latestDataset = (
             bag.map(lambda tfp: self.fetcher.mapCachedRaw(p=tfp))
             .fold(lambda ds1, ds2: _mergeDatasets([ds1, ds2]))
             .compute()
         )
-        datasets = dask.bag.from_sequence([cachedZarrs])
+        if not _dataQualityFilter(ds=latestDataset):
+            return []
+        if self.rename_vars:
+            for var in latestDataset.data_vars:
+                if var in self.fetcher.parameterConformMap():
+                    latestDataset = latestDataset.rename(
+                        {var: self.fetcher.parameterConformMap()[var].value}
+                    )
+        if self.variable_dim:
+            latestDataset = (
+                latestDataset.to_array(dim="variable", name=self.fetcher.datasetName())
+                .to_dataset()
+                .transpose("variable", ...)
+            )
+        datasets = dask.bag.from_sequence([latestDataset])
         # Save as zipped zarr
         if self.storer.exists(dst=self.zarrdir / "latest.zarr.zip"):
             self.storer.delete(p=self.zarrdir / "latest.zarr.zip")
