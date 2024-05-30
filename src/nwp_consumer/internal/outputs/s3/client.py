@@ -74,6 +74,17 @@ class Client(internal.StorageInterface):
             src=src.as_posix(),
             dst=(self.__bucket / dst).as_posix(),
         )
+
+        # If file already exists in store and is of the same size, skip the upload
+        if self.exists(dst=dst) and self.__fs.du((self.__bucket / dst).as_posix()) == src.stat().st_size:
+            log.debug(
+                event="file of same size already exists in s3, skipping",
+                src=src.as_posix(),
+                dst=(self.__bucket / dst).as_posix(),
+            )
+            return dst
+
+        # Upload the file to the store
         self.__fs.put(lpath=src.as_posix(), rpath=(self.__bucket / dst).as_posix(), recursive=True)
         # Don't delete cached file as user may want to do further processing locally.
         nbytes = self.__fs.du((self.__bucket / dst).as_posix())

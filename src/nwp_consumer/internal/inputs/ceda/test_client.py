@@ -40,7 +40,7 @@ class TestClient_MapCachedRaw(unittest.TestCase):
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(
-            {"init_time": 1, "step": 3, "y": 704, "x": 548},
+            {"init_time": 1, "step": 4, "y": 704, "x": 548},
             dict(out.sizes.items()),
         )
         # Ensure the correct variables are in the variable dimension
@@ -56,7 +56,7 @@ class TestClient_MapCachedRaw(unittest.TestCase):
 
         # Ensure the dimensions have the right sizes
         self.assertDictEqual(
-            {"init_time": 1, "step": 3, "y": 704, "x": 548},
+            {"init_time": 1, "step": 4, "y": 704, "x": 548},
             dict(out.sizes.items()),
         )
         # Ensure the correct variables are in the variable dimension
