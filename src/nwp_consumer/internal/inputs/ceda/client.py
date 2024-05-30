@@ -177,6 +177,7 @@ class Client(internal.FetcherInterface):
             datasets: list[xr.Dataset] = cfgrib.open_datasets(
                 path=p.as_posix(),
                 chunks={"time": 1, "step": -1, "variable": -1, "x": "auto", "y": "auto"},
+                backend_kwargs={"indexpath": ""},
             )
         except Exception as e:
             log.warn(event="error converting raw file to dataset", filepath=p.as_posix(), error=e)
@@ -244,7 +245,6 @@ class Client(internal.FetcherInterface):
                 },
             )
         )
-        print(wholesaleDataset)
         return wholesaleDataset
 
     def parameterConformMap(self) -> dict[str, internal.OCFParameter]:
