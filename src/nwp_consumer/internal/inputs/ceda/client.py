@@ -244,7 +244,7 @@ class Client(internal.FetcherInterface):
                 },
             )
         )
-
+        print(wholesaleDataset)
         return wholesaleDataset
 
     def parameterConformMap(self) -> dict[str, internal.OCFParameter]:
