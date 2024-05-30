@@ -122,6 +122,31 @@ class TestS3Client(unittest.TestCase):
         self.testS3.delete_object(Bucket=BUCKET, Key=dst.as_posix())
         src.unlink(missing_ok=True)
 
+        ## Test the store doesn't overwrite an existing file of equivalent size
+
+        # Create a mock file in the store
+        self.testS3.put_object(
+            Bucket=BUCKET,
+            Key=dst.as_posix(),
+            Body=bytes(fileName, "utf-8"),
+        )
+
+        # Create a temporary file with the same data
+        src.write_bytes(bytes(fileName, "utf-8"))
+
+        # Get the modified date of the file in the store
+        response = self.testS3.head_object(Bucket=BUCKET, Key=dst.as_posix())
+        lastModified = response["LastModified"]
+
+        # Call the store method on the file
+        name = self.client.store(src=src, dst=dst)
+
+        # Verify the file in the store was not overwritten
+        response = self.testS3.get_object(Bucket=BUCKET, Key=dst.as_posix())
+        self.assertEqual(response["Body"].read(), bytes(fileName, "utf-8"))
+        self.assertEqual(lastModified, response["LastModified"])
+
+
     def test_listInitTimes(self) -> None:
         # Create mock folders/files in the raw directory
         self.testS3.put_object(
