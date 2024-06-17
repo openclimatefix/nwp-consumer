@@ -8,9 +8,9 @@ __all__ = [
     "ECMWFMARSEnv",
     "ECMWFS3Env",
     "ICONEnv",
+    "GFSEnv",
     "HuggingFaceEnv",
     "MetOfficeEnv",
-    "MeteomaticsEnv",
     "S3Env",
     "LocalEnv",
 ]
@@ -22,10 +22,10 @@ from .env import (
     ECMWFMARSEnv,
     ECMWFS3Env,
     EnvParser,
+    GFSEnv,
     HuggingFaceEnv,
     ICONEnv,
     LocalEnv,
-    MeteomaticsEnv,
     MetOfficeEnv,
     S3Env,
 )

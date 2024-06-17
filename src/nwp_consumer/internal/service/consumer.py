@@ -84,7 +84,7 @@ class NWPConsumerService:
         )
 
     def ConvertRawDatasetToZarr(
-        self, *, start: dt.datetime, end: dt.datetime
+        self, *, start: dt.datetime, end: dt.datetime,
     ) -> list[pathlib.Path]:
         """Convert raw data for a given time range.
 
@@ -402,7 +402,7 @@ def _cacheAsZarr(ds: xr.Dataset) -> pathlib.Path:
 
 def _generate_encoding(ds: xr.Dataset) -> dict[str, dict[str, str] | dict[str, Blosc2]]:
     encoding = {"init_time": {"units": "nanoseconds since 1970-01-01"}}
-    for var in ds.data_vars.keys():
+    for var in ds.data_vars:
         encoding[var] = {"compressor": Blosc2(cname="zstd", clevel=5)}
     return encoding
 

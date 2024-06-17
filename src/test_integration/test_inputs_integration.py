@@ -139,8 +139,21 @@ class TestListRawFilesForInitTime(unittest.TestCase):
         self.assertTrue(len(europeFileInfos) > 0)
         self.assertNotEqual(fileInfos, europeFileInfos)
 
+    def test_getsFilesFromNOAANCAR(self) -> None:
+        ncarInitTime: dt.datetime = dt.datetime(
+            year=2023,
+            month=12,
+            day=19,
+            tzinfo=dt.UTC,
+        )
+        ncarClient = inputs.noaa.NCARClient(
+            model="global",
+            param_group="full",
+            hours=4,
+        )
+        fileInfos = ncarClient.listRawFilesForInitTime(it=ncarInitTime)
+        self.assertTrue(len(fileInfos) > 0)
 
-# TODO: NOAA
 
 if __name__ == "__main__":
     unittest.main()
