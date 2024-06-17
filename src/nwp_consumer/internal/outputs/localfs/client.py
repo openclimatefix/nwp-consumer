@@ -32,25 +32,27 @@ class Client(internal.StorageInterface):
             return dst
 
         dst.parent.mkdir(parents=True, exist_ok=True)
-        # Delete the cache to avoid double storage
-        shutil.move(src=src, dst=dst)
+        shutil.copy(src=src, dst=dst)
 
-        nbytes = os.stat(dst).st_size
-        if nbytes != dst.stat().st_size:
+        if src.stat().st_size != dst.stat().st_size:
             log.warn(
                 event="file size mismatch",
                 src=src.as_posix(),
                 dst=dst.as_posix(),
                 srcbytes=src.stat().st_size,
-                dstbytes=nbytes,
+                dstbytes=dst.stat().st_size,
             )
         else:
             log.debug(
                 event="stored file locally",
                 src=src.as_posix(),
                 dst=dst.as_posix(),
-                nbytes=nbytes,
+                nbytes=dst.stat().st_size,
             )
+
+        # Delete the cache to avoid double storage
+        src.unlink()
+
         return dst
 
     def listInitTimes(self, *, prefix: pathlib.Path) -> list[dt.datetime]:
