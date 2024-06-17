@@ -19,7 +19,7 @@ Commands:
 Options:
   --from=FROM         Start datetime in YYYY-MM-DDTHH:MM or YYYY-MM-DD format [default: today].
   --to=TO             End datetime in YYYY-MM-DD or YYYY-MM-DDTHH:MM format.
-  --source=SOURCE     Data source (ceda/metoffice/ecmwf-mars/ecmwf-s3/icon/cmc).
+  --source=SOURCE     Data source (ceda/metoffice/ecmwf-mars/ecmwf-s3/icon/cmc/gfs).
   --sink=SINK         Data sink (local/s3/huggingface) [default: local].
   --rsink=RSINK       Data sink for raw data, if different (local/s3/huggingface) [default: SINK].
   --rdir=RDIR         Directory of raw data store [default: /tmp/raw].
@@ -97,12 +97,6 @@ def run(argv: list[str]) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
         rawstorer = storer
     else:
         rawstorer = parse_actor(None, arguments["--rsink"])().configure_storer()
-
-    # Special logic for meteomatics
-    if arguments["--source"] == "meteomatics":
-        log.info("--no-rename-vars and --no-variable-dim are always true for meteomatics")
-        arguments["--no-rename-vars"] = True
-        arguments["--no-variable-dim"] = True
 
     service = NWPConsumerService(
         fetcher=fetcher,
@@ -220,7 +214,7 @@ def parse_actor(source: str | None, sink: str | None) -> type[config.EnvParser]:
         "ecmwf-s3": config.ECMWFS3Env,
         "icon": config.ICONEnv,
         "cmc": config.CMCEnv,
-        "meteomatics": config.MeteomaticsEnv,
+        "gfs": config.GFSEnv,
     }
     SINK_ENV_MAP: dict[str, type[config.EnvParser]] = {
         "local": config.LocalEnv,

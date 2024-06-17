@@ -37,11 +37,11 @@ class TestParseIconFilename(unittest.TestCase):
 
     def test_parsesSingleLevel(self) -> None:
         filename: str = "gfs.0p25.2016010300.f003.grib2"
-        it = dt.datetime(2016, 1, 3, 0, tzinfo=dt.timezone.utc)
+        it = dt.datetime(2016, 1, 3, 0, tzinfo=dt.UTC)
         out: NOAAFileInfo | None = _parseNCARFilename(
             name=filename,
             baseurl=f"{self.baseurl}/{it.strftime('%Y')}/{it.strftime('%Y%m%d')}",
         )
         self.assertIsNotNone(out)
         self.assertEqual(out.filename(), filename)
-        self.assertEqual(out.it(), dt.datetime(2016, 1, 3, 0, tzinfo=dt.timezone.utc))
+        self.assertEqual(out.it(), dt.datetime(2016, 1, 3, 0, tzinfo=dt.UTC))
