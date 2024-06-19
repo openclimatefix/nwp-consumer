@@ -217,4 +217,6 @@ class Client(internal.FetcherInterface):
             "r": internal.OCFParameter.RelativeHumidityAGL,
             "u10_instant": internal.OCFParameter.WindUComponentAGL,
             "v10_instant": internal.OCFParameter.WindVComponentAGL,
+            "u100_instant": internal.OCFParameter.WindUComponent100m,
+            "v100_instant": internal.OCFParameter.WindVComponent100m,
         }
