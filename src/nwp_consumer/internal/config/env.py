@@ -195,7 +195,7 @@ class GFSEnv(EnvParser):
 
     def configure_fetcher(self) -> internal.FetcherInterface:
         """Overrides the corresponding method in the parent class."""
-        return inputs.noaa.NCARClient(
+        return inputs.noaa.AWSClient(
             model=self.GFS_MODEL,
             param_group=self.GFS_PARAMETER_GROUP,
             hours=self.GFS_HOURS,
