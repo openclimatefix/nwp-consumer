@@ -45,9 +45,9 @@ class Client(internal.FetcherInterface):
                     "mcc",
                     "hcc",
                     "lcc",
-                    "dswrf_surface_avg",
-                    "dlwrf_surface_avg",
-                    "sdwe_surface_instant",
+                    "dswrf_avg",
+                    "dlwrf_avg",
+                    "sdwe_instant",
                     "r",
                     "u10_instant",
                     "v10_instant",
@@ -57,7 +57,7 @@ class Client(internal.FetcherInterface):
                     "v_instant",
                     ]
             case ("basic", "global"):
-                self.parameters = ["t2m_instant", "dswrf_surface_avg"]
+                self.parameters = ["t2m_instant", "dswrf_avg"]
             case ("full", "global"):
                 self.parameters = GFS_VARIABLES
             case (_, _):
@@ -142,7 +142,7 @@ class Client(internal.FetcherInterface):
                 new_name = f"{variable}_{d[f'{variable}'].attrs['GRIB_stepType']}"
                 d = d.rename({variable: new_name})
                 if new_name not in self.parameters:
-                    print(f"dropping {new_name}")
+                    print(f"dropping {new_name} from surface")
                     d = d.drop_vars(new_name)
             surface[i] = d
         for i, d in enumerate(heightAboveGround):
@@ -150,15 +150,15 @@ class Client(internal.FetcherInterface):
                 new_name = f"{variable}_{d[f'{variable}'].attrs['GRIB_stepType']}"
                 d = d.rename({variable: new_name})
                 if new_name not in self.parameters:
-                    print(f"dropping {new_name}")
+                    print(f"dropping {new_name} from heightAboveGround")
                     d = d.drop_vars(new_name)
+            heightAboveGround[i] = d
         for i, d in enumerate(isobaricInhPa):
             for variable in d.data_vars:
                 if variable not in self.parameters:
-                    print(f"dropping {variable}")
+                    print(f"dropping {variable} from isobaricInhPa")
                     d = d.drop_vars(variable)
-
-            heightAboveGround[i] = d
+            isobaricInhPa[i] = d
 
         surface_merged = xr.merge(surface).drop_vars(
             ["unknown_surface_instant", "valid_time"],
@@ -170,6 +170,10 @@ class Client(internal.FetcherInterface):
         del heightAboveGround
         iso_merged = xr.merge(isobaricInhPa).drop_vars("valid_time", errors="ignore")
         del isobaricInhPa
+
+        print(surface_merged)
+        print(hag_merged)
+        print(iso_merged)
 
         total_ds = (
             xr.merge([surface_merged, hag_merged, iso_merged])
