@@ -86,7 +86,7 @@ class Client(internal.FetcherInterface):
         # Files are split per timestep
         # And the url includes the time and init time
         # https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.20201206/00/atmos/gfs.t00z.pgrb2.0p25.f000
-        for step in range(0, self.hours + 1, 3):
+        for step in range(0, self.hours + 1):
             files.append(
                 NOAAFileInfo(
                     it=it,
@@ -137,12 +137,12 @@ class Client(internal.FetcherInterface):
         isobaricInhPa = [d for d in ds if "isobaricInhPa" in d.coords]
 
         # Update name of each data variable based off the attribute GRIB_stepType
+        # * Drop any variables we are not intrested in keeping
         for i, d in enumerate(surface):
             for variable in d.data_vars:
                 new_name = f"{variable}_{d[f'{variable}'].attrs['GRIB_stepType']}"
                 d = d.rename({variable: new_name})
                 if new_name not in self.parameters:
-                    print(f"dropping {new_name} from surface")
                     d = d.drop_vars(new_name)
             surface[i] = d
         for i, d in enumerate(heightAboveGround):
@@ -150,13 +150,11 @@ class Client(internal.FetcherInterface):
                 new_name = f"{variable}_{d[f'{variable}'].attrs['GRIB_stepType']}"
                 d = d.rename({variable: new_name})
                 if new_name not in self.parameters:
-                    print(f"dropping {new_name} from heightAboveGround")
                     d = d.drop_vars(new_name)
             heightAboveGround[i] = d
         for i, d in enumerate(isobaricInhPa):
             for variable in d.data_vars:
                 if variable not in self.parameters:
-                    print(f"dropping {variable} from isobaricInhPa")
                     d = d.drop_vars(variable)
             isobaricInhPa[i] = d
 
@@ -170,10 +168,6 @@ class Client(internal.FetcherInterface):
         del heightAboveGround
         iso_merged = xr.merge(isobaricInhPa).drop_vars("valid_time", errors="ignore")
         del isobaricInhPa
-
-        print(surface_merged)
-        print(hag_merged)
-        print(iso_merged)
 
         total_ds = (
             xr.merge([surface_merged, hag_merged, iso_merged])
