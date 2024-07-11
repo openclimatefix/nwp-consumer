@@ -87,21 +87,28 @@ class Client(internal.StorageInterface):
         # Upload the file to the store
         self.__fs.put(lpath=src.as_posix(), rpath=(self.__bucket / dst).as_posix(), recursive=True)
         # Don't delete cached file as user may want to do further processing locally.
-        nbytes = self.__fs.du((self.__bucket / dst).as_posix())
-        if nbytes != src.stat().st_size:
+        remote_size_bytes: int = self.__fs.du((self.__bucket / dst).as_posix())
+        local_size_bytes: int = src.stat().st_size
+        if src.is_dir():
+            local_size_bytes: int = sum(
+                f.stat().st_size
+                for f in src.rglob("*")
+                if f.is_file()
+            )
+        if remote_size_bytes != local_size_bytes:
             log.warn(
                 event="file size mismatch",
                 src=src.as_posix(),
                 dst=(self.__bucket / dst).as_posix(),
                 srcsize=src.stat().st_size,
-                dstsize=nbytes,
+                dstsize=remote_size_bytes,
             )
         else:
             log.debug(
                 event="stored file in s3",
                 src=src.as_posix(),
                 dst=(self.__bucket / dst).as_posix(),
-                nbytes=nbytes,
+                remote_size_bytes=remote_size_bytes,
             )
         return dst
 
