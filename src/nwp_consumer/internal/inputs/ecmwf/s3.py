@@ -123,8 +123,8 @@ class S3Client(internal.FetcherInterface):
         ds: xr.Dataset = xr.merge(area_dss, combine_attrs="drop_conflicts")
         del area_dss, all_dss
 
-        ds.drop_vars(
-            names=[v for v in ds.variables if v not in COORDINATE_ALLOW_LIST],
+        ds = ds.drop_vars(
+            names=[v for v in ds.coords if v not in COORDINATE_ALLOW_LIST],
             errors="ignore",
         )
 

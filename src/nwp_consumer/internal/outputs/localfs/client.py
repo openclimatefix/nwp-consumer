@@ -32,7 +32,10 @@ class Client(internal.StorageInterface):
             return dst
 
         dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(src=src, dst=dst)
+        if src.is_dir():
+            shutil.copytree(src=src, dst=dst)
+        else:
+            shutil.copy(src=src, dst=dst)
 
         if src.stat().st_size != dst.stat().st_size:
             log.warn(
@@ -51,7 +54,13 @@ class Client(internal.StorageInterface):
             )
 
         # Delete the cache to avoid double storage
-        src.unlink()
+        try:
+            src.unlink()
+        except:
+            log.warn(
+                event="could not delete source file. Will be cleaned up at end of run",
+                src=src.as_posix(),
+            )
 
         return dst
 

@@ -8,6 +8,7 @@ import xarray as xr
 from botocore.client import BaseClient as BotocoreClient
 from botocore.session import Session
 from moto.server import ThreadedMotoServer
+import numpy as np
 
 from ._models import ECMWFLiveFileInfo
 from .s3 import S3Client
@@ -117,6 +118,7 @@ class TestS3Client(unittest.TestCase):
         self.assertEqual(len(out.data_vars.keys()), 18)
         self.assertEqual(out.coords["latitude"].to_numpy().max(), 60)
         self.assertIn("t2m", list(out.data_vars.keys()))
+        self.assertTrue(np.all(out.data_vars["t2m"].values))
 
         print(out)
 
@@ -131,4 +133,6 @@ class TestS3Client(unittest.TestCase):
         )
         out = indiaClient.mapCachedRaw(p=testfile)
         self.assertEqual(out.coords["latitude"].to_numpy().max(), 31)
+        self.assertIn("t2m", list(out.data_vars.keys()))
+        self.assertTrue(np.all(out.data_vars["t2m"].values))
 
