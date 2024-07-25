@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 from .aws import Client
 
-testClient = Client(model="global", param_group="full")
+testClient = Client(model="global", param_group="default")
 
 
 class TestClient(unittest.TestCase):
