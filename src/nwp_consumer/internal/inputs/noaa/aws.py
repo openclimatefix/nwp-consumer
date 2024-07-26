@@ -140,16 +140,12 @@ class Client(internal.FetcherInterface):
         for i, d in enumerate(surface):
             unwanted_variables = [v for v in d.data_vars if v not in self.parameters]
             surface[i] = d.drop_vars(unwanted_variables)
-            print("Surface: ", [v for v in d.data_vars if v in self.parameters])
-            print(surface[i])
         for i, d in enumerate(heightAboveGround):
             unwanted_variables = [v for v in d.data_vars if v not in self.parameters]
             heightAboveGround[i] = d.drop_vars(unwanted_variables)
-            print("HeightAboveGround: ", [v for v in d.data_vars if v in self.parameters])
         for i, d in enumerate(isobaricInhPa):
             unwanted_variables = [v for v in d.data_vars if v not in self.parameters]
             isobaricInhPa[i] = d.drop_vars(unwanted_variables)
-            print("IsobaricInhPa: ", [v for v in d.data_vars if v in self.parameters])
 
         surface_merged = xr.merge(surface, compat="override").drop_vars(
             ["unknown_surface_instant", "valid_time"],
