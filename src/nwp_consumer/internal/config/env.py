@@ -191,7 +191,7 @@ class GFSEnv(EnvParser):
 
     GFS_MODEL: str = "global"
     GFS_HOURS: int = 48
-    GFS_PARAMETER_GROUP: str = "full"
+    GFS_PARAMETER_GROUP: str = "default"
 
     def configure_fetcher(self) -> internal.FetcherInterface:
         """Overrides the corresponding method in the parent class."""

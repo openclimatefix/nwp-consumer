@@ -10,7 +10,7 @@ class TestClient(unittest.TestCase):
     def test_mapCachedRaw(self) -> None:
         # Test with global file
         testFilePath: pathlib.Path = (
-            pathlib.Path(__file__).parent / "gfs.0p25.2023121906.f001.grib2"
+            pathlib.Path(__file__).parent / "test_surface_000.grib2"
         )
         out = testClient.mapCachedRaw(p=testFilePath)
         # Check latitude and longitude are injected
