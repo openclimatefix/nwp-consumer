@@ -171,6 +171,10 @@ def _parse_from_to(fr: str, to: str | None) -> tuple[dt.datetime, dt.datetime]:
     # Modify the default "today" argument to today's date
     if fr == "today":
         fr = dt.datetime.now(tz=dt.UTC).strftime("%Y-%m-%d")
+    # Modify the "latest" argument to the most recent 6 hour interval
+    if fr == "latest":
+        now = dt.datetime.now(tz=dt.UTC)
+        fr = now.replace(hour=(now.hour // 6) * 6, minute=0).strftime("%Y-%m-%dT%H:%M")
     # If --from specifies a date, and --to is not set, set --to to the next day
     if len(fr) == 10 and to is None:
         to = (
