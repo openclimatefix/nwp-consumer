@@ -85,12 +85,12 @@ class Client(internal.FetcherInterface):
 
         # Files are split per timestep
         # And the url includes the time and init time
-        # https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.20201206/00/atmos/gfs.t00z.pgrb2.0p25.f000
-        for step in range(0, self.hours + 1):
+        # https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.20201206/00/atmos/gfs.t00z.pgrb2.1p00.f000
+        for step in range(0, self.hours + 1, 3):
             files.append(
                 NOAAFileInfo(
                     it=it,
-                    filename=f"gfs.t{it.hour:02}z.pgrb2.0p25.f{step:03}",
+                    filename=f"gfs.t{it.hour:02}z.pgrb2.1p00.f{step:03}",
                     currentURL=f"{self.baseurl}/gfs.{it.strftime('%Y%m%d')}/{it.hour:02}/atmos",
                     step=step,
                 ),
