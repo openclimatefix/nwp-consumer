@@ -124,6 +124,7 @@ class Client(internal.FetcherInterface):
             )
             return xr.Dataset()
 
+        log.debug(event=f"Loaded the file {p.as_posix()}, and now processing it")
         # Process all the parameters into a single file
         ds = [
             d
