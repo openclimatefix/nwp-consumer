@@ -159,6 +159,8 @@ class Client(internal.FetcherInterface):
         iso_merged = xr.merge(isobaricInhPa).drop_vars("valid_time", errors="ignore")
         del isobaricInhPa
 
+        log.event(event='Merging surface, hag and iso backtogether')
+
         total_ds = (
             xr.merge([surface_merged, hag_merged, iso_merged])
             .rename({"time": "init_time"})
@@ -170,7 +172,11 @@ class Client(internal.FetcherInterface):
         )
         del surface_merged, hag_merged, iso_merged
 
-        return total_ds.drop_dims([c for c in list(total_ds.sizes.keys()) if c not in COORDINATE_ALLOW_LIST])
+        ds = total_ds.drop_dims([c for c in list(total_ds.sizes.keys()) if c not in COORDINATE_ALLOW_LIST])
+
+        log.debug(event='Finished mapping raw file to xarray', filename=p.as_posix())
+        
+        return ds
 
     def downloadToCache(  # noqa: D102
         self,
