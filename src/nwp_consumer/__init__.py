@@ -53,6 +53,7 @@ shared_processors = [
     structlog.processors.CallsiteParameterAdder(
         [
             structlog.processors.CallsiteParameter.FILENAME,
+            structlog.processors.CallsiteParameter.PATHNAME,
             structlog.processors.CallsiteParameter.LINENO,
         ],
     ),
