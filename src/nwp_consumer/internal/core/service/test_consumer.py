@@ -4,10 +4,9 @@ import unittest
 
 import numpy as np
 import xarray as xr
+from nwp_consumer.internal.core import domain, ports
 from returns.pipeline import is_successful
 from returns.result import Result
-
-from nwp_consumer.internal.core import domain, ports
 
 from .consumer import ParallelConsumer
 
@@ -39,22 +38,13 @@ class DummyModelRepository(ports.ModelRepository):
     def fetch_init_data(self, it: dt.datetime) -> list[xr.Dataset]:
         """Overrides the corresponding method in the parent class."""
 
-        # TODO: properly handle parameters
         return [
             xr.Dataset(
                 {
-                    "temperature_agl": (
+                    p: (
                         ["init_time", "step", "latitude", "longitude"],
                         np.random.rand(1, 1, 721, 1440),
-                    ),
-                    "wind_u": (
-                        ["init_time", "step", "latitude", "longitude"],
-                        np.random.rand(1, 1, 721, 1440),
-                    ),
-                    "wind_v": (
-                        ["init_time", "step", "latitude", "longitude"],
-                        np.random.rand(1, 1, 721, 1440),
-                    ),
+                    ) for p in domain.parameters
                 },
                 coords=self.metadata.expected_coordinates | {
                     "init_time": [np.datetime64(it.replace(tzinfo=None), "ns")],
@@ -94,5 +84,4 @@ class TestParallelConsumer(unittest.TestCase):
 
         result = test_consumer.consume(it=dt.datetime(2021, 1, 1, tzinfo=dt.UTC))
 
-        self.assertTrue(is_successful(result), msg=result.failure())
-        ds = result.map(xr.open_zarr)
+        self.assertTrue(is_successful(result), msg=f"Error: {result}")

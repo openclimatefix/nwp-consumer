@@ -2,6 +2,7 @@ import datetime as dt
 import logging
 import pathlib
 from typing import TYPE_CHECKING
+from multiprocessing import Pool, cpu_count
 
 import numpy as np
 from returns.result import Failure, Result, Success
@@ -46,19 +47,24 @@ class ParallelConsumer(ports.NWPConsumerService):
 
         match create_result:
             case Failure(e):
-                return Failure(OSError(f"Failed to create store for init time: {e}"))
+                return Result.from_failure(OSError(f"Failed to create store for init time: {e}"))
             case Success(smd):
                 # Get datasets from the model repository
                 partial_datasets: list[xr.Dataset] = self._mr.fetch_init_data(it=it)
-                # Write datasets to their appropriate regions in the store
-                # TODO: paralellize
-                ds: Dataset
-                for i, ds in enumerate(partial_datasets):
-                    write_result = smd.write_to_region(ds)
-                    if isinstance(write_result, Failure):
-                        return Result.from_failure(write_result.failure())
 
-                    log.debug(f"Written partial dataset to store ({i+1}/{len(partial_datasets)})")
+                # Write datasets to their appropriate regions in the store
+                # * Due to the blank dataset and region-based writing,
+                #   this can be done in parallel.
+                pool = Pool(max(cpu_count(), 8))
+                results: list[Result[int, Exception]] = pool.map(smd.write_to_region, partial_datasets)
+                pool.close()
+                pool.join()
+
+                # Fail hard if any of the writes failed
+                # * TODO: Consider just how hard we want to fail in this instance
+                for result in results:
+                    if result.is_failure:
+                        return Result.from_failure(result.failure())
 
                 notify_result = self._nr.notify(
                     domain.StoreCreatedNotification(
@@ -74,7 +80,9 @@ class ParallelConsumer(ports.NWPConsumerService):
                 return Result.from_value(smd.path)
 
             case _:
-                return Result.from_failure(TypeError(f"Unexpected result type: {type(create_result)}"))
+                return Result.from_failure(
+                    TypeError(f"Unexpected result type: {type(create_result)}")
+                )
 
     def create_store_for_init_time(self, it: dt.datetime) -> Result[domain.StoreMetadata, Exception]:
         """Create a store for a given init time.

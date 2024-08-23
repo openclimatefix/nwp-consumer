@@ -4,38 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="267ca1f9-a4e4-4ca3-afe5-1b3478bd9a79" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/mypy.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/nwp-consumer-2.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/ruff.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/core/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/core/domain/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/core/domain/_sharedtypes.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/core/domain/notification.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/core/domain/postprocess.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/core/domain/repometadata.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/core/domain/storemetadata.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/core/domain/test_storemetadata.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/core/ports/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/core/ports/repositories.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/core/ports/services.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/core/service/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/core/service/consumer.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/core/service/test_consumer.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model/ecmwf/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model/ecmwf/open_ifs.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/notification/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/notification/stdout.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/py.typed" afterDir="false" />
-    </list>
+    <list default="true" id="267ca1f9-a4e4-4ca3-afe5-1b3478bd9a79" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -156,16 +125,5 @@
       <updated>1724227291641</updated>
     </task>
     <servers />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/src/nwp_consumer/internal/core/service/test_consumer.py</url>
-          <line>93</line>
-          <option name="timeStamp" value="38" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
 </project>

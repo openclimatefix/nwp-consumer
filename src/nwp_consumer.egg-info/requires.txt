@@ -4,7 +4,6 @@ ocf-blosc2>=0.0.3
 psutil>=5.9.6
 returns>=0.23.0
 requests>=2.31.0
-structlog>=23.2.0
 xarray>=2023.11.0
 zarr>=2.16.1
 
