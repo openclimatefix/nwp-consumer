@@ -1,11 +1,10 @@
-"""Domain classes for repository metadata.
+"""Domain classes for store metadata.
 
-Sources of NWP data have attributes both pertaining to and apart from
-the data they deliver. This module defines classes for metadata that
-tracks relevant information about the model repository and the data
-it provides. This might be helpful in determining the quality of the
-data, defining pipelines for processing, or establishing the availability
-for a live service.
+Converted data is stored in Zarr stores, which are chunked datastores
+enabling subselection across any dimension of data, provided it is
+chunked appropriately.
+
+This module provides a class for storing metadata about a Zarr store.
 """
 
 import dataclasses
@@ -22,6 +21,7 @@ if TYPE_CHECKING:
     import numpy as np
 
 from ._sharedtypes import LabelCoordinateDict
+from .parameters import parameters
 
 log = logging.getLogger("nwp-consumer")
 
@@ -68,11 +68,9 @@ class StoreMetadata:
                     region = r
 
         try:
-            log.debug(f"Writing to region {region} in store.")
-            ds.to_zarr(store=self.path, region=region, mode="a")
+            ds.to_zarr(store=self.path, region=region)
             store_ds = xr.open_zarr(self.path)
             self.size_kb = store_ds.nbytes // 1024
-            log.debug(store_ds)
             return Result.from_value(ds.nbytes)
         except Exception as e:
             return Result.from_failure(e)
@@ -204,7 +202,6 @@ class StoreMetadata:
             - https://docs.xarray.dev/en/stable/user-guide/io.html#appending-to-existing-zarr-stores
             - https://docs.xarray.dev/en/stable/user-guide/io.html#distributed-writes
         """
-        parameters = ["dwsrf", "t2m"]  # TODO
         # Create a dask array of zeros with the shape of the dataset
         # * The values of this are ignored, only the shape and chunks are used
         # * Chunk the "init_time" and "step" dimensions to 1 to enable parallel writes

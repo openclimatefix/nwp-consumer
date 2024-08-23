@@ -14,7 +14,6 @@ Requires-Dist: ocf-blosc2>=0.0.3
 Requires-Dist: psutil>=5.9.6
 Requires-Dist: returns>=0.23.0
 Requires-Dist: requests>=2.31.0
-Requires-Dist: structlog>=23.2.0
 Requires-Dist: xarray>=2023.11.0
 Requires-Dist: zarr>=2.16.1
 Provides-Extra: test

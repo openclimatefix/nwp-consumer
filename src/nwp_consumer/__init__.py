@@ -128,7 +128,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
 
-for logger in ["numcodecs"]:
+for logger in ["numcodecs", "numexpr"]:
     logging.getLogger(logger).setLevel(logging.WARNING)
 
 log = logging.getLogger("nwp-consumer")
