@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RuffConfigService">
+    <option name="globalRuffExecutablePath" value="/opt/homebrew/Caskroom/miniforge/base/bin/ruff" />
+    <option name="projectRuffExecutablePath" value="/opt/homebrew/Caskroom/miniforge/base/envs/nwp-consumer-2/bin/ruff" />
+  </component>
+</project>

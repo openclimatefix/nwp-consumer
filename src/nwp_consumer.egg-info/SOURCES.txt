@@ -1,0 +1,13 @@
+README.md
+pyproject.toml
+src/nwp_consumer/__init__.py
+src/nwp_consumer/py.typed
+src/nwp_consumer.egg-info/PKG-INFO
+src/nwp_consumer.egg-info/SOURCES.txt
+src/nwp_consumer.egg-info/dependency_links.txt
+src/nwp_consumer.egg-info/entry_points.txt
+src/nwp_consumer.egg-info/requires.txt
+src/nwp_consumer.egg-info/top_level.txt
+src/nwp_consumer/internal/core/domain/repometadata.py
+src/nwp_consumer/internal/core/domain/tensor.py
+src/nwp_consumer/internal/core/ports/repositories.py

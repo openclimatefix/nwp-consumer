@@ -1,3 +1,35 @@
+Metadata-Version: 2.1
+Name: nwp-consumer
+Version: 0.0.1
+Summary: Tool for aggregating raw NWP files into .zarr files
+Author-email: Sol Cotton <sol@openclimatefix.org>
+License: MIT License
+Project-URL: repository, https://github.com/openclimatefix/nwp-consumer
+Classifier: Programming Language :: Python :: 3
+Requires-Python: >=3.12.0
+Description-Content-Type: text/markdown
+Requires-Dist: cfgrib>=0.9.10.4
+Requires-Dist: numpy>=1.23.2
+Requires-Dist: ocf-blosc2>=0.0.3
+Requires-Dist: psutil>=5.9.6
+Requires-Dist: returns>=0.23.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: structlog>=23.2.0
+Requires-Dist: xarray>=2023.11.0
+Requires-Dist: zarr>=2.16.1
+Provides-Extra: test
+Requires-Dist: botocore==1.33.7; extra == "test"
+Requires-Dist: flask==3.0.0; extra == "test"
+Requires-Dist: flask-cors==4.0.0; extra == "test"
+Requires-Dist: moto[s3,server]==4.2.11; extra == "test"
+Requires-Dist: unittest-xml-reporting==3.2.0; extra == "test"
+Provides-Extra: lint
+Requires-Dist: mypy>=1.10.1; extra == "lint"
+Requires-Dist: ruff>=0.6.0; extra == "lint"
+Provides-Extra: dev
+Requires-Dist: nwp-consumer[lint,test]; extra == "dev"
+Requires-Dist: pydoctor>=24.3.0; extra == "dev"
+
 <h2 align="center">
 NWP CONSUMER
 <br>
