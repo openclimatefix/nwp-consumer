@@ -1,0 +1,133 @@
+# --- PROJECT CONFIGURATION --- #
+
+[build-system]
+requires = ["setuptools>=67", "wheel", "setuptools-git-versioning>=1.13.3"]
+build-backend = "setuptools.build_meta"
+
+# Metadata (see https://peps.python.org/pep-0621/)
+[project]
+name = "nwp-consumer"
+dynamic = ["version"] # Set automtically using git: https://setuptools-git-versioning.readthedocs.io/en/stable/
+description = "Tool for aggregating raw NWP files into .zarr files"
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = ">=3.12.0"
+license = {text = "MIT License"}
+authors = [
+    { name = "Sol Cotton", email = "sol@openclimatefix.org"}
+]
+classifiers = ["Programming Language :: Python :: 3"]
+dependencies = [
+    "cfgrib >= 0.9.10.4",
+    "numpy >= 1.23.2",
+    "ocf-blosc2 >= 0.0.3",
+    "psutil >= 5.9.6",
+    "returns >= 0.23.0",
+    "requests >= 2.31.0",
+    "xarray >= 2023.11.0",
+    "zarr >= 2.16.1"
+]
+
+[project.optional-dependencies]
+test = [
+    "botocore == 1.33.7",  # Required for moto, prevents installing the whole of boto3
+    "flask == 3.0.0",
+    "flask-cors == 4.0.0",
+    "moto[s3,server] == 4.2.11",
+    "unittest-xml-reporting == 3.2.0",
+]
+lint = [
+    "mypy >= 1.10.1",
+    "ruff >= 0.6.0",
+]
+dev = [
+    "nwp-consumer[test,lint]",
+    "pydoctor >= 24.3.0",
+]
+
+[project.scripts]
+nwp-consumer = "nwp_consumer.cmd.main:main" # Set the entrypoint for the CLI
+
+[project.urls]
+repository = "https://github.com/openclimatefix/nwp-consumer"
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools-git-versioning]
+enabled = true
+
+# --- LINTING AND TYPING CONFIGURATION --- #
+
+[tool.basedpyright]
+include = ["src"]
+exclude = ["**/__pycache__"]
+pythonVersion = "3.12"
+
+# MyPy configuration
+# * See https://mypy.readthedocs.io/en/stable/index.html
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+warn_return_any = true
+disallow_untyped_defs = true
+plugins = [
+    "returns.contrib.mypy.returns_plugin",
+    "numpy.typing.mypy_plugin",
+]
+
+# Ruff configuration
+# * See https://beta.ruff.rs/docs/
+[tool.ruff]
+line-length = 100
+indent-width = 4
+exclude = ["__init__.py"]
+
+[tool.ruff.lint]
+fixable = ["ALL"]
+ignore = ["ANN101", "ANN102"]
+select = [
+    "F",   # pyflakes
+    "E",   # pycodestyle
+    "W",   # whitespace and newlines
+    "I",   # isort
+    "UP",  # modernize
+    "ANN", # flake8 type annotations
+    "S",   # flake8 bandit
+    "B",   # flake8 bugbear
+    "C4",  # flake8 comprehensions
+    "COM", # flake8 commas
+    "T20", # flake8 print
+    "SIM", # flake8 simplify
+    "ARG", # flake8 unused arguments
+    "DTZ", # flake8 datetimes
+    "Q",   # flake8 quotes
+    "TCH", # flake8 typecheck
+    "D",   # pydocstyle
+    "RUF", # ruff-specific rules
+]
+
+[tool.ruff.lint.per-file-ignores]
+"test*" = ["D", "ANN"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = 100
+
+# --- DOCUMENTATION CONFIGURATION --- #
+
+[tool.pydoctor]
+add-package = ["src/nwp_consumer"]
+docformat = "google"
+html-output = "docs"
+theme = "classic"
+privacy = [
+    "HIDDEN:**.test_*",
+]
+
