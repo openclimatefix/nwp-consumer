@@ -33,6 +33,11 @@ class DummyModelRepository(ports.ModelRepository):
                     np.timedelta64(np.timedelta64(h, "h"), "ns")
                     for h in range(0, 48, 1)
                 ],
+                "variable": [
+                    domain.params.temperature_sl.name,
+                    domain.params.downward_shortwave_radiation_flux_gl.name,
+                    domain.params.cloud_cover_high.name,
+                ],
                 "latitude": np.linspace(90, -90, 721).tolist(),
                 "longitude": np.linspace(-180, 179.8, 1440).tolist(),
             },
@@ -41,20 +46,23 @@ class DummyModelRepository(ports.ModelRepository):
     def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[[],xr.Dataset]]:
         """Overrides the corresponding method in the parent class."""
 
-        def gen_dataset(s: int) -> xr.Dataset:
+        def gen_dataset(s: int, variable: str) -> xr.Dataset:
+            """Define a generator that provides one variable at one step."""
             return xr.Dataset({
-                p: (
-                        ["init_time", "step", "latitude", "longitude"],
-                        np.random.rand(1, 1, 721, 1440),
-                    ) for p in domain.parameters
+                self.metadata.name: (
+                        ["init_time", "step", "variable", "latitude", "longitude"],
+                        np.random.rand(1, 1, 1, 721, 1440),
+                    ),
                 },
                 coords=self.metadata.expected_coordinates | {
                     "init_time": [np.datetime64(it.replace(tzinfo=None), "ns")],
                     "step": [s],
+                    "variable": [variable],
                 })
 
         for s in self.metadata.expected_coordinates["step"]:
-            yield delayed(gen_dataset)(s)
+            for v in self.metadata.expected_coordinates["variable"]:
+                yield delayed(gen_dataset)(s, v)
 
 
 class DummyNotificationRepository(ports.NotificationRepository):

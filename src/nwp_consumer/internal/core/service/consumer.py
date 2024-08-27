@@ -107,5 +107,5 @@ class ParallelConsumer(ports.NWPConsumerService):
             path=store_path,
             size_mb=0,
         )
-        result = store_metadata.write_as_dummy_dataset()
+        result = store_metadata.write_as_dummy_dataset(name=self._mr.metadata.name)
         return result

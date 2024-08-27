@@ -21,7 +21,6 @@ See Also:
 """
 
 import dataclasses
-from typing import TypedDict
 
 
 @dataclasses.dataclass
@@ -78,7 +77,8 @@ class Parameter:
     """
 
 
-class Parameters(TypedDict):
+@dataclasses.dataclass
+class Parameters:
     """A dictionary of parameters."""
     temperature_sl: Parameter
     """Temperature at screen level (C)."""
@@ -98,7 +98,7 @@ class Parameters(TypedDict):
     """U component of wind at 100m above ground level (m/s)."""
     wind_v_component_100m: Parameter
     """V component of wind at 100m above ground level (m/s)."""
-    snow_depth_sfc: Parameter
+    snow_depth_gl: Parameter
     """Depth of snow on the ground (m)."""
     cloud_cover_high: Parameter
     """Fraction of grid square covered by high-level cloud (UI)."""
@@ -110,7 +110,7 @@ class Parameters(TypedDict):
     """Total precipitation rate at ground level (kg/m^2/s)."""
 
 
-parameters = Parameters(
+params = Parameters(
     temperature_sl=Parameter(
         name="temperature_sl",
         description="Temperature at screen level",
@@ -123,7 +123,7 @@ parameters = Parameters(
             "Defined as the mean amount of solar radiation incident on the surface "
             "expected over the next hour.",
         units="W/m^2",
-        limits=ParameterLimits(upper=1500, lower=0)
+        limits=ParameterLimits(upper=1500, lower=0),
     ),
     downward_longwave_radiation_flux_gl=Parameter(
         name="downward_longwave_radiation_flux_gl",
@@ -131,7 +131,7 @@ parameters = Parameters(
             "Defined as the mean amount of thermal radiation incident on the surface "
             "expected over the next hour.",
         units="W/m^2",
-        limits=ParameterLimits(upper=500, lower=0)
+        limits=ParameterLimits(upper=500, lower=0),
     ),
     relative_humidity_sl=Parameter(
         name="relative_humidity_sl",
@@ -154,34 +154,34 @@ parameters = Parameters(
         description="U component of wind at 10m above ground level. "
                     "Defined as the horizontal speed of the wind in the eastward direction.",
         units="m/s",
-        limits=ParameterLimits(upper=100, lower=-100)
+        limits=ParameterLimits(upper=100, lower=-100),
     ),
     wind_v_component_10m=Parameter(
         name="wind_v_component_10m",
         description="V component of wind at 10m above ground level. "
                     "Defined as the horizontal speed of the wind in the northward direction.",
         units="m/s",
-        limits=ParameterLimits(upper=100, lower=-100)  # Non-tornadic winds are usually < 100m/s
+        limits=ParameterLimits(upper=100, lower=-100),  # Non-tornadic winds are usually < 100m/s
     ),
     wind_u_component_100m=Parameter(
         name="wind_u_component_100m",
         description="U component of wind at 100m above ground level. "
                     "Defined as the horizontal speed of the wind in the eastward direction.",
         units="m/s",
-        limits=ParameterLimits(upper=100, lower=-100)
+        limits=ParameterLimits(upper=100, lower=-100),
     ),
     wind_v_component_100m=Parameter(
         name="wind_v_component_100m",
         description="V component of wind at 100m above ground level. "
                     "Defined as the horizontal speed of the wind in the northward direction.",
         units="m/s",
-        limits=ParameterLimits(upper=100, lower=-100)
+        limits=ParameterLimits(upper=100, lower=-100),
     ),
     snow_depth_gl=Parameter(
         name="snow_depth_gl",
         description="Depth of snow on the ground.",
         units="m",
-        limits=ParameterLimits(upper=12, lower=0)
+        limits=ParameterLimits(upper=12, lower=0),
     ),
     cloud_cover_high=Parameter(
         name="cloud_cover_high",
@@ -189,7 +189,7 @@ parameters = Parameters(
             "Defined as the ratio of the area of the grid square covered by high-level "
             "(>6km) cloud to the square's total area.",
         units="UI",
-        limits=ParameterLimits(upper=1, lower=0)
+        limits=ParameterLimits(upper=1, lower=0),
     ),
     cloud_cover_medium=Parameter(
         name="cloud_cover_medium",
@@ -197,7 +197,7 @@ parameters = Parameters(
             "Defined as the ratio of the area of the grid square covered by medium-level "
             "(2-6km) cloud to the square's total area.",
         units="UI",
-        limits=ParameterLimits(upper=1, lower=0)
+        limits=ParameterLimits(upper=1, lower=0),
     ),
     cloud_cover_low=Parameter(
         name="cloud_cover_low",
@@ -205,7 +205,7 @@ parameters = Parameters(
             "Defined as the ratio of the area of the grid square covered by low-level "
             "(<2km) cloud to the square's total area.",
         units="UI",
-        limits=ParameterLimits(upper=1, lower=0)
+        limits=ParameterLimits(upper=1, lower=0),
     ),
     total_precipitation_rate_gl=Parameter(
         name="total_precipitation_rate_gl",
@@ -213,6 +213,7 @@ parameters = Parameters(
             "Defined as the rate at which liquid is deposited on the ground "
             "including rain, snow, and hail.",
         units="kg/m^2/s",
-        limits=ParameterLimits(upper=0.2, lower=0)
+        limits=ParameterLimits(upper=0.2, lower=0),
     ),
-}
+)
+"""Dictionary of parameters of interest in NWP forecasts."""
