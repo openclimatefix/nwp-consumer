@@ -9,8 +9,15 @@ Variables are forecasted at different levels in the atmosphere. A common
 level of interest is called "screen level (sl)". This corresponds to 1.5-2m
 above the Earth's surface, which is the height of many measuring stations.
 
+Variables also have units, which are the physical quantities that the
+variable is measured in. For example, temperature is measured in degrees
+Celsius (C), and wind speed is measured in meters per second (m/s).
+Some variables just occupy the range [0, 1], such as cloud cover.
+This unit is referred to as the Unit Interval (UI).
+
 See Also:
     - https://datahub.metoffice.gov.uk/docs/glossary
+    - https://codes.ecmwf.int/grib/param-db
 """
 
 import dataclasses
@@ -75,6 +82,10 @@ class Parameters(TypedDict):
     """A dictionary of parameters."""
     temperature_sl: Parameter
     """Temperature at screen level (C)."""
+    downward_shortwave_radiation_flux_gl: Parameter
+    """Downward shortwave radiation flux at ground level (W/m^2)."""
+    downward_longwave_radiation_flux_gl: Parameter
+    """Downward longwave radiation flux at ground level (W/m^2)."""
     relative_humidity_sl: Parameter
     """Relative humidity at screen level (%)."""
     visibility_sl: Parameter
@@ -87,18 +98,42 @@ class Parameters(TypedDict):
     """U component of wind at 100m above ground level (m/s)."""
     wind_v_component_100m: Parameter
     """V component of wind at 100m above ground level (m/s)."""
-    snow_depth: Parameter
+    snow_depth_sfc: Parameter
     """Depth of snow on the ground (m)."""
+    cloud_cover_high: Parameter
+    """Fraction of grid square covered by high-level cloud (UI)."""
+    cloud_cover_medium: Parameter
+    """Fraction of grid square covered by medium-level cloud (UI)."""
+    cloud_cover_low: Parameter
+    """Fraction of grid square covered by low-level cloud (UI)."""
+    total_precipitation_rate_gl: Parameter
+    """Total precipitation rate at ground level (kg/m^2/s)."""
 
 
-parameters: Parameters = {
-    "temperature_sl": Parameter(
+parameters = Parameters(
+    temperature_sl=Parameter(
         name="temperature_sl",
         description="Temperature at screen level",
         units="C",
         limits=ParameterLimits(upper=60, lower=-90),
     ),
-    "relative_humidity_sl": Parameter(
+    downward_shortwave_radiation_flux_gl=Parameter(
+        name="downward_shortwave_radiation_flux_gl",
+        description="Downward shortwave radiation flux at ground level. "
+            "Defined as the mean amount of solar radiation incident on the surface "
+            "expected over the next hour.",
+        units="W/m^2",
+        limits=ParameterLimits(upper=1500, lower=0)
+    ),
+    downward_longwave_radiation_flux_gl=Parameter(
+        name="downward_longwave_radiation_flux_gl",
+        description="Downward longwave radiation flux at ground level. "
+            "Defined as the mean amount of thermal radiation incident on the surface "
+            "expected over the next hour.",
+        units="W/m^2",
+        limits=ParameterLimits(upper=500, lower=0)
+    ),
+    relative_humidity_sl=Parameter(
         name="relative_humidity_sl",
         description="Relative humidity at screen level. "
                     "Defined as the ratio of partial pressure of water vapour "
@@ -106,7 +141,7 @@ parameters: Parameters = {
         units="%",
         limits=ParameterLimits(upper=100, lower=0),
     ),
-    "visibility_sl": Parameter(
+    visibility_sl=Parameter(
         name="visibility_sl",
         description="Visibility at screen level. "
                     "Defined as the distance at which an object can be seen "
@@ -114,38 +149,70 @@ parameters: Parameters = {
         units="m",
         limits=ParameterLimits(upper=4500, lower=0),
     ),
-    "wind_u_component_10m": Parameter(
+    wind_u_component_10m=Parameter(
         name="wind_u_component_10m",
         description="U component of wind at 10m above ground level. "
                     "Defined as the horizontal speed of the wind in the eastward direction.",
         units="m/s",
         limits=ParameterLimits(upper=100, lower=-100)
     ),
-    "wind_v_component_10m": Parameter(
+    wind_v_component_10m=Parameter(
         name="wind_v_component_10m",
         description="V component of wind at 10m above ground level. "
                     "Defined as the horizontal speed of the wind in the northward direction.",
         units="m/s",
         limits=ParameterLimits(upper=100, lower=-100)  # Non-tornadic winds are usually < 100m/s
     ),
-    "wind_u_component_100m": Parameter(
+    wind_u_component_100m=Parameter(
         name="wind_u_component_100m",
         description="U component of wind at 100m above ground level. "
                     "Defined as the horizontal speed of the wind in the eastward direction.",
         units="m/s",
         limits=ParameterLimits(upper=100, lower=-100)
     ),
-    "wind_v_component_100m": Parameter(
+    wind_v_component_100m=Parameter(
         name="wind_v_component_100m",
         description="V component of wind at 100m above ground level. "
                     "Defined as the horizontal speed of the wind in the northward direction.",
         units="m/s",
         limits=ParameterLimits(upper=100, lower=-100)
     ),
-    "snow_depth": Parameter(
-        name="snow_depth",
+    snow_depth_gl=Parameter(
+        name="snow_depth_gl",
         description="Depth of snow on the ground.",
         units="m",
         limits=ParameterLimits(upper=12, lower=0)
+    ),
+    cloud_cover_high=Parameter(
+        name="cloud_cover_high",
+        description="Fraction of grid square covered by high-level cloud. "
+            "Defined as the ratio of the area of the grid square covered by high-level "
+            "(>6km) cloud to the square's total area.",
+        units="UI",
+        limits=ParameterLimits(upper=1, lower=0)
+    ),
+    cloud_cover_medium=Parameter(
+        name="cloud_cover_medium",
+        description="Fraction of grid square covered by medium-level cloud. "
+            "Defined as the ratio of the area of the grid square covered by medium-level "
+            "(2-6km) cloud to the square's total area.",
+        units="UI",
+        limits=ParameterLimits(upper=1, lower=0)
+    ),
+    cloud_cover_low=Parameter(
+        name="cloud_cover_low",
+        description="Fraction of grid square covered by low-level cloud. "
+            "Defined as the ratio of the area of the grid square covered by low-level "
+            "(<2km) cloud to the square's total area.",
+        units="UI",
+        limits=ParameterLimits(upper=1, lower=0)
+    ),
+    total_precipitation_rate_gl=Parameter(
+        name="total_precipitation_rate_gl",
+        description="Total precipitation rate at ground level. "
+            "Defined as the rate at which liquid is deposited on the ground "
+            "including rain, snow, and hail.",
+        units="kg/m^2/s",
+        limits=ParameterLimits(upper=0.2, lower=0)
     ),
 }
