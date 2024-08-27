@@ -4,7 +4,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="267ca1f9-a4e4-4ca3-afe5-1b3478bd9a79" name="Changes" comment="" />
+    <list default="true" id="267ca1f9-a4e4-4ca3-afe5-1b3478bd9a79" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/core/domain/parameters.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/core/domain/parameters.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/core/service/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/core/service/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/core/service/consumer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/core/service/consumer.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -31,7 +39,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "Python tests.Python tests for service.test_consumer.TestParallelConsumer.test_consume.executor": "Debug",
+    "Python tests.Python tests for service.test_consumer.TestParallelConsumer.test_consume.executor": "Run",
     "Python tests.Python tests in test_repometadata.py.executor": "Debug",
     "Python tests.Python tests in test_tensor.py.executor": "Run",
     "Python.consumer.executor": "Run",

@@ -1,12 +1,15 @@
 import datetime as dt
 import pathlib
 import unittest
+from collections.abc import Callable, Iterator
 
 import numpy as np
 import xarray as xr
-from nwp_consumer.internal.core import domain, ports
+from joblib import delayed
 from returns.pipeline import is_successful
-from returns.result import Result
+from returns.result import Result, ResultE
+
+from nwp_consumer.internal.core import domain, ports
 
 from .consumer import ParallelConsumer
 
@@ -35,13 +38,12 @@ class DummyModelRepository(ports.ModelRepository):
             },
         )
 
-    def fetch_init_data(self, it: dt.datetime) -> list[xr.Dataset]:
+    def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[[],xr.Dataset]]:
         """Overrides the corresponding method in the parent class."""
 
-        return [
-            xr.Dataset(
-                {
-                    p: (
+        def gen_dataset(s: int) -> xr.Dataset:
+            return xr.Dataset({
+                p: (
                         ["init_time", "step", "latitude", "longitude"],
                         np.random.rand(1, 1, 721, 1440),
                     ) for p in domain.parameters
@@ -49,10 +51,10 @@ class DummyModelRepository(ports.ModelRepository):
                 coords=self.metadata.expected_coordinates | {
                     "init_time": [np.datetime64(it.replace(tzinfo=None), "ns")],
                     "step": [s],
-                },
-            )
-            for s in self.metadata.expected_coordinates["step"]
-        ]
+                })
+
+        for s in self.metadata.expected_coordinates["step"]:
+            yield delayed(gen_dataset)(s)
 
 
 class DummyNotificationRepository(ports.NotificationRepository):
@@ -60,14 +62,15 @@ class DummyNotificationRepository(ports.NotificationRepository):
     def notify(
             self,
             message: domain.StoreAppendedNotification | domain.StoreCreatedNotification,
-    ) -> Result[str, Exception]:
+    ) -> ResultE[str]:
         """Overrides the corresponding method in the parent class."""
+        print(message)
         return Result.from_value(str(message))
 
 
 class DummyZarrRepository(ports.ZarrRepository):
 
-    def save(self, src: pathlib.Path, dst: pathlib.Path) -> Result[str, Exception]:
+    def save(self, src: pathlib.Path, dst: pathlib.Path) -> ResultE[str]:
         """Overrides the corresponding method in the parent class."""
         return Result.from_value(str(dst))
 
@@ -85,3 +88,7 @@ class TestParallelConsumer(unittest.TestCase):
         result = test_consumer.consume(it=dt.datetime(2021, 1, 1, tzinfo=dt.UTC))
 
         self.assertTrue(is_successful(result), msg=f"Error: {result}")
+
+        ds = xr.open_zarr(result.unwrap())
+        print(ds)
+        self.assertFalse(True)

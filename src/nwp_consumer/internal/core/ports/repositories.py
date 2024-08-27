@@ -14,9 +14,11 @@ in a uniform way.
 import abc
 import datetime as dt
 import pathlib
+from collections.abc import Iterator
+from typing import Callable
 
 import xarray as xr
-from returns.result import Result
+from returns.result import ResultE
 
 from nwp_consumer.internal.core import domain
 
@@ -46,8 +48,38 @@ class ModelRepository(abc.ABC):
     """
 
     @abc.abstractmethod
-    def fetch_init_data(self, it: dt.datetime) -> list[xr.Dataset]:
-        """Fetch raw data files for an init time as xarray datasets."""
+    def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[..., ResultE[xr.Dataset]]]:
+        """Fetch raw data files for an init time as xarray datasets.
+
+        As per the typing, the return value is a generator of functions that
+        may produce an xarray dataset. This is done to allow for lazy evaluation:
+        by returning a generator of delayed objects, joblib can parallelize
+        the download and the results can be accumulated in a low-memory fashion.
+
+        For example:
+
+        >>> from joblib import Parallel, delayed
+        >>> import xarray as xr
+        >>> import nwp_consumer.internal.core.domain as domain
+        >>> from returns.result import ResultE
+        >>> import datetime as dt
+        >>>
+        >>> # Pseudocode for a model repository
+        >>> class MyModelRepository(domain.ModelRepository):
+        >>>     def fetch_init_data(self, it: dt.datetime) \
+        >>>         -> Iterator[Callable[..., ResultE[xr.Dataset]]]:
+        >>>         '''Overrides the abstract method.'''
+        >>>         for file in self.list_files(it):
+        >>>             # Download and convert is some function that downloads the file
+        >>>             # and converts it to an xarray dataset, returning a ResultE
+        >>>             yield delayed(self._download_and_convert)(file)
+
+        Args:
+            it: The initialization time for which to fetch data.
+
+        Returns:
+            A generator of delayed xarray datasets for the init time.
+        """
         pass
 
 
@@ -62,7 +94,7 @@ class ZarrRepository(abc.ABC):
     """Interface for a repository that stores Zarr NWP data."""
 
     @abc.abstractmethod
-    def save(self, src: pathlib.Path, dst: pathlib.Path) -> Result[str, Exception]:
+    def save(self, src: pathlib.Path, dst: pathlib.Path) -> ResultE[str]:
         """Save NWP store data in the repository."""
         pass
 
@@ -78,6 +110,6 @@ class NotificationRepository(abc.ABC):
     def notify(
             self,
             message: domain.StoreAppendedNotification | domain.StoreCreatedNotification,
-    ) -> Result[str, Exception]:
+    ) -> ResultE[str]:
         """Send a notification."""
         pass

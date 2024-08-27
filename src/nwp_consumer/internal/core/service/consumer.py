@@ -1,17 +1,20 @@
+"""Implementation of the NWP consumer service."""
+
 import datetime as dt
 import logging
 import pathlib
 from typing import TYPE_CHECKING
-from multiprocessing import Pool, cpu_count
 
 import numpy as np
-from returns.result import Failure, Result, Success
+from joblib import Parallel, delayed
+from returns.result import Failure, Result, Success, ResultE
+
+from .memory import PerformanceMonitor
 
 from .. import domain, ports
 
 if TYPE_CHECKING:
     import xarray as xr
-    from xarray import Dataset
 
 log = logging.getLogger("nwp-consumer")
 
@@ -19,7 +22,7 @@ log = logging.getLogger("nwp-consumer")
 class ParallelConsumer(ports.NWPConsumerService):
     """Consumer for NWP data that uses parallel processing."""
 
-    def postprocess(self, options: domain.PostProcessOptions) -> Result[str, Exception]:
+    def postprocess(self, options: domain.PostProcessOptions) -> ResultE[str]:
         """Overrides the corresponding method in the parent class."""
         return Result.from_failure(NotImplementedError("Postprocessing not yet implemented"))
 
@@ -38,9 +41,9 @@ class ParallelConsumer(ports.NWPConsumerService):
         self._zr = zarr_repository
         self._nr = notification_repository
 
-    def consume(self, it: dt.datetime) -> Result[pathlib.Path, Exception]:
+    def consume(self, it: dt.datetime) -> ResultE[pathlib.Path]:
         """Overrides the corresponding method in the parent class."""
-        _start: dt.datetime = dt.datetime.now(tz=dt.UTC)
+        monitor = PerformanceMonitor()
 
         # Create a store for the init time
         create_result = self.create_store_for_init_time(it=it)
@@ -49,30 +52,32 @@ class ParallelConsumer(ports.NWPConsumerService):
             case Failure(e):
                 return Result.from_failure(OSError(f"Failed to create store for init time: {e}"))
             case Success(smd):
-                # Get datasets from the model repository
-                partial_datasets: list[xr.Dataset] = self._mr.fetch_init_data(it=it)
+                # Get datasets from the model repository and write to their appropriate 
+                # regions in the store. Due to the blank dataset and region-based writing,
+                # this can be done in parallel. See
+                # https://joblib.readthedocs.io/en/stable/auto_examples/parallel_generator.html
+                result_generator = Parallel(n_jobs=-1, return_as="generator_unordered")(
+                    self._mr.fetch_init_data(it=it),
+                )
+                for ds in result_generator:
+                    write_result = smd.write_to_region(ds)
+                    # Fail hard if any of the writes failed
+                    # * TODO: Consider just how hard we want to fail in this instance
+                    if isinstance(write_result, Failure):
+                        return Result.from_failure(write_result.failure())
 
-                # Write datasets to their appropriate regions in the store
-                # * Due to the blank dataset and region-based writing,
-                #   this can be done in parallel.
-                pool = Pool(max(cpu_count(), 8))
-                results: list[Result[int, Exception]] = pool.map(smd.write_to_region, partial_datasets)
-                pool.close()
-                pool.join()
+                # TODO: Validate store
 
-                # Fail hard if any of the writes failed
-                # * TODO: Consider just how hard we want to fail in this instance
-                for result in results:
-                    if result.is_failure:
-                        return Result.from_failure(result.failure())
+                del result_generator
+                monitor.join()
 
                 notify_result = self._nr.notify(
                     domain.StoreCreatedNotification(
                         filename=smd.path.name,
-                        size_kb=smd.size_kb,
+                        size_mb=smd.size_mb,
                         performance=domain.PerformanceMetadata(
-                            duration_seconds=(dt.datetime.now(tz=dt.UTC) - _start).total_seconds(),
-                            memory_mb=0,  # TODO: Add memory usage
+                            duration_seconds=monitor.get_runtime(),
+                            memory_mb=max(monitor.memory_buffer) / 1e6,
                         ),
                     ),
                 )
@@ -84,7 +89,7 @@ class ParallelConsumer(ports.NWPConsumerService):
                     TypeError(f"Unexpected result type: {type(create_result)}")
                 )
 
-    def create_store_for_init_time(self, it: dt.datetime) -> Result[domain.StoreMetadata, Exception]:
+    def create_store_for_init_time(self, it: dt.datetime) -> ResultE[domain.StoreMetadata]:
         """Create a store for a given init time.
 
         This store is used to hold the processed data for a given init time.
@@ -105,7 +110,7 @@ class ParallelConsumer(ports.NWPConsumerService):
         store_metadata: domain.StoreMetadata = domain.StoreMetadata(
             coordinate_map=store_coordinates,
             path=store_path,
-            size_kb=0,
+            size_mb=0,
         )
         result = store_metadata.write_as_dummy_dataset()
         return result

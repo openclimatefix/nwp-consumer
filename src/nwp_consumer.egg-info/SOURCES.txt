@@ -8,10 +8,12 @@ src/nwp_consumer.egg-info/dependency_links.txt
 src/nwp_consumer.egg-info/entry_points.txt
 src/nwp_consumer.egg-info/requires.txt
 src/nwp_consumer.egg-info/top_level.txt
+src/nwp_consumer/internal/__init__.py
 src/nwp_consumer/internal/core/__init__.py
 src/nwp_consumer/internal/core/domain/__init__.py
 src/nwp_consumer/internal/core/domain/_sharedtypes.py
 src/nwp_consumer/internal/core/domain/notification.py
+src/nwp_consumer/internal/core/domain/parameters.py
 src/nwp_consumer/internal/core/domain/postprocess.py
 src/nwp_consumer/internal/core/domain/repometadata.py
 src/nwp_consumer/internal/core/domain/storemetadata.py

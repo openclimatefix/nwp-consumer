@@ -50,9 +50,10 @@ class ParameterLimits:
     Denoted as a ratio (#outside/#total).
     """
 
+
 @dataclasses.dataclass
 class Parameter:
-    """Class containing information about a paremeter."""
+    """Class containing information about a parameter."""
 
     name: str
     """The name of the parameter as appears in produced datasets."""
@@ -68,6 +69,7 @@ class Parameter:
 
     Used in sanity and validity checking the database values.
     """
+
 
 class Parameters(TypedDict):
     """A dictionary of parameters."""
@@ -88,6 +90,7 @@ class Parameters(TypedDict):
     snow_depth: Parameter
     """Depth of snow on the ground (m)."""
 
+
 parameters: Parameters = {
     "temperature_sl": Parameter(
         name="temperature_sl",
@@ -98,44 +101,44 @@ parameters: Parameters = {
     "relative_humidity_sl": Parameter(
         name="relative_humidity_sl",
         description="Relative humidity at screen level. "
-            "Defined as the ratio of partial pressure of water vapour "
-            "to the equilibrium vapour pressure of water",
+                    "Defined as the ratio of partial pressure of water vapour "
+                    "to the equilibrium vapour pressure of water",
         units="%",
         limits=ParameterLimits(upper=100, lower=0),
     ),
     "visibility_sl": Parameter(
         name="visibility_sl",
         description="Visibility at screen level. "
-            "Defined as the distance at which an object can be seen "
-            "horizontally in daylight conditions.",
+                    "Defined as the distance at which an object can be seen "
+                    "horizontally in daylight conditions.",
         units="m",
         limits=ParameterLimits(upper=4500, lower=0),
     ),
     "wind_u_component_10m": Parameter(
         name="wind_u_component_10m",
         description="U component of wind at 10m above ground level. "
-            "Defined as the horizontal speed of the wind in the eastward direction.",
+                    "Defined as the horizontal speed of the wind in the eastward direction.",
         units="m/s",
         limits=ParameterLimits(upper=100, lower=-100)
     ),
     "wind_v_component_10m": Parameter(
         name="wind_v_component_10m",
         description="V component of wind at 10m above ground level. "
-            "Defined as the horizontal speed of the wind in the northward direction.",
+                    "Defined as the horizontal speed of the wind in the northward direction.",
         units="m/s",
-        limits=ParameterLimits(upper=100, lower=-100) # Non-tornadic winds are usually < 100m/s
+        limits=ParameterLimits(upper=100, lower=-100)  # Non-tornadic winds are usually < 100m/s
     ),
     "wind_u_component_100m": Parameter(
         name="wind_u_component_100m",
         description="U component of wind at 100m above ground level. "
-            "Defined as the horizontal speed of the wind in the eastward direction.",
+                    "Defined as the horizontal speed of the wind in the eastward direction.",
         units="m/s",
         limits=ParameterLimits(upper=100, lower=-100)
     ),
     "wind_v_component_100m": Parameter(
         name="wind_v_component_100m",
         description="V component of wind at 100m above ground level. "
-            "Defined as the horizontal speed of the wind in the northward direction.",
+                    "Defined as the horizontal speed of the wind in the northward direction.",
         units="m/s",
         limits=ParameterLimits(upper=100, lower=-100)
     ),
@@ -146,5 +149,3 @@ parameters: Parameters = {
         limits=ParameterLimits(upper=12, lower=0)
     ),
 }
-
-
