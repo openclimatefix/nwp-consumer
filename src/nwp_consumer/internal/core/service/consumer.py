@@ -3,18 +3,13 @@
 import datetime as dt
 import logging
 import pathlib
-from typing import TYPE_CHECKING
 
 import numpy as np
-from joblib import Parallel, delayed
-from returns.result import Failure, Result, Success, ResultE
-
-from .memory import PerformanceMonitor
+from joblib import Parallel
+from returns.result import Failure, Result, ResultE, Success
 
 from .. import domain, ports
-
-if TYPE_CHECKING:
-    import xarray as xr
+from .memory import PerformanceMonitor
 
 log = logging.getLogger("nwp-consumer")
 
