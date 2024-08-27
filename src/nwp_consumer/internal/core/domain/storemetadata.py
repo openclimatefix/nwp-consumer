@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     import numpy as np
 
 from ._sharedtypes import LabelCoordinateDict
-from .parameters import parameters
+from .parameters import params
 
 log = logging.getLogger("nwp-consumer")
 
@@ -170,7 +170,7 @@ class StoreMetadata:
 
         return Success(slices)
 
-    def write_as_dummy_dataset(self) -> ResultE["StoreMetadata"]:
+    def write_as_dummy_dataset(self, name: str) -> ResultE["StoreMetadata"]:
         """Write a blank dataset to disk based on the input coordinates.
 
         The coordinates define the dimension labels and tick values of the
@@ -189,11 +189,14 @@ class StoreMetadata:
         individual file in the store). In this manner chunks are chosen to cover as small
         a unit of data as could reasonably be expected to be provided by an NWP source:
 
-        - Raw data files will always contain the full grid of data, hence a chunk of size equal
-          to the length of the grid dimension (lat/lon/x/y axes) is acceptable.
+        - Raw data files may not contain the full grid of data, hence a chunk of size equal
+          to a quarter the length of the grid dimension (lat/lon/x/y axes) is used.
         - Raw data files may contain as little as one step for a single parameter, so a chunk
           size of 1 is used along the step dimension.
         - As above for the init_time dimension.
+
+        Args:
+            name: The name of the tensor to write to the store.
 
         Returns:
             An indicator of a successful store write containing the number of bytes written.
@@ -202,20 +205,34 @@ class StoreMetadata:
             - https://docs.xarray.dev/en/stable/user-guide/io.html#appending-to-existing-zarr-stores
             - https://docs.xarray.dev/en/stable/user-guide/io.html#distributed-writes
         """
-        # Create a dask array of zeros with the shape of the dataset
-        # * The values of this are ignored, only the shape and chunks are used
-        # * Chunk the "init_time" and "step" dimensions to 1 to enable parallel writes
         if list(self.coordinate_map.keys())[:2] != ["init_time", "step"]:
             return Result.from_failure(KeyError(
                 "The first two coordinate labels must be 'init_time' and 'step'. "
                 f"Got: {list(self.coordinate_map.keys())[:2]}.",
             ))
-        shape: list[int] = [len(v) for v in self.coordinate_map.values()]
-        dummy_values = dask_zeros(shape=shape, chunks=tuple([1, 1] + shape[2:]))
-        data_vars = {
-            p: (self.coordinate_map.keys(), dummy_values)
-            for p in parameters
+        # Determine the shape of the dataset via the coordinate map
+        shape_dict: dict[str, int] = {
+            k: len(v) for k, v in self.coordinate_map.items()
         }
+        # * Define a set of chunks allowing for intermediate parallel writes
+        #   NOTE: This is not the same as the final chunking of the dataset!
+        #   Merely a chunksize that is small enough to allow for parallel writes
+        #   to different regions of the init store.
+        intermediate_chunks: dict[str, int] = {
+            "init_time": 1,
+            "step": 1,
+            "variable": 1,
+            "latitude": shape_dict.get("latitude", 400) // 4,
+            "longitude": shape_dict.get("longitude", 400) // 4,
+            "values": shape_dict.get("values", 1),
+        }
+        # Create a dask array of zeros with the shape of the dataset
+        # * The values of this are ignored, only the shape and chunks are used
+        dummy_values = dask_zeros(
+            shape=list(shape_dict.values()),
+            chunks=tuple([intermediate_chunks[k] for k in shape_dict]),
+        )
+        data_vars = {name: (tuple(shape_dict.keys()), dummy_values)}
         # Ensure the coordinates are coordinates with dimensions
         # * This is done via the dict value being a tuple of (label, coordinate values)
         xr_coords = {k: (k, v) for k, v in self.coordinate_map.items()}

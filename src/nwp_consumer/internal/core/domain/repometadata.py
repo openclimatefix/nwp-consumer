@@ -20,7 +20,10 @@ class ModelRepositoryMetadata:
     """Metadata for an NWP Model repository."""
 
     name: str
-    """The name of the model."""
+    """The name of the model.
+
+    Also used to name the tensor in the zarr store.
+    """
 
     is_archive: bool
     """Whether the repository is a complete archival set.
