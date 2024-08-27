@@ -18,6 +18,7 @@ authors = [
 classifiers = ["Programming Language :: Python :: 3"]
 dependencies = [
     "cfgrib >= 0.9.10.4",
+    "joblib >= 1.4.2",
     "numpy >= 1.23.2",
     "ocf-blosc2 >= 0.0.3",
     "psutil >= 5.9.6",
@@ -124,9 +125,10 @@ docstring-code-line-length = 100
 
 [tool.pydoctor]
 add-package = ["src/nwp_consumer"]
+project-base-dir = "src/nwp_consumer"
 docformat = "google"
 html-output = "docs"
-theme = "classic"
+theme = "readthedocs"
 privacy = [
     "HIDDEN:**.test_*",
 ]

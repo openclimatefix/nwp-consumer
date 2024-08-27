@@ -37,12 +37,12 @@ The core of the service is split into three main components:
 - **Service** - The service logic that defines how the service processes' data.
 
 In this package, the core of the service is in `nwp_consumer.internal.core`,
-and the actors are in `nwp_consumer.internal.handlers` and`nwp_consumer.internal.repositories`.
+and the actors are in `nwp_consumer.internal.repositories`.
 
 The service logic has no knowledge of the external actors, instead defining interfaces that
 the actors must implement. These are found in `nwp_consumer.internal.core.ports`.
 The actors are then responsible for implementing these interfaces, and are *dependency-injected* in at runtime.
-This allows the service to be easily tested and extended. See `further reading` for more information.
+This allows the service to be easily tested and extended. See 'further reading' for more information.
 
 Head into `nwp_consumer.internal.core` to see the details of each of these components.
 

@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 import xarray as xr
 from dask.array import zeros as dask_zeros
-from returns.result import Failure, Result, Success
+from returns.result import Failure, Result, ResultE, Success
 from xarray.core.indexes import Indexes
 
 if TYPE_CHECKING:
@@ -36,14 +36,14 @@ class StoreMetadata:
     coordinate_map: LabelCoordinateDict | Indexes  # type: ignore
     """The coordinates of the store."""
 
-    size_kb: int
-    """The size of the store in kilobytes."""
+    size_mb: int
+    """The size of the store in megabytes."""
 
     def write_to_region(
             self,
             ds: xr.Dataset,
             region: dict[str, slice] | None = None,
-    ) -> Result[int, Exception]:
+    ) -> ResultE[int]:
         """Write partial data to the store.
 
         The optional region is a dictionary which maps dimension labels to slices.
@@ -70,7 +70,7 @@ class StoreMetadata:
         try:
             ds.to_zarr(store=self.path, region=region)
             store_ds = xr.open_zarr(self.path)
-            self.size_kb = store_ds.nbytes // 1024
+            self.size_mb = store_ds.nbytes // (1024 ** 2)
             return Result.from_value(ds.nbytes)
         except Exception as e:
             return Result.from_failure(e)
@@ -78,7 +78,7 @@ class StoreMetadata:
     def determine_region(
             self,
             inner: LabelCoordinateDict | Indexes,  # type: ignore
-    ) -> Result[dict[str, slice], Exception]:
+    ) -> ResultE[dict[str, slice]]:
         """Return the index slices of inner mapping relative to the outer map.
 
         The calling instance is regarded as the "outer", that is, the larger
@@ -170,7 +170,7 @@ class StoreMetadata:
 
         return Success(slices)
 
-    def write_as_dummy_dataset(self) -> Result["StoreMetadata", Exception]:
+    def write_as_dummy_dataset(self) -> ResultE["StoreMetadata"]:
         """Write a blank dataset to disk based on the input coordinates.
 
         The coordinates define the dimension labels and tick values of the
@@ -229,7 +229,8 @@ class StoreMetadata:
             # * This also ensures the zarr is readable
             store_ds = xr.open_zarr(self.path)
             self.coordinate_map = store_ds.coords.indexes
-            self.size_kb = store_ds.nbytes // 1024
+            self.size_mb = store_ds.nbytes // (1024 ** 2)
             return Result.from_value(self)
         except Exception as e:
             return Result.from_failure(e)
+

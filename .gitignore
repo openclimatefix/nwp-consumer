@@ -71,6 +71,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/
 
 # PyBuilder
 .pybuilder/
@@ -152,4 +153,3 @@ s3:
 # MacOS
 .DS_Store
 **/*.swp
-

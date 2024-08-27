@@ -8,7 +8,7 @@ import abc
 import datetime as dt
 import pathlib
 
-from returns.result import Result
+from returns.result import ResultE
 
 from nwp_consumer.internal.core import domain
 
@@ -20,11 +20,11 @@ class NWPConsumerService(abc.ABC):
     """
 
     @abc.abstractmethod
-    def consume(self, it: dt.datetime) -> Result[pathlib.Path, Exception]:
+    def consume(self, it: dt.datetime) -> ResultE[pathlib.Path]:
         """Consume NWP data to Zarr format for desired init time."""
         pass
 
     @abc.abstractmethod
-    def postprocess(self, options: domain.PostProcessOptions) -> Result[str, Exception]:
+    def postprocess(self, options: domain.PostProcessOptions) -> ResultE[str]:
         """Postprocess the produced Zarr according to given options."""
         pass

@@ -7,6 +7,7 @@ This module defines the structure of the notification messages.
 
 import dataclasses
 
+
 @dataclasses.dataclass
 class PerformanceMetadata:
     """Metadata for a service operation."""
@@ -25,8 +26,8 @@ class StoreCreatedNotification:
     filename: str
     """The name of the store created, including extension."""
 
-    size_kb: int
-    """The size of the store in kilobytes."""
+    size_mb: int
+    """The size of the store in megabytes."""
 
     performance: PerformanceMetadata
     """Metadata for the operation."""
@@ -39,8 +40,8 @@ class StoreAppendedNotification:
     filename: str
     """The name of the store appended to, including extension."""
 
-    size_kb: int
-    """The size of the store in kilobytes."""
+    size_mb: int
+    """The size of the store in megabytes."""
 
     performance: PerformanceMetadata
     """Metadata for the operation."""
