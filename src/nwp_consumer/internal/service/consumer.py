@@ -68,8 +68,8 @@ class ParallelConsumer(ports.NWPConsumerService):
                         return Result.from_failure(write_result.failure())
 
                 # TODO: Validate store
-                store_ds: xr.Dataset = xr.open_zarr(smd.path)
-                for parameter in store_ds.coords["variable"].values:
+                store_da: xr.DataArray = xr.open_dataarray(smd.path, engine="zarr")
+                for parameter in store_da.coords["variable"].values:
                     if parameter not in entities.params.__slots__:
                         log.warning(
                             f"Cannot validate unknown parameter: {parameter}. "
@@ -101,7 +101,7 @@ class ParallelConsumer(ports.NWPConsumerService):
 
             case _:
                 return Result.from_failure(
-                    TypeError(f"Unexpected result type: {type(create_result)}")
+                    TypeError(f"Unexpected result type: {type(create_result)}"),
                 )
 
 
@@ -128,5 +128,5 @@ class ParallelConsumer(ports.NWPConsumerService):
             path=store_path,
             size_mb=0,
         )
-        result = store_metadata.write_as_dummy_dataset(name=self._mr.metadata.name)
+        result = store_metadata.write_as_dummy_dataarray(name=self._mr.metadata.name)
         return result

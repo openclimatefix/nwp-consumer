@@ -24,10 +24,12 @@ class TestTensorDimensionMap(unittest.TestCase):
             coordinate_map={
                 "init_time": [np.datetime64(f"2021-01-01T0{i}:00:00") for i in range(0, 9, 3)],
                 "step": [np.timedelta64(i, "h") for i in range(12)],
+                "variable": ["temperature", "cloud_cover", "precipitation"],
                 "latitude": [60.0, 61.0, 62.0],
                 "longitude": [10.0, 11.0, 12.0],
             },
             path=pathlib.Path(""),
+            size_mb=0,
         )
 
         tests = [
@@ -36,12 +38,14 @@ class TestTensorDimensionMap(unittest.TestCase):
                 inner={
                     "init_time": [np.datetime64("2021-01-01T00:00:00")],
                     "step": [np.timedelta64(i, "h") for i in range(6)],
+                    "variable": ["temperature", "cloud_cover", "precipitation"],
                     "latitude": [60.0, 61.0, 62.0],
                     "longitude": [10.0, 11.0, 12.0],
                 },
                 expected_slices={
                     "init_time": slice(0, 1),
                     "step": slice(0, 6),
+                    "variable": slice(0, 3),
                     "latitude": slice(0, 3),
                     "longitude": slice(0, 3),
                 },
@@ -55,12 +59,14 @@ class TestTensorDimensionMap(unittest.TestCase):
                         np.datetime64("2021-01-01T06:00:00"),
                     ],
                     "step": [np.timedelta64(i, "h") for i in range(12)],
+                    "variable": ["temperature", "cloud_cover", "precipitation"],
                     "latitude": [60.0, 61.0, 62.0],
                     "longitude": [10.0, 11.0, 12.0],
                 },
                 expected_slices={
                     "init_time": slice(1, 3),
                     "step": slice(0, 12),
+                    "variable": slice(0, 3),
                     "latitude": slice(0, 3),
                     "longitude": slice(0, 3),
                 },
@@ -71,6 +77,7 @@ class TestTensorDimensionMap(unittest.TestCase):
                 inner={
                     "init_time": [np.datetime64("2021-01-01T00:00:00")],
                     "step": [np.timedelta64(i, "h") for i in range(1, 6, 2)],
+                    "variable": ["temperature", "cloud_cover", "precipitation"],
                     "latitude": [60.0, 63.0],
                     "longitude": [10.0, 11.0, 12.0],
                 },
@@ -82,6 +89,7 @@ class TestTensorDimensionMap(unittest.TestCase):
                 inner={
                     "init_time": [np.datetime64("2021-01-01T00:00:00")],
                     "step": [np.timedelta64(15, "h")],
+                    "variable": ["temperature", "cloud_cover", "precipitation"],
                     "latitude": [60.0, 61.0, 62.0, 64.0],
                     "longitude": [10.0, 11.0, 12.0],
                 },
@@ -93,6 +101,7 @@ class TestTensorDimensionMap(unittest.TestCase):
                 inner={
                     "init_time": [np.datetime64("2021-01-01T00:00:00")],
                     "step": [np.timedelta64(15, "h")],
+                    "variable": ["temperature", "cloud_cover", "precipitation"],
                     "x": [60.0, 61.0, 62.0, 64.0],
                     "y": [10.0, 11.0, 12.0],
                 },

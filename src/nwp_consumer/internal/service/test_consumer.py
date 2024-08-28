@@ -42,23 +42,22 @@ class DummyModelRepository(ports.ModelRepository):
             },
         )
 
-    def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[[],xr.Dataset]]:
+    def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[[],xr.DataArray]]:
         """Overrides the corresponding method in the parent class."""
 
-        def gen_dataset(s: int, variable: str) -> xr.Dataset:
+        def gen_dataset(s: int, variable: str) -> xr.DataArray:
             """Define a generator that provides one variable at one step."""
-            ds = xr.Dataset({
-                self.metadata.name: (
-                        ["init_time", "step", "variable", "latitude", "longitude"],
-                        np.random.rand(1, 1, 1, 721, 1440),
-                    ),
-                },
+            da = xr.DataArray(
+                name=self.metadata.name,
+                dims=["init_time", "step", "variable", "latitude", "longitude"],
+                data=np.random.rand(1, 1, 1, 721, 1440),
                 coords=self.metadata.expected_coordinates | {
                     "init_time": [np.datetime64(it.replace(tzinfo=None), "ns")],
                     "step": [s],
                     "variable": [variable],
-            })
-            return ds
+                },
+            )
+            return da
 
 
         for s in self.metadata.expected_coordinates["step"]:
@@ -99,5 +98,9 @@ class TestParallelConsumer(unittest.TestCase):
 
         self.assertTrue(is_successful(result), msg=f"Error: {result}")
 
-        ds = xr.open_zarr(result.unwrap())
-        self.assertEqual(list(ds.sizes.keys()), ["init_time", "step", "variable", "latitude", "longitude"])
+        da = xr.open_dataarray(result.unwrap(), engine="zarr")
+        print(da)
+        self.assertEqual(
+            list(da.sizes.keys()),
+            ["init_time", "step", "variable", "latitude", "longitude"],
+        )
