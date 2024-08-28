@@ -41,7 +41,7 @@ class StoreMetadata:
 
     def write_to_region(
             self,
-            ds: xr.Dataset,
+            da: xr.DataArray,
             region: dict[str, slice] | None = None,
     ) -> ResultE[int]:
         """Write partial data to the store.
@@ -60,7 +60,7 @@ class StoreMetadata:
             An indicator of a successful store write containing the number of bytes written.
         """
         if region is None or region == {}:
-            region_result = self.determine_region(ds.coords.indexes)
+            region_result = self.determine_region(da.coords.indexes)
             match region_result:
                 case Failure(e):
                     return Result.from_failure(e)
@@ -68,9 +68,9 @@ class StoreMetadata:
                     region = r
 
         try:
-            _ = ds.to_zarr(store=self.path, region=region, consolidated=True, write_empty_chunks=False)
-            nbytes = ds.nbytes
-            del ds
+            _ = da.to_zarr(store=self.path, region=region, consolidated=True)
+            nbytes = da.nbytes
+            del da
             self.size_mb = nbytes // (1024 ** 2)
             return Result.from_value(nbytes)
         except Exception as e:
@@ -104,6 +104,7 @@ class StoreMetadata:
             >>>     coordinate_map={
             >>>         "init_time": [np.datetime64("2021-01-01T00:00:00")],
             >>>         "step": [np.timedelta64(i, "h") for i in range(48)],
+            >>>         "variable": ["temperature_sl", "downward_shortwave_radiation_flux_gl"],
             >>>         "latitude": [68.0, 69.0, 70.0],
             >>>         "longitude": [-10.0, -9.0, -8.0])
             >>>     },
@@ -116,7 +117,8 @@ class StoreMetadata:
             >>> outer.determine_region(inner)
             Success({
                 "init_time": slice(0, 1),
-                "step": slice(0, 24),
+                "step": slice(0, 24), # Notice the slice is inclusive of the last index
+                "variable": slice(0, 2),
                 "latitude": slice(0, 3),
                 "longitude": slice(0, 3),
             })
@@ -171,7 +173,7 @@ class StoreMetadata:
 
         return Success(slices)
 
-    def write_as_dummy_dataset(self, name: str) -> ResultE["StoreMetadata"]:
+    def write_as_dummy_dataarray(self, name: str) -> ResultE["StoreMetadata"]:
         """Write a blank dataset to disk based on the input coordinates.
 
         The coordinates define the dimension labels and tick values of the
@@ -233,21 +235,24 @@ class StoreMetadata:
             shape=list(shape_dict.values()),
             chunks=tuple([intermediate_chunks[k] for k in shape_dict]),
         )
-        data_vars = {name: (tuple(shape_dict.keys()), dummy_values)}
         # Ensure the coordinates are coordinates with dimensions
         # * This is done via the dict value being a tuple of (label, coordinate values)
         xr_coords = {k: (k, v) for k, v in self.coordinate_map.items()}
-        ds: xr.Dataset = xr.Dataset(data_vars=data_vars, coords=xr_coords)
+        da: xr.DataArray = xr.DataArray(
+            name=name,
+            data=dummy_values,
+            coords=xr_coords,
+        )
         try:
             # Write the dataset to a skeleton zarr file
             # * 'compute=False' enables only saving metadata
             # * 'mode="w"' overwrites any existing store
-            ds.to_zarr(store=self.path, compute=False, mode="w")
+            da.to_zarr(store=self.path, compute=False, mode="w")
             # Update the coordinates in the metadata to the actual coordinates
             # * This also ensures the zarr is readable
-            store_ds = xr.open_zarr(self.path)
-            self.coordinate_map = store_ds.coords.indexes
-            self.size_mb = store_ds.nbytes // (1024 ** 2)
+            store_da = xr.open_zarr(self.path)
+            self.coordinate_map = store_da.coords.indexes
+            self.size_mb = store_da.nbytes // (1024 ** 2)
             return Result.from_value(self)
         except Exception as e:
             return Result.from_failure(e)

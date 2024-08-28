@@ -49,7 +49,7 @@ class ModelRepository(abc.ABC):
     """
 
     @abc.abstractmethod
-    def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[..., ResultE[xr.Dataset]]]:
+    def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[..., ResultE[xr.DataArray]]]:
         """Fetch raw data files for an init time as xarray datasets.
 
         As per the typing, the return value is a generator of functions that
@@ -68,7 +68,7 @@ class ModelRepository(abc.ABC):
         >>> # Pseudocode for a model repository
         >>> class MyModelRepository(entities.ModelRepository):
         >>>     def fetch_init_data(self, it: dt.datetime) \
-        >>>         -> Iterator[Callable[..., ResultE[xr.Dataset]]]:
+        >>>         -> Iterator[Callable[..., ResultE[xr.DataArray]]]:
         >>>         '''Overrides the abstract method.'''
         >>>         for file in self.list_files(it):
         >>>             # Download and convert is some function that downloads the file
