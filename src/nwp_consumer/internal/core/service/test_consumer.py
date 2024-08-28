@@ -1,17 +1,20 @@
 import datetime as dt
+import os
 import pathlib
+import time
 import unittest
 from collections.abc import Callable, Iterator
 
 import numpy as np
 import xarray as xr
+import cProfile
+
 from joblib import delayed
 from returns.pipeline import is_successful
 from returns.result import Result, ResultE
 
 from nwp_consumer.internal.core import domain, ports
-
-from .consumer import ParallelConsumer
+from nwp_consumer.internal.core.service.consumer import ParallelConsumer
 
 
 class DummyModelRepository(ports.ModelRepository):
@@ -48,7 +51,7 @@ class DummyModelRepository(ports.ModelRepository):
 
         def gen_dataset(s: int, variable: str) -> xr.Dataset:
             """Define a generator that provides one variable at one step."""
-            return xr.Dataset({
+            ds = xr.Dataset({
                 self.metadata.name: (
                         ["init_time", "step", "variable", "latitude", "longitude"],
                         np.random.rand(1, 1, 1, 721, 1440),
@@ -58,7 +61,9 @@ class DummyModelRepository(ports.ModelRepository):
                     "init_time": [np.datetime64(it.replace(tzinfo=None), "ns")],
                     "step": [s],
                     "variable": [variable],
-                })
+            })
+            return ds
+
 
         for s in self.metadata.expected_coordinates["step"]:
             for v in self.metadata.expected_coordinates["variable"]:
@@ -84,6 +89,7 @@ class DummyZarrRepository(ports.ZarrRepository):
 
 
 class TestParallelConsumer(unittest.TestCase):
+
     def test_consume(self) -> None:
         """Test the consume method of the ParallelConsumer class."""
 
@@ -99,4 +105,4 @@ class TestParallelConsumer(unittest.TestCase):
 
         ds = xr.open_zarr(result.unwrap())
         print(ds)
-        self.assertFalse(True)
+

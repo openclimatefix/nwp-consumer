@@ -7,7 +7,7 @@ https://joblib.readthedocs.io/en/stable/auto_examples/parallel_generator.html#me
 import time
 from threading import Thread
 
-from psutil import Process
+import psutil
 
 
 class PerformanceMonitor(Thread):
@@ -33,7 +33,7 @@ class PerformanceMonitor(Thread):
 
     def get_memory(self) -> int:
         """Get memory of a process and its children."""
-        p = Process()
+        p = psutil.Process()
         memory: int = p.memory_info().rss
         for c in p.children():
             memory += c.memory_info().rss
@@ -48,9 +48,9 @@ class PerformanceMonitor(Thread):
         memory_start = self.get_memory()
         while not self.stop:
             self.memory_buffer.append(self.get_memory() - memory_start)
-            time.sleep(1)
+            time.sleep(0.2)
 
-    def join(self) -> None:
+    def join(self) -> None:  # type: ignore
         """Stop the thread."""
         self.stop = True
         self.end_time = time.time()
