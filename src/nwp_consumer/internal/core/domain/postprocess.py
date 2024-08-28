@@ -19,14 +19,7 @@ class PostProcessOptions:
     i.e. nothing occurs by default.
     """
 
-    create_variable_dimension: bool = False
-    """Whether to create a variable dimension.
-
-    Squashes all data variables into their own "variable" dimension.
-    """
-
-    rename_variables: bool = False
-    """Whether to rename variables."""
-
-    append_to_archive: AppendToArchiveOption = field(default_factory=AppendToArchiveOption.Unset)
+    append_to_archive: AppendToArchiveOption = field(
+        default_factory=lambda: AppendToArchiveOption.Unset,
+    )
     """Whether to append the init time dataset to a larger archive."""

@@ -21,7 +21,6 @@ if TYPE_CHECKING:
     import numpy as np
 
 from ._sharedtypes import LabelCoordinateDict
-from .parameters import params
 
 log = logging.getLogger("nwp-consumer")
 
@@ -68,10 +67,11 @@ class StoreMetadata:
                     region = r
 
         try:
-            ds.to_zarr(store=self.path, region=region)
-            store_ds = xr.open_zarr(self.path)
-            self.size_mb = store_ds.nbytes // (1024 ** 2)
-            return Result.from_value(ds.nbytes)
+            _ = ds.to_zarr(store=self.path, region=region, consolidated=True, write_empty_chunks=False)
+            nbytes = ds.nbytes
+            del ds
+            self.size_mb = nbytes // (1024 ** 2)
+            return Result.from_value(nbytes)
         except Exception as e:
             return Result.from_failure(e)
 
@@ -205,10 +205,10 @@ class StoreMetadata:
             - https://docs.xarray.dev/en/stable/user-guide/io.html#appending-to-existing-zarr-stores
             - https://docs.xarray.dev/en/stable/user-guide/io.html#distributed-writes
         """
-        if list(self.coordinate_map.keys())[:2] != ["init_time", "step"]:
+        if list(self.coordinate_map.keys())[:3] != ["init_time", "step", "variable"]:
             return Result.from_failure(KeyError(
-                "The first two coordinate labels must be 'init_time' and 'step'. "
-                f"Got: {list(self.coordinate_map.keys())[:2]}.",
+                "The first three coordinate labels must be ['init_time', 'step', 'variable']. "
+                f"Got: {list(self.coordinate_map.keys())[:3]}.",
             ))
         # Determine the shape of the dataset via the coordinate map
         shape_dict: dict[str, int] = {
@@ -224,7 +224,7 @@ class StoreMetadata:
             "variable": 1,
             "latitude": shape_dict.get("latitude", 400) // 4,
             "longitude": shape_dict.get("longitude", 400) // 4,
-            "values": shape_dict.get("values", 1),
+            "values": shape_dict.get("values", 100),
         }
         # Create a dask array of zeros with the shape of the dataset
         # * The values of this are ignored, only the shape and chunks are used

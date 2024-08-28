@@ -14,8 +14,7 @@ in a uniform way.
 import abc
 import datetime as dt
 import pathlib
-from collections.abc import Iterator
-from typing import Callable
+from collections.abc import Callable, Iterator
 
 import xarray as xr
 from returns.result import ResultE

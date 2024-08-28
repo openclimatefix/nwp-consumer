@@ -21,7 +21,23 @@ class NWPConsumerService(abc.ABC):
 
     @abc.abstractmethod
     def consume(self, it: dt.datetime) -> ResultE[pathlib.Path]:
-        """Consume NWP data to Zarr format for desired init time."""
+        """Consume NWP data to Zarr format for desired init time.
+
+        Where possible the implementation should be as memory-efficient as possible.
+        The designs of the repository methods also enable parallel processing within
+        the implementation.
+
+        Args:
+            it: The initialization time for which to consume data.
+
+        Returns:
+            The path to the produced Zarr store.
+
+        See Also:
+            - `ModelRepository.fetch_init_data`
+            - `StoreMetadata.write_to_region`
+            - https://joblib.readthedocs.io/en/stable/auto_examples/parallel_generator.html
+        """
         pass
 
     @abc.abstractmethod

@@ -1,5 +1,4 @@
 """Implementation of the NWP consumer service."""
-
 import datetime as dt
 import logging
 import pathlib
@@ -47,13 +46,17 @@ class ParallelConsumer(ports.NWPConsumerService):
             case Failure(e):
                 return Result.from_failure(OSError(f"Failed to create store for init time: {e}"))
             case Success(smd):
-                # Get datasets from the model repository and write to their appropriate 
+                # Get datasets from the model repository and write to their appropriate
                 # regions in the store. Due to the blank dataset and region-based writing,
                 # this can be done in parallel. See
-                # https://joblib.readthedocs.io/en/stable/auto_examples/parallel_generator.html
-                result_generator = Parallel(n_jobs=-1, return_as="generator_unordered")(
-                    self._mr.fetch_init_data(it=it),
-                )
+                #
+                # Note that increasing the parallelism increases the RAM usage.
+                result_generator = Parallel(
+                    n_jobs=1,
+                    prefer="threads",
+                    return_as="generator_unordered",
+                )(self._mr.fetch_init_data(it=it))
+                # Handle the results of the generator as they are ready
                 for ds in result_generator:
                     write_result = smd.write_to_region(ds)
                     # Fail hard if any of the writes failed
@@ -83,6 +86,7 @@ class ParallelConsumer(ports.NWPConsumerService):
                 return Result.from_failure(
                     TypeError(f"Unexpected result type: {type(create_result)}")
                 )
+
 
     def create_store_for_init_time(self, it: dt.datetime) -> ResultE[domain.StoreMetadata]:
         """Create a store for a given init time.
