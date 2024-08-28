@@ -2,6 +2,8 @@
 
 These interfaces define the signatures that *driving* actors must conform to
 in order to interact with the core.
+
+Also sometimes referred to as *primary ports*.
 """
 
 import abc
@@ -10,7 +12,7 @@ import pathlib
 
 from returns.result import ResultE
 
-from nwp_consumer.internal.core import domain
+from nwp_consumer.internal import entities
 
 
 class NWPConsumerService(abc.ABC):
@@ -41,6 +43,6 @@ class NWPConsumerService(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def postprocess(self, options: domain.PostProcessOptions) -> ResultE[str]:
+    def postprocess(self, options: entities.PostProcessOptions) -> ResultE[str]:
         """Postprocess the produced Zarr according to given options."""
         pass

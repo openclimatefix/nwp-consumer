@@ -1,17 +1,18 @@
+"""Domain entities for post-processing."""
+
+import dataclasses
 from enum import Enum
-from dataclasses import dataclass, field
 
 
-@dataclass
 class AppendToArchiveOption(str, Enum):
     """Options for appending to an archive."""
 
-    Unset = "unset"
-    Monthly = "monthly"
-    Yearly = "yearly"
+    Unset: str = "unset"
+    Monthly: str = "monthly"
+    Yearly: str = "yearly"
 
 
-@dataclass
+@dataclasses.dataclass(slots=True)
 class PostProcessOptions:
     """Options for post-processing NWP data.
 
@@ -19,7 +20,5 @@ class PostProcessOptions:
     i.e. nothing occurs by default.
     """
 
-    append_to_archive: AppendToArchiveOption = field(
-        default_factory=lambda: AppendToArchiveOption.Unset,
-    )
+    append_to_archive: AppendToArchiveOption = AppendToArchiveOption.Unset
     """Whether to append the init time dataset to a larger archive."""

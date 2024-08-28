@@ -1,7 +1,7 @@
 """NWP Consumer.
 
 Overview
-========
+--------
 
 A microservice for multi-source consumption of NWP data, storing it in a common format. Built with inspiration
 from the `Hexagonal Architecture`_ pattern, the nwp-consumer is
@@ -11,7 +11,7 @@ currently packaged with adapters for pulling and converting grib data from:
 
 Its modular nature enables straightforward extension to alternate future sources.
 
-Ubiquitous Language
+Ubiquitous language
 -------------------
 
 The following terms are used throughout the codebase and documentation. They are defined here to avoid ambiguity.
@@ -32,23 +32,23 @@ Structure
 separation between the application's business logic - it's **Core** - and the **Actors** that are external to it.
 The core of the service is split into three main components:
 
-- **Domain** - The domain classes that define the structure of the data that the service works with.
+- **Domain** - The entities classes that define the structure of the data that the service works with.
 - **Ports** - The interfaces that define how the service interacts with the outside world.
 - **Service** - The service logic that defines how the service processes' data.
 
-In this package, the core of the service is in `nwp_consumer.internal.core`,
-and the actors are in `nwp_consumer.internal.repositories`.
+In this package, the actors are in `nwp_consumer.internal.repositories`, the entities in
+`nwp_consumer.internal.entities`, and the service logic in `nwp_consumer.internal.service`.
 
-The service logic has no knowledge of the external actors, instead defining interfaces that
-the actors must implement. These are found in `nwp_consumer.internal.core.ports`.
+The business logic has no knowledge of the external actors, instead defining interfaces that
+the actors must implement. These are found in `nwp_consumer.internal.ports`.
 The actors are then responsible for implementing these interfaces, and are *dependency-injected* in at runtime.
 This allows the service to be easily tested and extended. See 'further reading' for more information.
 
-Head into `nwp_consumer.internal.core` to see the details of each of these components.
+Head into `nwp_consumer.internal` to see the details of each of these components.
 
 
-On Multidimensional Data
-------------------------
+Multidimensional data
+---------------------
 
 Tensor datasets are the primary data structure used in the consumer, which are
 characterised by their multidimensional nature. To map data points in a tensor
@@ -87,11 +87,11 @@ Further reading
 On packaging a python project using setuptools and pyproject.toml:
 
 - The official PyPA packaging guide:
-    https://packaging.python.org/.
+    https://packaging.python.org/
 - A step-by-step practical guide on the *godatadriven* blog:
     https://godatadriven.com/blog/a-practical-guide-to-setuptools-and-pyproject-toml/
 - The pyproject.toml metadata specification:
-    https://packaging.python.org/en/latest/specifications/declaring-project-metadata.
+    https://packaging.python.org/en/latest/specifications/declaring-project-metadata
 
 On hexagonal architecture:
 
@@ -101,12 +101,12 @@ On hexagonal architecture:
     https://medium.com/ssense-tech/hexagonal-architecture-there-are-always-two-sides-to-every-story-bc0780ed7d9c
 
 - Another example using Go:
-    https://medium.com/@matiasvarela/hexagonal-architecture-in-go-cfd4e436faa3.
+    https://medium.com/@matiasvarela/hexagonal-architecture-in-go-cfd4e436faa3
 
 On the directory structure:
 
 - The official PyPA discussion on src and flat layouts"
-    https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/.
+    https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/
 
 .. _Hexagonal Architecture:
     https://alistair.cockburn.us/hexagonal-architecture/
@@ -130,7 +130,3 @@ logging.basicConfig(
 
 for logger in ["numcodecs", "numexpr"]:
     logging.getLogger(logger).setLevel(logging.WARNING)
-
-log = logging.getLogger("nwp-consumer")
-
-

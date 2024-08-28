@@ -4,6 +4,8 @@ These interfaces define the signatures that *driven* actors must conform to
 in order to interact with the core. These interfaces include providers of
 NWP data (`ModelRepository`) and stores for processed data (`ZarrRepository`).
 
+Also sometimes referred to as *secondary ports*.
+
 All NWP providers use some kind of model to generate their data. This model
 can be physically based, such as ERA5, or a machine learning model, such as
 Google's GraphCast. The `ModelRepository` interface is used to abstract the
@@ -19,7 +21,7 @@ from collections.abc import Callable, Iterator
 import xarray as xr
 from returns.result import ResultE
 
-from nwp_consumer.internal.core import domain
+from nwp_consumer.internal import entities
 
 
 class ModelRepository(abc.ABC):
@@ -59,12 +61,12 @@ class ModelRepository(abc.ABC):
 
         >>> from joblib import Parallel, delayed
         >>> import xarray as xr
-        >>> import nwp_consumer.internal.core.domain as domain
+        >>> import nwp_consumer.internal.core.entities as entities
         >>> from returns.result import ResultE
         >>> import datetime as dt
         >>>
         >>> # Pseudocode for a model repository
-        >>> class MyModelRepository(domain.ModelRepository):
+        >>> class MyModelRepository(entities.ModelRepository):
         >>>     def fetch_init_data(self, it: dt.datetime) \
         >>>         -> Iterator[Callable[..., ResultE[xr.Dataset]]]:
         >>>         '''Overrides the abstract method.'''
@@ -84,7 +86,7 @@ class ModelRepository(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def metadata(self) -> domain.ModelRepositoryMetadata:
+    def metadata(self) -> entities.ModelRepositoryMetadata:
         """Metadata about the model repository."""
         pass
 
@@ -108,7 +110,7 @@ class NotificationRepository(abc.ABC):
     @abc.abstractmethod
     def notify(
             self,
-            message: domain.StoreAppendedNotification | domain.StoreCreatedNotification,
+            message: entities.StoreAppendedNotification | entities.StoreCreatedNotification,
     ) -> ResultE[str]:
         """Send a notification."""
         pass

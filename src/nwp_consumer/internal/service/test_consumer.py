@@ -1,191 +1,103 @@
 import datetime as dt
 import pathlib
 import unittest
+from collections.abc import Callable, Iterator
 
 import numpy as np
-import structlog
 import xarray as xr
+from joblib import delayed
+from returns.pipeline import is_successful
+from returns.result import Result, ResultE
 
-from nwp_consumer import internal
-from .consumer import NWPConsumerService, _cacheAsZipZarr, _mergeDatasets
-
-log = structlog.getLogger()
-
-IT = dt.datetime(2021, 1, 1, tzinfo=dt.UTC)
-FILES = ["dswrf.grib", "prate.grib", "t2m.grib"]
+from nwp_consumer.internal import entities, ports
+from nwp_consumer.internal.service.consumer import ParallelConsumer
 
 
-class DummyStorer(internal.StorageInterface):
-    def name(self) -> str:
-        return "dummy"
+class DummyModelRepository(ports.ModelRepository):
 
-    def exists(self, *, dst: pathlib.Path) -> bool:
-        return True
-
-    def store(self, *, src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:
-        return dst
-
-    def listInitTimes(self, prefix: pathlib.Path) -> list[dt.datetime]:
-        return [IT]
-
-    def copyITFolderToCache(self, *, prefix: pathlib.Path, it: dt.datetime) -> list[pathlib.Path]:
-        return [
-            pathlib.Path(internal.rawCachePath(it=it, filename=f))
-            for f in FILES
-        ]
-
-    def delete(self, *, p: pathlib.Path) -> None:
-        pass
-
-
-class DummyFileInfo(internal.FileInfoModel):
-    def __init__(self, fileName: str, initTime: dt.datetime):
-        self.f = fileName
-        self.t = initTime
-
-    def filename(self) -> str:
-        return self.f
-
-    def it(self) -> dt.datetime:
-        return self.t
-
-    def filepath(self) -> str:
-        return self.f
-
-    def variables(self) -> list[str]:
-        raise NotImplementedError()
-
-    def steps(self) -> list[int]:
-        return list(range(100))
-
-
-class DummyFetcher(internal.FetcherInterface):
-    def getInitHours(self) -> list[int]:
-        return [0, 6, 12, 18]
-
-    def datasetName(self) -> str:
-        return "dummy"
-
-    def listRawFilesForInitTime(self, *, it: dt.datetime) -> list[internal.FileInfoModel]:
-        return [DummyFileInfo(file, it) for file in FILES]
-
-    def downloadToCache(self, *, fi: internal.FileInfoModel) -> pathlib.Path:
-        return internal.rawCachePath(it=fi.it(), filename=fi.filename())
-
-    def mapCachedRaw(self, *, p: pathlib.Path) -> xr.Dataset:
-        initTime = dt.datetime.strptime(
-            p.parent.relative_to(internal.CACHE_DIR_RAW).as_posix(),
-            "%Y/%m/%d/%H%M",
-        ).replace(tzinfo=dt.UTC)
-        return xr.Dataset(
-            data_vars={
-                f"{p.stem}": (
-                    ("init_time", "step", "x", "y"),
-                    np.random.rand(1, 12, 100, 100),
-                )
-            },
-            coords={
-                "init_time": [np.datetime64(initTime)],
-                "step": range(12),
-                "x": range(100),
-                "y": range(100),
+    @property
+    def metadata(self) -> entities.ModelRepositoryMetadata:
+        """Overrides the corresponding method in the parent class."""
+        return entities.ModelRepositoryMetadata(
+            name="dummy",
+            is_archive=False,
+            is_order_based=False,
+            running_hours=[0, 6, 12, 18],
+            delay_minutes=60,
+            required_env=[],
+            optional_env={},
+            expected_coordinates={
+                "init_time": [np.datetime64("1970-01-01T00:00", "ns")],
+                "step": [
+                    np.timedelta64(np.timedelta64(h, "h"), "ns")
+                    for h in range(0, 48, 1)
+                ],
+                "variable": [
+                    entities.params.temperature_sl.name,
+                    entities.params.downward_shortwave_radiation_flux_gl.name,
+                    entities.params.cloud_cover_high.name,
+                ],
+                "latitude": np.linspace(90, -90, 721).tolist(),
+                "longitude": np.linspace(-180, 179.8, 1440).tolist(),
             },
         )
 
-    def parameterConformMap(self) -> dict[str, internal.OCFParameter]:
-        return {
-            "t2m": internal.OCFParameter.TemperatureAGL,
-        }
+    def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[[],xr.Dataset]]:
+        """Overrides the corresponding method in the parent class."""
 
-
-# ------------- Client Methods -------------- #
-
-
-class TestNWPConsumerService(unittest.TestCase):
-    service: NWPConsumerService
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        testStorer = DummyStorer()
-        testFetcher = DummyFetcher()
-
-        cls.service = NWPConsumerService(
-            fetcher=testFetcher,
-            storer=testStorer,
-            rawdir="raw",
-            zarrdir="zarr",
-        )
-
-    def test_downloadSingleInitTime(self) -> None:
-        files = self.service._downloadSingleInitTime(it=IT)
-        self.assertEqual(3, len(files))
-
-    def test_convertSingleInitTime(self) -> None:
-        files = self.service._convertSingleInitTime(it=IT)
-        self.assertEqual(1, len(files))
-
-    def test_createLatestZarr(self) -> None:
-        files = self.service.CreateLatestZarr()
-        # 1 zarr, 1 zipped zarr
-        self.assertEqual(2, len(files))
-
-
-# ------------ Static Methods ----------- #
-
-
-class TestCacheAsZipZarr(unittest.TestCase):
-    def test_createsValidZipZarr(self) -> None:
-        ds = DummyFetcher().mapCachedRaw(
-            p=pathlib.Path(f"{internal.CACHE_DIR_RAW}/2021/01/01/0000/dswrf.grib"),
-        )
-        file = _cacheAsZipZarr(ds=ds)
-        outds = xr.open_zarr(f"zip::{file.as_posix()}")
-        self.assertEqual(ds.dims, outds.dims)
-
-
-class TestMergeDatasets(unittest.TestCase):
-    def test_mergeDifferentDataVars(self) -> None:
-        """Test merging datasets with different data variables.
-
-        This targets a bug seen in merging large ICON datasets, whereby
-        two datasets with different variables and number of steps would
-        not merge correctly.
-
-        """
-        datasets = [
-            xr.Dataset(
-                data_vars={
-                    "msnswrf": (
-                        ("init_time", "step", "latitude", "longitude"),
-                        np.random.rand(1, 2, 657, 1377),
-                    ),
-                    "t2m": (
-                        ("init_time", "step", "latitude", "longitude"),
-                        np.random.rand(1, 2, 657, 1377),
-                    )
-                },
-                coords={
-                    "init_time": [np.datetime64("2021-01-01T00:00:00")],
-                    "step": [np.timedelta64(i, 's') for i in [7200, 10800]],
-                    "latitude": range(657),
-                    "longitude": range(1377),
-                },
-            ),
-            xr.Dataset(
-                data_vars={
-                    "t2m": (
-                        ("init_time", "latitude", "longitude", "step"),
-                        np.random.rand(1, 657, 1377, 1),
+        def gen_dataset(s: int, variable: str) -> xr.Dataset:
+            """Define a generator that provides one variable at one step."""
+            ds = xr.Dataset({
+                self.metadata.name: (
+                        ["init_time", "step", "variable", "latitude", "longitude"],
+                        np.random.rand(1, 1, 1, 721, 1440),
                     ),
                 },
-                coords={
-                    "init_time": [np.datetime64("2021-01-01T00:00:00")],
-                    "step": [0],
-                    "latitude": range(657),
-                    "longitude": range(1377),
-                },
-            ),
-        ]
-        # Merge the datasets
-        merged = _mergeDatasets(datasets)
+                coords=self.metadata.expected_coordinates | {
+                    "init_time": [np.datetime64(it.replace(tzinfo=None), "ns")],
+                    "step": [s],
+                    "variable": [variable],
+            })
+            return ds
 
+
+        for s in self.metadata.expected_coordinates["step"]:
+            for v in self.metadata.expected_coordinates["variable"]:
+                yield delayed(gen_dataset)(s, v)
+
+
+class DummyNotificationRepository(ports.NotificationRepository):
+
+    def notify(
+            self,
+            message: entities.StoreAppendedNotification | entities.StoreCreatedNotification,
+    ) -> ResultE[str]:
+        """Overrides the corresponding method in the parent class."""
+        print(message)
+        return Result.from_value(str(message))
+
+
+class DummyZarrRepository(ports.ZarrRepository):
+
+    def save(self, src: pathlib.Path, dst: pathlib.Path) -> ResultE[str]:
+        """Overrides the corresponding method in the parent class."""
+        return Result.from_value(str(dst))
+
+
+class TestParallelConsumer(unittest.TestCase):
+
+    def test_consume(self) -> None:
+        """Test the consume method of the ParallelConsumer class."""
+
+        test_consumer = ParallelConsumer(
+            model_repository=DummyModelRepository(),
+            notification_repository=DummyNotificationRepository(),
+            zarr_repository=DummyZarrRepository(),
+        )
+
+        result = test_consumer.consume(it=dt.datetime(2021, 1, 1, tzinfo=dt.UTC))
+
+        self.assertTrue(is_successful(result), msg=f"Error: {result}")
+
+        ds = xr.open_zarr(result.unwrap())
+        self.assertEqual(list(ds.sizes.keys()), ["init_time", "step", "variable", "latitude", "longitude"])

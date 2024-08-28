@@ -1,4 +1,4 @@
-"""Domain classes for service notifications.
+"""Domain entities for service notifications.
 
 Upon completion of the processing of a request, the service can
 deliver a notification of the result to a notification repository.
@@ -19,7 +19,7 @@ class PerformanceMetadata:
     """The memory usage of the operation in megabytes."""
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
 class StoreCreatedNotification:
     """A notification of successful store creation."""
 
@@ -33,7 +33,7 @@ class StoreCreatedNotification:
     """Metadata for the operation."""
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
 class StoreAppendedNotification:
     """A notification of successful append to a store."""
 

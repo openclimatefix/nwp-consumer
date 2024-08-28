@@ -5,15 +5,15 @@ from returns.io import IOResultE
 from returns.result import ResultE
 import numpy as np
 
-from nwp_consumer.internal.core import domain, ports
+from nwp_consumer.internal import entities, ports
 
 
 class ECMWFOpenIFS(ports.ModelRepository):
     """Repository for ECMWF OpenIFS model data."""
 
     @property
-    def metadata(self) -> domain.ModelRepositoryMetadata:
-        return domain.ModelRepositoryMetadata(
+    def metadata(self) -> entities.ModelRepositoryMetadata:
+        return entities.ModelRepositoryMetadata(
             name="ecmwf_open_ifs",
             is_archive=False,
             is_order_based=False,
@@ -28,17 +28,17 @@ class ECMWFOpenIFS(ports.ModelRepository):
             },
         )
 
-    def map_file(self, cached_file: domain.ModelFileMetadata, store_metadata: domain.StoreMetadata) -> ResultE[
-        domain.ModelFileMetadata]:
+    def map_file(self, cached_file: entities.ModelFileMetadata, store_metadata: entities.StoreMetadata) -> ResultE[
+        entities.ModelFileMetadata]:
         pass
 
-    def download_file(self, file: domain.ModelFileMetadata) -> IOResultE[domain.ModelFileMetadata]:
+    def download_file(self, file: entities.ModelFileMetadata) -> IOResultE[entities.ModelFileMetadata]:
         pass
 
-    def list_fileset(self, it: dt.datetime) -> IOResultE[list[domain.ModelFileMetadata]]:
+    def list_fileset(self, it: dt.datetime) -> IOResultE[list[entities.ModelFileMetadata]]:
 
         [
-            domain.ModelFileMetadata(
+            entities.ModelFileMetadata(
                 name=f"{it:%Y%m%d%H%M%s}-{s}h-oper-fc.grib2",
                 path=pathlib.Path(
                     "https://storage.cloud.google.com/ecmwf-open-data"

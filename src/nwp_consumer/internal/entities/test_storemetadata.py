@@ -5,10 +5,8 @@ import unittest
 import numpy as np
 from returns.result import Failure, Success
 
-from .repometadata import (
-    LabelCoordinateDict,
-    StoreMetadata,
-)
+from .repometadata import LabelCoordinateDict
+from .storemetadata import StoreMetadata
 
 
 class TestTensorDimensionMap(unittest.TestCase):
