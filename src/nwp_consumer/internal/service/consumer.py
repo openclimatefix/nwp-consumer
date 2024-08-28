@@ -1,13 +1,16 @@
 """Implementation of the NWP consumer service."""
+
 import datetime as dt
 import logging
 import pathlib
 
 import numpy as np
+import xarray as xr
 from joblib import Parallel
 from returns.result import Failure, Result, ResultE, Success
 
-from .. import domain, ports
+from nwp_consumer.internal import entities, ports
+
 from .memory import PerformanceMonitor
 
 log = logging.getLogger("nwp-consumer")
@@ -16,7 +19,7 @@ log = logging.getLogger("nwp-consumer")
 class ParallelConsumer(ports.NWPConsumerService):
     """Consumer for NWP data that uses parallel processing."""
 
-    def postprocess(self, options: domain.PostProcessOptions) -> ResultE[str]:
+    def postprocess(self, options: entities.PostProcessOptions) -> ResultE[str]:
         """Overrides the corresponding method in the parent class."""
         return Result.from_failure(NotImplementedError("Postprocessing not yet implemented"))
 
@@ -65,15 +68,29 @@ class ParallelConsumer(ports.NWPConsumerService):
                         return Result.from_failure(write_result.failure())
 
                 # TODO: Validate store
+                store_ds: xr.Dataset = xr.open_zarr(smd.path)
+                for parameter in store_ds.coords["variable"].values:
+                    if parameter not in entities.params.__slots__:
+                        log.warning(
+                            f"Cannot validate unknown parameter: {parameter}. "
+                            "Ensure the parameter has been renamed to match the entities "
+                            "parameters defined in `entities.parameters` if desired, or "
+                            "add the parameter to the entities parameters if it is new. "
+                            f"Known parameters: {entities.params.__slots__}",
+                        )
+                    else:
+                        parameter_obj = getattr(entities.params, parameter)
+                        print(parameter_obj)
+
 
                 del result_generator
                 monitor.join()
 
                 notify_result = self._nr.notify(
-                    domain.StoreCreatedNotification(
+                    entities.StoreCreatedNotification(
                         filename=smd.path.name,
                         size_mb=smd.size_mb,
-                        performance=domain.PerformanceMetadata(
+                        performance=entities.PerformanceMetadata(
                             duration_seconds=monitor.get_runtime(),
                             memory_mb=max(monitor.memory_buffer) / 1e6,
                         ),
@@ -88,7 +105,7 @@ class ParallelConsumer(ports.NWPConsumerService):
                 )
 
 
-    def create_store_for_init_time(self, it: dt.datetime) -> ResultE[domain.StoreMetadata]:
+    def create_store_for_init_time(self, it: dt.datetime) -> ResultE[entities.StoreMetadata]:
         """Create a store for a given init time.
 
         This store is used to hold the processed data for a given init time.
@@ -106,7 +123,7 @@ class ParallelConsumer(ports.NWPConsumerService):
         store_coordinates = self._mr.metadata.expected_coordinates | {
             "init_time": [np.datetime64(it.replace(tzinfo=None), "ns")],
         }
-        store_metadata: domain.StoreMetadata = domain.StoreMetadata(
+        store_metadata: entities.StoreMetadata = entities.StoreMetadata(
             coordinate_map=store_coordinates,
             path=store_path,
             size_mb=0,

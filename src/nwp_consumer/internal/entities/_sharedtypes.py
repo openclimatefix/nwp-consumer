@@ -1,4 +1,4 @@
-"""Type aliases used throughout the domain layer."""
+"""Type aliases used throughout the entities layer."""
 
 from typing import TYPE_CHECKING
 

@@ -1,4 +1,4 @@
-"""Domain model for NWP parameters.
+"""Domain entities for NWP parameters.
 
 NWP forecasts have to forecast something, and that something is the value
 of one or more parameters. Often referred to as variables (or
@@ -23,7 +23,7 @@ See Also:
 import dataclasses
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
 class ParameterLimits:
     """Class containing information about the limits of a parameter."""
 
@@ -42,7 +42,7 @@ class ParameterLimits:
     """The lower limit on the parameter value.
 
     Not an absolute minimum, but rather the minimum value that
-    the parameter can resonably be expected to take.
+    the parameter can reasonably be expected to take.
 
     As an example, the minimum temperature on Earth is -89C,
     so the lower limit for a temperature parameter should be ~ -90C.
@@ -57,7 +57,7 @@ class ParameterLimits:
     """
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
 class Parameter:
     """Class containing information about a parameter."""
 
@@ -76,10 +76,39 @@ class Parameter:
     Used in sanity and validity checking the database values.
     """
 
+    # --- Business methods --- #
 
-@dataclasses.dataclass
+    def validate_values(self, values: list[float]) -> bool:
+        """Validate a list of values against the parameter limits.
+
+        If the ratio of the number of values outside the limits to
+        the total number of values is greater than the threshold,
+        the data is considered invalid.
+
+        Args:
+            values: A list of values to validate.
+
+        Returns:
+            Bool indicating the validity of the values.
+        """
+        # TODO: This is quite expensive for large arrays
+        outside = 0
+        for value in values:
+            if value > self.limits.upper or value < self.limits.lower:
+                outside += 1
+
+        return outside / len(values) < self.limits.threshold
+
+
+@dataclasses.dataclass(slots=True)
 class Parameters:
-    """A dictionary of parameters."""
+    """Container holding parameters of interest.
+
+    The entries in this container represent the entire parameter
+    space that is workable within the nwp consumer. Any parameters
+    not in here cannot be pulled into datasets as they cannot be
+    validated.
+    """
     temperature_sl: Parameter
     """Temperature at screen level (C)."""
     downward_shortwave_radiation_flux_gl: Parameter
@@ -108,6 +137,10 @@ class Parameters:
     """Fraction of grid square covered by low-level cloud (UI)."""
     total_precipitation_rate_gl: Parameter
     """Total precipitation rate at ground level (kg/m^2/s)."""
+
+    def __getitem__(self, item: str) -> Parameter:
+        """Enable accessing field members like a dictionary."""
+        return getattr(self, item)  # type: ignore
 
 
 params = Parameters(

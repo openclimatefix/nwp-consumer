@@ -15,7 +15,7 @@ import pathlib
 from ._sharedtypes import LabelCoordinateDict
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
 class ModelRepositoryMetadata:
     """Metadata for an NWP Model repository."""
 
@@ -71,7 +71,7 @@ class ModelRepositoryMetadata:
     """
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
 class ModelFileMetadata:
     """Metadata for a raw file."""
 

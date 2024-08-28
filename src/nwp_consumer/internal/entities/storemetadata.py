@@ -12,8 +12,8 @@ import logging
 import pathlib
 from typing import TYPE_CHECKING
 
+import dask.array
 import xarray as xr
-from dask.array import zeros as dask_zeros
 from returns.result import Failure, Result, ResultE, Success
 from xarray.core.indexes import Indexes
 
@@ -21,11 +21,12 @@ if TYPE_CHECKING:
     import numpy as np
 
 from ._sharedtypes import LabelCoordinateDict
+from .parameters import params
 
 log = logging.getLogger("nwp-consumer")
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
 class StoreMetadata:
     """Metadata for a store."""
 
@@ -228,7 +229,7 @@ class StoreMetadata:
         }
         # Create a dask array of zeros with the shape of the dataset
         # * The values of this are ignored, only the shape and chunks are used
-        dummy_values = dask_zeros(
+        dummy_values = dask.array.zeros(
             shape=list(shape_dict.values()),
             chunks=tuple([intermediate_chunks[k] for k in shape_dict]),
         )
@@ -250,4 +251,7 @@ class StoreMetadata:
             return Result.from_value(self)
         except Exception as e:
             return Result.from_failure(e)
+
+
+
 

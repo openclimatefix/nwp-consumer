@@ -1,28 +1,24 @@
 import datetime as dt
-import os
 import pathlib
-import time
 import unittest
 from collections.abc import Callable, Iterator
 
 import numpy as np
 import xarray as xr
-import cProfile
-
 from joblib import delayed
 from returns.pipeline import is_successful
 from returns.result import Result, ResultE
 
-from nwp_consumer.internal.core import domain, ports
-from nwp_consumer.internal.core.service.consumer import ParallelConsumer
+from nwp_consumer.internal import entities, ports
+from nwp_consumer.internal.service.consumer import ParallelConsumer
 
 
 class DummyModelRepository(ports.ModelRepository):
 
     @property
-    def metadata(self) -> domain.ModelRepositoryMetadata:
+    def metadata(self) -> entities.ModelRepositoryMetadata:
         """Overrides the corresponding method in the parent class."""
-        return domain.ModelRepositoryMetadata(
+        return entities.ModelRepositoryMetadata(
             name="dummy",
             is_archive=False,
             is_order_based=False,
@@ -37,9 +33,9 @@ class DummyModelRepository(ports.ModelRepository):
                     for h in range(0, 48, 1)
                 ],
                 "variable": [
-                    domain.params.temperature_sl.name,
-                    domain.params.downward_shortwave_radiation_flux_gl.name,
-                    domain.params.cloud_cover_high.name,
+                    entities.params.temperature_sl.name,
+                    entities.params.downward_shortwave_radiation_flux_gl.name,
+                    entities.params.cloud_cover_high.name,
                 ],
                 "latitude": np.linspace(90, -90, 721).tolist(),
                 "longitude": np.linspace(-180, 179.8, 1440).tolist(),
@@ -74,7 +70,7 @@ class DummyNotificationRepository(ports.NotificationRepository):
 
     def notify(
             self,
-            message: domain.StoreAppendedNotification | domain.StoreCreatedNotification,
+            message: entities.StoreAppendedNotification | entities.StoreCreatedNotification,
     ) -> ResultE[str]:
         """Overrides the corresponding method in the parent class."""
         print(message)
@@ -104,5 +100,4 @@ class TestParallelConsumer(unittest.TestCase):
         self.assertTrue(is_successful(result), msg=f"Error: {result}")
 
         ds = xr.open_zarr(result.unwrap())
-        print(ds)
-
+        self.assertEqual(list(ds.sizes.keys()), ["init_time", "step", "variable", "latitude", "longitude"])
