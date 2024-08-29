@@ -5,7 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="267ca1f9-a4e4-4ca3-afe5-1b3478bd9a79" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/test_coordinates.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/test_coordinates.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/tensorstore.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/tensorstore.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/service/consumer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/service/consumer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -36,7 +38,7 @@
     "Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_determine_region.executor": "Debug",
     "Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas.executor": "Run",
     "Python tests.Python tests for service.test_consumer.TestParallelConsumer.test_consume.executor": "Run",
-    "Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume.executor": "Debug",
+    "Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume.executor": "Run",
     "Python tests.Python tests in test_consumer.py.executor": "Run",
     "Python tests.Python tests in test_repometadata.py.executor": "Debug",
     "Python tests.Python tests in test_storemetadata.py.executor": "Run",
@@ -60,7 +62,7 @@
       <recent name="$PROJECT_DIR$/src/nwp_consumer" />
     </key>
   </component>
-  <component name="RunManager" selected="Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas">
+  <component name="RunManager" selected="Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume">
     <configuration name="scratch_7" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="nwp-consumer-2" />
       <option name="ENV_FILES" value="" />
@@ -160,8 +162,8 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas" />
         <item itemvalue="Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume" />
+        <item itemvalue="Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas" />
         <item itemvalue="Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_determine_region" />
         <item itemvalue="Python.scratch_7" />
         <item itemvalue="Python tests.Python tests in test_tensorstore.py" />

@@ -8,6 +8,7 @@ This module provides a class for storing metadata about a Zarr store.
 """
 
 import dataclasses
+import datetime as dt
 import logging
 import pathlib
 
@@ -141,11 +142,17 @@ class TensorStore:
             shape=list(shape_dict.values()),
             chunks=tuple([intermediate_chunks[k] for k in shape_dict]),
         )
+        attrs: dict[str, str] = {
+            "produced_by": "nwp-consumer",
+            "produced_at": str(dt.datetime.now(tz=dt.UTC)),
+            "variables": "; ".join([f"{v.name}: {v.description}" for v in coords["variable"]]),
+        }
         # Create a DataArray object with the given coordinates and dummy values
         da: xr.DataArray = xr.DataArray(
             name=name,
             data=dummy_values,
             coords=to_pandas(coords),
+            attrs=attrs,
         )
         try:
             # Write the dataset to a skeleton zarr file
@@ -242,24 +249,20 @@ class TensorStore:
                     )
 
         # Validity check on the parameters of the store
-        for param_name in store_da.coords["variable"].values:
-            scan_result = self.scan_parameter_values(param_name=param_name)
+        for param in self.coordinate_map["variable"]:
+            scan_result: ResultE[ParameterScanResult] = self.scan_parameter_values(
+                param_name=param_name,
+            )
             match scan_result:
                 case Failure(e):
                     return Result.from_failure(e)
                 case Success(scan):
-                    if not scan.is_valid:
-                        return Result.from_failure(
-                            ValueError(
-                                f"Parameter '{param_name}' failed validation: "
-                                f"Mean value: {scan.mean}. "
-                                f"Contains nulls: {scan.has_nulls}.",
-                            ),
-                        )
+                    log.debug(f"Scanned parameter {param_name}: {scan.__repr__()}")
+                    if not scan.is_valid or scan.has_nulls:
+                        return Result.from_value(False)
 
-        return Result.from_value(False)
 
-    def scan_parameter_values(self, param_name: str) -> ResultE[ParameterScanResult]:
+    def scan_parameter_values(self, p: Parameter) -> ResultE[ParameterScanResult]:
         """Scan the values of a parameter in the store.
 
         Extracts data from the values of the given parameter in the store.
@@ -272,21 +275,19 @@ class TensorStore:
         Returns:
             A ParameterScanResult object.
         """
-        if param_name not in params.__slots__\
-                or param_name not in self.coordinate_map["variable"]:
+        if p not in self.coordinate_map["variable"]:
             return Result.from_failure(KeyError(
                 "Parameter scan failed: "
-                f"Cannot validate unknown parameter: {param_name}. "
+                f"Cannot validate unknown parameter: {p.name}. "
                 "Ensure the parameter has been renamed to match the entities "
                 "parameters defined in `entities.parameters` if desired, or "
                 "add the parameter to the entities parameters if it is new. "
-                f"Store parameters: {self.coordinate_map['variable']}. "
+                f"Store parameters: {[p.name for p in self.coordinate_map['variable']]}. "
                 f"Known parameters: {params.__slots__}",
             ))
-        param_obj: Parameter = getattr(params, param_name)
         store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")
         values: list[float] = (
-            store_da.sel(variable=param_name)
+            store_da.sel(variable=p.name)
             .to_numpy()
             .flatten()
             .tolist()
@@ -296,13 +297,13 @@ class TensorStore:
         num_null: int = 0
         for val in values:
             total += val
-            if val > param_obj.limits.upper or val < param_obj.limits.lower:
+            if val > p.limits.upper or val < p.limits.lower:
                 num_outside_limits += 1
             if val is None:
                 num_null += 1
 
         return Result.from_value(ParameterScanResult(
             mean=total / len(values),
-            is_valid=num_outside_limits / len(values) < param_obj.limits.threshold,
+            is_valid=num_outside_limits / len(values) < p.limits.threshold,
             has_nulls=num_null > 0,
         ))
