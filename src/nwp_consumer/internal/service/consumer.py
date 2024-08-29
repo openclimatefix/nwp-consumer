@@ -4,7 +4,6 @@ import datetime as dt
 import logging
 import pathlib
 
-import numpy as np
 import xarray as xr
 from joblib import Parallel
 from returns.result import Failure, Result, ResultE, Success
@@ -43,9 +42,14 @@ class ParallelConsumer(ports.NWPConsumerService):
         monitor = PerformanceMonitor()
 
         # Create a store for the init time
-        create_result = self.create_store_for_init_time(it=it)
+        create_store_result = entities.TensorStore.initialize_empty_store(
+            name=self._mr.metadata.name,
+            coords=self._mr.metadata.expected_coordinates | {
+                "init_time": [it],
+            },
+        )
 
-        match create_result:
+        match create_store_result:
             case Failure(e):
                 return Result.from_failure(OSError(f"Failed to create store for init time: {e}"))
             case Success(smd):
@@ -101,32 +105,7 @@ class ParallelConsumer(ports.NWPConsumerService):
 
             case _:
                 return Result.from_failure(
-                    TypeError(f"Unexpected result type: {type(create_result)}"),
+                    TypeError(f"Unexpected result type: {type(create_store_result)}"),
                 )
 
 
-    def create_store_for_init_time(self, it: dt.datetime) -> ResultE[entities.StoreMetadata]:
-        """Create a store for a given init time.
-
-        This store is used to hold the processed data for a given init time.
-        As such, no data is written by this function; only the metadata.
-        The shape and coordinates of the store are determined by the model repository,
-        and the 'init_time' coordinate is overwritten with the provided init time.
-
-        Args:
-            it: The init time value to specify as the coordinate
-                of the 'init_time' dimension in the store.
-        """
-        store_path = pathlib.Path(
-            f"~/.local/cache/nwp/{self._mr.metadata.name}/{it:%Y%m%d%H}.zarr",
-        )
-        store_coordinates = self._mr.metadata.expected_coordinates | {
-            "init_time": [np.datetime64(it.replace(tzinfo=None), "ns")],
-        }
-        store_metadata: entities.StoreMetadata = entities.StoreMetadata(
-            coordinate_map=store_coordinates,
-            path=store_path,
-            size_mb=0,
-        )
-        result = store_metadata.write_as_dummy_dataarray(name=self._mr.metadata.name)
-        return result

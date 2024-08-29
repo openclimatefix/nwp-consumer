@@ -12,7 +12,7 @@ import dataclasses
 import datetime as dt
 import pathlib
 
-from ._sharedtypes import LabelCoordinateDict
+from .coordinates import NWPDimensionCoordinateMap
 
 
 @dataclasses.dataclass(slots=True)
@@ -56,17 +56,17 @@ class ModelRepositoryMetadata:
     optional_env: dict[str, str]
     """Optional environment variables."""
 
-    expected_coordinates: LabelCoordinateDict
+    expected_coordinates: NWPDimensionCoordinateMap
     """The expected dimension coordinate mapping.
 
     This is a dictionary mapping dimension labels to their coordinate values,
     for a single init time dataset, e.g.
 
     >>> {
-    >>>     "init_time": [np.datetime64('2021-01-01T00:00')],
-    >>>     "step": [np.timedelta64('0h'), np.timedelta64('1h'), ...],
-    >>>     "lat": [90, 89.75, 89.5, ...],
-    >>>     "lon": [180, 179, ...],
+    >>>     "init_time": [dt.datetime(2021, 1, 1, 0, 0), ...],
+    >>>     "step": [1, 2, ...],
+    >>>     "latitude": [90, 89.75, 89.5, ...],
+    >>>     "longitude": [180, 179, ...],
     >>> }
     """
 

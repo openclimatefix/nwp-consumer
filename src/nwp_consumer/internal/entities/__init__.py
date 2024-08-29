@@ -14,7 +14,8 @@ should not contain any logic that is specific to a particular implementation.
 """
 
 from .repometadata import *
-from .storemetadata import *
+from .tensorstore import *
 from .postprocess import *
 from .notification import *
 from .parameters import *
+from .coordinates import *
