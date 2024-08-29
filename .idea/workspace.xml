@@ -5,21 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="267ca1f9-a4e4-4ca3-afe5-1b3478bd9a79" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/coordinates.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/tensorstore.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/test_coordinates.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/test_tensorstore.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/_sharedtypes.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/parameters.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/parameters.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/repometadata.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/repometadata.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/storemetadata.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/test_storemetadata.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model/ecmwf/open_ifs.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model/ecmwf/open_ifs.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/service/consumer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/service/consumer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/service/test_consumer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/service/test_consumer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/test_coordinates.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/test_coordinates.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,8 +34,9 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_determine_region.executor": "Debug",
+    "Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas.executor": "Run",
     "Python tests.Python tests for service.test_consumer.TestParallelConsumer.test_consume.executor": "Run",
-    "Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume.executor": "Run",
+    "Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume.executor": "Debug",
     "Python tests.Python tests in test_consumer.py.executor": "Run",
     "Python tests.Python tests in test_repometadata.py.executor": "Debug",
     "Python tests.Python tests in test_storemetadata.py.executor": "Run",
@@ -73,7 +60,7 @@
       <recent name="$PROJECT_DIR$/src/nwp_consumer" />
     </key>
   </component>
-  <component name="RunManager" selected="Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume">
+  <component name="RunManager" selected="Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas">
     <configuration name="scratch_7" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="nwp-consumer-2" />
       <option name="ENV_FILES" value="" />
@@ -111,18 +98,18 @@
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
-    <configuration name="Python tests for nwp_consumer.internal.service.test_consumer.TestParallelConsumer.test_consume" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+    <configuration name="Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
       <module name="nwp-consumer-2" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/nwp_consumer/internal/core" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/nwp_consumer/internal" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="_new_additionalArguments" value="&quot;&quot;" />
-      <option name="_new_target" value="&quot;nwp_consumer.internal.service.test_consumer.TestParallelConsumer.test_consume&quot;" />
+      <option name="_new_target" value="&quot;entities.test_coordinates.TestCoordinates.test_to_pandas&quot;" />
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
@@ -173,11 +160,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas" />
         <item itemvalue="Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume" />
         <item itemvalue="Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_determine_region" />
         <item itemvalue="Python.scratch_7" />
         <item itemvalue="Python tests.Python tests in test_tensorstore.py" />
-        <item itemvalue="Python tests.Python tests for nwp_consumer.internal.service.test_consumer.TestParallelConsumer.test_consume" />
       </list>
     </recent_temporary>
   </component>

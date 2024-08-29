@@ -4,7 +4,7 @@ import unittest
 
 from returns.result import Failure, Success
 
-from .coordinates import NWPDimensionCoordinateMap, determine_region, params
+from .coordinates import NWPDimensionCoordinateMap, determine_region, params, to_pandas
 
 
 class TestCoordinates(unittest.TestCase):
@@ -115,6 +115,32 @@ class TestCoordinates(unittest.TestCase):
                     self.assertTrue(isinstance(result, Failure), msg="Expected error to be returned.")
                 else:
                     self.assertEqual(result, Success(t.expected_slices))
+
+    def test_to_pandas(self) -> None:
+        coords: NWPDimensionCoordinateMap = {
+            "init_time": [dt.datetime(2021, 1, 1, i, tzinfo=dt.UTC) for i in range(0, 9, 3)],
+            "step": list(range(12)),
+            "variable": [
+                params.temperature_sl,
+                params.cloud_cover_high,
+                params.total_precipitation_rate_gl,
+            ],
+            "latitude": [60.0, 61.0, 62.0],
+            "longitude": [10.0, 11.0, 12.0],
+        }
+
+        out = to_pandas(coords)
+
+        self.assertEqual(out["init_time"].dtype, "datetime64[ns]")
+        self.assertEqual(out["step"].dtype, "timedelta64[ns]")
+        self.assertEqual(out["variable"].dtype, "object")
+        self.assertEqual(out["latitude"].dtype, "float64")
+        self.assertEqual(out["longitude"].dtype, "float64")
+
+    def test_from_pandas(self) -> None:
+        # TODO: Implement this test
+        pass
+
 
 
 if __name__ == "__main__":

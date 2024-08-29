@@ -154,7 +154,7 @@ def to_pandas(coords: NWPDimensionCoordinateMap) -> dict[str, pd.Index]:
         "step": pd.Index([
             np.timedelta64(np.timedelta64(h, "h"), "ns") for h in coords["step"]
         ]),
-        "variable": pd.Index([p.name for p in coords["variable"]], dtype=str),
+        "variable": pd.Index([p.name for p in coords["variable"]]),
     } | {
         key: pd.Index(value)
         for key, value in coords.items()
