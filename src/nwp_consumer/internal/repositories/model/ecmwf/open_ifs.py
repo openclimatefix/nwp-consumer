@@ -28,7 +28,7 @@ class ECMWFOpenIFS(ports.ModelRepository):
             },
         )
 
-    def map_file(self, cached_file: entities.ModelFileMetadata, store_metadata: entities.StoreMetadata) -> ResultE[
+    def map_file(self, cached_file: entities.ModelFileMetadata, store_metadata: entities.ITStore) -> ResultE[
         entities.ModelFileMetadata]:
         pass
 

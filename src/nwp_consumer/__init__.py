@@ -46,41 +46,6 @@ This allows the service to be easily tested and extended. See 'further reading' 
 
 Head into `nwp_consumer.internal` to see the details of each of these components.
 
-
-Multidimensional data
----------------------
-
-Tensor datasets are the primary data structure used in the consumer, which are
-characterised by their multidimensional nature. To map data points in a tensor
-back to selectable, indexable points along the dimensions of the tensor, a
-mapping is required between the integer ticks along the dimension axes and the
-values those ticks represent.
-
-For instance, consider a 2D tensor containing x, y data of the lap number vs lap
-time of a runner running around a racetrack. The point (2, 4) in the tensor
-would represent the runner's time at lap 2. In this instance the indexes are
-2 and 4, but to get back to the values they represent, a mapping of the
-dimension indices to coordinate values must be consulted, for instance:
-
-x index: [0, 1, 2, 3, 4]
-x value: [lap 1, lap 2, lap 3, lap 4, lap 5]
-
-y index: [0, 1, 2, 3, 4]
-y value: [0 seconds, 30 seconds, 60 seconds, 90 seconds, 120 seconds]
-
-Now by consulting the mapping we can see that the point (2, 4) in the tensor
-represents that the runners time at lap three was 60 seconds.
-
-
-This formalisation is useful also in the reverse case: inserting data into a
-tensor according to its dimension coordinate values, and not its indexes.
-This is the primary use case for these maps in this service.
-
-It is far more likely that for incoming data the coordinate values along the
-dimension axes are known, as opposed to the indexes they represent. This mapping
-then enables insertion that data into the correct regions of the tensor, which is
-a key part of parallel writing.
-
 Further reading
 ---------------
 

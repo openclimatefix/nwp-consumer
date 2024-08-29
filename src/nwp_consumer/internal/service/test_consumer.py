@@ -27,15 +27,12 @@ class DummyModelRepository(ports.ModelRepository):
             required_env=[],
             optional_env={},
             expected_coordinates={
-                "init_time": [np.datetime64("1970-01-01T00:00", "ns")],
-                "step": [
-                    np.timedelta64(np.timedelta64(h, "h"), "ns")
-                    for h in range(0, 48, 1)
-                ],
+                "init_time": [dt.datetime(2021, 1, 1, 0, 0, tzinfo=dt.UTC)],
+                "step": list(range(0, 48, 1)),
                 "variable": [
-                    entities.params.temperature_sl.name,
-                    entities.params.downward_shortwave_radiation_flux_gl.name,
-                    entities.params.cloud_cover_high.name,
+                    entities.params.temperature_sl,
+                    entities.params.downward_shortwave_radiation_flux_gl,
+                    entities.params.cloud_cover_high,
                 ],
                 "latitude": np.linspace(90, -90, 721).tolist(),
                 "longitude": np.linspace(-180, 179.8, 1440).tolist(),
@@ -51,7 +48,7 @@ class DummyModelRepository(ports.ModelRepository):
                 name=self.metadata.name,
                 dims=["init_time", "step", "variable", "latitude", "longitude"],
                 data=np.random.rand(1, 1, 1, 721, 1440),
-                coords=self.metadata.expected_coordinates | {
+                coords=entities.to_pandas(self.metadata.expected_coordinates) | {
                     "init_time": [np.datetime64(it.replace(tzinfo=None), "ns")],
                     "step": [s],
                     "variable": [variable],
@@ -62,7 +59,7 @@ class DummyModelRepository(ports.ModelRepository):
 
         for s in self.metadata.expected_coordinates["step"]:
             for v in self.metadata.expected_coordinates["variable"]:
-                yield delayed(gen_dataset)(s, v)
+                yield delayed(gen_dataset)(s, v.name)
 
 
 class DummyNotificationRepository(ports.NotificationRepository):
@@ -98,7 +95,7 @@ class TestParallelConsumer(unittest.TestCase):
 
         self.assertTrue(is_successful(result), msg=f"Error: {result}")
 
-        da = xr.open_dataarray(result.unwrap(), engine="zarr")
+        da: xr.DataArray = xr.open_dataarray(result.unwrap(), engine="zarr")
         print(da)
         self.assertEqual(
             list(da.sizes.keys()),

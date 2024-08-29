@@ -57,7 +57,7 @@ class ParameterLimits:
     """
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(slots=True, frozen=True)
 class Parameter:
     """Class containing information about a parameter."""
 
@@ -76,28 +76,10 @@ class Parameter:
     Used in sanity and validity checking the database values.
     """
 
-    # --- Business methods --- #
+    def __str__(self) -> str:
+        """String representation of the parameter."""
+        return self.name
 
-    def validate_values(self, values: list[float]) -> bool:
-        """Validate a list of values against the parameter limits.
-
-        If the ratio of the number of values outside the limits to
-        the total number of values is greater than the threshold,
-        the data is considered invalid.
-
-        Args:
-            values: A list of values to validate.
-
-        Returns:
-            Bool indicating the validity of the values.
-        """
-        # TODO: This is quite expensive for large arrays
-        outside = 0
-        for value in values:
-            if value > self.limits.upper or value < self.limits.lower:
-                outside += 1
-
-        return outside / len(values) < self.limits.threshold
 
 
 @dataclasses.dataclass(slots=True)
@@ -138,7 +120,7 @@ class Parameters:
     total_precipitation_rate_gl: Parameter
     """Total precipitation rate at ground level (kg/m^2/s)."""
 
-    def __getitem__(self, item: str) -> Parameter:
+    def get(self, item: str) -> Parameter:
         """Enable accessing field members like a dictionary."""
         return getattr(self, item)  # type: ignore
 
