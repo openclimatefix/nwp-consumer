@@ -79,8 +79,8 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
             name="ceda_metoffice_global_17km",
             is_archive=True,
             is_order_based=False,
-            running_hours=[0, 6, 12, 18],
-            delay_minutes=480,
+            running_hours=[0, 12],  # 6 and 18 exist, but are lacking variables
+            delay_minutes=(60 * 24 * 7) + (60 * 12),  # 7.5 days
             required_env=["CEDA_FTP_USER", "CEDA_FTP_PASS"],
             optional_env={},
             expected_coordinates={

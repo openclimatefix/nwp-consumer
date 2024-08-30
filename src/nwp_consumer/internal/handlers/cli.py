@@ -4,6 +4,8 @@ import argparse
 import datetime as dt
 import logging
 
+from returns.result import Failure, Success
+
 from nwp_consumer.internal import ports
 
 log = logging.getLogger("nwp-consumer")
@@ -34,23 +36,21 @@ class CLIHandler:
 
         return parser
 
-    def handle_consume(self) -> None:
-        """Handle the consume command."""
-        result = self._consumer_usecase.consume()
-        if result.is_failure:
-            log.error(f"Failed to consume NWP data: {result.failure()}")
-            exit(1)
-        else:
-            log.info("Successfully consumed NWP data.")
-            exit(0)
-
     def run(self) -> None:
         """Run the CLI handler."""
         args = self.parser.parse_args()
-        if args.command == "consume":
-            self.handle_consume()
-        else:
-            log.error(f"Unknown command: {args.command}")
-            self.parser.print_help()
-            exit(1)
+        match args.command:
+            case "consume":
+                result = self._consumer_usecase.consume()
 
+                match result:
+                    case Failure(e):
+                        log.error(f"Failed to consume NWP data: {e}")
+                        exit(1)
+                    case Success(path):
+                        log.info(f"Successfully consumed NWP data: {path.as_posix()}")
+                        exit(0)
+            case _:
+                log.error(f"Unknown command: {args.command}")
+                self.parser.print_help()
+                exit(1)

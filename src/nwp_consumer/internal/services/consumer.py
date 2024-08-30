@@ -65,20 +65,20 @@ class ConsumerService(ports.ConsumerUseCase):
                 # this can be done in parallel. See
                 #
                 # Note that increasing the parallelism increases the RAM usage.
-                result_generator = Parallel(
+                da_result_generator = Parallel(
                     n_jobs=1,
                     prefer="threads",
                     return_as="generator_unordered",
                 )(self._mr.fetch_init_data(it=it))
                 # Handle the results of the generator as they are ready
-                for ds in result_generator:
-                    write_result = tensor_store.write_to_region(ds)
+                for da_result in da_result_generator:
+                    write_result = da_result.bind(tensor_store.write_to_region)
                     # Fail hard if any of the writes failed
                     # * TODO: Consider just how hard we want to fail in this instance
                     if isinstance(write_result, Failure):
                         return Result.from_failure(write_result.failure())
 
-                del result_generator
+                del da_result_generator
                 # TODO: Validation is very memory intensive
                 # TODO: Possible to iterator over data array values?
                 #validation_result = tensor_store.validate_store()
