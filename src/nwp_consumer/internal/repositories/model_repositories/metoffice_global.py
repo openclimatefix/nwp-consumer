@@ -36,6 +36,10 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
 
     def __init__(self) -> None:
         """Create a new instance."""
+        if all(k not in os.environ for k in self.metadata.required_env):
+            raise ValueError(
+                f"Missing required environment variables: {self.metadata.required_env}",
+            )
         username: str = urllib.parse.quote(os.environ["CEDA_FTP_USER"])
         password: str = urllib.parse.quote(os.environ["CEDA_FTP_PASS"])
 
@@ -106,7 +110,11 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
             A ResultE containing the xarray dataset.
         """
         log.debug("Sending request to CEDA FTP server for: '%s'", url)
-        response = urllib.request.urlopen(self._url_auth + url)  # noqa: S310
+        try:
+            response = urllib.request.urlopen(self._url_auth + url)  # noqa: S310
+        except Exception as e:
+            return Result.from_failure(OSError(f"Error fetching {url}: {e}"))
+
 
         local_path: pathlib.Path = pathlib.Path(
             f"~/.local/cache/nwp/{self.metadata.name}/raw",

@@ -23,5 +23,5 @@ This module contains implementations for the following driven actors:
 - Model - `nwp_consumer.internal.handlers.model_repositories`
 """
 
-from model_repositories import *
-from notification_repositories import *
+from .model_repositories import *
+from .notification_repositories import *

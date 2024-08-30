@@ -5,7 +5,6 @@ import datetime as dt
 import logging
 
 from nwp_consumer.internal import ports
-from nwp_consumer.internal.repositories import model_repositories
 
 log = logging.getLogger("nwp-consumer")
 
@@ -32,12 +31,6 @@ class CLIHandler:
             type=dt.datetime.fromisoformat,
             required=False,
         )
-        consume_command.add_argument(
-            "--source", "-s",
-            help="Source of the NWP data",
-            type=str,
-            choices=["mo-global"],
-        )
 
         return parser
 
@@ -46,8 +39,10 @@ class CLIHandler:
         result = self._consumer_usecase.consume()
         if result.is_failure:
             log.error(f"Failed to consume NWP data: {result.failure()}")
+            exit(1)
         else:
             log.info("Successfully consumed NWP data.")
+            exit(0)
 
     def run(self) -> None:
         """Run the CLI handler."""
@@ -58,3 +53,4 @@ class CLIHandler:
             log.error(f"Unknown command: {args.command}")
             self.parser.print_help()
             exit(1)
+
