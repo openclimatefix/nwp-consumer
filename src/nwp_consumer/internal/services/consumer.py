@@ -1,4 +1,4 @@
-"""Implementation of the NWP consumer service."""
+"""Implementation of the NWP consumer services."""
 
 import datetime as dt
 import logging
@@ -10,7 +10,7 @@ from returns.result import Failure, Result, ResultE, Success
 
 from nwp_consumer.internal import entities, ports
 
-from .memory import PerformanceMonitor
+from ._performance import PerformanceMonitor
 
 if TYPE_CHECKING:
     from ..entities import TensorStore
@@ -18,12 +18,13 @@ if TYPE_CHECKING:
 log = logging.getLogger("nwp-consumer")
 
 
-class ParallelConsumer(ports.NWPConsumerService):
-    """Consumer for NWP data that uses parallel processing."""
+class ConsumerService(ports.ConsumerUseCase):
+    """Service implementation of the consumer use case.
 
-    def postprocess(self, options: entities.PostProcessOptions) -> ResultE[str]:
-        """Overrides the corresponding method in the parent class."""
-        return Result.from_failure(NotImplementedError("Postprocessing not yet implemented"))
+    This services contains the business logic required to enact
+    the consumer use case. It is responsible for consuming NWP data
+    and writing it to a Zarr store.
+    """
 
     _mr: ports.ModelRepository
     _zr: ports.ZarrRepository
@@ -40,9 +41,12 @@ class ParallelConsumer(ports.NWPConsumerService):
         self._zr = zarr_repository
         self._nr = notification_repository
 
-    def consume(self, it: dt.datetime) -> ResultE[pathlib.Path]:
+    def consume(self, it: dt.datetime | None = None) -> ResultE[pathlib.Path]:
         """Overrides the corresponding method in the parent class."""
         monitor = PerformanceMonitor()
+
+        if it is None:
+            it = self._mr.metadata.determine_latest_it_from(dt.datetime.now(tz=dt.UTC))
 
         # Create a store for the init time
         create_store_result: ResultE[TensorStore] = entities.TensorStore.initialize_empty_store(
@@ -56,7 +60,7 @@ class ParallelConsumer(ports.NWPConsumerService):
             case Failure(e):
                 return Result.from_failure(OSError(f"Failed to create store for init time: {e}"))
             case Success(tensor_store):
-                # Get datasets from the model repository and write to their appropriate
+                # Get datasets from the model_repositories repository and write to their appropriate
                 # regions in the store. Due to the blank dataset and region-based writing,
                 # this can be done in parallel. See
                 #
@@ -103,5 +107,9 @@ class ParallelConsumer(ports.NWPConsumerService):
                 return Result.from_failure(
                     TypeError(f"Unexpected result type: {type(create_store_result)}"),
                 )
+
+    def postprocess(self, options: entities.PostProcessOptions) -> ResultE[str]:
+        """Overrides the corresponding method in the parent class."""
+        return Result.from_failure(NotImplementedError("Postprocessing not yet implemented"))
 
 

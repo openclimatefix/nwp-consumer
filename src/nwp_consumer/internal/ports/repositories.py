@@ -6,8 +6,8 @@ NWP data (`ModelRepository`) and stores for processed data (`ZarrRepository`).
 
 Also sometimes referred to as *secondary ports*.
 
-All NWP providers use some kind of model to generate their data. This model
-can be physically based, such as ERA5, or a machine learning model, such as
+All NWP providers use some kind of model_repositories to generate their data. This model_repositories
+can be physically based, such as ERA5, or a machine learning model_repositories, such as
 Google's GraphCast. The `ModelRepository` interface is used to abstract the
 differences between these models, allowing the core to interact with them
 in a uniform way.
@@ -65,7 +65,7 @@ class ModelRepository(abc.ABC):
         >>> from returns.result import ResultE
         >>> import datetime as dt
         >>>
-        >>> # Pseudocode for a model repository
+        >>> # Pseudocode for a model_repositories repository
         >>> class MyModelRepository(entities.ModelRepository):
         >>>     def fetch_init_data(self, it: dt.datetime) \
         >>>         -> Iterator[Callable[..., ResultE[xr.DataArray]]]:
@@ -87,7 +87,7 @@ class ModelRepository(abc.ABC):
     @property
     @abc.abstractmethod
     def metadata(self) -> entities.ModelRepositoryMetadata:
-        """Metadata about the model repository."""
+        """Metadata about the model_repositories repository."""
         pass
 
 
@@ -104,7 +104,7 @@ class NotificationRepository(abc.ABC):
     """Interface for a repository that sends notifications.
 
     Adaptors for this port enable sending notifications to
-    a desired notification channel.
+    a desired notification_repositories channel.
     """
 
     @abc.abstractmethod
@@ -112,5 +112,5 @@ class NotificationRepository(abc.ABC):
             self,
             message: entities.StoreAppendedNotification | entities.StoreCreatedNotification,
     ) -> ResultE[str]:
-        """Send a notification."""
+        """Send a notification_repositories."""
         pass

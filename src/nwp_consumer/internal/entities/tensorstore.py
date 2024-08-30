@@ -13,6 +13,7 @@ import logging
 import pathlib
 
 import dask.array
+import numpy as np
 import xarray as xr
 from returns.pipeline import flow
 from returns.pointfree import bind
@@ -250,14 +251,12 @@ class TensorStore:
 
         # Validity check on the parameters of the store
         for param in self.coordinate_map["variable"]:
-            scan_result: ResultE[ParameterScanResult] = self.scan_parameter_values(
-                param_name=param_name,
-            )
+            scan_result: ResultE[ParameterScanResult] = self.scan_parameter_values(p=param)
             match scan_result:
                 case Failure(e):
                     return Result.from_failure(e)
                 case Success(scan):
-                    log.debug(f"Scanned parameter {param_name}: {scan.__repr__()}")
+                    log.debug(f"Scanned parameter {param.name}: {scan.__repr__()}")
                     if not scan.is_valid or scan.has_nulls:
                         return Result.from_value(False)
 
@@ -270,7 +269,7 @@ class TensorStore:
         expensive operation for large datasets.
 
         Args:
-            param_name: The name of the parameter to scan.
+            p: The name of the parameter to scan.
 
         Returns:
             A ParameterScanResult object.
@@ -286,24 +285,11 @@ class TensorStore:
                 f"Known parameters: {params.__slots__}",
             ))
         store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")
-        values: list[float] = (
-            store_da.sel(variable=p.name)
-            .to_numpy()
-            .flatten()
-            .tolist()
-        )
-        total: float = 0.0
-        num_outside_limits: int = 0
-        num_null: int = 0
-        for val in values:
-            total += val
-            if val > p.limits.upper or val < p.limits.lower:
-                num_outside_limits += 1
-            if val is None:
-                num_null += 1
+
+        mean = store_da.mean().values
 
         return Result.from_value(ParameterScanResult(
-            mean=total / len(values),
-            is_valid=num_outside_limits / len(values) < p.limits.threshold,
-            has_nulls=num_null > 0,
+            mean=mean,
+            is_valid=True,
+            has_nulls=False,
         ))

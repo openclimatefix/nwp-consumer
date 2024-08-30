@@ -5,9 +5,30 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="267ca1f9-a4e4-4ca3-afe5-1b3478bd9a79" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/test_repometadata.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/handlers/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/handlers/cli.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/handlers/test_cli.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model_repositories/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model_repositories/metoffice_global.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/repometadata.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/repometadata.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/tensorstore.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/tensorstore.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/service/consumer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/service/consumer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/test_coordinates.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/test_coordinates.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/ports/repositories.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/ports/repositories.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/ports/services.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/ports/services.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model/ecmwf/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/cmd/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model/ecmwf/open_ifs.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/notification/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/notification_repositories/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/notification/stdout.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/notification_repositories/stdout.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/service/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/services/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/service/consumer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/services/consumer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/service/memory.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/services/_performance.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/service/test_consumer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/services/test_consumer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,7 +58,11 @@
   "keyToString": {
     "Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_determine_region.executor": "Debug",
     "Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas.executor": "Run",
+    "Python tests.Python tests for entities.test_repometadata.TestModelRepositoryMetadata.executor": "Run",
+    "Python tests.Python tests for entities.test_repometadata.TestModelRepositoryMetadata.test_determine_latest_it_from.executor": "Debug",
+    "Python tests.Python tests for handlers.test_cli.TestCLIHandler.test_parser.executor": "Run",
     "Python tests.Python tests for service.test_consumer.TestParallelConsumer.test_consume.executor": "Run",
+    "Python tests.Python tests for test_consumer.TestParallelConsumer.test__determine_latest_it_from.executor": "Run",
     "Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume.executor": "Run",
     "Python tests.Python tests in test_consumer.py.executor": "Run",
     "Python tests.Python tests in test_repometadata.py.executor": "Debug",
@@ -62,30 +87,8 @@
       <recent name="$PROJECT_DIR$/src/nwp_consumer" />
     </key>
   </component>
-  <component name="RunManager" selected="Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume">
-    <configuration name="scratch_7" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="nwp-consumer-2" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$APPLICATION_CONFIG_DIR$/scratches" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$APPLICATION_CONFIG_DIR$/scratches/scratch_7.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="Python tests for entities.test_coordinates.TestCoordinates.test_determine_region" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+  <component name="RunManager" selected="Python tests.Python tests for handlers.test_cli.TestCLIHandler.test_parser">
+    <configuration name="Python tests for entities.test_repometadata.TestModelRepositoryMetadata" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
       <module name="nwp-consumer-2" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -96,11 +99,11 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="_new_additionalArguments" value="&quot;&quot;" />
-      <option name="_new_target" value="&quot;entities.test_coordinates.TestCoordinates.test_determine_region&quot;" />
+      <option name="_new_target" value="&quot;entities.test_repometadata.TestModelRepositoryMetadata&quot;" />
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
-    <configuration name="Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+    <configuration name="Python tests for entities.test_repometadata.TestModelRepositoryMetadata.test_determine_latest_it_from" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
       <module name="nwp-consumer-2" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -111,7 +114,22 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="_new_additionalArguments" value="&quot;&quot;" />
-      <option name="_new_target" value="&quot;entities.test_coordinates.TestCoordinates.test_to_pandas&quot;" />
+      <option name="_new_target" value="&quot;entities.test_repometadata.TestModelRepositoryMetadata.test_determine_latest_it_from&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Python tests for handlers.test_cli.TestCLIHandler.test_parser" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+      <module name="nwp-consumer-2" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/nwp_consumer/internal" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;handlers.test_cli.TestCLIHandler.test_parser&quot;" />
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
@@ -130,43 +148,43 @@
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
-    <configuration name="Python tests for test_consumer.TestParallelConsumer.test_consume" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+    <configuration name="Python tests for nwp_consumer.internal.services.test_consumer.TestParallelConsumer" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
       <module name="nwp-consumer-2" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/nwp_consumer/internal/service" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/nwp_consumer/internal/services" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="_new_additionalArguments" value="&quot;&quot;" />
-      <option name="_new_target" value="&quot;test_consumer.TestParallelConsumer.test_consume&quot;" />
+      <option name="_new_target" value="&quot;nwp_consumer.internal.services.test_consumer.TestParallelConsumer&quot;" />
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
-    <configuration name="Python tests in test_tensorstore.py" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+    <configuration name="Python tests for nwp_consumer.internal.services.test_consumer.TestParallelConsumer.test_consume" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
       <module name="nwp-consumer-2" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/nwp_consumer/internal" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/nwp_consumer/internal/services" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="_new_additionalArguments" value="&quot;&quot;" />
-      <option name="_new_target" value="&quot;$PROJECT_DIR$/src/nwp_consumer/internal/entities/test_tensorstore.py&quot;" />
-      <option name="_new_targetType" value="&quot;PATH&quot;" />
+      <option name="_new_target" value="&quot;nwp_consumer.internal.services.test_consumer.TestParallelConsumer.test_consume&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume" />
-        <item itemvalue="Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas" />
-        <item itemvalue="Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_determine_region" />
-        <item itemvalue="Python.scratch_7" />
-        <item itemvalue="Python tests.Python tests in test_tensorstore.py" />
+        <item itemvalue="Python tests.Python tests for handlers.test_cli.TestCLIHandler.test_parser" />
+        <item itemvalue="Python tests.Python tests for entities.test_repometadata.TestModelRepositoryMetadata" />
+        <item itemvalue="Python tests.Python tests for entities.test_repometadata.TestModelRepositoryMetadata.test_determine_latest_it_from" />
+        <item itemvalue="Python tests.Python tests for nwp_consumer.internal.services.test_consumer.TestParallelConsumer" />
+        <item itemvalue="Python tests.Python tests for nwp_consumer.internal.services.test_consumer.TestParallelConsumer.test_consume" />
       </list>
     </recent_temporary>
   </component>

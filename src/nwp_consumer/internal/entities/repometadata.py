@@ -70,6 +70,22 @@ class ModelRepositoryMetadata:
     >>> }
     """
 
+    def determine_latest_it_from(self, t: dt.datetime) -> dt.datetime:
+        """Determine the latest available initialization time from a given time.
+
+        Args:
+            t: The time from which to determine the latest initialization time.
+
+        Returns:
+            The latest available initialization time prior to the given time.
+        """
+        it = t.replace(minute=0, second=0, microsecond=0) \
+             - dt.timedelta(minutes=self.delay_minutes)
+        while it.hour not in self.running_hours:
+            it -= dt.timedelta(hours=1)
+
+        return it
+
 
 @dataclasses.dataclass(slots=True)
 class ModelFileMetadata:

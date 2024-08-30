@@ -12,7 +12,7 @@ class TestCoordinates(unittest.TestCase):
     def test_determine_region(self) -> None:
 
         @dataclasses.dataclass
-        class TestContainer:
+        class TestCase:
             name: str
             inner: NWPDimensionCoordinateMap
             expected_slices: dict[str, slice]
@@ -31,7 +31,7 @@ class TestCoordinates(unittest.TestCase):
         }
 
         tests = [
-            TestContainer(
+            TestCase(
                 name="basic_subset",
                 inner={
                     "init_time": outer["init_time"][:1],
@@ -49,7 +49,7 @@ class TestCoordinates(unittest.TestCase):
                 },
                 should_error=False,
             ),
-            TestContainer(
+            TestCase(
                 name="subset_with_multiple_span",
                 inner={
                     "init_time": [
@@ -70,7 +70,7 @@ class TestCoordinates(unittest.TestCase):
                 },
                 should_error=False,
             ),
-            TestContainer(
+            TestCase(
                 name="subset_with_non_contiguous_values",
                 inner={
                     "init_time": outer["init_time"][:1],
@@ -82,7 +82,7 @@ class TestCoordinates(unittest.TestCase):
                 expected_slices={},
                 should_error=True,
             ),
-            TestContainer(
+            TestCase(
                 name="not_a_subset",
                 inner={
                     "init_time": outer["init_time"][:1],
@@ -94,7 +94,7 @@ class TestCoordinates(unittest.TestCase):
                 expected_slices={},
                 should_error=True,
             ),
-            TestContainer(
+            TestCase(
                 name="different_dimensions",
                 inner={
                     "init_time": outer["init_time"][:1],

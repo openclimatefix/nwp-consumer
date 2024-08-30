@@ -10,7 +10,7 @@ from returns.pipeline import is_successful
 from returns.result import Result, ResultE
 
 from nwp_consumer.internal import entities, ports
-from nwp_consumer.internal.service.consumer import ParallelConsumer
+from nwp_consumer.internal.services.consumer import ConsumerService
 
 
 class DummyModelRepository(ports.ModelRepository):
@@ -85,7 +85,7 @@ class TestParallelConsumer(unittest.TestCase):
     def test_consume(self) -> None:
         """Test the consume method of the ParallelConsumer class."""
 
-        test_consumer = ParallelConsumer(
+        test_consumer = ConsumerService(
             model_repository=DummyModelRepository(),
             notification_repository=DummyNotificationRepository(),
             zarr_repository=DummyZarrRepository(),
@@ -96,8 +96,9 @@ class TestParallelConsumer(unittest.TestCase):
         self.assertTrue(is_successful(result), msg=f"Error: {result}")
 
         da: xr.DataArray = xr.open_dataarray(result.unwrap(), engine="zarr")
-        print(da)
+
         self.assertEqual(
             list(da.sizes.keys()),
             ["init_time", "step", "variable", "latitude", "longitude"],
         )
+

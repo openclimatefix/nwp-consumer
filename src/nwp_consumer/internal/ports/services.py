@@ -15,14 +15,16 @@ from returns.result import ResultE
 from nwp_consumer.internal import entities
 
 
-class NWPConsumerService(abc.ABC):
-    """Interface for a service that consumes NWP data.
+class ConsumerUseCase(abc.ABC):
+    """Interface for the consumer use case.
 
-    Defines the business-critical methods that an NWP service must implement.
+    Defines the business-critical methods for the following use case:
+
+    'A user should be able to consume NWP data for a given initialization time.'
     """
 
     @abc.abstractmethod
-    def consume(self, it: dt.datetime) -> ResultE[pathlib.Path]:
+    def consume(self, it: dt.datetime | None = None) -> ResultE[pathlib.Path]:
         """Consume NWP data to Zarr format for desired init time.
 
         Where possible the implementation should be as memory-efficient as possible.
@@ -31,6 +33,7 @@ class NWPConsumerService(abc.ABC):
 
         Args:
             it: The initialization time for which to consume data.
+                If None, the latest available forecast should be consumed.
 
         Returns:
             The path to the produced Zarr store.
