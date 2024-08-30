@@ -1,2 +1,2 @@
 [console_scripts]
-nwp-consumer = nwp_consumer.cmd.main:main
+nwp-consumer-metoffice-global = nwp_consumer.cmd.main:ceda_metoffice_entrypoint

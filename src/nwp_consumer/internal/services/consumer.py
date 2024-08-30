@@ -108,6 +108,7 @@ class ConsumerService(ports.ConsumerUseCase):
                     TypeError(f"Unexpected result type: {type(create_store_result)}"),
                 )
 
+
     def postprocess(self, options: entities.PostProcessOptions) -> ResultE[str]:
         """Overrides the corresponding method in the parent class."""
         return Result.from_failure(NotImplementedError("Postprocessing not yet implemented"))

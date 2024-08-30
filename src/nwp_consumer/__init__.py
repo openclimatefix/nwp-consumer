@@ -93,5 +93,5 @@ logging.basicConfig(
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
 
-for logger in ["numcodecs", "numexpr"]:
+for logger in ["numcodecs", "numexpr", "cfgrib"]:
     logging.getLogger(logger).setLevel(logging.WARNING)

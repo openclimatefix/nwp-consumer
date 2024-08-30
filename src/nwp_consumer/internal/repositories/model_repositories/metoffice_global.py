@@ -85,8 +85,14 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
                 "variable": [
                     entities.params.downward_shortwave_radiation_flux_gl,
                 ],
-                "latitude": np.arange(90, -90, -0.156).tolist(),
-                "longitude": np.arange(-45, 316, 0.234).tolist(),
+                "latitude": [
+                    float(f"{lat:.4f}")
+                    for lat in np.arange(-89.856, 89.856 + 0.156, 0.156)
+                ],
+                "longitude": [
+                    float(f"{lon:.4f}")
+                    for lon in np.arange(-45, 315.09 + 0.234, 0.234)
+                ],
             },
         )
 

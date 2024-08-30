@@ -40,6 +40,7 @@ from typing import NotRequired, TypedDict, cast
 
 import numpy as np
 import pandas as pd
+import pytz
 from returns.result import Result, ResultE
 
 from .parameters import Parameter, params
@@ -107,17 +108,45 @@ class NWPDimensionCoordinateMap(TypedDict):
             return Result.from_failure(
                 ValueError(
                     f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
-                    "as the 'variable' index contains unknown parameters. "
+                    "as the 'variable' dimension contains unknown parameters. "
                     f"Got: {pd_indexes['variable'].to_list()}",
                     f"Known parameters: {params.__slots__}",
                     "Ensure the parameter names match the entities parameters defined in "
                     "`entities.parameters.params`.",
                 ),
             )
-        temp_dict = {key: value.to_list() for key, value in pd_indexes.items()}
-        temp_dict["init_time"] = [ts.to_pydatetime() for ts in temp_dict["init_time"]]
-        temp_dict["step"] = [np.timedelta64(ts, "h").astype(int) for ts in temp_dict["step"]]
-        temp_dict["variable"] = [params.get(param) for param in temp_dict["variable"]]
+
+        # Convert the pandas Index objects to lists of the appropriate types
+        temp_dict = {}
+        for key, value in pd_indexes.items():
+            match key:
+                case "init_time":
+                    # NOTE: The timezone information is stripped from the datetime objects
+                    # as numpy cannot handle timezone-aware datetime objects. As such, it
+                    # must be added back in when converting to a datetime object.
+                    temp_dict[key] = [
+                        ts.to_pydatetime().replace(tzinfo=dt.UTC)
+                        for ts in value.to_list()
+                    ]
+                case "step":
+                    temp_dict[key] = [
+                        np.timedelta64(ts, "h").astype(int)
+                        for ts in value.to_list()
+                    ]
+                case "variable":
+                    temp_dict[key] = [params.get(param) for param in value.to_list()]
+                case "latitude" | "longitude":
+                    # NOTE: For latitude and longitude values, we round to 4 decimal places
+                    # to avoid floating point precision issues when comparing values.
+                    # It is important to note that this places a limit on the precision
+                    # of the latitude and longitude values that can be stored in the map.
+                    # 4 decimal places corresponds to a precision of ~11m at the equator.
+                    temp_dict[key] = [float(f"{lat:.4f}") for lat in value.to_list()]
+                case _:
+                    return Result.from_failure(KeyError(
+                        f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
+                        f"as an unknown key was encountered: {key}",
+                    ))
 
         try:
             out_dict: NWPDimensionCoordinateMap = cast(NWPDimensionCoordinateMap, temp_dict)
@@ -140,7 +169,7 @@ def to_pandas(coords: NWPDimensionCoordinateMap) -> dict[str, pd.Index]:
     to a pandas Index object. However, there are some caveats involving
     the time-centric dimensions:
 
-    - XArray will compain if any of the numpy time types have any precision
+    - XArray will complain if any of the numpy time types have any precision
       other than nanoseconds, so care is taken to convert all time types to
       np.timedelta64['ns'] or np.datetime64['ns'] as appropriate.
     - Similarly, numpy can't handle timezone-aware datetime objects, so
@@ -149,7 +178,8 @@ def to_pandas(coords: NWPDimensionCoordinateMap) -> dict[str, pd.Index]:
     """
     out_dict = {
         "init_time": pd.Index([
-            np.datetime64(t.replace(tzinfo=None), "ns") for t in coords["init_time"]
+            np.datetime64(t.astimezone(pytz.utc).replace(tzinfo=None), "ns")
+            for t in coords["init_time"]
         ]),
         "step": pd.Index([
             np.timedelta64(np.timedelta64(h, "h"), "ns") for h in coords["step"]
@@ -236,13 +266,16 @@ def determine_region(
         else:
             outer_dim_coords = outer[inner_dim_label]
         if not set(inner_dim_coords).issubset(set(outer_dim_coords)):
+            diff_coords = list(set(inner_dim_coords).difference(set(outer_dim_coords)))
+            first_diff_index: int = inner_dim_coords.index(diff_coords[0])
             return Result.from_failure(
                 ValueError(
-                    f"Coordinate values for dimension <{inner_dim_label}> not all present "
+                    f"Coordinate values for dimension '{inner_dim_label}' not all present "
                     "within outer dimension map. The inner map must be entirely contained "
                     "within the outer map along every dimension. "
-                    "Got differing coordinate values: "
-                    f"{set(inner_dim_coords) ^ set(outer_dim_coords)}.",
+                    f"Got: {len(diff_coords)}/{len(outer_dim_coords)} differing coordinate values. "
+                    f"First differing value: '{diff_coords[0]}' (inner[{first_diff_index}]) != "
+                    f"'{outer_dim_coords[first_diff_index]}' (outer[{first_diff_index}]).",
                 ),
             )
 
