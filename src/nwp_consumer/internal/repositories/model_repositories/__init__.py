@@ -1,1 +1,1 @@
-from .metoffice_global import MetOfficeGlobalModelRepository
+from .metoffice_global import CedaMetOfficeGlobalModelRepository
