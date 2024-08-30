@@ -1,7 +1,7 @@
 # --- PROJECT CONFIGURATION --- #
 
 [build-system]
-requires = ["setuptools>=67", "wheel", "setuptools-git-versioning>=1.13.3"]
+requires = ["setuptools>=67", "wheel", "setuptools-git-versioning>=2.0,<3"]
 build-backend = "setuptools.build_meta"
 
 # Metadata (see https://peps.python.org/pep-0621/)
@@ -46,7 +46,7 @@ dev = [
 ]
 
 [project.scripts]
-nwp-consumer = "nwp_consumer.cmd.main:main" # Set the entrypoint for the CLI
+nwp-consumer-metoffice-global = "nwp_consumer.cmd.main:ceda_metoffice_entrypoint"
 
 [project.urls]
 repository = "https://github.com/openclimatefix/nwp-consumer"
@@ -68,6 +68,7 @@ pythonVersion = "3.12"
 # * See https://mypy.readthedocs.io/en/stable/index.html
 [tool.mypy]
 python_version = "3.12"
+dmypy = true
 strict = true
 warn_unreachable = true
 warn_return_any = true

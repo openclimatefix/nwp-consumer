@@ -28,21 +28,21 @@ The assumption is made that every piece of NWP forecast data has both an associa
 Structure
 ---------
 
-`nwp-consumer` is structured following principles from the hexagonal architecture pattern. In brief, this means a clear
+The code is structured following principles from the hexagonal architecture pattern. In brief, this means a clear
 separation between the application's business logic - it's **Core** - and the **Actors** that are external to it.
-The core of the service is split into three main components:
+The core of the services is split into three main components:
 
-- **Domain** - The entities classes that define the structure of the data that the service works with.
-- **Ports** - The interfaces that define how the service interacts with the outside world.
-- **Service** - The service logic that defines how the service processes' data.
+- **Domain** - The entities classes that define the structure of the data that the services works with.
+- **Ports** - The interfaces that define how the services interacts with the outside world.
+- **Service** - The services logic that defines how the services processes' data.
 
 In this package, the actors are in `nwp_consumer.internal.repositories`, the entities in
-`nwp_consumer.internal.entities`, and the service logic in `nwp_consumer.internal.service`.
+`nwp_consumer.internal.entities`, and the services logic in `nwp_consumer.internal.services`.
 
 The business logic has no knowledge of the external actors, instead defining interfaces that
 the actors must implement. These are found in `nwp_consumer.internal.ports`.
 The actors are then responsible for implementing these interfaces, and are *dependency-injected* in at runtime.
-This allows the service to be easily tested and extended. See 'further reading' for more information.
+This allows the services to be easily tested and extended. See 'further reading' for more information.
 
 Head into `nwp_consumer.internal` to see the details of each of these components.
 
@@ -93,5 +93,5 @@ logging.basicConfig(
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
 
-for logger in ["numcodecs", "numexpr"]:
+for logger in ["numcodecs", "numexpr", "cfgrib"]:
     logging.getLogger(logger).setLevel(logging.WARNING)

@@ -56,6 +56,13 @@ class ModelRepositoryMetadata:
     optional_env: dict[str, str]
     """Optional environment variables."""
 
+    max_connections: int
+    """The maximum number of simultaneous connections allowed to the model repository.
+
+    This determines the maximum level of concurrency that can be achieved when
+    downloading data from the repository.
+    """
+
     expected_coordinates: NWPDimensionCoordinateMap
     """The expected dimension coordinate mapping.
 
@@ -70,6 +77,40 @@ class ModelRepositoryMetadata:
     >>> }
     """
 
+    def determine_latest_it_from(self, t: dt.datetime) -> dt.datetime:
+        """Determine the latest available initialization time from a given time.
+
+        Args:
+            t: The time from which to determine the latest initialization time.
+
+        Returns:
+            The latest available initialization time prior to the given time.
+        """
+        it = t.replace(minute=0, second=0, microsecond=0) \
+             - dt.timedelta(minutes=self.delay_minutes)
+        while it.hour not in self.running_hours:
+            it -= dt.timedelta(hours=1)
+
+        return it
+
+    def __str__(self) -> str:
+        """Return a pretty-printed string representation of the metadata."""
+        pretty: str = "\n".join((
+            f"Model: {self.name} ({'archive' if self.is_archive else 'live/rolling'} dataset.)",
+            f"\truns at: {self.running_hours} hours (available after {self.delay_minutes} minute delay)",
+            "\tCoordinates:",
+            "\n".join(f"\t\t{dim}: {vals}"
+                      if len(vals) < 5
+                      else f"\t\t{dim}: {vals[:3]} ... {vals[-3:]}"
+                      for dim, vals in self.expected_coordinates.items()
+            ),
+            "Environment variables:",
+            "\tRequired:",
+            "\n".join(f"\t\t{var}" for var in self.required_env),
+            "\tOptional:",
+            "\n".join(f"\t\t{var}={val}" for var, val in self.optional_env.items()),
+        ))
+        return pretty
 
 @dataclasses.dataclass(slots=True)
 class ModelFileMetadata:

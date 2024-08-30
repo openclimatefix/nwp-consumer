@@ -1,5 +1,7 @@
 """Struct definitions for domain entities.
 
+These define data objects and behaviours that are used in the services core.
+
 Domain Entities
 ---------------
 

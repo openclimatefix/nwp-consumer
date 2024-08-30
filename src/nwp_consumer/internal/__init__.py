@@ -1,9 +1,9 @@
-"""Internal workings of the service.
+"""Internal workings of the services.
 
 Why have an internal package?
 -----------------------------
 
-This package is meant to be run as a service, either via a binary or a container image.
+This package is meant to be run as a services, either via a binary or a container image.
 However, the code can still be used as a library, and a user could import the modules
 from this package and use them in their own code.
 

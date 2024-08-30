@@ -5,9 +5,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="267ca1f9-a4e4-4ca3-afe5-1b3478bd9a79" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/TODO.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/coordinates.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/coordinates.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/tensorstore.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/tensorstore.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/service/consumer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/service/consumer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/ports/services.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/ports/services.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model_repositories/metoffice_global.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model_repositories/metoffice_global.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/notification_repositories/stdout.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/notification_repositories/stdout.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/services/consumer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/services/consumer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/services/test_consumer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/services/test_consumer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -33,37 +42,46 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_determine_region.executor": "Debug",
-    "Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas.executor": "Run",
-    "Python tests.Python tests for service.test_consumer.TestParallelConsumer.test_consume.executor": "Run",
-    "Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume.executor": "Run",
-    "Python tests.Python tests in test_consumer.py.executor": "Run",
-    "Python tests.Python tests in test_repometadata.py.executor": "Debug",
-    "Python tests.Python tests in test_storemetadata.py.executor": "Run",
-    "Python tests.Python tests in test_tensor.py.executor": "Run",
-    "Python.consumer.executor": "Run",
-    "Python.scratch_7.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "main",
-    "settings.editor.selected.configurable": "com.leinardi.pycharm.mypy.MypyConfigurable"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_determine_region.executor&quot;: &quot;Debug&quot;,
+    &quot;Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for entities.test_repometadata.TestModelRepositoryMetadata.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for entities.test_repometadata.TestModelRepositoryMetadata.test_determine_latest_it_from.executor&quot;: &quot;Debug&quot;,
+    &quot;Python tests.Python tests for handlers.test_cli.TestCLIHandler.test_parser.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for internal.repositories.model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.test__download_and_convert.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.test__download_and_convert.executor&quot;: &quot;Debug&quot;,
+    &quot;Python tests.Python tests for service.test_consumer.TestParallelConsumer.test_consume.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for test_consumer.TestParallelConsumer.test__determine_latest_it_from.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for test_integration.TestIntegration.test_ceda_metoffice_global_model.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests in test_consumer.py.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests in test_repometadata.py.executor&quot;: &quot;Debug&quot;,
+    &quot;Python tests.Python tests in test_storemetadata.py.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests in test_tensor.py.executor&quot;: &quot;Run&quot;,
+    &quot;Python.consumer.executor&quot;: &quot;Run&quot;,
+    &quot;Python.scratch_1.executor&quot;: &quot;Run&quot;,
+    &quot;Python.scratch_7.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;debugger.dataViews.python.type.renderers&quot;
   },
-  "keyToStringList": {
-    "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
-      "Python"
+  &quot;keyToStringList&quot;: {
+    &quot;com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File&quot;: [
+      &quot;Python&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/src/nwp_consumer/internal" />
       <recent name="$PROJECT_DIR$/src/nwp_consumer" />
     </key>
   </component>
-  <component name="RunManager" selected="Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume">
-    <configuration name="scratch_7" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+  <component name="RunManager" selected="Python.scratch_1">
+    <configuration name="scratch_1" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="nwp-consumer-2" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -76,7 +94,7 @@
       <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$APPLICATION_CONFIG_DIR$/scratches/scratch_7.py" />
+      <option name="SCRIPT_NAME" value="$APPLICATION_CONFIG_DIR$/scratches/scratch_1.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -85,7 +103,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="Python tests for entities.test_coordinates.TestCoordinates.test_determine_region" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+    <configuration name="Python tests for handlers.test_cli.TestCLIHandler.test_parser" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
       <module name="nwp-consumer-2" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -96,37 +114,56 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="_new_additionalArguments" value="&quot;&quot;" />
-      <option name="_new_target" value="&quot;entities.test_coordinates.TestCoordinates.test_determine_region&quot;" />
+      <option name="_new_target" value="&quot;handlers.test_cli.TestCLIHandler.test_parser&quot;" />
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
-    <configuration name="Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+    <configuration name="Python tests for internal.repositories.model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.test__download_and_convert" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
       <module name="nwp-consumer-2" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/nwp_consumer/internal" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/nwp_consumer" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="_new_additionalArguments" value="&quot;&quot;" />
-      <option name="_new_target" value="&quot;entities.test_coordinates.TestCoordinates.test_to_pandas&quot;" />
+      <option name="_new_target" value="&quot;internal.repositories.model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.test__download_and_convert&quot;" />
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
-    <configuration name="Python tests for nwp_consumer.internal.service.test_consumer.TestParallelConsumer.test_consume" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+    <configuration name="Python tests for model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
       <module name="nwp-consumer-2" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/nwp_consumer/internal/service" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/nwp_consumer/internal/repositories" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="_new_additionalArguments" value="&quot;&quot;" />
-      <option name="_new_target" value="&quot;nwp_consumer.internal.service.test_consumer.TestParallelConsumer.test_consume&quot;" />
+      <option name="_new_target" value="&quot;model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Python tests for model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.test__download_and_convert" type="tests" factoryName="Autodetect" nameIsGenerated="true">
+      <module name="nwp-consumer-2" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="CEDA_FTP_USER" value="scotton" />
+        <env name="CEDA_FTP_PASS" value="B^]&lt;&quot;uDn&quot;3dR" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/nwp_consumer/internal/repositories" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.test__download_and_convert&quot;" />
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
@@ -136,7 +173,7 @@
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/nwp_consumer/internal/service" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/nwp_consumer/internal/services" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
@@ -145,35 +182,39 @@
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
-    <configuration name="Python tests in test_tensorstore.py" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+    <configuration name="Python tests for test_integration.TestIntegration.test_ceda_metoffice_global_model" type="tests" factoryName="Autodetect" nameIsGenerated="true">
       <module name="nwp-consumer-2" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="CEDA_FTP_USER" value="scotton" />
+        <env name="CEDA_FTP_PASS" value="B^]&lt;&quot;uDn&quot;3dR" />
+      </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/nwp_consumer/internal" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/test_integration" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="_new_additionalArguments" value="&quot;&quot;" />
-      <option name="_new_target" value="&quot;$PROJECT_DIR$/src/nwp_consumer/internal/entities/test_tensorstore.py&quot;" />
-      <option name="_new_targetType" value="&quot;PATH&quot;" />
+      <option name="_new_target" value="&quot;test_integration.TestIntegration.test_ceda_metoffice_global_model&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.scratch_1" />
+        <item itemvalue="Python tests.Python tests for internal.repositories.model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.test__download_and_convert" />
+        <item itemvalue="Python tests.Python tests for model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository" />
         <item itemvalue="Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume" />
-        <item itemvalue="Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas" />
-        <item itemvalue="Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_determine_region" />
-        <item itemvalue="Python.scratch_7" />
-        <item itemvalue="Python tests.Python tests in test_tensorstore.py" />
+        <item itemvalue="Python tests.Python tests for handlers.test_cli.TestCLIHandler.test_parser" />
       </list>
     </recent_temporary>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-abccbe9d933a-ba05f1cad1b1-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-242.20224.428" />
+        <option value="bundled-python-sdk-98f27166c754-ba05f1cad1b1-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-242.21829.153" />
       </set>
     </attachedChunks>
   </component>
@@ -187,5 +228,16 @@
       <updated>1724227291641</updated>
     </task>
     <servers />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/nwp_consumer/internal/entities/coordinates.py</url>
+          <line>275</line>
+          <option name="timeStamp" value="50" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>
