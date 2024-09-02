@@ -99,8 +99,6 @@ class Parameters:
     """Downward longwave radiation flux at ground level (W/m^2)."""
     relative_humidity_sl: Parameter
     """Relative humidity at screen level (%)."""
-    visibility_sl: Parameter
-    """Visibility at screen level (m)."""
     wind_u_component_10m: Parameter
     """U component of wind at 10m above ground level (m/s)."""
     wind_v_component_10m: Parameter
@@ -117,12 +115,20 @@ class Parameters:
     """Fraction of grid square covered by medium-level cloud (UI)."""
     cloud_cover_low: Parameter
     """Fraction of grid square covered by low-level cloud (UI)."""
+    cloud_cover_total: Parameter
+    """Fraction of grid square covered by any cloud (UI)."""
     total_precipitation_rate_gl: Parameter
     """Total precipitation rate at ground level (kg/m^2/s)."""
+    visibility_sl: Parameter
+    """Visibility at screen level (m)."""
 
     def get(self, item: str) -> Parameter:
         """Enable accessing field members like a dictionary."""
         return getattr(self, item)  # type: ignore
+
+    def names(self) -> list[str]:
+        """Return a list of parameter names."""
+        return [f.name for f in dataclasses.fields(self)]
 
 
 params = Parameters(
@@ -219,6 +225,14 @@ params = Parameters(
         description="Fraction of grid square covered by low-level cloud. "
             "Defined as the ratio of the area of the grid square covered by low-level "
             "(<2km) cloud to the square's total area.",
+        units="UI",
+        limits=ParameterLimits(upper=1, lower=0),
+    ),
+    cloud_cover_total=Parameter(
+        name="cloud_cover_total",
+        description="Fraction of grid square covered by any cloud. "
+            "Defined as the ratio of the area of the grid square covered by any "
+            "cloud to the square's total area.",
         units="UI",
         limits=ParameterLimits(upper=1, lower=0),
     ),

@@ -86,6 +86,24 @@ class ModelRepositoryMetadata:
 
         return it
 
+    def __str__(self) -> str:
+        """Return a pretty-printed string representation of the metadata."""
+        pretty: str = "\n".join((
+            f"Model: {self.name} ({'archive' if self.is_archive else 'live/rolling'} dataset.)",
+            f"\truns at: {self.running_hours} hours (available after {self.delay_minutes} minute delay)",
+            "\tCoordinates:",
+            "\n".join(f"\t\t{dim}: {vals}"
+                      if len(vals) < 5
+                      else f"\t\t{dim}: {vals[:3]} ... {vals[-3:]}"
+                      for dim, vals in self.expected_coordinates.items()
+            ),
+            "Environment variables:",
+            "\tRequired:",
+            "\n".join(f"\t\t{var}" for var in self.required_env),
+            "\tOptional:",
+            "\n".join(f"\t\t{var}={val}" for var, val in self.optional_env.items()),
+        ))
+        return pretty
 
 @dataclasses.dataclass(slots=True)
 class ModelFileMetadata:

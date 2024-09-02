@@ -282,7 +282,7 @@ class TensorStore:
                 "parameters defined in `entities.parameters` if desired, or "
                 "add the parameter to the entities parameters if it is new. "
                 f"Store parameters: {[p.name for p in self.coordinate_map['variable']]}. "
-                f"Known parameters: {params.__slots__}",
+                f"Known parameters: {params.names()}",
             ))
         store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")
 

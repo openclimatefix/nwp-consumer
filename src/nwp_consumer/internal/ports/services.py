@@ -24,6 +24,11 @@ class ConsumerUseCase(abc.ABC):
     """
 
     @abc.abstractmethod
+    def info(self) -> str:
+        """Return information about the model repository."""
+        pass
+
+    @abc.abstractmethod
     def consume(self, it: dt.datetime | None = None) -> ResultE[pathlib.Path]:
         """Consume NWP data to Zarr format for desired init time.
 

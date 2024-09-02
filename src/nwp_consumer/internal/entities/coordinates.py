@@ -35,6 +35,7 @@ then enables insertion that data into the correct regions of the tensor, which i
 a key part of parallel writing.
 """
 
+import dataclasses
 import datetime as dt
 from typing import NotRequired, TypedDict, cast
 
@@ -104,13 +105,14 @@ class NWPDimensionCoordinateMap(TypedDict):
                     f"Got: {pd_indexes.keys()}",
                 ),
             )
-        if not all(param in params.__slots__ for param in pd_indexes["variable"].to_list()):
+        if not all(param in params.names() for param in pd_indexes["variable"].to_list()):
+            unknown_params: list[str] = list(
+                set(pd_indexes["variable"].to_list()).difference(set(params.names())),
+            )
             return Result.from_failure(
                 ValueError(
                     f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
-                    "as the 'variable' dimension contains unknown parameters. "
-                    f"Got: {pd_indexes['variable'].to_list()}",
-                    f"Known parameters: {params.__slots__}",
+                    f"as the 'variable' dimension contains unknown parameters: {unknown_params}",
                     "Ensure the parameter names match the entities parameters defined in "
                     "`entities.parameters.params`.",
                 ),

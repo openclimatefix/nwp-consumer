@@ -47,6 +47,7 @@ class ConsumerService(ports.ConsumerUseCase):
 
         if it is None:
             it = self._mr.metadata.determine_latest_it_from(dt.datetime.now(tz=dt.UTC))
+        log.info(f"Consuming data from {self._mr.metadata.name} for {it:%Y-%m-%d %H:%M}")
 
         # Create a store for the init time
         create_store_result: ResultE[TensorStore] = entities.TensorStore.initialize_empty_store(
@@ -66,7 +67,7 @@ class ConsumerService(ports.ConsumerUseCase):
                 #
                 # Note that increasing the parallelism increases the RAM usage.
                 da_result_generator = Parallel(
-                    n_jobs=1,
+                    n_jobs=4,
                     prefer="threads",
                     return_as="generator_unordered",
                 )(self._mr.fetch_init_data(it=it))
@@ -112,5 +113,9 @@ class ConsumerService(ports.ConsumerUseCase):
     def postprocess(self, options: entities.PostProcessOptions) -> ResultE[str]:
         """Overrides the corresponding method in the parent class."""
         return Result.from_failure(NotImplementedError("Postprocessing not yet implemented"))
+
+    def info(self) -> str:
+        """Overrides the corresponding method in the parent class."""
+        return str(self._mr.metadata)
 
 

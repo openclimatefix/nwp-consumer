@@ -56,8 +56,8 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
             "snow_depth",
             "temperature_1_5m",
             "total_cloud",
-            "total_precipitation_rate",
-            "visibility",
+            # "total_precipitation_rate", Exists, but only has 3 hourly steps
+            "visibility_1_5m",
             "wind_u_10m",
             "wind_v_10m",
         ]
@@ -88,6 +88,16 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
                 "step": list(range(0, 48, 1)),
                 "variable": [
                     entities.params.downward_shortwave_radiation_flux_gl,
+                    entities.params.cloud_cover_total,
+                    entities.params.cloud_cover_high,
+                    entities.params.cloud_cover_low,
+                    entities.params.cloud_cover_medium,
+                    entities.params.relative_humidity_sl,
+                    entities.params.snow_depth_gl,
+                    entities.params.temperature_sl,
+                    entities.params.wind_u_component_10m,
+                    entities.params.wind_v_component_10m,
+                    entities.params.visibility_sl,
                 ],
                 "latitude": [
                     float(f"{lat:.4f}")
@@ -115,7 +125,6 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
         except Exception as e:
             return Result.from_failure(OSError(f"Error fetching {url}: {e}"))
 
-
         local_path: pathlib.Path = pathlib.Path(
             f"~/.local/cache/nwp/{self.metadata.name}/raw",
         ) / url.split("/")[-1]
@@ -128,29 +137,84 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
                     for chunk in iter(lambda: response.read(16 * 1024), b""):
                         f.write(chunk)
                         f.flush()
+                log.debug(
+                    "Downloaded %s to %s (%s bytes)",
+                    url, local_path, local_path.stat().st_size,
+                )
             except Exception as e:
                 return Result.from_failure(OSError(
-                    f"Error saving {url} to {local_path}: {e}",
+                    f"Error saving '{url}' to '{local_path}': {e}",
                 ))
 
         try:
-            da = xr.open_dataset(local_path, engine="cfgrib")
-            da = (
-                da.sel(step=[np.timedelta64(i, "h") for i in range(0, 48, 1)])
-                .expand_dims(dim={"init_time": [da["time"].values]})
+            data = xr.open_dataset(local_path, engine="cfgrib")
+        except Exception as e:
+            return Result.from_failure(OSError(
+                f"Error opening '{local_path}' as xarray Dataset: {e}",
+            ))
+        try:
+            data = (
+                data.sel(step=[np.timedelta64(i, "h") for i in range(0, 48, 1)])
+                .expand_dims(dim={"init_time": [data["time"].values]})
                 .drop_vars(
                     names=[
-                        v for v in da.coords.variables
+                        v for v in data.coords.variables
                         if v not in ["init_time", "step", "latitude", "longitude"]
                     ],
                 )
-                .rename_vars({"swavr": "downward_shortwave_radiation_flux_gl"})
+                .pipe(_rename_vars)
                 .to_dataarray(name=self.metadata.name)
                 .transpose("init_time", "step", "variable", "latitude", "longitude")
             )
         except Exception as e:
-            return Result.from_failure(OSError(
-                f"Error converting {url} to xarray dataset: {e}",
+            return Result.from_failure(ValueError(
+                f"Error processing {local_path} to DataArray: {e}",
             ))
 
-        return Result.from_value(da)
+        return Result.from_value(data)
+
+def _rename_vars(ds: xr.Dataset) -> xr.Dataset:
+    """Rename variables to match the expected names.
+
+    To find the names as they exist in the raw files, the following
+    function was used:
+
+    >>> import xarray as xr
+    >>> import urllib.request
+    >>> import datetime as dt
+    >>>
+    >>> def download_single_file(parameter: str) -> xr.Dataset:
+    >>>     it = dt.datetime(2021, 1, 1, 0, tzinfo=dt.UTC)
+    >>>     base_url = "ftp://<user>:<pass>@ftp.ceda.ac.uk/badc/ukmo-nwp/data/global-grib"
+    >>>     url = f"{base_url}/{it:%Y/%m/%d}/" + \
+    >>>           f"{it:%Y%m%d%H}_WSGlobal17km_{parameter}_AreaA_000144.grib"
+    >>>     response = urllib.request.urlopen(url)
+    >>>     with open("/tmp/mo-global/test.grib", "wb") as f:
+    >>>         for chunk in iter(lambda: response.read(16 * 1024), b""):
+    >>>             f.write(chunk)
+    >>>             f.flush()
+    >>>
+    >>>     ds = xr.open_dataset("/tmp/mo-global/test.grib", engine="cfgrib")
+    >>>     return ds
+
+    Args:
+        ds: The xarray dataset to rename.
+    """
+    rename_map: dict[str, str] = {
+        "t": entities.params.temperature_sl.name,
+        "r": entities.params.relative_humidity_sl.name,
+        "sf": entities.params.snow_depth_gl.name,
+        "prate": entities.params.total_precipitation_rate_gl.name,
+        "swavr": entities.params.downward_shortwave_radiation_flux_gl.name,
+        "u": entities.params.wind_u_component_10m.name,
+        "v": entities.params.wind_v_component_10m.name,
+        "vis": entities.params.visibility_sl.name,
+        "hcc": entities.params.cloud_cover_high.name,
+        "lcc": entities.params.cloud_cover_low.name,
+        "mcc": entities.params.cloud_cover_medium.name,
+    }
+    for old, new in rename_map.items():
+        if old in ds.data_vars:
+            ds = ds.rename_vars({old: new})
+    return ds
+
