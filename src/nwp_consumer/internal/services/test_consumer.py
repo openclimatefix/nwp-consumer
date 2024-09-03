@@ -26,39 +26,39 @@ class DummyModelRepository(ports.ModelRepository):
             delay_minutes=60,
             required_env=[],
             optional_env={},
-            expected_coordinates={
-                "init_time": [dt.datetime(2021, 1, 1, 0, 0, tzinfo=dt.UTC)],
-                "step": list(range(0, 48, 1)),
-                "variable": [
+            expected_coordinates=entities.NWPDimensionCoordinateMap(
+                init_time=[dt.datetime(2021, 1, 1, 0, 0, tzinfo=dt.UTC)],
+                step=list(range(0, 48, 1)),
+                variable=[
                     entities.params.temperature_sl,
                     entities.params.downward_shortwave_radiation_flux_gl,
                     entities.params.cloud_cover_high,
                 ],
-                "latitude": np.linspace(90, -90, 721).tolist(),
-                "longitude": np.linspace(-180, 179.8, 1440).tolist(),
-            },
+                latitude=np.linspace(90, -90, 721).tolist(),
+                longitude=np.linspace(-180, 179.8, 1440).tolist(),
+            ),
         )
 
-    def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[[],xr.DataArray]]:
+    def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[[], ResultE[xr.DataArray]]]:
         """Overrides the corresponding method in the parent class."""
 
-        def gen_dataset(s: int, variable: str) -> xr.DataArray:
+        def gen_dataset(s: int, variable: str) -> ResultE[xr.DataArray]:
             """Define a generator that provides one variable at one step."""
             da = xr.DataArray(
                 name=self.metadata.name,
                 dims=["init_time", "step", "variable", "latitude", "longitude"],
                 data=np.random.rand(1, 1, 1, 721, 1440),
-                coords=entities.to_pandas(self.metadata.expected_coordinates) | {
+                coords=self.metadata.expected_coordinates.to_pandas() | {
                     "init_time": [np.datetime64(it.replace(tzinfo=None), "ns")],
                     "step": [s],
                     "variable": [variable],
                 },
             )
-            return da
+            return Result.from_value(da)
 
 
-        for s in self.metadata.expected_coordinates["step"]:
-            for v in self.metadata.expected_coordinates["variable"]:
+        for s in self.metadata.expected_coordinates.step:
+            for v in self.metadata.expected_coordinates.variable:
                 yield delayed(gen_dataset)(s, v.name)
 
 

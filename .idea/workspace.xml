@@ -4,7 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="267ca1f9-a4e4-4ca3-afe5-1b3478bd9a79" name="Changes" comment="" />
+    <list default="true" id="267ca1f9-a4e4-4ca3-afe5-1b3478bd9a79" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/coordinates.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/coordinates.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/test_coordinates.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/test_coordinates.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -221,7 +225,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/nwp_consumer/internal/entities/coordinates.py</url>
-          <line>272</line>
+          <line>260</line>
           <option name="timeStamp" value="50" />
         </line-breakpoint>
       </breakpoints>

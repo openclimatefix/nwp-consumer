@@ -1,5 +1,6 @@
 """Implementation of the NWP consumer services."""
 
+import dataclasses
 import datetime as dt
 import logging
 import pathlib
@@ -31,10 +32,10 @@ class ConsumerService(ports.ConsumerUseCase):
     _nr: ports.NotificationRepository
 
     def __init__(
-            self,
-            model_repository: ports.ModelRepository,
-            zarr_repository: ports.ZarrRepository,
-            notification_repository: ports.NotificationRepository,
+        self,
+        model_repository: ports.ModelRepository,
+        zarr_repository: ports.ZarrRepository,
+        notification_repository: ports.NotificationRepository,
     ) -> None:
         """Create a new instance."""
         self._mr = model_repository
@@ -52,9 +53,7 @@ class ConsumerService(ports.ConsumerUseCase):
         # Create a store for the init time
         create_store_result: ResultE[TensorStore] = entities.TensorStore.initialize_empty_store(
             name=self._mr.metadata.name,
-            coords=self._mr.metadata.expected_coordinates | {
-                "init_time": [it],
-            },
+            coords=dataclasses.replace(self._mr.metadata.expected_coordinates, init_time=[it]),
         )
 
         match create_store_result:
@@ -85,8 +84,8 @@ class ConsumerService(ports.ConsumerUseCase):
                 del da_result_generator
                 # TODO: Validation is very memory intensive
                 # TODO: Possible to iterator over data array values?
-                #validation_result = tensor_store.validate_store()
-                #if isinstance(validation_result, Failure):
+                # validation_result = tensor_store.validate_store()
+                # if isinstance(validation_result, Failure):
                 #    log.error("Validation failed for store")
                 #    return Result.from_failure(validation_result.failure())
 
@@ -103,7 +102,7 @@ class ConsumerService(ports.ConsumerUseCase):
                 )
                 if isinstance(notify_result, Failure):
                     log.error("Failed to notify of store creation")
-                    return notify_result.failure()
+                    return notify_result
 
                 return Result.from_value(tensor_store.path)
 
@@ -112,7 +111,6 @@ class ConsumerService(ports.ConsumerUseCase):
                     TypeError(f"Unexpected result type: {type(create_store_result)}"),
                 )
 
-
     def postprocess(self, options: entities.PostProcessOptions) -> ResultE[str]:
         """Overrides the corresponding method in the parent class."""
         return Result.from_failure(NotImplementedError("Postprocessing not yet implemented"))
@@ -120,5 +118,3 @@ class ConsumerService(ports.ConsumerUseCase):
     def info(self) -> str:
         """Overrides the corresponding method in the parent class."""
         return str(self._mr.metadata)
-
-

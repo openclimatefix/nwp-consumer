@@ -13,16 +13,14 @@ import logging
 import pathlib
 
 import dask.array
-import numpy as np
 import xarray as xr
-from returns.pipeline import flow
-from returns.pointfree import bind
 from returns.result import Failure, Result, ResultE, Success
 
-from .coordinates import NWPDimensionCoordinateMap, determine_region, to_pandas
+from .coordinates import NWPDimensionCoordinateMap
 from .parameters import Parameter, params
 
 log = logging.getLogger("nwp-consumer")
+
 
 @dataclasses.dataclass(slots=True)
 class ParameterScanResult:
@@ -104,27 +102,27 @@ class TensorStore:
         Returns:
             A new instance of the TensorStore class.
         """
-        if not isinstance(coords["init_time"], list):
+        if not isinstance(coords.init_time, list) or len(coords.init_time) == 0:
             return Result.from_failure(
                 ValueError(
                     "Cannot initialize store with 'init_time' dimension coordinates not "
-                    "specified via a list. Check instantiation of NWPDimensionCoordinateMap. "
-                    f"Got: {coords['init_time']} (not a list).",
+                    "specified via a populated list. Check instantiation of "
+                    "NWPDimensionCoordinateMap. "
+                    f"Got: {coords.init_time} (not a list, or empty).",
                 ),
             )
-        if len(coords["init_time"]) != 1:
+        if len(coords.init_time) != 1:
             return Result.from_failure(
                 ValueError(
                     "Cannot initialize store with 'init_time' dimension specifying "
                     "multiple init time coordinates. "
-                    f"Expected a single init time, got: {coords['init_time']}.",
+                    f"Expected a single init time, got: {coords.init_time}.",
                 ),
             )
         store_path = pathlib.Path(
-            f"~/.local/cache/nwp/{name}/{coords['init_time'][0]:%Y%m%d%H}.zarr",
+            f"~/.local/cache/nwp/{name}/{coords.init_time[0]:%Y%m%d%H}.zarr",
         )
 
-        shape_dict: dict[str, int] = {k: len(v) for k, v in coords.items()}
         # * Define a set of chunks allowing for intermediate parallel writes
         #   NOTE: This is not the same as the final chunking of the dataset!
         #   Merely a chunksize that is small enough to allow for parallel writes
@@ -133,26 +131,26 @@ class TensorStore:
             "init_time": 1,
             "step": 1,
             "variable": 1,
-            "latitude": shape_dict.get("latitude", 400) // 4,
-            "longitude": shape_dict.get("longitude", 400) // 4,
-            "values": shape_dict.get("values", 100),
+            "latitude": coords.shapemap.get("latitude", 400) // 4,
+            "longitude": coords.shapemap.get("longitude", 400) // 4,
+            "values": coords.shapemap.get("values", 100),
         }
         # Create a dask array of zeros with the shape of the dataset
         # * The values of this are ignored, only the shape and chunks are used
         dummy_values = dask.array.zeros(
-            shape=list(shape_dict.values()),
-            chunks=tuple([intermediate_chunks[k] for k in shape_dict]),
+            shape=list(coords.shapemap.values()),
+            chunks=tuple([intermediate_chunks[k] for k in coords.shapemap]),
         )
         attrs: dict[str, str] = {
             "produced_by": "nwp-consumer",
             "produced_at": str(dt.datetime.now(tz=dt.UTC)),
-            "variables": "; ".join([f"{v.name}: {v.description}" for v in coords["variable"]]),
+            "variables": "; ".join([f"{v.name}: {v.description}" for v in coords.variable]),
         }
         # Create a DataArray object with the given coordinates and dummy values
         da: xr.DataArray = xr.DataArray(
             name=name,
             data=dummy_values,
-            coords=to_pandas(coords),
+            coords=coords.to_pandas(),
             attrs=attrs,
         )
         try:
@@ -175,12 +173,14 @@ class TensorStore:
             case Failure(e):
                 return Result.from_failure(e)
             case Success(coordinate_map):
-                return Result.from_value(cls(
-                    name=name,
-                    path=store_path,
-                    coordinate_map=coordinate_map,
-                    size_mb=0,
-                ))
+                return Result.from_value(
+                    cls(
+                        name=name,
+                        path=store_path,
+                        coordinate_map=coordinate_map,
+                        size_mb=0,
+                    )
+                )
 
     # --- Business logic methods --- #
     def write_to_region(
@@ -204,12 +204,10 @@ class TensorStore:
             An indicator of a successful store write containing the number of bytes written.
         """
         if region is None or region == {}:
-
-            region_result = flow(
-                NWPDimensionCoordinateMap.from_pandas(da.coords.indexes),
-                bind(
-                    lambda map: determine_region(inner=map, outer=self.coordinate_map)
-                ),
+            region_result = NWPDimensionCoordinateMap.from_pandas(
+                da.coords.indexes,
+            ).bind(
+                self.coordinate_map.determine_region,
             )
             try:
                 Result.do(
@@ -217,12 +215,14 @@ class TensorStore:
                     for region in region_result
                 )
             except Exception as e:
-                return Result.from_failure(OSError(
-                    f"Error writing to region of store: {e}",
-                ))
+                return Result.from_failure(
+                    OSError(
+                        f"Error writing to region of store: {e}",
+                    )
+                )
             nbytes: int = da.nbytes
             del da
-            self.size_mb += nbytes // (1024 ** 2)
+            self.size_mb += nbytes // (1024**2)
             return Result.from_value(nbytes)
 
     def validate_store(self) -> ResultE[bool]:
@@ -250,7 +250,7 @@ class TensorStore:
                     )
 
         # Validity check on the parameters of the store
-        for param in self.coordinate_map["variable"]:
+        for param in self.coordinate_map.variable:
             scan_result: ResultE[ParameterScanResult] = self.scan_parameter_values(p=param)
             match scan_result:
                 case Failure(e):
@@ -259,7 +259,6 @@ class TensorStore:
                     log.debug(f"Scanned parameter {param.name}: {scan.__repr__()}")
                     if not scan.is_valid or scan.has_nulls:
                         return Result.from_value(False)
-
 
     def scan_parameter_values(self, p: Parameter) -> ResultE[ParameterScanResult]:
         """Scan the values of a parameter in the store.
@@ -274,25 +273,29 @@ class TensorStore:
         Returns:
             A ParameterScanResult object.
         """
-        if p not in self.coordinate_map["variable"]:
-            return Result.from_failure(KeyError(
-                "Parameter scan failed: "
-                f"Cannot validate unknown parameter: {p.name}. "
-                "Ensure the parameter has been renamed to match the entities "
-                "parameters defined in `entities.parameters` if desired, or "
-                "add the parameter to the entities parameters if it is new. "
-                f"Store parameters: {[p.name for p in self.coordinate_map['variable']]}. "
-                f"Known parameters: {params.names()}",
-            ))
+        if p not in self.coordinate_map.variable:
+            return Result.from_failure(
+                KeyError(
+                    "Parameter scan failed: "
+                    f"Cannot validate unknown parameter: {p.name}. "
+                    "Ensure the parameter has been renamed to match the entities "
+                    "parameters defined in `entities.parameters` if desired, or "
+                    "add the parameter to the entities parameters if it is new. "
+                    f"Store parameters: {[p.name for p in self.coordinate_map.variable]}. "
+                    f"Known parameters: {params.names()}",
+                )
+            )
         store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")
 
         mean = store_da.mean().values
 
-        return Result.from_value(ParameterScanResult(
-            mean=mean,
-            is_valid=True,
-            has_nulls=False,
-        ))
+        return Result.from_value(
+            ParameterScanResult(
+                mean=mean,
+                is_valid=True,
+                has_nulls=False,
+            )
+        )
 
     def rechunk(self, chunks: dict[str, int] | None = None) -> ResultE[None]:
         """Rechunk the store.
@@ -309,12 +312,12 @@ class TensorStore:
         """
         if chunks is None:
             chunks = self.coordinate_map.desired_chunking()
-        if chunks.keys() != self.coordinate_map.keys():
+        if list(chunks.keys()) != self.coordinate_map.dims:
             return Result.from_failure(
                 ValueError(
                     "Cannot rechunk store: "
                     "New chunk sizes must be provided for all dimensions. "
-                    f"Expected: {self.coordinate_map.keys()}. Got: {chunks.keys()}.",
+                    f"Expected: {self.coordinate_map.dims}. Got: {list(chunks.keys())}.",
                 ),
             )
         store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")
@@ -322,8 +325,9 @@ class TensorStore:
             log.debug(f"Rechunking store {self.name} to {chunks}.")
             store_da.chunk(chunks)
         except Exception as e:
-            return Result.from_failure(OSError(
-                f"Error rechunking store: {e}",
-            ))
+            return Result.from_failure(
+                OSError(
+                    f"Error rechunking store: {e}",
+                )
+            )
         return Result.from_value(None)
-
