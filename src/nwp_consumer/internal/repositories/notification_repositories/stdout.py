@@ -2,7 +2,7 @@
 
 import logging
 
-from returns.result import ResultE, Result
+from returns.result import Result, ResultE
 
 from nwp_consumer.internal import entities
 from nwp_consumer.internal.ports import NotificationRepository

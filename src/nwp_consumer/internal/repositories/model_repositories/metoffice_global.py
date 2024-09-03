@@ -81,6 +81,7 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
             is_order_based=False,
             running_hours=[0, 12],  # 6 and 18 exist, but are lacking variables
             delay_minutes=(60 * 24 * 7) + (60 * 12),  # 7.5 days
+            max_connections=20,
             required_env=["CEDA_FTP_USER", "CEDA_FTP_PASS"],
             optional_env={},
             expected_coordinates=entities.NWPDimensionCoordinateMap(

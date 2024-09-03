@@ -56,6 +56,13 @@ class ModelRepositoryMetadata:
     optional_env: dict[str, str]
     """Optional environment variables."""
 
+    max_connections: int
+    """The maximum number of simultaneous connections allowed to the model repository.
+
+    This determines the maximum level of concurrency that can be achieved when
+    downloading data from the repository.
+    """
+
     expected_coordinates: NWPDimensionCoordinateMap
     """The expected dimension coordinate mapping.
 

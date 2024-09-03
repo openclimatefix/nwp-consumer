@@ -24,6 +24,7 @@ class DummyModelRepository(ports.ModelRepository):
             is_order_based=False,
             running_hours=[0, 6, 12, 18],
             delay_minutes=60,
+            max_connections=4,
             required_env=[],
             optional_env={},
             expected_coordinates=entities.NWPDimensionCoordinateMap(

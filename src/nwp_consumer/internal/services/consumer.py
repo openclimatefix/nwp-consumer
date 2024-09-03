@@ -1,5 +1,6 @@
 """Implementation of the NWP consumer services."""
 
+import os
 import dataclasses
 import datetime as dt
 import logging
@@ -66,7 +67,7 @@ class ConsumerService(ports.ConsumerUseCase):
                 #
                 # Note that increasing the parallelism increases the RAM usage.
                 da_result_generator = Parallel(
-                    n_jobs=8,
+                    n_jobs=self._mr.metadata.max_connections - 1,
                     prefer="threads",
                     return_as="generator_unordered",
                 )(self._mr.fetch_init_data(it=it))
