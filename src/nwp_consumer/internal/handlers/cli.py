@@ -3,7 +3,7 @@
 import argparse
 import datetime as dt
 import logging
-import sys
+import dataclasses
 
 from returns.result import Failure, Success
 
@@ -50,8 +50,11 @@ class CLIHandler:
 
         return parser
 
-    def run(self) -> None:
-        """Run the CLI handler."""
+    def run(self) -> int:
+        """Run the CLI handler.
+
+        Returns the appropriate exit code.
+        """
         args = self.parser.parse_args()
         match args.command:
             case "consume":
@@ -60,21 +63,26 @@ class CLIHandler:
                 match result:
                     case Failure(e):
                         log.error(f"Failed to consume NWP data: {e}")
-                        sys.exit(1)
+                        return 1
                     case Success(path):
                         log.info(f"Successfully consumed NWP data: {path.as_posix()}")
-                        sys.exit(0)
+                        return 0
 
             case "info":
                 if args.model:
                     log.info(self._consumer_usecase.info())
-                    sys.exit(0)
+                    return 0
                 if args.parameters:
-                    for parameter in entities.params:
+                    for parameter in [
+                        getattr(entities.params, f.name)
+                        for f in dataclasses.fields(entities.params)
+                    ]:
                         log.info(parameter.__repr__())
-                        sys.exit(0)
+                        return 0
 
             case _:
                 log.error(f"Unknown command: {args.command}")
                 self.parser.print_help()
-                sys.exit(1)
+                return 1
+
+        return 0

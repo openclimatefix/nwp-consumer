@@ -37,10 +37,8 @@ class TestCedaMetOfficeGlobalModelRepository(unittest.TestCase):
 
         # Check resultant array is a subset of the expected coordinates
         map_result = entities.NWPDimensionCoordinateMap.from_pandas(result.unwrap().coords.indexes)
-        determine_region_partial = functools.partial(
-            entities.determine_region,
-            outer=self.c.metadata.expected_coordinates | {"init_time": [test_it]},
-        )
-        region_result = map_result.bind(determine_region_partial)
+        self.c.metadata.expected_coordinates.init_time = [test_it]
+        region_result = map_result.bind(self.c.metadata.expected_coordinates.determine_region)
 
         self.assertTrue(is_successful(region_result), msg=f"Error: {region_result}")
+

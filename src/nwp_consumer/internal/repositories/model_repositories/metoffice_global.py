@@ -83,10 +83,10 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
             delay_minutes=(60 * 24 * 7) + (60 * 12),  # 7.5 days
             required_env=["CEDA_FTP_USER", "CEDA_FTP_PASS"],
             optional_env={},
-            expected_coordinates={
-                "init_time": [],
-                "step": list(range(0, 48, 1)),
-                "variable": [
+            expected_coordinates=entities.NWPDimensionCoordinateMap(
+                init_time=[],
+                step=list(range(0, 48, 1)),
+                variable=[
                     entities.params.downward_shortwave_radiation_flux_gl,
                     entities.params.cloud_cover_total,
                     entities.params.cloud_cover_high,
@@ -99,15 +99,15 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
                     entities.params.wind_v_component_10m,
                     entities.params.visibility_sl,
                 ],
-                "latitude": [
+                latitude=[
                     float(f"{lat:.4f}")
                     for lat in np.arange(-89.856, 89.856 + 0.156, 0.156)
                 ],
-                "longitude": [
+                longitude=[
                     float(f"{lon:.4f}")
                     for lon in np.arange(-45, 315.09 + 0.234, 0.234)
                 ],
-            },
+            ),
         )
 
     def _download_and_convert(self, url: str) -> ResultE[xr.DataArray]:
@@ -147,18 +147,18 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
                 ))
 
         try:
-            data = xr.open_dataset(local_path, engine="cfgrib")
+            ds: xr.Dataset = xr.open_dataset(local_path, engine="cfgrib")
         except Exception as e:
             return Result.from_failure(OSError(
                 f"Error opening '{local_path}' as xarray Dataset: {e}",
             ))
         try:
-            data = (
-                data.sel(step=[np.timedelta64(i, "h") for i in range(0, 48, 1)])
-                .expand_dims(dim={"init_time": [data["time"].values]})
+            da: xr.DataArray = (
+                ds.sel(step=[np.timedelta64(i, "h") for i in range(0, 48, 1)])
+                .expand_dims(dim={"init_time": [ds["time"].values]})
                 .drop_vars(
                     names=[
-                        v for v in data.coords.variables
+                        v for v in ds.coords.variables
                         if v not in ["init_time", "step", "latitude", "longitude"]
                     ],
                 )
@@ -171,7 +171,7 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
                 f"Error processing {local_path} to DataArray: {e}",
             ))
 
-        return Result.from_value(data)
+        return Result.from_value(da)
 
 def _rename_vars(ds: xr.Dataset) -> xr.Dataset:
     """Rename variables to match the expected names.

@@ -2,7 +2,7 @@
 
 import logging
 
-from returns.io import IOResultE, IOSuccess
+from returns.result import ResultE, Result
 
 from nwp_consumer.internal import entities
 from nwp_consumer.internal.ports import NotificationRepository
@@ -14,9 +14,10 @@ class StdoutNotificationRepository(NotificationRepository):
     """Stdout notification_repositories repository."""
 
     def notify(
-            self,
-            message: entities.StoreCreatedNotification | entities.StoreAppendedNotification,
-    ) -> IOResultE[str]:
+        self,
+        message: entities.StoreCreatedNotification | entities.StoreAppendedNotification,
+    ) -> ResultE[str]:
         """Overrides the corresponding method in the parent class."""
-        log.info(f"Sent notification_repositories (type: {message.__class__.__name__}): {message}")
-        return IOSuccess("Notification sent to stdout successfully.")
+        log.info(f"{message}")
+        return Result.from_value("Notification sent to stdout successfully.")
+
