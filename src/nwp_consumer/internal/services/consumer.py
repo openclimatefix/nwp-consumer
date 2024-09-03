@@ -67,7 +67,7 @@ class ConsumerService(ports.ConsumerUseCase):
                 #
                 # Note that increasing the parallelism increases the RAM usage.
                 da_result_generator = Parallel(
-                    n_jobs=4,
+                    n_jobs=8,
                     prefer="threads",
                     return_as="generator_unordered",
                 )(self._mr.fetch_init_data(it=it))
@@ -78,6 +78,9 @@ class ConsumerService(ports.ConsumerUseCase):
                     # * TODO: Consider just how hard we want to fail in this instance
                     if isinstance(write_result, Failure):
                         return Result.from_failure(write_result.failure())
+                rechunk_result = tensor_store.rechunk()
+                if isinstance(rechunk_result, Failure):
+                    return Result.from_failure(rechunk_result.failure())
 
                 del da_result_generator
                 # TODO: Validation is very memory intensive

@@ -160,6 +160,28 @@ class NWPDimensionCoordinateMap(TypedDict):
 
         return Result.from_value(out_dict)
 
+    def desired_chunking(self) -> dict[str, int]:
+        """The expected chunk sizes for each dimension.
+
+        A dictionary mapping of dimension labels to the size of a chunk along that
+        dimension. Note that the number is chunk size, not chunk number, so a chunk
+        that wants to cover the entire dimension should have a size equal to the
+        dimension length.
+
+        It defaults to a single chunk per init time and step, and a single chunk
+        for each entire other dimension.
+        """
+        out_dict: dict[str, int] = {
+            "init_time": 1,
+            "step": 1,
+        } | {
+            key: len(value)
+            for key, value in self.items()
+            if key not in ["init_time", "step"]
+        }
+        return out_dict
+
+
 
 def to_pandas(coords: NWPDimensionCoordinateMap) -> dict[str, pd.Index]:
     """Convert the coordinate map to a dictionary of pandas Index objects.

@@ -293,3 +293,37 @@ class TensorStore:
             is_valid=True,
             has_nulls=False,
         ))
+
+    def rechunk(self, chunks: dict[str, int] | None = None) -> ResultE[None]:
+        """Rechunk the store.
+
+        This method rechunks the store to the given chunk sizes.
+        If no chunk sizes are provided, the defaults are used
+        for the dimension coordinate map.
+
+        Args:
+            chunks: The new chunk sizes.
+
+        See Also:
+            - `nwp_consumer.coordinates.NWPDimensionCoordinateMap.desired_chunking`
+        """
+        if chunks is None:
+            chunks = self.coordinate_map.desired_chunking()
+        if chunks.keys() != self.coordinate_map.keys():
+            return Result.from_failure(
+                ValueError(
+                    "Cannot rechunk store: "
+                    "New chunk sizes must be provided for all dimensions. "
+                    f"Expected: {self.coordinate_map.keys()}. Got: {chunks.keys()}.",
+                ),
+            )
+        store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")
+        try:
+            log.debug(f"Rechunking store {self.name} to {chunks}.")
+            store_da.chunk(chunks)
+        except Exception as e:
+            return Result.from_failure(OSError(
+                f"Error rechunking store: {e}",
+            ))
+        return Result.from_value(None)
+

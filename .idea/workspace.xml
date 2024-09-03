@@ -4,18 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="267ca1f9-a4e4-4ca3-afe5-1b3478bd9a79" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/test_integration/test_integration.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/coordinates.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/coordinates.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/parameters.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/parameters.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/repometadata.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/repometadata.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/tensorstore.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/tensorstore.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/handlers/cli.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/handlers/cli.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/ports/services.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/ports/services.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model_repositories/metoffice_global.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model_repositories/metoffice_global.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/services/consumer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/services/consumer.py" afterDir="false" />
-    </list>
+    <list default="true" id="267ca1f9-a4e4-4ca3-afe5-1b3478bd9a79" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
