@@ -308,7 +308,7 @@ class TensorStore:
             chunks: The new chunk sizes.
 
         See Also:
-            - `nwp_consumer.coordinates.NWPDimensionCoordinateMap.desired_chunking`
+            - `coordinates.NWPDimensionCoordinateMap.desired_chunking`
         """
         if chunks is None:
             chunks = self.coordinate_map.desired_chunking()

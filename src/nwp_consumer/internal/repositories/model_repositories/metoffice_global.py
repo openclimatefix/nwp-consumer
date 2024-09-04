@@ -17,6 +17,7 @@ import pathlib
 import urllib.parse
 import urllib.request
 from collections.abc import Callable, Iterator
+from typing import override
 
 import numpy as np
 import xarray as xr
@@ -45,6 +46,7 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
 
         self._url_auth = f"ftp://{username}:{password}@"
 
+    @override
     def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[..., ResultE[xr.DataArray]]]:
         """Overrides the corresponding method in the parent class."""
         parameter_stubs: list[str] = [
@@ -65,16 +67,19 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
 
         for parameter in parameter_stubs:
             for area in area_stubs:
-                url = f"{self.url_base}/{it:%Y/%m/%d}/" + \
-                      f"{it:%Y%m%d%H}_WSGlobal17km_{parameter}_{area}_000144.grib"
+                url = (
+                    f"{self.url_base}/{it:%Y/%m/%d}/"
+                    + f"{it:%Y%m%d%H}_WSGlobal17km_{parameter}_{area}_000144.grib"
+                )
 
                 yield delayed(self._download_and_convert)(url)
 
         pass
 
+    @override
     @property
     def metadata(self) -> entities.ModelRepositoryMetadata:
-        """Overrides the corresponding method in the parent class."""
+        """See parent class."""
         return entities.ModelRepositoryMetadata(
             name="ceda_metoffice_global_17km",
             is_archive=True,
@@ -101,13 +106,9 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
                     entities.params.visibility_sl,
                 ],
                 latitude=[
-                    float(f"{lat:.4f}")
-                    for lat in np.arange(-89.856, 89.856 + 0.156, 0.156)
+                    float(f"{lat:.4f}") for lat in np.arange(89.856, -89.856 - 0.156, -0.156)
                 ],
-                longitude=[
-                    float(f"{lon:.4f}")
-                    for lon in np.arange(-45, 315.09 + 0.234, 0.234)
-                ],
+                longitude=[float(f"{lon:.4f}") for lon in np.arange(-179.838, 179.928 + 0.234, 0.234)],
             ),
         )
 
@@ -126,9 +127,12 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
         except Exception as e:
             return Result.from_failure(OSError(f"Error fetching {url}: {e}"))
 
-        local_path: pathlib.Path = pathlib.Path(
-            f"~/.local/cache/nwp/{self.metadata.name}/raw",
-        ) / url.split("/")[-1]
+        local_path: pathlib.Path = (
+            pathlib.Path(
+                f"~/.local/cache/nwp/{self.metadata.name}/raw",
+            )
+            / url.split("/")[-1]
+        )
         # Don't download the file if it already exists
         if not local_path.exists():
             local_path.parent.mkdir(parents=True, exist_ok=True)
@@ -140,39 +144,52 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
                         f.flush()
                 log.debug(
                     "Downloaded %s to %s (%s bytes)",
-                    url, local_path, local_path.stat().st_size,
+                    url,
+                    local_path,
+                    local_path.stat().st_size,
                 )
             except Exception as e:
-                return Result.from_failure(OSError(
-                    f"Error saving '{url}' to '{local_path}': {e}",
-                ))
+                return Result.from_failure(
+                    OSError(
+                        f"Error saving '{url}' to '{local_path}': {e}",
+                    )
+                )
 
         try:
             ds: xr.Dataset = xr.open_dataset(local_path, engine="cfgrib")
         except Exception as e:
-            return Result.from_failure(OSError(
-                f"Error opening '{local_path}' as xarray Dataset: {e}",
-            ))
+            return Result.from_failure(
+                OSError(
+                    f"Error opening '{local_path}' as xarray Dataset: {e}",
+                )
+            )
         try:
             da: xr.DataArray = (
                 ds.sel(step=[np.timedelta64(i, "h") for i in range(0, 48, 1)])
                 .expand_dims(dim={"init_time": [ds["time"].values]})
                 .drop_vars(
                     names=[
-                        v for v in ds.coords.variables
+                        v
+                        for v in ds.coords.variables
                         if v not in ["init_time", "step", "latitude", "longitude"]
                     ],
                 )
                 .pipe(_rename_vars)
                 .to_dataarray(name=self.metadata.name)
                 .transpose("init_time", "step", "variable", "latitude", "longitude")
+                # Ensure coordinates are within the expected range
+                # See https://docs.xarray.dev/en/stable/generated/xarray.Dataset.assign_coords.html
+                .assign_coords({"longitude": ((ds.coordinates["longitude"] + 180) % 360) - 180})
             )
         except Exception as e:
-            return Result.from_failure(ValueError(
-                f"Error processing {local_path} to DataArray: {e}",
-            ))
+            return Result.from_failure(
+                ValueError(
+                    f"Error processing {local_path} to DataArray: {e}",
+                )
+            )
 
         return Result.from_value(da)
+
 
 def _rename_vars(ds: xr.Dataset) -> xr.Dataset:
     """Rename variables to match the expected names.

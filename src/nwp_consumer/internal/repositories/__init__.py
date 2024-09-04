@@ -19,8 +19,8 @@ This module
 
 This module contains implementations for the following driven actors:
 
-- Notification - `nwp_consumer.internal.handlers.notification_repositories`
-- Model - `nwp_consumer.internal.handlers.model_repositories`
+- Notification - `notification_repositories`
+- Model - `model_repositories`
 """
 
 from .model_repositories import *

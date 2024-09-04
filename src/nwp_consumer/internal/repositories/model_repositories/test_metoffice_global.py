@@ -1,8 +1,9 @@
 import datetime as dt
-import functools
 import os
 import unittest
 
+import numpy as np
+import xarray as xr
 from returns.pipeline import is_successful
 
 from nwp_consumer.internal import entities

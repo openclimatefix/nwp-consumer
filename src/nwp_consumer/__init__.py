@@ -28,7 +28,7 @@ The assumption is made that every piece of NWP forecast data has both an associa
 Structure
 ---------
 
-`nwp-consumer` is structured following principles from the hexagonal architecture pattern. In brief, this means a clear
+The code is structured following principles from the hexagonal architecture pattern. In brief, this means a clear
 separation between the application's business logic - it's **Core** - and the **Actors** that are external to it.
 The core of the services is split into three main components:
 

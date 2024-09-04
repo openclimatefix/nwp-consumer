@@ -1,11 +1,10 @@
 """Implementation of the NWP consumer services."""
 
-import os
 import dataclasses
 import datetime as dt
 import logging
 import pathlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from joblib import Parallel
 from returns.result import Failure, Result, ResultE, Success
@@ -43,8 +42,9 @@ class ConsumerService(ports.ConsumerUseCase):
         self._zr = zarr_repository
         self._nr = notification_repository
 
+    @override
     def consume(self, it: dt.datetime | None = None) -> ResultE[pathlib.Path]:
-        """Overrides the corresponding method in the parent class."""
+        """See parent class."""
         monitor = PerformanceMonitor()
 
         if it is None:
@@ -112,10 +112,12 @@ class ConsumerService(ports.ConsumerUseCase):
                     TypeError(f"Unexpected result type: {type(create_store_result)}"),
                 )
 
+    @override
     def postprocess(self, options: entities.PostProcessOptions) -> ResultE[str]:
-        """Overrides the corresponding method in the parent class."""
+        """See parent class."""
         return Result.from_failure(NotImplementedError("Postprocessing not yet implemented"))
 
+    @override
     def info(self) -> str:
-        """Overrides the corresponding method in the parent class."""
+        """See parent class."""
         return str(self._mr.metadata)

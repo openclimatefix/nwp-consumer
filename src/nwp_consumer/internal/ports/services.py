@@ -44,8 +44,8 @@ class ConsumerUseCase(abc.ABC):
             The path to the produced Zarr store.
 
         See Also:
-            - `ModelRepository.fetch_init_data`
-            - `StoreMetadata.write_to_region`
+            - `repositories.ModelRepository.fetch_init_data`
+            - `tensorstore.TensorStore.write_to_region`
             - https://joblib.readthedocs.io/en/stable/auto_examples/parallel_generator.html
         """
         pass

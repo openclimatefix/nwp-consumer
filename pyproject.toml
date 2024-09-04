@@ -68,6 +68,7 @@ pythonVersion = "3.12"
 # * See https://mypy.readthedocs.io/en/stable/index.html
 [tool.mypy]
 python_version = "3.12"
+dmypy = true
 strict = true
 warn_unreachable = true
 warn_return_any = true

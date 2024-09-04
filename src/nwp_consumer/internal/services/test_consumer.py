@@ -2,6 +2,7 @@ import datetime as dt
 import pathlib
 import unittest
 from collections.abc import Callable, Iterator
+from typing import override
 
 import numpy as np
 import xarray as xr
@@ -15,9 +16,10 @@ from nwp_consumer.internal.services.consumer import ConsumerService
 
 class DummyModelRepository(ports.ModelRepository):
 
+    @override
     @property
     def metadata(self) -> entities.ModelRepositoryMetadata:
-        """Overrides the corresponding method in the parent class."""
+        """See parent class."""
         return entities.ModelRepositoryMetadata(
             name="dummy",
             is_archive=False,
@@ -40,8 +42,9 @@ class DummyModelRepository(ports.ModelRepository):
             ),
         )
 
+    @override
     def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[[], ResultE[xr.DataArray]]]:
-        """Overrides the corresponding method in the parent class."""
+        """See parent class."""
 
         def gen_dataset(s: int, variable: str) -> ResultE[xr.DataArray]:
             """Define a generator that provides one variable at one step."""
@@ -65,19 +68,21 @@ class DummyModelRepository(ports.ModelRepository):
 
 class DummyNotificationRepository(ports.NotificationRepository):
 
+    @override
     def notify(
             self,
             message: entities.StoreAppendedNotification | entities.StoreCreatedNotification,
     ) -> ResultE[str]:
-        """Overrides the corresponding method in the parent class."""
+        """See parent class."""
         print(message)
         return Result.from_value(str(message))
 
 
 class DummyZarrRepository(ports.ZarrRepository):
 
+    @override
     def save(self, src: pathlib.Path, dst: pathlib.Path) -> ResultE[str]:
-        """Overrides the corresponding method in the parent class."""
+        """See parent class."""
         return Result.from_value(str(dst))
 
 

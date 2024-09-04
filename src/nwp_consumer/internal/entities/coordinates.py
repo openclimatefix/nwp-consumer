@@ -74,9 +74,15 @@ class NWPDimensionCoordinateMap:
     variable: list[Parameter]
     """The variables in the forecast data."""
     latitude: list[float] | None = None
-    """The latitude coordinates of the forecast grid in degrees."""
+    """The latitude coordinates of the forecast grid in degrees.
+
+    TODO: Should go +ve to -ve, e.g. for global, should be 90 to -90.
+    """
     longitude: list[float] | None = None
-    """The longitude coordinates of the forecast grid in degrees."""
+    """The longitude coordinates of the forecast grid in degrees.
+
+    TODO: Should go -ve to +ve, e.g. for global, should be -180 to 180.
+    """
 
     @property
     def dims(self) -> list[str]:
@@ -108,15 +114,15 @@ class NWPDimensionCoordinateMap:
         there is the "indexes" property on an xarray Coordinates object:
 
         Example:
-        >>> idxs = xr_data.coords.indexes
-        >>> NWPDimensionCoordinateMap.from_pandas(idxs)
-        {
-            "init_time": [dt.datetime(2021, 1, 1, 0, 0, ...],
-            "step": [1, 2, ...],
-            "variable": [Parameter(name="relative_humidity_gl", ...), ...],
-            "latitude": [90, ...],
-            "longitude": [45, ...],
-        }
+        >>> > idxs = xr_data.coords.indexes
+        >>> > NWPDimensionCoordinateMap.from_pandas(idxs)
+        >>> {
+        >>>     "init_time": [dt.datetime(2021, 1, 1, 0, 0, ...],
+        >>>     "step": [1, 2, ...],
+        >>>     "variable": [Parameter(name="relative_humidity_gl", ...), ...],
+        >>>     "latitude": [90, ...],
+        >>>     "longitude": [45, ...],
+        >>> }
 
         See Also:
             `NWPDimensionCoordinateMap.to_pandas` for the reverse operation.
@@ -235,9 +241,8 @@ class NWPDimensionCoordinateMap:
         The returned dictionary of slices defines the region of the base map covered
         by the instances dimension mapping.
 
-        Arguments:
+        Args:
             inner: The dimension coordinate dictionary of the smaller dataset.
-            outer: The dimension coordinate dictionary of the larger dataset.
 
         Examples:
             Getting the inner map slices relative to the outer map:
@@ -261,9 +266,6 @@ class NWPDimensionCoordinateMap:
                 "latitude": slice(0, 3),
                 "longitude": slice(0, 3),
             })
-
-        Args:
-            inner: dimension coordinate dictionary of the smaller dataset
 
         Returns:
             Dictionary mapping the slices defining the indexes of the coordinates in
