@@ -1,13 +1,69 @@
 """Model repository implementation for MetOffice Global data from CEDA.
 
+Data discrepencies and corrections
+----------------------------------
+
 MetOffice global model data is stored on CEDA in segments:
 
 - 4 areas for the northern hemisphere (A,B,C,D)
 - 4 areas for the southern hemisphere (E,F,G,H)
 
-See also:
-    - https://www.metoffice.gov.uk/binaries/content/assets/metofficegovuk/pdf/data/global-atmospheric-model-17-km-resolution.pdf
-    - https://catalogue.ceda.ac.uk/uuid/86df725b793b4b4cb0ca0646686bd783
+Each area contains a subset of the data for a given time step.
+
+Documented structure
+====================
+
+According to the MetOffice documentation [1], the files have the following structure:
+
+Northern hemisphere:
+
+- AreaA: Lat: 89.9 -> 0.3, Lon: -45 -> 45
+- AreaB: Lat: 89.9 -> 0.3, Lon: 45 -> 135
+- AreaC: Lat: 89.9 -> 0.3, Lon: 135 -> -135 (wraps around 180)
+- AreaD: Lat: 89.9 -> 0.3, Lon: -135 -> -45
+
+Southern hemisphere:
+
+- AreaE: Lat: -0.3 -> -89.9, Lon: -45 -> 45
+- AreaF: Lat: -0.3 -> -89.9, Lon: 45 -> 135
+- AreaG: Lat: -0.3 -> -89.9, Lon: 135 -> -135 (wraps around 180)
+- AreaH: Lat: -0.3 -> -89.9, Lon: -135 -> -45
+
+With steps of 0.153 degrees in latitude and 0.234 degrees in longitude.
+
+Actual structure
+================
+
+In my experience however, the data is not quite as described in the documentation.
+Using the eccodes grib tool as shown
+
+>>> grib_ls -n geography -wcount=13 file.grib
+
+I found that the grids are in fact as follows:
+
+- AreaA: Lat: 0 -> 89.856, Lon: 315 -> 45.09
+- AreaB: Lat: 0 -> 89.856, Lon: 45 -> 135.09
+- AreaC: Lat: 0 -> 89.856, Lon: 135 -> 225.09
+- AreaD: Lat: 0 -> 89.856, Lon: 225 -> 315.09
+- AreaE: Lat: -89.856 -> 0, Lon: 315 -> 45.09
+- AreaF: Lat: -89.856 -> 0, Lon: 45 -> 135.09
+- AreaG: Lat: -89.856 -> 0, Lon: 135 -> 225.09
+- AreaH: Lat: -89.856 -> 0, Lon: 225 -> 315.09
+
+With steps of 0.156 degrees in latitude and 0.234 degrees in longitude.
+
+The key takeaways are:
+
+- The latitude values are in reverse order as described in the documentation
+- The longitude values overlap each other and combine to form a non-uniform step size
+- The step size is slightly different
+
+As a result, the incoming data is modified to alleviate these issues.
+
+
+See Also:
+    - [1] https://www.metoffice.gov.uk/binaries/content/assets/metofficegovuk/pdf/data/global-atmospheric-model-17-km-resolution.pdf
+    - [2] https://catalogue.ceda.ac.uk/uuid/86df725b793b4b4cb0ca0646686bd783
 """
 
 import datetime as dt
@@ -41,7 +97,7 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
     @override
     def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[..., ResultE[xr.DataArray]]]:
         """Overrides the corresponding method in the parent class."""
-        # Ensure class is authenticated
+        # Ensure class is authenticated
         authenticate_result = self.authenticate()
         if isinstance(authenticate_result, Failure):
             yield delayed(Result.from_failure)(authenticate_result.failure())
@@ -285,13 +341,16 @@ def _standardize_coordinates(da: xr.DataArray) -> xr.DataArray:
     is not uniform or standard; hence some memory-intensive re-ordering
     is required.
     """
+    # Remove the last value of the longitude dimension as it overlaps with the next area file
+    da = da.isel(longitude=slice(None, -1))
     # Make the longitude values range from -180 to 180
     da = da.assign_coords({"longitude": ((da.coords["longitude"] + 180) % 360) - 180})
     # Find the index of the maximum value
     idx: int = da.coords["longitude"].argmax().values
     # Move the maximum value to the end, and do the same to the underlying data
     da = da.roll(longitude=len(da.coords["longitude"]) - idx - 1, roll_coords=True)
-    # Select all but the last longitude value, as it overlaps with the other
-    # area files
-    da = da.isel(longitude=slice(0, -1))
+    # Reverse the latitude dimension to be in descending order
+    da = da.isel(latitude=slice(None, None, -1))
     return da
+
+
