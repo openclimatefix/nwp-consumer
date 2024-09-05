@@ -27,12 +27,6 @@ from nwp_consumer.internal import entities
 class ModelRepository(abc.ABC):
     """Interface for a repository that produces raw NWP data.
 
-    Class/static methods are used to distinguish between calls that require
-    authentication and those that do not: if authentication is required,
-    the method requires an instantiated class and as such is a standard method
-    on the class consuming self; elsewise the method is a classmethod or
-    staticmethod effectively just namespaced to the class.
-
     Since different producers of NWP data have different data storage
     implementations, a ModelRepository needs to define its own download
     and processing  methods.
@@ -53,33 +47,41 @@ class ModelRepository(abc.ABC):
         """Fetch raw data files for an init time as xarray datasets.
 
         As per the typing, the return value is a generator of functions that
-        may produce an xarray dataset. This is done to allow for lazy evaluation:
+        may produce one or more xarray datasets. This is done to allow for lazy evaluation:
         by returning a generator of delayed objects, joblib can parallelize
-        the download and the results can be accumulated in a low-memory fashion.
+        the download and the results can be accumulated in a low-memory fashion (see
+        `the JobLib documentation on parallel generators
+        <https://joblib.readthedocs.io/en/stable/auto_examples/parallel_generator.html>`_).
 
-        For example:
+        An example psuedocode implementation is shown below:
 
         >>> from joblib import Parallel, delayed
         >>> import xarray as xr
-        >>> import nwp_consumer.internal.core.entities as entities
-        >>> from returns.result import ResultE
+        >>> import nwp_consumer.internal.entities as entities
+        >>> from returns.result import ResultE, Result
         >>> import datetime as dt
         >>>
         >>> # Pseudocode for a model_repositories repository
         >>> class MyModelRepository(entities.ModelRepository):
-        >>>     def fetch_init_data(self, it: dt.datetime) \
-        >>>         -> Iterator[Callable[..., ResultE[xr.DataArray]]]:
-        >>>         '''Overrides the abstract method.'''
-        >>>         for file in self.list_files(it):
-        >>>             # Download and convert is some function that downloads the file
-        >>>             # and converts it to an xarray dataset, returning a ResultE
-        >>>             yield delayed(self._download_and_convert)(file)
+        ...     def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[..., ResultE[xr.DataArray]]]:
+        ...         '''Overrides the abstract method.'''
+        ...         for file in ["raw_file1.grib", "raw_file2.grib"]:
+        ...             yield delayed(self._download_and_convert)(file)
+        ...
+        ...     def _download_and_convert(self, file: str) -> ResultE[xr.DataArray]:
+        ...         '''Download and convert a raw file to an xarray dataset.'''
+        ...         return Result.from_value(xr.open_dataset(file).to_dataarray())
+
+        .. important:: No downloading or processing should be done in this method. All of that
+          should be handled in the function that is yielded by the generator -
+          ``_download_and_convert`` in the example above.
+          This is to allow for parallelization of the download and processing.
 
         Args:
             it: The initialization time for which to fetch data.
 
         Returns:
-            A generator of delayed xarray datasets for the init time.
+            A generator of delayed xarray dataarrays for the init time.
         """
         pass
 
@@ -87,7 +89,11 @@ class ModelRepository(abc.ABC):
     @property
     @abc.abstractmethod
     def metadata(self) -> entities.ModelRepositoryMetadata:
-        """Metadata about the model_repositories repository."""
+        """Metadata about the model repository.
+
+        See Also:
+            - `entities.ModelRepositoryMetadata`.
+        """
         pass
 
 

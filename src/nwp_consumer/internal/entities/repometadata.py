@@ -13,6 +13,7 @@ import datetime as dt
 import pathlib
 
 from .coordinates import NWPDimensionCoordinateMap
+from .postprocess import PostProcessOptions
 
 
 @dataclasses.dataclass(slots=True)
@@ -75,7 +76,16 @@ class ModelRepositoryMetadata:
     >>>     "latitude": [90, 89.75, 89.5, ...],
     >>>     "longitude": [180, 179, ...],
     >>> }
+
+    To work this out, it can be useful to use the 'grib_ls' tool from eccodes:
+
+    >>> grib_ls -n geography -wcount=13 raw_file.grib
+
+    Which prints grid data from the grib file.
     """
+
+    postprocess_options: PostProcessOptions
+    """Options for post-processing the data."""
 
     def determine_latest_it_from(self, t: dt.datetime) -> dt.datetime:
         """Determine the latest available initialization time from a given time.

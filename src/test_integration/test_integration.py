@@ -1,5 +1,6 @@
-import unittest
 import datetime as dt
+import unittest
+import xarray as xr
 
 from returns.pipeline import is_successful
 
@@ -18,3 +19,7 @@ class TestIntegration(unittest.TestCase):
         result = c._consumer_usecase.consume(it=dt.datetime(2021, 1, 1, tzinfo=dt.UTC))
 
         self.assertTrue(is_successful(result), msg=f"{result}")
+
+        da = xr.open_dataarray(result.unwrap(), engine="zarr")
+        print(da)
+

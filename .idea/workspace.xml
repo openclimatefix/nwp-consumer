@@ -5,18 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="267ca1f9-a4e4-4ca3-afe5-1b3478bd9a79" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/TODO.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/coordinates.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/coordinates.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/tensorstore.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/tensorstore.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/ports/services.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/ports/services.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/ports/repositories.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/ports/repositories.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model_repositories/metoffice_global.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model_repositories/metoffice_global.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/notification_repositories/stdout.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/notification_repositories/stdout.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/services/consumer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/services/consumer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model_repositories/test_metoffice_global.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model_repositories/test_metoffice_global.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/services/test_consumer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/services/test_consumer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test_integration/test_integration.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/test_integration/test_integration.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -42,45 +38,45 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_determine_region.executor&quot;: &quot;Debug&quot;,
-    &quot;Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for entities.test_repometadata.TestModelRepositoryMetadata.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for entities.test_repometadata.TestModelRepositoryMetadata.test_determine_latest_it_from.executor&quot;: &quot;Debug&quot;,
-    &quot;Python tests.Python tests for handlers.test_cli.TestCLIHandler.test_parser.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for internal.repositories.model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.test__download_and_convert.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.test__download_and_convert.executor&quot;: &quot;Debug&quot;,
-    &quot;Python tests.Python tests for service.test_consumer.TestParallelConsumer.test_consume.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_consumer.TestParallelConsumer.test__determine_latest_it_from.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_integration.TestIntegration.test_ceda_metoffice_global_model.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests in test_consumer.py.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests in test_repometadata.py.executor&quot;: &quot;Debug&quot;,
-    &quot;Python tests.Python tests in test_storemetadata.py.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests in test_tensor.py.executor&quot;: &quot;Run&quot;,
-    &quot;Python.consumer.executor&quot;: &quot;Run&quot;,
-    &quot;Python.scratch_1.executor&quot;: &quot;Run&quot;,
-    &quot;Python.scratch_7.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;debugger.dataViews.python.type.renderers&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_determine_region.executor": "Debug",
+    "Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas.executor": "Run",
+    "Python tests.Python tests for entities.test_repometadata.TestModelRepositoryMetadata.executor": "Run",
+    "Python tests.Python tests for entities.test_repometadata.TestModelRepositoryMetadata.test_determine_latest_it_from.executor": "Debug",
+    "Python tests.Python tests for handlers.test_cli.TestCLIHandler.test_parser.executor": "Run",
+    "Python tests.Python tests for internal.repositories.model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.test__download_and_convert.executor": "Run",
+    "Python tests.Python tests for model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.executor": "Run",
+    "Python tests.Python tests for model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.test__download_and_convert.executor": "Debug",
+    "Python tests.Python tests for service.test_consumer.TestParallelConsumer.test_consume.executor": "Run",
+    "Python tests.Python tests for test_consumer.TestParallelConsumer.test__determine_latest_it_from.executor": "Run",
+    "Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume.executor": "Run",
+    "Python tests.Python tests for test_integration.TestIntegration.test_ceda_metoffice_global_model.executor": "Debug",
+    "Python tests.Python tests in test_consumer.py.executor": "Run",
+    "Python tests.Python tests in test_repometadata.py.executor": "Debug",
+    "Python tests.Python tests in test_storemetadata.py.executor": "Run",
+    "Python tests.Python tests in test_tensor.py.executor": "Run",
+    "Python.consumer.executor": "Run",
+    "Python.scratch_1.executor": "Run",
+    "Python.scratch_7.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "git-widget-placeholder": "main",
+    "settings.editor.selected.configurable": "debugger.dataViews.python.type.renderers"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File&quot;: [
-      &quot;Python&quot;
+  "keyToStringList": {
+    "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
+      "Python"
     ]
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/src/nwp_consumer/internal" />
       <recent name="$PROJECT_DIR$/src/nwp_consumer" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.scratch_1">
+  <component name="RunManager" selected="Python tests.Python tests for test_integration.TestIntegration.test_ceda_metoffice_global_model">
     <configuration name="scratch_1" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="nwp-consumer-2" />
       <option name="ENV_FILES" value="" />
@@ -203,10 +199,10 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume" />
         <item itemvalue="Python.scratch_1" />
         <item itemvalue="Python tests.Python tests for internal.repositories.model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.test__download_and_convert" />
         <item itemvalue="Python tests.Python tests for model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository" />
-        <item itemvalue="Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume" />
         <item itemvalue="Python tests.Python tests for handlers.test_cli.TestCLIHandler.test_parser" />
       </list>
     </recent_temporary>
@@ -233,11 +229,22 @@
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file:///opt/homebrew/Caskroom/miniforge/base/envs/nwp-consumer-2/lib/python3.12/site-packages/xarray/coding/times.py</url>
+          <line>702</line>
+          <option name="timeStamp" value="58" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/nwp_consumer/internal/entities/coordinates.py</url>
-          <line>275</line>
-          <option name="timeStamp" value="50" />
+          <line>321</line>
+          <option name="timeStamp" value="88" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
+    <watches-manager>
+      <configuration name="tests">
+        <watch expression="area" />
+        <watch expression="region" />
+      </configuration>
+    </watches-manager>
   </component>
 </project>

@@ -50,8 +50,8 @@ class PerformanceMonitor(Thread):
             self.memory_buffer.append(self.get_memory() - memory_start)
             time.sleep(0.2)
 
-    def join(self) -> None:  # type: ignore
+    def join(self, timeout: int | None = None) -> None:  # type: ignore
         """Stop the thread."""
         self.stop = True
         self.end_time = time.time()
-        super().join()
+        super().join(timeout=timeout)

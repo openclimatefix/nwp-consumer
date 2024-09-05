@@ -290,6 +290,15 @@ class NWPDimensionCoordinateMap:
             else:
                 inner_dim_coords = getattr(inner, inner_dim_label)
                 outer_dim_coords = getattr(self, inner_dim_label)
+            if len(inner_dim_coords) > len(outer_dim_coords):
+                return Result.from_failure(
+                    ValueError(
+                        f"Coordinate values for dimension '{inner_dim_label}' in the inner map "
+                        "exceed the number of coordinate values in the outer map. "
+                        f"Got: {len(inner_dim_coords)}' (> {len(outer_dim_coords)}) "
+                        "coordinate values.",
+                    ),
+                )
             if not set(inner_dim_coords).issubset(set(outer_dim_coords)):
                 diff_coords = list(set(inner_dim_coords).difference(set(outer_dim_coords)))
                 first_diff_index: int = inner_dim_coords.index(diff_coords[0])
@@ -310,11 +319,13 @@ class NWPDimensionCoordinateMap:
             )
             contiguous_index_run = list(range(outer_dim_indices[0], outer_dim_indices[-1] + 1))
             if outer_dim_indices != contiguous_index_run:
+                idxs = np.argwhere(np.gradient(outer_dim_indices) > 1).flatten()
                 return Result.from_failure(
                     ValueError(
-                        f"Coordinate values for dimension <{inner_dim_label}> do not correspond "
+                        f"Coordinate values for dimension '{inner_dim_label}' do not correspond "
                         f"with a contiguous index set in the outer dimension map. "
-                        f"Got: '{outer_dim_indices}' indices.",
+                        f"Non-contiguous values '{[outer_dim_indices[i] for i in idxs]}' "
+                        f"adjacent in dimension coordinates.",
                     ),
                 )
 
@@ -322,7 +333,7 @@ class NWPDimensionCoordinateMap:
 
         return Result.from_value(slices)
 
-    def desired_chunking(self) -> dict[str, int]:
+    def default_chunking(self) -> dict[str, int]:
         """The expected chunk sizes for each dimension.
 
         A dictionary mapping of dimension labels to the size of a chunk along that
@@ -338,3 +349,4 @@ class NWPDimensionCoordinateMap:
             "step": 1,
         } | {dim: len(getattr(self, dim)) for dim in self.dims if dim not in ["init_time", "step"]}
         return out_dict
+
