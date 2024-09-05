@@ -27,12 +27,6 @@ from nwp_consumer.internal import entities
 class ModelRepository(abc.ABC):
     """Interface for a repository that produces raw NWP data.
 
-    Class/static methods are used to distinguish between calls that require
-    authentication and those that do not: if authentication is required,
-    the method requires an instantiated class and as such is a standard method
-    on the class consuming self; elsewise the method is a classmethod or
-    staticmethod effectively just namespaced to the class.
-
     Since different producers of NWP data have different data storage
     implementations, a ModelRepository needs to define its own download
     and processing  methods.

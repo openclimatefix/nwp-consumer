@@ -52,49 +52,38 @@ class ConsumerService(ports.ConsumerUseCase):
         log.info(f"Consuming data from {self._mr.metadata.name} for {it:%Y-%m-%d %H:%M}")
 
         # Create a store for the init time
-        create_store_result: ResultE[TensorStore] = entities.TensorStore.initialize_empty_store(
+        init_store_result: ResultE[TensorStore] = entities.TensorStore.initialize_empty_store(
             name=self._mr.metadata.name,
             coords=dataclasses.replace(self._mr.metadata.expected_coordinates, init_time=[it]),
         )
 
-        match create_store_result:
+        match init_store_result:
             case Failure(e):
-                return Result.from_failure(OSError(f"Failed to create store for init time: {e}"))
-            case Success(tensor_store):
-                # Get datasets from the model_repositories repository and write to their appropriate
-                # regions in the store. Due to the blank dataset and region-based writing,
-                # this can be done in parallel. See
-                #
-                # Note that increasing the parallelism increases the RAM usage.
+                return Result.from_failure(OSError(f"Failed to initialize store for init time: {e}"))
+            case Success(store):
+
+                # Create a generator to fetch and process raw data
                 da_result_generator = Parallel(
                     n_jobs=self._mr.metadata.max_connections - 1,
                     prefer="threads",
                     return_as="generator_unordered",
                 )(self._mr.fetch_init_data(it=it))
-                # Handle the results of the generator as they are ready
+
+                # Regionally write the results of the generator as they are ready
                 for da_result in da_result_generator:
-                    write_result = da_result.bind(tensor_store.write_to_region)
+                    write_result = da_result.bind(store.write_to_region)
                     # Fail hard if any of the writes failed
                     # * TODO: Consider just how hard we want to fail in this instance
                     if isinstance(write_result, Failure):
                         return Result.from_failure(write_result.failure())
-                rechunk_result = tensor_store.rechunk()
-                if isinstance(rechunk_result, Failure):
-                    return Result.from_failure(rechunk_result.failure())
 
                 del da_result_generator
-                # TODO: Validation is very memory intensive
-                # TODO: Possible to iterator over data array values?
-                # validation_result = tensor_store.validate_store()
-                # if isinstance(validation_result, Failure):
-                #    log.error("Validation failed for store")
-                #    return Result.from_failure(validation_result.failure())
 
                 monitor.join()
                 notify_result = self._nr.notify(
                     entities.StoreCreatedNotification(
-                        filename=tensor_store.path.name,
-                        size_mb=tensor_store.size_mb,
+                        filename=store.path.name,
+                        size_mb=store.size_mb,
                         performance=entities.PerformanceMetadata(
                             duration_seconds=monitor.get_runtime(),
                             memory_mb=max(monitor.memory_buffer) / 1e6,
@@ -105,11 +94,11 @@ class ConsumerService(ports.ConsumerUseCase):
                     log.error("Failed to notify of store creation")
                     return notify_result
 
-                return Result.from_value(tensor_store.path)
+                return Result.from_value(store.path)
 
             case _:
                 return Result.from_failure(
-                    TypeError(f"Unexpected result type: {type(create_store_result)}"),
+                    TypeError(f"Unexpected result type: {type(init_store_result)}"),
                 )
 
     @override

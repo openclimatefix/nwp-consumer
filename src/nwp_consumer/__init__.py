@@ -80,18 +80,28 @@ On the directory structure:
 import logging
 import sys
 
+if sys.stdout.isatty():
+    # Simple logging for terminals
+    formatstr="%(levelname)s | %(message)s"
+else:
+    # JSON logging for containers
+    formatstr="".join((
+        "{",
+        '"message": "%(message)s", ',
+        '"severity": "%(levelname)s", "timestamp": "%(asctime)s.%(msecs)03dZ", ',
+        '"logging.googleapis.com/labels": {"python_logger": "%(name)s"}, ',
+        '"logging.googleapis.com/sourceLocation": ',
+        '{"file": "%(filename)s", "line": %(lineno)d, "function": "%(funcName)s"}',
+        "}",
+    ))
+
 logging.basicConfig(
     level=logging.DEBUG,
     stream=sys.stdout,
-    format="{"
-    + '"message": "%(message)s", '
-    + '"severity": "%(levelname)s", "timestamp": "%(asctime)s.%(msecs)03dZ", '
-    + '"logging.googleapis.com/labels": {"python_logger": "%(name)s"}, '
-    + '"logging.googleapis.com/sourceLocation": '
-    + ' {"file": "%(filename)s", "line": %(lineno)d, "function": "%(funcName)s"}'
-    + "}",
+    format=formatstr,
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
 
 for logger in ["numcodecs", "numexpr", "cfgrib"]:
     logging.getLogger(logger).setLevel(logging.WARNING)
+

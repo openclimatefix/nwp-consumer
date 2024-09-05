@@ -9,13 +9,18 @@ This module provides a class for storing metadata about a Zarr store.
 
 import dataclasses
 import datetime as dt
+import json
 import logging
 import pathlib
+import shutil
 
 import dask.array
 import xarray as xr
+import zarr
 from returns.result import Failure, Result, ResultE, Success
+from typing import Any
 
+from .postprocess import PostProcessOptions
 from .coordinates import NWPDimensionCoordinateMap
 from .parameters import Parameter, params
 
@@ -120,7 +125,7 @@ class TensorStore:
                 ),
             )
         store_path = pathlib.Path(
-            f"~/.local/cache/nwp/{name}/{coords.init_time[0]:%Y%m%d%H}.zarr",
+            f"~/.local/cache/nwp/{name}/{coords.init_time[0]:%Y%m%d%H}.zarr.temp",
         )
 
         # * Define a set of chunks allowing for intermediate parallel writes
@@ -142,9 +147,10 @@ class TensorStore:
             chunks=tuple([intermediate_chunks[k] for k in coords.shapemap]),
         )
         attrs: dict[str, str] = {
-            "produced_by": "nwp-consumer",
-            "produced_at": str(dt.datetime.now(tz=dt.UTC)),
-            "variables": "; ".join([f"{v.name}: {v.description}" for v in coords.variable]),
+            "produced_by": f"nwp-consumer at {dt.datetime.now(tz=dt.UTC).strftime('%Y-%m-%d %H:%M')}",
+            "variables": json.dumps(
+                {p.name: {"description": p.description, "units": p.units} for p in coords.variable},
+            ),
         }
         # Create a DataArray object with the given coordinates and dummy values
         da: xr.DataArray = xr.DataArray(
@@ -153,11 +159,21 @@ class TensorStore:
             coords=coords.to_pandas(),
             attrs=attrs,
         )
+
         try:
             # Write the dataset to a skeleton zarr file
             # * 'compute=False' enables only saving metadata
             # * 'mode="w"' overwrites any existing store
-            da.to_zarr(store=store_path, compute=False, mode="w", consolidated=True)
+            da.to_zarr(
+                store=store_path,
+                compute=False,
+                mode="w",
+                consolidated=True,
+                encoding={
+                    "init_time": {"units": "nanoseconds since 1970-01-01"},
+                    "step": {"units": "hours"},
+                },
+            )
             # Ensure the store is readable
             store_da: xr.DataArray = xr.open_dataarray(store_path, engine="zarr")
         except Exception as e:
@@ -166,12 +182,18 @@ class TensorStore:
                     f"Failed writing blank store to disk: {e}",
                 ),
             )
+        # Check the resultant array's coordinates can be converted back
         coordinate_map_result = NWPDimensionCoordinateMap.from_pandas(
             pd_indexes=store_da.coords.indexes,
         )
         match coordinate_map_result:
             case Failure(e):
-                return Result.from_failure(e)
+                return Result.from_failure(
+                    OSError(
+                        f"Error reading back coordinates of initialized store "
+                        f"from disk (possible corruption): {e}",
+                    ),
+                )
             case Success(coordinate_map):
                 return Result.from_value(
                     cls(
@@ -179,7 +201,7 @@ class TensorStore:
                         path=store_path,
                         coordinate_map=coordinate_map,
                         size_mb=0,
-                    )
+                    ),
                 )
 
     # --- Business logic methods --- #
@@ -283,7 +305,7 @@ class TensorStore:
                     "add the parameter to the entities parameters if it is new. "
                     f"Store parameters: {[p.name for p in self.coordinate_map.variable]}. "
                     f"Known parameters: {params.names()}",
-                )
+                ),
             )
         store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")
 
@@ -294,40 +316,66 @@ class TensorStore:
                 mean=mean,
                 is_valid=True,
                 has_nulls=False,
-            )
+            ),
         )
 
-    def rechunk(self, chunks: dict[str, int] | None = None) -> ResultE[None]:
-        """Rechunk the store.
 
-        This method rechunks the store to the given chunk sizes.
-        If no chunk sizes are provided, the defaults are used
-        for the dimension coordinate map.
+    def postprocess(self, options: PostProcessOptions) -> ResultE[pathlib.Path]:
+        """Post-process the store.
 
-        Args:
-            chunks: The new chunk sizes.
-
-        See Also:
-            - `coordinates.NWPDimensionCoordinateMap.desired_chunking`
+        This creates a new store, as many of the postprocess options require
+        modifications to the underlying file structure of the store.
         """
-        if chunks is None:
-            chunks = self.coordinate_map.desired_chunking()
-        if list(chunks.keys()) != self.coordinate_map.dims:
-            return Result.from_failure(
-                ValueError(
-                    "Cannot rechunk store: "
-                    "New chunk sizes must be provided for all dimensions. "
-                    f"Expected: {self.coordinate_map.dims}. Got: {list(chunks.keys())}.",
-                ),
-            )
+        log.info("Applying postprocessing options to store %s", self.name)
+
+        encoding: dict[str, Any] = {
+            "init_time": {"units": "nanoseconds since 1970-01-01"},
+        }
+
+        if options.validate:
+            log.warning("Validation not yet implemented in efficient manner. Skipping option.")
+
+        if options.compressor is not None:
+            encoding["compressor"] = options.compressor
+
         store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")
+
+        if options.zip:
+            newstore = zarr.ZipStore(
+                self.path.as_posix().replace(".temp", ".zip"),
+            )
+        else:
+            newstore = zarr.DirectoryStore(
+                self.path.as_posix().replace(".temp", ""),
+            )
+
+        if options.rechunk:
+            store_da = store_da.chunk(chunks=self.coordinate_map.default_chunking())
+
+        if options.standardize_coordinates:
+            log.warning("Standardizing coordinates not yet implemented. Skipping option.")
+
         try:
-            log.debug(f"Rechunking store {self.name} to {chunks}.")
-            store_da.chunk(chunks)
+            log.debug("Writing postprocessed store to %s", newstore.path)
+            store_da.to_zarr(
+                store=newstore,
+                mode="w",
+                encoding=encoding,
+                consolidated=True,
+            )
         except Exception as e:
             return Result.from_failure(
                 OSError(
-                    f"Error rechunking store: {e}",
-                )
+                    f"Error encountered writing postprocessed store: {e}",
+                ),
             )
-        return Result.from_value(None)
+
+        # Clean up the temporary store
+        shutil.rmtree(self.path)
+        self.path.unlink(missing_ok=True)
+        # Update the store details
+        self.path = pathlib.Path(newstore.path)
+        self.size_mb = int(self.path.stat().st_size / (1024**2))
+
+        log.debug("Postprocessing complete for store %s", self.name)
+        return Result.from_value(pathlib.Path(newstore.path))

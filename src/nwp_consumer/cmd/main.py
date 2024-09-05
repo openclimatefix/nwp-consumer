@@ -1,4 +1,6 @@
-from nwp_consumer.internal import entities, handlers, repositories, services
+import sys
+
+from nwp_consumer.internal import handlers, repositories, services
 
 
 def ceda_metoffice_entrypoint() -> None:
@@ -10,4 +12,5 @@ def ceda_metoffice_entrypoint() -> None:
             zarr_repository=None,
         ),
     )
-    c.run()
+    returncode = c.run()
+    sys.exit(returncode)
