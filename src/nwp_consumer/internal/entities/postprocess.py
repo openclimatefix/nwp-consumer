@@ -2,6 +2,24 @@
 
 import dataclasses
 from codecs import Codec
+from enum import Enum
+
+import ocf_blosc2
+
+
+class CodecOptions(Codec, Enum):
+    """Options for compression codecs."""
+    UNSET = None
+    OCF_BLOSC2 = ocf_blosc2.Blosc2(clevel=5)
+    """Use the OCF Blosc2 codec.
+
+    See Also:
+        - https://pypi.org/project/ocf-blosc2/
+    """
+
+    def __bool__(self) -> bool:
+        """Boolean indicating whether a codec is set."""
+        return self != CodecOptions.UNSET
 
 
 @dataclasses.dataclass(slots=True)
@@ -35,12 +53,41 @@ class PostProcessOptions:
     Turn on only if there exists RAM to spare!
     """
 
-    compressor: Codec | None = None
-    """The compressor to use for the data."""
+    codec: CodecOptions = CodecOptions.UNSET
+    """Whether to compress the data with a non-standard codec.
+
+    By default, Zarr writes chunks compressed using the `Blosc compressor
+    <https://zarr.readthedocs.io/en/stable/tutorial.html#compressors>`_.
+    """
 
     zip: bool = False
     """Whether to zip the data."""
 
     plot: bool = False
     """Whether to save a plot of the data."""
+
+
+    def requires_rewrite(self) -> bool:
+        """Boolean indicating whether the specified options necessitate a rewrite."""
+        return any(
+            [
+                self.standardize_coordinates,
+                self.rechunk,
+                self.codec,
+                self.zip,
+            ],
+        )
+
+    def requires_postprocessing(self) -> bool:
+        """Boolean indicating whether the specified options necessitate post-processing."""
+        return any(
+            [
+                self.standardize_coordinates,
+                self.rechunk,
+                self.validate,
+                self.codec,
+                self.zip,
+                self.plot,
+            ],
+        )
 

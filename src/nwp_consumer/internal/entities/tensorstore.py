@@ -11,20 +11,29 @@ import dataclasses
 import datetime as dt
 import json
 import logging
+import os
 import pathlib
 import shutil
+import time
+from typing import Any
 
 import dask.array
 import xarray as xr
 import zarr
+from zarr._storage.store import Store
 from returns.result import Failure, Result, ResultE, Success
-from typing import Any
+from importlib.metadata import version, PackageNotFoundError
 
-from .postprocess import PostProcessOptions
 from .coordinates import NWPDimensionCoordinateMap
 from .parameters import Parameter, params
+from .postprocess import PostProcessOptions
 
 log = logging.getLogger("nwp-consumer")
+
+try:
+    __version__ = version("nwp-consumer")
+except PackageNotFoundError:
+    __version__ = "v?"
 
 
 @dataclasses.dataclass(slots=True)
@@ -63,6 +72,9 @@ class TensorStore:
 
     size_mb: int
     """The size of the store in megabytes."""
+
+    encoding: dict[str, Any]
+    """The encoding passed to Zarr whilst writing."""
 
     @classmethod
     def initialize_empty_store(
@@ -116,16 +128,12 @@ class TensorStore:
                     f"Got: {coords.init_time} (not a list, or empty).",
                 ),
             )
-        if len(coords.init_time) != 1:
-            return Result.from_failure(
-                ValueError(
-                    "Cannot initialize store with 'init_time' dimension specifying "
-                    "multiple init time coordinates. "
-                    f"Expected a single init time, got: {coords.init_time}.",
-                ),
-            )
+        store_range: str = f"{coords.init_time[0]:%Y%m%d%H}"
+        if len(coords.init_time) > 1:
+            store_range = f"{coords.init_time[0]:%Y%m%d%H}-{coords.init_time[-1]:%Y%m%d%H}"
+
         store_path = pathlib.Path(
-            f"~/.local/cache/nwp/{name}/{coords.init_time[0]:%Y%m%d%H}.zarr.temp",
+            f"{os.getenv('NWP_WORKDIR', f'~/.local/cache/nwp/{name}')}/{store_range}.zarr",
         )
 
         # * Define a set of chunks allowing for intermediate parallel writes
@@ -147,7 +155,10 @@ class TensorStore:
             chunks=tuple([intermediate_chunks[k] for k in coords.shapemap]),
         )
         attrs: dict[str, str] = {
-            "produced_by": f"nwp-consumer at {dt.datetime.now(tz=dt.UTC).strftime('%Y-%m-%d %H:%M')}",
+            "produced_by": "".join((
+                f"nwp-consumer {__version__} at ",
+                f"{dt.datetime.now(tz=dt.UTC).strftime('%Y-%m-%d %H:%M')}",
+            )),
             "variables": json.dumps(
                 {p.name: {"description": p.description, "units": p.units} for p in coords.variable},
             ),
@@ -159,6 +170,10 @@ class TensorStore:
             coords=coords.to_pandas(),
             attrs=attrs,
         )
+        encoding: dict[str, Any] ={
+            "init_time": {"units": "nanoseconds since 1970-01-01"},
+            "step": {"units": "hours"},
+        }
 
         try:
             # Write the dataset to a skeleton zarr file
@@ -169,10 +184,7 @@ class TensorStore:
                 compute=False,
                 mode="w",
                 consolidated=True,
-                encoding={
-                    "init_time": {"units": "nanoseconds since 1970-01-01"},
-                    "step": {"units": "hours"},
-                },
+                encoding=encoding,
             )
             # Ensure the store is readable
             store_da: xr.DataArray = xr.open_dataarray(store_path, engine="zarr")
@@ -183,26 +195,24 @@ class TensorStore:
                 ),
             )
         # Check the resultant array's coordinates can be converted back
-        coordinate_map_result = NWPDimensionCoordinateMap.from_pandas(
-            pd_indexes=store_da.coords.indexes,
+        coordinate_map_result = NWPDimensionCoordinateMap.from_xarray(store_da)
+        if isinstance(coordinate_map_result, Failure):
+            return Result.from_failure(
+                OSError(
+                    f"Error reading back coordinates of initialized store "
+                    f"from disk (possible corruption): {coordinate_map_result}",
+                ),
+            )
+
+        return Result.from_value(
+            cls(
+                name=name,
+                path=store_path,
+                coordinate_map=coordinate_map_result.unwrap(),
+                size_mb=0,
+                encoding=encoding,
+            ),
         )
-        match coordinate_map_result:
-            case Failure(e):
-                return Result.from_failure(
-                    OSError(
-                        f"Error reading back coordinates of initialized store "
-                        f"from disk (possible corruption): {e}",
-                    ),
-                )
-            case Success(coordinate_map):
-                return Result.from_value(
-                    cls(
-                        name=name,
-                        path=store_path,
-                        coordinate_map=coordinate_map,
-                        size_mb=0,
-                    ),
-                )
 
     # --- Business logic methods --- #
     def write_to_region(
@@ -227,9 +237,7 @@ class TensorStore:
         """
         # Attempt to determine the region if missing
         if region is None or region == {}:
-            region_result = NWPDimensionCoordinateMap.from_pandas(
-                da.coords.indexes,
-            ).bind(
+            region_result = NWPDimensionCoordinateMap.from_xarray(da).bind(
                 self.coordinate_map.determine_region,
             )
             if isinstance(region_result, Failure):
@@ -262,7 +270,7 @@ class TensorStore:
         """
         store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")
         # Consistency check on the coordinates of the store
-        coords_result = NWPDimensionCoordinateMap.from_pandas(store_da.coords.indexes)
+        coords_result = NWPDimensionCoordinateMap.from_xarray(store_da)
         match coords_result:
             case Failure(e):
                 return Result.from_failure(e)
@@ -331,56 +339,95 @@ class TensorStore:
         This creates a new store, as many of the postprocess options require
         modifications to the underlying file structure of the store.
         """
-        log.info("Applying postprocessing options to store %s", self.name)
+        if options.requires_postprocessing():
+            log.info("Applying postprocessing options to store %s", self.name)
 
-        encoding: dict[str, Any] = {
-            "init_time": {"units": "nanoseconds since 1970-01-01"},
-        }
+            if options.validate:
+                log.warning("Validation not yet implemented in efficient manner. Skipping option.")
 
-        if options.validate:
-            log.warning("Validation not yet implemented in efficient manner. Skipping option.")
-
-        if options.compressor is not None:
-            encoding["compressor"] = options.compressor
-
-        store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")
-
-        if options.zip:
-            newstore = zarr.ZipStore(
-                self.path.as_posix().replace(".temp", ".zip"),
+            store_da: xr.DataArray = xr.open_dataarray(
+                self.path,
+                engine="zarr",
             )
+
+            if options.codec:
+                log.debug("Applying codec %s to store %s", options.codec.name, self.name)
+                self.encoding = self.encoding | {"compressor": options.codec.value}
+
+            if options.rechunk:
+                store_da = store_da.chunk(chunks=self.coordinate_map.default_chunking())
+
+            if options.standardize_coordinates:
+                # Make the longitude values range from -180 to 180
+                store_da = store_da.assign_coords({
+                    "longitude": ((store_da.coords["longitude"] + 180) % 360) - 180,
+                })
+                # Find the index of the maximum value
+                idx: int = store_da.coords["longitude"].argmax().values
+                # Move the maximum value to the end, and do the same to the underlying data
+                store_da = store_da.roll(
+                    longitude=len(store_da.coords["longitude"]) - idx - 1,
+                    roll_coords=True,
+                )
+                coordinates_result = NWPDimensionCoordinateMap.from_xarray(store_da)
+                match coordinates_result:
+                    case Failure(e):
+                        return Result.from_failure(e)
+                    case Success(coords):
+                        self.coordinate_map = coords
+
+            if options.requires_rewrite():
+                processed_path = self.path.parent / (self.path.name + ".processed")
+                try:
+                    log.debug(
+                        "Writing postprocessed store to %s",
+                        processed_path,
+                    )
+                    # Clear the encoding for any variables indexed as an 'object' type
+                    # * e.g. Dimensions with string labels -> the variable dim
+                    # * See https://github.com/sgkit-dev/sgkit/issues/991
+                    # * and https://github.com/pydata/xarray/issues/3476
+                    store_da.coords["variable"].encoding.clear()
+                    zstore: xr.backends.zarr.ZarrStore = store_da.to_zarr(
+                        store=processed_path,
+                        mode="w",
+                        encoding=self.encoding,
+                        consolidated=True,
+                    )
+                    self.path = processed_path
+                except Exception as e:
+                    return Result.from_failure(
+                        OSError(
+                            f"Error encountered writing postprocessed store: {e}",
+                        ),
+                    )
+
+            if options.zip:
+                log.debug(
+                    "Postprocessor: Zipping store to "
+                    f"{self.path.with_suffix(".zarr.zip")}",
+                )
+                try:
+                    shutil.make_archive(self.path.name, "zip", self.path)
+                except Exception as e:
+                    return Result.from_failure(
+                        OSError(
+                            f"Error encountered zipping store: {e}",
+                        ),
+                    )
+
+            log.debug("Postprocessing complete for store %s", self.name)
+            return Result.from_value(self.path)
+
         else:
-            newstore = zarr.DirectoryStore(
-                self.path.as_posix().replace(".temp", ""),
-            )
+            return Result.from_value(self.path)
 
-        if options.rechunk:
-            store_da = store_da.chunk(chunks=self.coordinate_map.default_chunking())
+    def update_attrs(self, attrs: dict[str, str]) -> ResultE[pathlib.Path]:
+        """Update the attributes of the store.
 
-        if options.standardize_coordinates:
-            log.warning("Standardizing coordinates not yet implemented. Skipping option.")
-
-        try:
-            log.debug("Writing postprocessed store to %s", newstore.path)
-            store_da.to_zarr(
-                store=newstore,
-                mode="w",
-                encoding=encoding,
-                consolidated=True,
-            )
-        except Exception as e:
-            return Result.from_failure(
-                OSError(
-                    f"Error encountered writing postprocessed store: {e}",
-                ),
-            )
-
-        # Clean up the temporary store
-        shutil.rmtree(self.path)
-        self.path.unlink(missing_ok=True)
-        # Update the store details
-        self.path = pathlib.Path(newstore.path)
-        self.size_mb = int(self.path.stat().st_size / (1024**2))
-
-        log.debug("Postprocessing complete for store %s", self.name)
-        return Result.from_value(pathlib.Path(newstore.path))
+        This method updates the attributes of the store with the given dictionary.
+        """
+        group: zarr.Group = zarr.open_group(self.path.as_posix())
+        group.attrs.update(attrs)
+        zarr.consolidate_metadata(self.path.as_posix())
+        return Result.from_value(self.path)

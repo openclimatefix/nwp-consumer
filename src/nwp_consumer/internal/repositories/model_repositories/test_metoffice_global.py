@@ -8,6 +8,7 @@ from returns.pipeline import is_successful
 from nwp_consumer.internal import entities
 
 from .metoffice_global import CedaMetOfficeGlobalModelRepository
+from ...entities import NWPDimensionCoordinateMap
 
 
 class TestCedaMetOfficeGlobalModelRepository(unittest.TestCase):
@@ -57,7 +58,10 @@ class TestCedaMetOfficeGlobalModelRepository(unittest.TestCase):
                 self.assertTrue(is_successful(result), msg=f"Error: {result}")
 
                 # Check resultant array is a subset of the expected coordinates
-                map_result = entities.NWPDimensionCoordinateMap.from_pandas(result.unwrap().coords.indexes)
-                region_result = map_result.bind(test_coordinates.determine_region)
+                region_result = result.bind(
+                    NWPDimensionCoordinateMap.from_xarray,
+                ).bind(
+                    test_coordinates.determine_region,
+                )
                 self.assertTrue(is_successful(region_result), msg=f"Error: {region_result}")
 

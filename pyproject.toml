@@ -17,6 +17,7 @@ authors = [
 ]
 classifiers = ["Programming Language :: Python :: 3"]
 dependencies = [
+    "dask >= 2024.8.0",
     "cfgrib >= 0.9.10.4",
     "joblib >= 1.4.2",
     "numpy >= 1.23.2",
@@ -46,7 +47,7 @@ dev = [
 ]
 
 [project.scripts]
-nwp-consumer-metoffice-global = "nwp_consumer.cmd.main:ceda_metoffice_entrypoint"
+nwp-consumer-cli = "nwp_consumer.cmd.main:run_cli"
 
 [project.urls]
 repository = "https://github.com/openclimatefix/nwp-consumer"

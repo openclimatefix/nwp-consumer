@@ -18,6 +18,7 @@ class PerformanceMonitor(Thread):
     all cases.
     """
 
+    thread: Thread
     memory_buffer: list[int]
     stop: bool
     start_time: float

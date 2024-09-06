@@ -15,6 +15,7 @@ class TestIntegration(unittest.TestCase):
                 notification_repository=repositories.StdoutNotificationRepository(),
                 zarr_repository=None,
             ),
+            archiver_usecase=None,
         )
         result = c._consumer_usecase.consume(it=dt.datetime(2021, 1, 1, tzinfo=dt.UTC))
 

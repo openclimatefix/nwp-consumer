@@ -86,7 +86,6 @@ from typing import override
 import numpy as np
 import xarray as xr
 from joblib import delayed
-import functools
 from returns.result import Failure, Result, ResultE
 
 from nwp_consumer.internal import entities, ports
@@ -136,25 +135,17 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
                 latitude=[
                     float(f"{lat:.4f}") for lat in np.arange(89.856, -89.856 - 0.156, -0.156)
                 ],
-                # Longitude arrives in four files: 315 -> 45.09, 45 -> 135.09, 135 -> 225.09, 225 -> 315.09
-                # all in steps of 0.234.
-                # This is in the range [0, 360], so we need to adjust it to [-180, 180]
-                # Also the last value of each file overlaps with the first two values of the next file
-                # so we need to remove the last value of each file.
-                # See `_standardize_coordinates` for the implementation
                 longitude=[
                     float(f"{lon:.4f}") for lon in np.concatenate([
-                        np.arange(-179.838, -135, 0.234),
-                        np.arange(-135, -45, 0.234),
                         np.arange(-45, 45, 0.234),
                         np.arange(45, 135, 0.234),
-                        np.arange(135, 180, 0.234),
+                        np.arange(135, 225, 0.234),
+                        np.arange(225, 315, 0.234),
                     ])
                 ],
             ),
             postprocess_options=entities.PostProcessOptions(
                 standardize_coordinates=True,
-                rechunk=True,
             ),
         )
 
@@ -180,41 +171,52 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
             "wind_u_10m",
             "wind_v_10m",
         ]
-        area_stubs: list[str] = [f"Area{c}" for c in "ABCDEFGH"]
 
         for parameter in parameter_stubs:
-            for area in area_stubs:
+            for area in [f"Area{c}" for c in "ABCDEFGH"]:
                 url = (
                         f"{self.url_base}/{it:%Y/%m/%d}/"
                         + f"{it:%Y%m%d%H}_WSGlobal17km_{parameter}_{area}_000144.grib"
                 )
-                if area == "AreaC" or area == "AreaG":
-                    # The longitude values in AreaC and G wrap around the 180 degree mark,
-                    # so in order to be successfully written to a region (xarray doesn't have a
-                    # concrete implementation of periodic coordinates, or python wrapped array
-                    # slicing), they must be split into two dataarrays each.
-                    for region in ["west", "east"]:
-                        yield delayed(
-                            functools.partial(self._download_and_convert, region=region)
-                        )(url)
-                else:
-                    yield delayed(self._download_and_convert)(url)
+                yield delayed(self._download_and_convert)(url=url)
 
         pass
 
     def _download_and_convert(
         self,
         url: str,
-        region: str | None = None,
     ) -> ResultE[xr.DataArray]:
         """Download and convert a file to an xarray dataset.
 
         Args:
             url: The URL of the file to download.
-            region: The region of the file to download, if applicable.
 
         Returns:
             A ResultE containing the xarray dataset.
+        """
+        return self._download(url).bind(self._convert)
+
+    def authenticate(self) -> ResultE[None]:
+        """Authenticate with the CEDA FTP server.
+
+        Returns:
+            A Result containing None if successful, or an error if not.
+        """
+        if all(k not in os.environ for k in self.metadata.required_env):
+            return Result.from_failure(ValueError(
+                f"Missing required environment variables: {self.metadata.required_env}",
+            ))
+        username: str = urllib.parse.quote(os.environ["CEDA_FTP_USER"])
+        password: str = urllib.parse.quote(os.environ["CEDA_FTP_PASS"])
+
+        self._url_auth = f"ftp://{username}:{password}@"
+        return Result.from_value(None)
+
+    def _download(self, url: str) -> ResultE[pathlib.Path]:
+        """Download a file from the CEDA FTP server.
+
+        Args:
+            url: The URL of the file to download.
         """
         if self._url_auth is None:
             return Result.from_failure(
@@ -226,7 +228,7 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
 
         local_path: pathlib.Path = (
                 pathlib.Path(
-                    f"~/.local/cache/nwp/{self.metadata.name}/raw",
+                    f"{os.getenv('NWP_WORKDIR', f'~/.local/cache/nwp/{self.metadata.name}')}/raw",
                 )
                 / url.split("/")[-1]
         )
@@ -262,12 +264,20 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
                     ),
                 )
 
+        return Result.from_value(local_path)
+
+    def _convert(self, path: pathlib.Path) -> ResultE[xr.DataArray]:
+        """Convert a file to an xarray dataset.
+
+        Args:
+            path: The path to the file to convert.
+        """
         try:
-            ds: xr.Dataset = xr.open_dataset(local_path, engine="cfgrib")
+            ds: xr.Dataset = xr.open_dataset(path, engine="cfgrib")
         except Exception as e:
             return Result.from_failure(
                 OSError(
-                    f"Error opening '{local_path}' as xarray Dataset: {e}",
+                    f"Error opening '{path}' as xarray Dataset: {e}",
                 ),
             )
         try:
@@ -284,32 +294,17 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
                 .pipe(_rename_vars)
                 .to_dataarray(name=self.metadata.name)
                 .transpose("init_time", "step", "variable", "latitude", "longitude")
-                .pipe(functools.partial(_standardize_coordinates, crop=region))
+                # Remove the last value of the longitude dimension as it overlaps with the next file
+                # Reverse the latitude dimension to be in descending order
+                .isel(longitude=slice(None, -1), latitude=slice(None, None, -1))
             )
         except Exception as e:
             return Result.from_failure(
                 ValueError(
-                    f"Error processing {local_path} to DataArray: {e}",
+                    f"Error processing {path} to DataArray: {e}",
                 ),
             )
-
         return Result.from_value(da)
-
-    def authenticate(self) -> ResultE[None]:
-        """Authenticate with the CEDA FTP server.
-
-        Returns:
-            A Result containing None if successful, or an error if not.
-        """
-        if all(k not in os.environ for k in self.metadata.required_env):
-            return Result.from_failure(ValueError(
-                f"Missing required environment variables: {self.metadata.required_env}",
-            ))
-        username: str = urllib.parse.quote(os.environ["CEDA_FTP_USER"])
-        password: str = urllib.parse.quote(os.environ["CEDA_FTP_PASS"])
-
-        self._url_auth = f"ftp://{username}:{password}@"
-        return Result.from_value(None)
 
 
 def _rename_vars(ds: xr.Dataset) -> xr.Dataset:
@@ -356,37 +351,3 @@ def _rename_vars(ds: xr.Dataset) -> xr.Dataset:
         if old in ds.data_vars:
             ds = ds.rename_vars({old: new})
     return ds
-
-def _standardize_coordinates(da: xr.DataArray, crop: str | None = None) -> xr.DataArray:
-    """Standardize the coordinates of the data.
-
-    CEDA provide MetOffice data on a very irritating "lat long grid" that
-    is not uniform or standard; hence some memory-intensive re-ordering
-    is required.
-
-    Arguments:
-        da: The xarray DataArray to standardize.
-        crop: The region of the data to crop to, if any.
-    """
-    # Remove the last value of the longitude dimension as it overlaps with the next area file
-    da = da.isel(longitude=slice(None, -1))
-    # Make the longitude values range from -180 to 180
-    da = da.assign_coords({"longitude": ((da.coords["longitude"] + 180) % 360) - 180})
-    # Find the index of the maximum value
-    idx: int = da.coords["longitude"].argmax().values
-    # Move the maximum value to the end, and do the same to the underlying data
-    da = da.roll(longitude=len(da.coords["longitude"]) - idx - 1, roll_coords=True)
-    # Reverse the latitude dimension to be in descending order
-    da = da.isel(latitude=slice(None, None, -1))
-
-    match crop:
-        case None:
-            pass
-        case "west":
-            da = da.where(da.coords["longitude"] < 0, drop=True)
-        case "east":
-            da = da.where(da.coords["longitude"] >= 0, drop=True)
-        case _:
-            raise ValueError(f"Invalid crop value: {crop}")
-    return da
-

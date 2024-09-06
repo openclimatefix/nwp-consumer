@@ -34,6 +34,7 @@ src/nwp_consumer/internal/repositories/notification_repositories/__init__.py
 src/nwp_consumer/internal/repositories/notification_repositories/stdout.py
 src/nwp_consumer/internal/services/__init__.py
 src/nwp_consumer/internal/services/_performance.py
-src/nwp_consumer/internal/services/consumer.py
+src/nwp_consumer/internal/services/archiver_service.py
+src/nwp_consumer/internal/services/consumer_service.py
 src/nwp_consumer/internal/services/test_consumer.py
 src/test_integration/test_integration.py

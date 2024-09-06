@@ -11,6 +11,9 @@ for a live service.
 import dataclasses
 import datetime as dt
 import pathlib
+from collections.abc import Iterator
+
+import pandas as pd
 
 from .coordinates import NWPDimensionCoordinateMap
 from .postprocess import PostProcessOptions
@@ -102,6 +105,15 @@ class ModelRepositoryMetadata:
             it -= dt.timedelta(hours=1)
 
         return it
+
+    def month_its(self, year: int, month: int) -> list[dt.datetime]:
+        """Generate all init times for a given month."""
+        days = pd.Period(f"{year}-{month}").days_in_month
+        its: list[dt.datetime] = []
+        for day in range(1, days + 1):
+            for hour in self.running_hours:
+                its.append(dt.datetime(year, month, day, hour, tzinfo=dt.UTC))
+        return its
 
     def __str__(self) -> str:
         """Return a pretty-printed string representation of the metadata."""
