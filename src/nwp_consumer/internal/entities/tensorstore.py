@@ -116,16 +116,12 @@ class TensorStore:
                     f"Got: {coords.init_time} (not a list, or empty).",
                 ),
             )
-        if len(coords.init_time) != 1:
-            return Result.from_failure(
-                ValueError(
-                    "Cannot initialize store with 'init_time' dimension specifying "
-                    "multiple init time coordinates. "
-                    f"Expected a single init time, got: {coords.init_time}.",
-                ),
-            )
+        store_range: str = f"{coords.init_time[0]:%Y%m%d%H}"
+        if len(coords.init_time) > 1:
+            store_range = f"{coords.init_time[0]:%Y%m%d%H}-{coords.init_time[-1]:%Y%m%d%H}"
+
         store_path = pathlib.Path(
-            f"~/.local/cache/nwp/{name}/{coords.init_time[0]:%Y%m%d%H}.zarr.temp",
+            f"~/.local/cache/nwp/{name}/{store_range}.zarr",
         )
 
         # * Define a set of chunks allowing for intermediate parallel writes

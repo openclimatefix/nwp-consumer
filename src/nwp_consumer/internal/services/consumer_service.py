@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 log = logging.getLogger("nwp-consumer")
 
 
-class ConsumerService(ports.ConsumerUseCase):
+class ConsumerService(ports.ConsumeUseCase):
     """Service implementation of the consumer use case.
 
     This services contains the business logic required to enact
@@ -44,7 +44,6 @@ class ConsumerService(ports.ConsumerUseCase):
 
     @override
     def consume(self, it: dt.datetime | None = None) -> ResultE[pathlib.Path]:
-        """See parent class."""
         monitor = PerformanceMonitor()
 
         if it is None:
@@ -59,6 +58,7 @@ class ConsumerService(ports.ConsumerUseCase):
 
         match init_store_result:
             case Failure(e):
+                monitor.join()  # TODO: Make this a context manager instead
                 return Result.from_failure(OSError(f"Failed to initialize store for init time: {e}"))
             case Success(store):
 
@@ -75,6 +75,7 @@ class ConsumerService(ports.ConsumerUseCase):
                     # Fail hard if any of the writes failed
                     # * TODO: Consider just how hard we want to fail in this instance
                     if isinstance(write_result, Failure):
+                        monitor.join() # TODO: Make this a context manager instead
                         return Result.from_failure(write_result.failure())
 
                 del da_result_generator
@@ -103,10 +104,4 @@ class ConsumerService(ports.ConsumerUseCase):
 
     @override
     def postprocess(self, options: entities.PostProcessOptions) -> ResultE[str]:
-        """See parent class."""
         return Result.from_failure(NotImplementedError("Postprocessing not yet implemented"))
-
-    @override
-    def info(self) -> str:
-        """See parent class."""
-        return str(self._mr.metadata)

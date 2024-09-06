@@ -11,7 +11,7 @@ from returns.pipeline import is_successful
 from returns.result import Result, ResultE
 
 from nwp_consumer.internal import entities, ports
-from nwp_consumer.internal.services.consumer import ConsumerService
+from nwp_consumer.internal.services.consumer_service import ConsumerService
 
 
 class DummyModelRepository(ports.ModelRepository):

@@ -9,7 +9,7 @@ from nwp_consumer.internal import entities, ports
 from .cli import CLIArgs, CLIHandler
 
 
-class DummyConsumerService(ports.ConsumerUseCase):
+class DummyConsumerService(ports.ConsumeUseCase):
 
     def consume(self, it: dt.datetime | None = None) -> ResultE[pathlib.Path]:
         return ResultE.success(pathlib.Path(f"dummy_{it:%Y%m%dT%H}.zarr"))

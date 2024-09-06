@@ -194,11 +194,9 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
                     # concrete implementation of periodic coordinates, or python wrapped array
                     # slicing), they must be split into two dataarrays each.
                     for region in ["west", "east"]:
-                        yield delayed(
-                            functools.partial(self._download_and_convert, region=region)
-                        )(url)
+                        yield delayed(self._download_and_convert)(url=url, region=region)
                 else:
-                    yield delayed(self._download_and_convert)(url)
+                    yield delayed(self._download_and_convert)(url=url, region=None)
 
         pass
 

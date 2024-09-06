@@ -15,7 +15,7 @@ from returns.result import ResultE
 from nwp_consumer.internal import entities
 
 
-class ConsumerUseCase(abc.ABC):
+class ConsumeUseCase(abc.ABC):
     """Interface for the consumer use case.
 
     Defines the business-critical methods for the following use case:
@@ -23,10 +23,6 @@ class ConsumerUseCase(abc.ABC):
     'A user should be able to consume NWP data for a given initialization time.'
     """
 
-    @abc.abstractmethod
-    def info(self) -> str:
-        """Return information about the model repository."""
-        pass
 
     @abc.abstractmethod
     def consume(self, it: dt.datetime | None = None) -> ResultE[pathlib.Path]:
@@ -53,4 +49,39 @@ class ConsumerUseCase(abc.ABC):
     @abc.abstractmethod
     def postprocess(self, options: entities.PostProcessOptions) -> ResultE[str]:
         """Postprocess the produced Zarr according to given options."""
+        pass
+
+
+class ArchiveUseCase(abc.ABC):
+    """Interface for the archive use case.
+
+    Defines the following business-critical methods:
+
+    'A user should be able to archive NWP data for a given time period.'
+    """
+
+    @abc.abstractmethod
+    def archive(self, year: int, month: int) -> ResultE[pathlib.Path]:
+        """Archive NWP data to Zarr format for the given month.
+
+        Args:
+            year: The year for which to archive data.
+            month: The month for which to archive data.
+
+        Returns:
+            The path to the produced Zarr store.
+        """
+        pass
+
+class InformUseCase(abc.ABC):
+    """Interface for the notification use case.
+
+    Defines the following business-critical methods:
+
+    'A user should be able to retrieve information about the service.'
+    """
+
+    @abc.abstractmethod
+    def model_info(self) -> str:
+        """Get information about the model repository."""
         pass

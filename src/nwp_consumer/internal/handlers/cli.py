@@ -3,7 +3,6 @@
 import argparse
 import datetime as dt
 import logging
-import dataclasses
 
 from returns.result import Failure, Success
 
@@ -15,9 +14,14 @@ log = logging.getLogger("nwp-consumer")
 class CLIHandler:
     """CLI driving actor."""
 
-    def __init__(self, consumer_usecase: ports.ConsumerUseCase) -> None:
+    def __init__(
+            self,
+            consumer_usecase: ports.ConsumeUseCase,
+            archiver_usecase: ports.ArchiveUseCase,
+    ) -> None:
         """Create a new instance."""
         self._consumer_usecase = consumer_usecase
+        self._archiver_usecase = archiver_usecase
 
 
     @property
@@ -26,13 +30,33 @@ class CLIHandler:
         parser = argparse.ArgumentParser(description="NWP Consumer CLI")
         subparsers = parser.add_subparsers(dest="command")
 
-        consume_command = subparsers.add_parser("consume", help="Consume NWP data")
+        consume_command = subparsers.add_parser(
+            "consume",
+            help="Consume NWP data for a single init time",
+        )
         consume_command.add_argument(
             "--init-time", "-i",
             help="Initialization time of the forecast (YYYY-MM-DDTHH). "
                  "Omit to pull the latest available forecast.",
             type=dt.datetime.fromisoformat,
             required=False,
+        )
+
+        archive_command = subparsers.add_parser(
+            "archive",
+            help="Archive NWP data for a given month",
+        )
+        archive_command.add_argument(
+            "--year", "-y",
+            help="Year to archive",
+            type=int,
+            required=True,
+        )
+        archive_command.add_argument(
+            "--month", "-m",
+            help="Month to archive",
+            type=int,
+            required=True,
         )
 
         info_command = subparsers.add_parser("info", help="Show model repository info")
@@ -65,20 +89,23 @@ class CLIHandler:
                         log.error(f"Failed to consume NWP data: {e}")
                         return 1
                     case Success(path):
-                        log.info(f"Successfully consumed NWP data: {path.as_posix()}")
+                        log.info(f"Successfully consumed NWP data to '{path.as_posix()}'")
+                        return 0
+
+            case "archive":
+                result = self._archiver_usecase.archive(year=args.year, month=args.month)
+
+                match result:
+                    case Failure(e):
+                        log.error(f"Failed to archive NWP data: {e}")
+                        return 1
+                    case Success(path):
+                        log.info(f"Successfully archived NWP data to '{path.as_posix()}'")
                         return 0
 
             case "info":
-                if args.model:
-                    log.info(self._consumer_usecase.info())
-                    return 0
-                if args.parameters:
-                    for parameter in [
-                        getattr(entities.params, f.name)
-                        for f in dataclasses.fields(entities.params)
-                    ]:
-                        log.info(parameter.__repr__())
-                        return 0
+                log.error("Info command is coming soon! :)")
+                return 0
 
             case _:
                 log.error(f"Unknown command: {args.command}")

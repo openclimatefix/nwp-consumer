@@ -104,7 +104,10 @@ class NWPDimensionCoordinateMap:
         return {dim: len(getattr(self, dim)) for dim in self.dims}
 
     @classmethod
-    def from_pandas(cls, pd_indexes: dict[str, pd.Index]) -> ResultE["NWPDimensionCoordinateMap"]:
+    def from_pandas(
+            cls,
+            pd_indexes: dict[str, pd.Index], # type: ignore
+    ) -> ResultE["NWPDimensionCoordinateMap"]:
         """Create a new NWPDimensionCoordinateMap from a dictionary of pandas Index objects.
 
         This is useful for interoperability with xarray, which prefers to define
@@ -184,7 +187,7 @@ class NWPDimensionCoordinateMap:
             ),
         )
 
-    def to_pandas(self) -> dict[str, pd.Index]:
+    def to_pandas(self) -> dict[str, pd.Index]:  # type: ignore
         """Convert the coordinate map to a dictionary of pandas Index objects.
 
         This is useful for interoperability with xarray, which prefers to define
@@ -204,7 +207,7 @@ class NWPDimensionCoordinateMap:
             `NWPDimensionCoordinateMap.from_pandas` for the reverse operation.
 
         """
-        out_dict: dict[str, pd.Index] = {
+        out_dict: dict[str, pd.Index] = {  # type: ignore
             "init_time": pd.Index(
                 [
                     np.datetime64(t.astimezone(pytz.utc).replace(tzinfo=None), "ns")
@@ -349,4 +352,3 @@ class NWPDimensionCoordinateMap:
             "step": 1,
         } | {dim: len(getattr(self, dim)) for dim in self.dims if dim not in ["init_time", "step"]}
         return out_dict
-
