@@ -6,6 +6,7 @@ import unittest
 from returns.pipeline import is_successful
 
 from nwp_consumer.internal import entities
+
 from .metoffice_global import CedaMetOfficeGlobalModelRepository
 
 
@@ -31,6 +32,7 @@ class TestCedaMetOfficeGlobalModelRepository(unittest.TestCase):
         @dataclasses.dataclass
         class TestCase:
             area: str
+            crop: str | None = None
 
             @property
             def url(self) -> str:
@@ -43,15 +45,14 @@ class TestCedaMetOfficeGlobalModelRepository(unittest.TestCase):
                 )
 
         tests = [
-            TestCase(area="AreaA"),
-            TestCase(area="AreaB"),
-            TestCase(area="AreaC"),
-            TestCase(area="AreaD"),
+            TestCase(area="AreaC", crop="east"),
+            TestCase(area="AreaG", crop="west"),
+            TestCase(area="AreaE"),
         ]
 
         for test in tests:
             with self.subTest(area=test.area):
-                result = c._download_and_convert(test.url)
+                result = c._download_and_convert(test.url, region=test.crop)
 
                 self.assertTrue(is_successful(result), msg=f"Error: {result}")
 

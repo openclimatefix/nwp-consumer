@@ -6,8 +6,13 @@
   <component name="ChangeListManager">
     <list default="true" id="267ca1f9-a4e4-4ca3-afe5-1b3478bd9a79" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/notification.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/notification.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/coordinates.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/coordinates.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/tensorstore.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/entities/tensorstore.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/ports/repositories.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/ports/repositories.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model_repositories/metoffice_global.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model_repositories/metoffice_global.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model_repositories/test_metoffice_global.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/repositories/model_repositories/test_metoffice_global.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/internal/services/test_consumer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/internal/services/test_consumer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test_integration/test_integration.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/test_integration/test_integration.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -71,7 +76,7 @@
       <recent name="$PROJECT_DIR$/src/nwp_consumer" />
     </key>
   </component>
-  <component name="RunManager" selected="Python tests.Python tests for model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.test__download_and_convert">
+  <component name="RunManager" selected="Python tests.Python tests for test_integration.TestIntegration.test_ceda_metoffice_global_model">
     <configuration name="scratch_1" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="nwp-consumer-2" />
       <option name="ENV_FILES" value="" />
@@ -194,10 +199,10 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume" />
         <item itemvalue="Python.scratch_1" />
         <item itemvalue="Python tests.Python tests for internal.repositories.model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.test__download_and_convert" />
         <item itemvalue="Python tests.Python tests for model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository" />
-        <item itemvalue="Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume" />
         <item itemvalue="Python tests.Python tests for handlers.test_cli.TestCLIHandler.test_parser" />
       </list>
     </recent_temporary>
@@ -229,41 +234,17 @@
           <option name="timeStamp" value="58" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file:///opt/homebrew/Caskroom/miniforge/base/envs/nwp-consumer-2/lib/python3.12/site-packages/xarray/coding/times.py</url>
-          <line>921</line>
-          <option name="timeStamp" value="59" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file:///opt/homebrew/Caskroom/miniforge/base/envs/nwp-consumer-2/lib/python3.12/site-packages/xarray/coding/times.py</url>
-          <line>1013</line>
-          <option name="timeStamp" value="60" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file:///opt/homebrew/Caskroom/miniforge/base/envs/nwp-consumer-2/lib/python3.12/site-packages/xarray/coding/times.py</url>
-          <line>720</line>
-          <option name="timeStamp" value="63" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file:///opt/homebrew/Caskroom/miniforge/base/envs/nwp-consumer-2/lib/python3.12/site-packages/xarray/coding/times.py</url>
-          <line>919</line>
-          <option name="timeStamp" value="66" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/nwp_consumer/internal/entities/coordinates.py</url>
-          <line>285</line>
-          <option name="timeStamp" value="69" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/src/nwp_consumer/internal/entities/coordinates.py</url>
-          <line>222</line>
-          <option name="timeStamp" value="70" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/src/nwp_consumer/internal/entities/coordinates.py</url>
-          <line>301</line>
-          <option name="timeStamp" value="75" />
+          <line>321</line>
+          <option name="timeStamp" value="88" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
+    <watches-manager>
+      <configuration name="tests">
+        <watch expression="area" />
+        <watch expression="region" />
+      </configuration>
+    </watches-manager>
   </component>
 </project>

@@ -295,7 +295,7 @@ class NWPDimensionCoordinateMap:
                     ValueError(
                         f"Coordinate values for dimension '{inner_dim_label}' in the inner map "
                         "exceed the number of coordinate values in the outer map. "
-                        f"Got: {len(inner_dim_coords)} (> {len(outer_dim_coords)}) "
+                        f"Got: {len(inner_dim_coords)}' (> {len(outer_dim_coords)}) "
                         "coordinate values.",
                     ),
                 )
@@ -319,11 +319,13 @@ class NWPDimensionCoordinateMap:
             )
             contiguous_index_run = list(range(outer_dim_indices[0], outer_dim_indices[-1] + 1))
             if outer_dim_indices != contiguous_index_run:
+                idxs = np.argwhere(np.gradient(outer_dim_indices) > 1).flatten()
                 return Result.from_failure(
                     ValueError(
-                        f"Coordinate values for dimension <{inner_dim_label}> do not correspond "
+                        f"Coordinate values for dimension '{inner_dim_label}' do not correspond "
                         f"with a contiguous index set in the outer dimension map. "
-                        f"Got: '{outer_dim_indices}' indices.",
+                        f"Non-contiguous values '{[outer_dim_indices[i] for i in idxs]}' "
+                        f"adjacent in dimension coordinates.",
                     ),
                 )
 

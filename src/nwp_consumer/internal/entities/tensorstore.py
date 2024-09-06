@@ -137,7 +137,7 @@ class TensorStore:
             "step": 1,
             "variable": 1,
             "latitude": coords.shapemap.get("latitude", 400) // 4,
-            "longitude": coords.shapemap.get("longitude", 400) // 4,
+            "longitude": coords.shapemap.get("longitude", 400) // 8,
             "values": coords.shapemap.get("values", 100),
         }
         # Create a dask array of zeros with the shape of the dataset
@@ -225,27 +225,32 @@ class TensorStore:
         Returns:
             An indicator of a successful store write containing the number of bytes written.
         """
+        # Attempt to determine the region if missing
         if region is None or region == {}:
             region_result = NWPDimensionCoordinateMap.from_pandas(
                 da.coords.indexes,
             ).bind(
                 self.coordinate_map.determine_region,
             )
-            try:
-                Result.do(
-                    da.to_zarr(store=self.path, region=region, consolidated=True)
-                    for region in region_result
-                )
-            except Exception as e:
-                return Result.from_failure(
-                    OSError(
-                        f"Error writing to region of store: {e}",
-                    )
-                )
-            nbytes: int = da.nbytes
-            del da
-            self.size_mb += nbytes // (1024**2)
-            return Result.from_value(nbytes)
+            if isinstance(region_result, Failure):
+                return Result.from_failure(region_result.failure())
+            region = region_result.unwrap()
+
+        # Perform the regional write
+        try:
+            da.to_zarr(store=self.path, region=region, consolidated=True)
+        except Exception as e:
+            return Result.from_failure(
+                OSError(
+                    f"Error writing to region of store: {e}",
+                ),
+            )
+
+        # Calculate the number of bytes written
+        nbytes: int = da.nbytes
+        del da
+        self.size_mb += nbytes // (1024**2)
+        return Result.from_value(nbytes)
 
     def validate_store(self) -> ResultE[bool]:
         """Validate the store.

@@ -29,6 +29,7 @@ class DummyModelRepository(ports.ModelRepository):
             max_connections=4,
             required_env=[],
             optional_env={},
+            postprocess_options=entities.PostProcessOptions(),
             expected_coordinates=entities.NWPDimensionCoordinateMap(
                 init_time=[dt.datetime(2021, 1, 1, 0, 0, tzinfo=dt.UTC)],
                 step=list(range(0, 48, 1)),
