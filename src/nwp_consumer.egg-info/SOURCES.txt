@@ -18,11 +18,11 @@ src/nwp_consumer/internal/entities/postprocess.py
 src/nwp_consumer/internal/entities/repometadata.py
 src/nwp_consumer/internal/entities/tensorstore.py
 src/nwp_consumer/internal/entities/test_coordinates.py
+src/nwp_consumer/internal/entities/test_postprocess.py
 src/nwp_consumer/internal/entities/test_repometadata.py
 src/nwp_consumer/internal/entities/test_tensorstore.py
 src/nwp_consumer/internal/handlers/__init__.py
 src/nwp_consumer/internal/handlers/cli.py
-src/nwp_consumer/internal/handlers/test_cli.py
 src/nwp_consumer/internal/ports/__init__.py
 src/nwp_consumer/internal/ports/repositories.py
 src/nwp_consumer/internal/ports/services.py

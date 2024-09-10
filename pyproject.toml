@@ -19,6 +19,7 @@ classifiers = ["Programming Language :: Python :: 3"]
 dependencies = [
     "dask >= 2024.8.0",
     "cfgrib >= 0.9.10.4",
+    "dagster-pipes >= 1.8.5",
     "joblib >= 1.4.2",
     "numpy >= 1.23.2",
     "ocf-blosc2 >= 0.0.3",
@@ -40,6 +41,9 @@ test = [
 lint = [
     "mypy >= 1.10.1",
     "ruff >= 0.6.0",
+]
+docs = [
+    "pydoctor >= 24.3.0",
 ]
 dev = [
     "nwp-consumer[test,lint]",

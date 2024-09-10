@@ -1,1 +1,2 @@
 from .stdout import StdoutNotificationRepository
+from .dagster import DagsterPipesNotificationRepository
