@@ -32,16 +32,16 @@ def parse_env() -> argparse.Namespace:
 
 def run_cli() -> None:
     """Entrypoint for the CLI handler."""
-    env = parse_env()
+    args = parse_env()
     c = handlers.CLIHandler(
         consumer_usecase=services.ConsumerService(
-            model_repository=env.model_repository,
+            model_repository=args.model_repository,
             zarr_repository=None,
-            notification_repository=env.notification_repository,
+            notification_repository=args.notification_repository,
         ),
         archiver_usecase=services.ArchiverService(
-            model_repository=env.model_repository,
-            notification_repository=env.notification_repository,
+            model_repository=args.model_repository,
+            notification_repository=args.notification_repository,
         ),
     )
     returncode: int = c.run()

@@ -41,6 +41,7 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 import pytz
+import xarray as xr
 from returns.result import Result, ResultE
 
 from .parameters import Parameter, params
@@ -186,6 +187,11 @@ class NWPDimensionCoordinateMap:
                 else None,
             ),
         )
+
+    @classmethod
+    def from_xarray(cls, xarray_obj: xr.DataArray | xr.Dataset) -> ResultE["NWPDimensionCoordinateMap"]:
+        """Create a new NWPDimensionCoordinateMap from an XArray DataArray or Dataset object."""
+        return cls.from_pandas(xarray_obj.coords.indexes)   # type: ignore
 
     def to_pandas(self) -> dict[str, pd.Index]:  # type: ignore
         """Convert the coordinate map to a dictionary of pandas Index objects.

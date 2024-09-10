@@ -2,6 +2,7 @@ import dataclasses
 import datetime as dt
 import unittest
 
+from . import NWPDimensionCoordinateMap
 from .repometadata import ModelRepositoryMetadata
 
 
@@ -16,11 +17,13 @@ class TestModelRepositoryMetadata(unittest.TestCase):
         delay_minutes=60,
         required_env=["TEST"],
         optional_env={"TEST": "test"},
-        expected_coordinates={
-            "init_time": [dt.datetime(2021, 1, 1, tzinfo=dt.UTC)],
-            "step": [1, 2],
-            "variable": [],
-        },
+        expected_coordinates=NWPDimensionCoordinateMap(
+            init_time=[dt.datetime(2021, 1, 1, tzinfo=dt.UTC)],
+            step=[1, 2],
+            variable=[],
+        ),
+        max_connections=1,
+        postprocess_options=None,
     )
 
     def test_determine_latest_it_from(self) -> None:
