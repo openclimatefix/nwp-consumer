@@ -228,7 +228,7 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
 
         local_path: pathlib.Path = (
                 pathlib.Path(
-                    f"{os.getenv("NWP_WORKDIR", "~/.local/cache/nwp")}/{self.metadata.name}/raw",
+                    f"{os.getenv('NWP_WORKDIR', f'~/.local/cache/nwp/{self.metadata.name}')}/raw",
                 )
                 / url.split("/")[-1]
         )

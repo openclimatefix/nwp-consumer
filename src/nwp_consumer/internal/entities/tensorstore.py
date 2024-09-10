@@ -133,7 +133,7 @@ class TensorStore:
             store_range = f"{coords.init_time[0]:%Y%m%d%H}-{coords.init_time[-1]:%Y%m%d%H}"
 
         store_path = pathlib.Path(
-            f"{os.getenv("NWP_WORKDIR", "~/.local/cache/nwp")}/{name}/{store_range}.zarr",
+            f"{os.getenv('NWP_WORKDIR', f'~/.local/cache/nwp/{name}')}/{store_range}.zarr",
         )
 
         # * Define a set of chunks allowing for intermediate parallel writes
@@ -196,24 +196,23 @@ class TensorStore:
             )
         # Check the resultant array's coordinates can be converted back
         coordinate_map_result = NWPDimensionCoordinateMap.from_xarray(store_da)
-        match coordinate_map_result:
-            case Failure(e):
-                return Result.from_failure(
-                    OSError(
-                        f"Error reading back coordinates of initialized store "
-                        f"from disk (possible corruption): {e}",
-                    ),
-                )
-            case Success(coordinate_map):
-                return Result.from_value(
-                    cls(
-                        name=name,
-                        path=store_path,
-                        coordinate_map=coordinate_map,
-                        size_mb=0,
-                        encoding=encoding,
-                    ),
-                )
+        if isinstance(coordinate_map_result, Failure):
+            return Result.from_failure(
+                OSError(
+                    f"Error reading back coordinates of initialized store "
+                    f"from disk (possible corruption): {coordinate_map_result}",
+                ),
+            )
+
+        return Result.from_value(
+            cls(
+                name=name,
+                path=store_path,
+                coordinate_map=coordinate_map_result.unwrap(),
+                size_mb=0,
+                encoding=encoding,
+            ),
+        )
 
     # --- Business logic methods --- #
     def write_to_region(
