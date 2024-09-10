@@ -206,7 +206,6 @@ jobs:
   # * Only runs if integration test job passes
   build-wheel:
     runs-on: ubuntu-latest
-    needs: test-integration
     if: contains(github.ref, 'refs/tags/v') && github.event_name == 'push'
 
     steps:
