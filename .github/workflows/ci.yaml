@@ -57,7 +57,7 @@ jobs:
       - name: Upload documentation
         uses: actions/upload-artifact@v3
         with:
-          name: docs
+          path: docs
 
 
   # Define a dependencies job that runs on all branches and PRs
