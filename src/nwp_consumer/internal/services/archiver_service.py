@@ -61,6 +61,7 @@ class ArchiverService(ports.ArchiveUseCase):
                     f"Failed to initialize store for {year}-{month}: {e}"),
                 )
             case Success(store):
+                failed_times: list[dt.datetime] = []
                 for it in init_times:
                     log.info(
                         f"Consuming data from {self._mr.metadata.name} for {it:%Y-%m-%d %H:%M}",
@@ -76,11 +77,10 @@ class ArchiverService(ports.ArchiveUseCase):
                     # Regionally write the results of the generator as they are ready
                     for da_result in da_result_generator:
                         write_result = da_result.bind(store.write_to_region)
-                        # Fail hard if any of the writes failed
-                        # * TODO: Consider just how hard we want to fail in this instance
+                        # Fail soft if a region fails to write
                         if isinstance(write_result, Failure):
-                            monitor.join() # TODO: Make this context managed
-                            return Result.from_failure(write_result.failure())
+                            log.error(f"Failed to write time {it:%Y-%m-%d %H:%M}: {write_result}")
+                            failed_times.append(it)
 
                     del da_result_generator
 
