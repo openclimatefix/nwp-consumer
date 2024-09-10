@@ -23,6 +23,8 @@ def parse_env() -> argparse.Namespace:
     match os.getenv("NWP_CONSUMER_NOTIFICATION_REPOSITORY", "stdout"):
         case "stdout":
             config.notification_repository = repositories.StdoutNotificationRepository()
+        case "dagster-pipes":
+            config.notification_repository = repositories.DagsterPipesNotificationRepository()
         case _ as notification:
             log.error(f"Unknown notification repository: {notification}")
             sys.exit(1)

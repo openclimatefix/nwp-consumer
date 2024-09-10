@@ -5,8 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="267ca1f9-a4e4-4ca3-afe5-1b3478bd9a79" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.github/workflows/ci.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/ci.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/nwp_consumer/cmd/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nwp_consumer/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nwp_consumer/__init__.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -32,49 +35,50 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python tests.Python tests for entities.test_coordinates.TestCoordinates.executor": "Run",
-    "Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_determine_region.executor": "Debug",
-    "Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas.executor": "Run",
-    "Python tests.Python tests for entities.test_postprocess.TestPostProcessOptions.executor": "Run",
-    "Python tests.Python tests for entities.test_postprocess.TestPostProcessOptions.test_requires_postprocessing.executor": "Run",
-    "Python tests.Python tests for entities.test_repometadata.TestModelRepositoryMetadata.executor": "Run",
-    "Python tests.Python tests for entities.test_repometadata.TestModelRepositoryMetadata.test_determine_latest_it_from.executor": "Debug",
-    "Python tests.Python tests for entities.test_tensorstore.TestTensorStore.test_postprocess.executor": "Run",
-    "Python tests.Python tests for handlers.test_cli.TestCLIHandler.test_parser.executor": "Run",
-    "Python tests.Python tests for internal.repositories.model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.test__download_and_convert.executor": "Run",
-    "Python tests.Python tests for model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.executor": "Run",
-    "Python tests.Python tests for model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.test__download_and_convert.executor": "Debug",
-    "Python tests.Python tests for service.test_consumer.TestParallelConsumer.test_consume.executor": "Run",
-    "Python tests.Python tests for test_consumer.TestParallelConsumer.test__determine_latest_it_from.executor": "Run",
-    "Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume.executor": "Run",
-    "Python tests.Python tests for test_integration.TestIntegration.test_ceda_metoffice_global_model.executor": "Run",
-    "Python tests.Python tests in test_consumer.py.executor": "Run",
-    "Python tests.Python tests in test_repometadata.py.executor": "Debug",
-    "Python tests.Python tests in test_storemetadata.py.executor": "Run",
-    "Python tests.Python tests in test_tensor.py.executor": "Run",
-    "Python.consumer.executor": "Run",
-    "Python.scratch_1.executor": "Run",
-    "Python.scratch_7.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "devsjc/major-refactor",
-    "settings.editor.selected.configurable": "reference.settingsdialog.IDE.editor.colors.Python"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python tests.Python tests for entities.test_coordinates.TestCoordinates.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_determine_region.executor&quot;: &quot;Debug&quot;,
+    &quot;Python tests.Python tests for entities.test_coordinates.TestCoordinates.test_to_pandas.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for entities.test_postprocess.TestPostProcessOptions.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for entities.test_postprocess.TestPostProcessOptions.test_requires_postprocessing.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for entities.test_repometadata.TestModelRepositoryMetadata.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for entities.test_repometadata.TestModelRepositoryMetadata.test_determine_latest_it_from.executor&quot;: &quot;Debug&quot;,
+    &quot;Python tests.Python tests for entities.test_tensorstore.TestTensorStore.test_missing_times.executor&quot;: &quot;Debug&quot;,
+    &quot;Python tests.Python tests for entities.test_tensorstore.TestTensorStore.test_postprocess.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for handlers.test_cli.TestCLIHandler.test_parser.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for internal.repositories.model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.test__download_and_convert.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for model_repositories.test_metoffice_global.TestCedaMetOfficeGlobalModelRepository.test__download_and_convert.executor&quot;: &quot;Debug&quot;,
+    &quot;Python tests.Python tests for service.test_consumer.TestParallelConsumer.test_consume.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for test_consumer.TestParallelConsumer.test__determine_latest_it_from.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for test_consumer.TestParallelConsumer.test_consume.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for test_integration.TestIntegration.test_ceda_metoffice_global_model.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests in test_consumer.py.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests in test_repometadata.py.executor&quot;: &quot;Debug&quot;,
+    &quot;Python tests.Python tests in test_storemetadata.py.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests in test_tensor.py.executor&quot;: &quot;Run&quot;,
+    &quot;Python.consumer.executor&quot;: &quot;Run&quot;,
+    &quot;Python.scratch_1.executor&quot;: &quot;Run&quot;,
+    &quot;Python.scratch_7.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;devsjc/major-refactor&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;reference.settingsdialog.IDE.editor.colors.Python&quot;
   },
-  "keyToStringList": {
-    "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
-      "Python"
+  &quot;keyToStringList&quot;: {
+    &quot;com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File&quot;: [
+      &quot;Python&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/src/nwp_consumer/internal" />
       <recent name="$PROJECT_DIR$/src/nwp_consumer" />
     </key>
   </component>
-  <component name="RunManager" selected="Python tests.Python tests for test_integration.TestIntegration.test_ceda_metoffice_global_model">
+  <component name="RunManager" selected="Python.scratch_1">
     <configuration name="scratch_1" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="nwp-consumer-2" />
       <option name="ENV_FILES" value="" />
@@ -112,21 +116,6 @@
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
-    <configuration name="Python tests for entities.test_postprocess.TestPostProcessOptions" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
-      <module name="nwp-consumer-2" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/nwp_consumer/internal" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="_new_additionalArguments" value="&quot;&quot;" />
-      <option name="_new_target" value="&quot;entities.test_postprocess.TestPostProcessOptions&quot;" />
-      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
-      <method v="2" />
-    </configuration>
     <configuration name="Python tests for entities.test_repometadata.TestModelRepositoryMetadata" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
       <module name="nwp-consumer-2" />
       <option name="ENV_FILES" value="" />
@@ -139,6 +128,21 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="_new_additionalArguments" value="&quot;&quot;" />
       <option name="_new_target" value="&quot;entities.test_repometadata.TestModelRepositoryMetadata&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Python tests for entities.test_tensorstore.TestTensorStore.test_missing_times" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+      <module name="nwp-consumer-2" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/nwp_consumer/internal" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;entities.test_tensorstore.TestTensorStore.test_missing_times&quot;" />
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
@@ -198,10 +202,10 @@
     <recent_temporary>
       <list>
         <item itemvalue="Python.scratch_1" />
+        <item itemvalue="Python tests.Python tests for entities.test_tensorstore.TestTensorStore.test_missing_times" />
         <item itemvalue="Python tests.Python tests for entities.test_tensorstore.TestTensorStore.test_postprocess" />
         <item itemvalue="Python tests.Python tests for entities.test_coordinates.TestCoordinates" />
         <item itemvalue="Python tests.Python tests for entities.test_repometadata.TestModelRepositoryMetadata" />
-        <item itemvalue="Python tests.Python tests for entities.test_postprocess.TestPostProcessOptions" />
       </list>
     </recent_temporary>
   </component>
@@ -233,7 +237,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/nwp_consumer/internal/entities/tensorstore.py</url>
-          <line>391</line>
+          <line>423</line>
           <option name="timeStamp" value="120" />
         </line-breakpoint>
       </breakpoints>

@@ -1,91 +1,106 @@
 """NWP Consumer.
 
-Overview
---------
+Development Documentation
+=========================
 
-A microservice for multi-source consumption of NWP data, storing it in a common format. Built with inspiration
-from the `Hexagonal Architecture`_ pattern, the nwp-consumer is
-currently packaged with adapters for pulling and converting grib data from:
+Getting started for development
+-------------------------------
 
-- Nothing (yet!)
+In order to work on the project, first clone the repository.
+Then, create a virtual environment and install the dependencies
+using an editable pip installation::
 
-Its modular nature enables straightforward extension to alternate future sources.
+    $ git clone git@github.com:openclimatefix/nwp-consumer.git
+    $ cd nwp-consumer
+    $ python -m venv ./venv
+    $ source ./venv/bin/activate
+    $ pip install -e .[dev]
 
-Ubiquitous language
--------------------
+.. note:: ZSH users may have to escape the square brackets in the last command.
 
-The following terms are used throughout the codebase and documentation. They are defined here to avoid ambiguity.
+This enables the use of the 'nwp-consumer-cli' command in the virtualenv, which
+runs the `nwp_consumer.cmd.main.run_cli` entrypoint. The editable installation
+ensures that changes to the code are immediately reflected while using the command.
 
-- ***InitTime*** - The time at which a forecast is initialised.
-    For example, a forecast initialised at 12:00 on 1st January.
 
-- ***TargetTime*** - The time at which a predicted value is valid.
-    For example, a forecast with InitTime 12:00 on 1st January predicts that the temperature
-    at TargetTime 12:00 on 2nd January at position x will be 10 degrees.
+Project structure
+-----------------
 
-The assumption is made that every piece of NWP forecast data has both an associated init time and target time.
+The code is structured following principles from the `Hexagonal Architecture`_ pattern.
+In brief, this means a clear separation between the application's business logic
+- it's *core* - and the *actors* that are external to it.
 
-Structure
----------
-
-The code is structured following principles from the hexagonal architecture pattern. In brief, this means a clear
-separation between the application's business logic - it's **Core** - and the **Actors** that are external to it.
 The core of the services is split into three main components:
 
-- **Domain** - The entities classes that define the structure of the data that the services works with.
-- **Ports** - The interfaces that define how the services interacts with the outside world.
-- **Service** - The services logic that defines how the services processes' data.
+- `internal.entities` - The domain classes that define the structure of the data
+  that the services works with, and the business logic they contain.
+- `internal.ports` - The interfaces that define how the services interact with external actors.
+- `internal.services` - The business logic that defines how the service functions.
 
-In this package, the actors are in `nwp_consumer.internal.repositories`, the entities in
-`nwp_consumer.internal.entities`, and the services logic in `nwp_consumer.internal.services`.
+Alongside these core components are the actors, which adhere to the interfaces defined in the
+ports module. Actors come in two flavours, *driving* and *driven*.
+Driven actors are sources and sinks of data, such as databases and message queues,
+while driving actors are methods of interacting with the core, such as a command-line interface
+or REST server.
 
-The business logic has no knowledge of the external actors, instead defining interfaces that
-the actors must implement. These are found in `nwp_consumer.internal.ports`.
-The actors are then responsible for implementing these interfaces, and are *dependency-injected* in at runtime.
-This allows the services to be easily tested and extended. See 'further reading' for more information.
+This application currently has the following defined actors:
+
+- `internal.repositories.model_repositories` (driven) - The sources of NWP data.
+- `internal.repositories.notification_repositories` (driven) - The sinks of notification data.
+- `internal.handlers.cli` (driving) - The command-line interface for the services.
+
+The actors are then responsible for implementing the abstract ports,
+and are *dependency-injected* in at runtime. This allows the services to be easily tested
+and extended. See 'further reading' for more information.
 
 Head into `nwp_consumer.internal` to see the details of each of these components.
 
+Where do I go to...?
+--------------------
+
+- **...modify the business logic?** Check out the `internal.services` module.
+- **...add a new source of NWP data?** Implement a new repository in `internal.repositories.model_repositories`.
+- **...modify the command line interface?** Check out `internal.handlers.cli`.
+
 Further reading
----------------
+===============
 
 On packaging a python project using setuptools and pyproject.toml:
 
-- The official PyPA packaging guide:
-    https://packaging.python.org/
+- The official PyPA packaging guide: https://packaging.python.org/
 - A step-by-step practical guide on the *godatadriven* blog:
-    https://godatadriven.com/blog/a-practical-guide-to-setuptools-and-pyproject-toml/
+  https://godatadriven.com/blog/a-practical-guide-to-setuptools-and-pyproject-toml/
 - The pyproject.toml metadata specification:
-    https://packaging.python.org/en/latest/specifications/declaring-project-metadata
+  https://packaging.python.org/en/latest/specifications/declaring-project-metadata
 
 On hexagonal architecture:
 
 - A concrete example using Python:
-    https://medium.com/towards-data-engineering/a-concrete-example-of-the-hexagonal-architecture-in-python-d821213c6fb9
+  https://medium.com/towards-data-engineering/a-concrete-example-of-the-hexagonal-architecture-in-python-d821213c6fb9
 - An overview of the fundamentals incorporating Typescript:
-    https://medium.com/ssense-tech/hexagonal-architecture-there-are-always-two-sides-to-every-story-bc0780ed7d9c
+  https://medium.com/ssense-tech/hexagonal-architecture-there-are-always-two-sides-to-every-story-bc0780ed7d9c
 
 - Another example using Go:
-    https://medium.com/@matiasvarela/hexagonal-architecture-in-go-cfd4e436faa3
+  https://medium.com/@matiasvarela/hexagonal-architecture-in-go-cfd4e436faa3
 
 On the directory structure:
 
 - The official PyPA discussion on src and flat layouts"
-    https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/
+  https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/
 
-.. _Hexagonal Architecture:
-    https://alistair.cockburn.us/hexagonal-architecture/
+.. _Hexagonal Architecture: https://alistair.cockburn.us/hexagonal-architecture/
 """
 
 import logging
 import sys
+import os
 
 if sys.stdout.isatty():
     # Simple logging for terminals
-    formatstr="%(levelname)s | %(message)s"
+    _formatstr="%(levelname)s | %(message)s"
 else:
     # JSON logging for containers
-    formatstr="".join((
+    _formatstr="".join((
         "{",
         '"message": "%(message)s", ',
         '"severity": "%(levelname)s", "timestamp": "%(asctime)s.%(msecs)03dZ", ',
@@ -95,10 +110,13 @@ else:
         "}",
     ))
 
+
+
+_loglevel: int | str = logging.getLevelName(os.getenv("LOGLEVEL", "INFO").upper())
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO if isinstance(_loglevel, str) else _loglevel,
     stream=sys.stdout,
-    format=formatstr,
+    format=_formatstr,
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
 

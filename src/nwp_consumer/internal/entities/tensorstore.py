@@ -15,14 +15,16 @@ import os
 import pathlib
 import shutil
 import time
+from importlib.metadata import PackageNotFoundError, version
 from typing import Any
 
 import dask.array
+import numpy as np
+import pandas as pd
 import xarray as xr
 import zarr
-from zarr._storage.store import Store
 from returns.result import Failure, Result, ResultE, Success
-from importlib.metadata import version, PackageNotFoundError
+from zarr._storage.store import Store
 
 from .coordinates import NWPDimensionCoordinateMap
 from .parameters import Parameter, params
@@ -81,11 +83,17 @@ class TensorStore:
         cls,
         name: str,
         coords: NWPDimensionCoordinateMap,
+        overwrite_existing: bool = True,
     ) -> ResultE["TensorStore"]:
         """Initialize a store for a given init time.
 
         This method writes a blank dataarray to disk based on the input coordinates,
         which define the dimension labels and tick values of the output dataset object.
+
+        If the store already exists, it will be overwritten, unless the 'overwrite_existing'
+        flag is set to False. In this case, the existing store will be used only if its
+        coordinates are consistent with the expected coordinates.
+
         The dataarray is 'blank' because it is written via::
 
             dataarray.to_zarr("<example>.zarr", compute=False)
@@ -108,6 +116,7 @@ class TensorStore:
         Args:
             name: The name of the tensor.
             coords: The coordinates of the store.
+            overwrite_existing: Whether to overwrite an existing store.
 
         Returns:
             An indicator of a successful store write containing the number of bytes written.
@@ -175,25 +184,49 @@ class TensorStore:
             "step": {"units": "hours"},
         }
 
-        try:
-            # Write the dataset to a skeleton zarr file
-            # * 'compute=False' enables only saving metadata
-            # * 'mode="w"' overwrites any existing store
-            da.to_zarr(
-                store=store_path,
-                compute=False,
-                mode="w",
-                consolidated=True,
-                encoding=encoding,
-            )
-            # Ensure the store is readable
-            store_da: xr.DataArray = xr.open_dataarray(store_path, engine="zarr")
-        except Exception as e:
-            return Result.from_failure(
-                OSError(
-                    f"Failed writing blank store to disk: {e}",
-                ),
-            )
+        match (os.path.exists(store_path), overwrite_existing):
+            case (True, False):
+                store_da: xr.DataArray = xr.open_dataarray(store_path, engine="zarr")
+                for dim in store_da.dims:
+                    if dim not in da.dims:
+                        return Result.from_failure(
+                            ValueError(
+                                "Cannot use existing store due to mismatched coordinates. "
+                                f"Dimension '{dim}' in existing store not found in new store. "
+                                "Use 'overwrite_existing=True' or move the existing store at "
+                                f"'{store_path}' to a new location. ",
+                            ),
+                        )
+                    if not np.array_equal(store_da.coords[dim].values, da.coords[dim].values):
+                        return Result.from_failure(
+                            ValueError(
+                                "Cannot use existing store due to mismatched coordinates. "
+                                f"Dimension '{dim}' in existing store has different coordinate "
+                                "values from specified. "
+                                "Use 'overwrite_existing=True' or move the existing store at "
+                                f"'{store_path}' to a new location.",
+                            ),
+                        )
+            case (_, _):
+                try:
+                    # Write the dataset to a skeleton zarr file
+                    # * 'compute=False' enables only saving metadata
+                    # * 'mode="w"' overwrites any existing store
+                    da.to_zarr(
+                        store=store_path,
+                        compute=False,
+                        mode="w",
+                        consolidated=True,
+                        encoding=encoding,
+                    )
+                    # Ensure the store is readable
+                    store_da = xr.open_dataarray(store_path, engine="zarr")
+                except Exception as e:
+                    return Result.from_failure(
+                        OSError(
+                            f"Failed writing blank store to disk: {e}",
+                        ),
+                    )
         # Check the resultant array's coordinates can be converted back
         coordinate_map_result = NWPDimensionCoordinateMap.from_xarray(store_da)
         if isinstance(coordinate_map_result, Failure):
@@ -431,3 +464,28 @@ class TensorStore:
         group.attrs.update(attrs)
         zarr.consolidate_metadata(self.path.as_posix())
         return Result.from_value(self.path)
+
+    def missing_times(self) -> ResultE[list[dt.datetime]]:
+        """Find the missing init_time in the store.
+
+        A "missing init_time" is determined by the values corresponding
+        to the first two coordinate values of each dimension: if all are
+        NaN or None values then the time is considered missing.
+        """
+        try:
+            store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")
+        except Exception as e:
+            return Result.from_failure(OSError(
+                "Cannot determine missing times in store due to "
+                f"error reading '{self.path}': {e}",
+            ))
+        missing_times: list[dt.datetime] = []
+        for it in store_da.coords["init_time"].values:
+            if store_da.sel(init_time=it).isel({
+                d: slice(0, 2) for d in self.coordinate_map.dims
+                if d != "init_time"
+            }).isnull().all().values:
+                missing_times.append(pd.Timestamp(it).to_pydatetime().replace(tzinfo=dt.UTC))
+        return Result.from_value(missing_times)
+
+

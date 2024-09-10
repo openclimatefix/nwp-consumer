@@ -52,6 +52,7 @@ class ArchiverService(ports.ArchiveUseCase):
                 self._mr.metadata.expected_coordinates,
                 init_time=init_times,
             ),
+            overwrite_existing=False,
         )
 
         match init_store_result:
@@ -61,10 +62,17 @@ class ArchiverService(ports.ArchiveUseCase):
                     f"Failed to initialize store for {year}-{month}: {e}"),
                 )
             case Success(store):
+                missing_times_result = store.missing_times()
+                if isinstance(missing_times_result, Failure):
+                    monitor.join()
+                    return Result.from_failure(missing_times_result.failure())
+                log.info(f"{len(missing_times_result.unwrap())} missing init_times in store.")
+
                 failed_times: list[dt.datetime] = []
-                for it in init_times:
+                for n, it in enumerate(missing_times_result.unwrap()):
                     log.info(
-                        f"Consuming data from {self._mr.metadata.name} for {it:%Y-%m-%d %H:%M}",
+                        f"Consuming data from {self._mr.metadata.name} for {it:%Y-%m-%d %H:%M} "
+                        f"(time {n + 1}/{len(missing_times_result.unwrap())})",
                     )
 
                     # Create a generator to fetch and process raw data
@@ -83,6 +91,11 @@ class ArchiverService(ports.ArchiveUseCase):
                             failed_times.append(it)
 
                     del da_result_generator
+
+                # Add the failed times to the store's metadata
+                store.update_attrs({
+                    "failed_times": [t.strftime("%d %H:%M") for t in failed_times],
+                })
 
                 monitor.join()
                 notify_result = self._nr.notify(
