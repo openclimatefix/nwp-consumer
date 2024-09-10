@@ -31,6 +31,35 @@ permissions:
 
 jobs:
 
+  # Define a job that builds the documentation
+  # * Surfaces the documentation as an artifact
+  build-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r pydoctor
+
+      - name: Build documentation
+        run: |
+          python -m pydoctor
+
+      - name: Upload documentation
+        uses: actions/upload-artifact@v3
+        with:
+          name: docs
+
+
   # Define a dependencies job that runs on all branches and PRs
   # * Installs dependencies and caches them
   build-venv:
