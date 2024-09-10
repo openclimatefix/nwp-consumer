@@ -17,6 +17,7 @@ authors = [
 ]
 classifiers = ["Programming Language :: Python :: 3"]
 dependencies = [
+    "dask >= 2024.8.0",
     "cfgrib >= 0.9.10.4",
     "joblib >= 1.4.2",
     "numpy >= 1.23.2",

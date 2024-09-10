@@ -12,7 +12,7 @@ def parse_env() -> argparse.Namespace:
     config = argparse.Namespace()
     match os.getenv("NWP_CONSUMER_MODEL_REPOSITORY"):
         case None:
-            log.error("NWP_CONSUMER_MODEL is not set in environment.")
+            log.error("NWP_CONSUMER_MODEL_REPOSITORY is not set in environment.")
             sys.exit(1)
         case "ceda-metoffice-global":
             config.model_repository = repositories.CedaMetOfficeGlobalModelRepository()

@@ -29,7 +29,7 @@ RUN rm -r /venv/lib/python3.12/site-packages/pandas/tests
 # Copy the virtualenv into a distroless image
 # * These are small images that only contain the runtime dependencies
 FROM gcr.io/distroless/python3-debian11
+ENV NWP_WORKDIR=/work
 WORKDIR /app
 COPY --from=build-app /venv /venv
 ENTRYPOINT ["/venv/bin/nwp-consumer-cli"]
-VOLUME /tmp/nwpc

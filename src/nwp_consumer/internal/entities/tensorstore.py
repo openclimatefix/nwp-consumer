@@ -133,7 +133,7 @@ class TensorStore:
             store_range = f"{coords.init_time[0]:%Y%m%d%H}-{coords.init_time[-1]:%Y%m%d%H}"
 
         store_path = pathlib.Path(
-            f"~/.local/cache/nwp/{name}/{store_range}.zarr",
+            f"{os.getenv("NWP_WORKDIR", "~/.local/cache/nwp")}/{name}/{store_range}.zarr",
         )
 
         # * Define a set of chunks allowing for intermediate parallel writes
