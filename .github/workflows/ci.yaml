@@ -38,10 +38,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
@@ -55,8 +55,9 @@ jobs:
           python -m pydoctor
 
       - name: Upload documentation
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
+          name: docs
           path: docs
 
 
@@ -68,14 +69,14 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Restore cached virtualenv, if available
       # * The pyproject.toml hash is part of the cache key, invalidating
       #   the cache if the file changes
       - name: Restore cached virtualenv
         id: restore-cache
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: ./venv
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
@@ -98,7 +99,7 @@ jobs:
 
       # Cache the virtualenv for future runs
       - name: Cache virtualenv
-        uses: actions/cache/save@v3
+        uses: actions/cache/save@v4
         with:
           path: ./venv
           key: ${{ steps.restore-cache.outputs.cache-primary-key }}
@@ -112,11 +113,11 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Restore cached virtualenv
       - name: Restore cached virtualenv
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: ./venv
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
@@ -151,7 +152,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Bump version and push tag
@@ -175,7 +176,7 @@ jobs:
       # Do a non-shallow clone of the repo to ensure tags are present
       # * This allows setuptools-git-versioning to automatically set the version
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -241,13 +242,13 @@ jobs:
       # Do a non-shallow clone of the repo to ensure tags are present
       # * This allows setuptools-git-versioning to automatically set the version
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       # Restore cached virtualenv
       - name: Restore cached virtualenv
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: ./venv
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
@@ -260,7 +261,7 @@ jobs:
         run: ./venv/bin/python -m pip wheel . --no-deps --wheel-dir dist
 
       - name: Upload wheel
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: wheel
           path: dist/*.whl
