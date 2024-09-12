@@ -79,13 +79,14 @@ On the directory structure:
 
 import logging
 import sys
+import os
 
 if sys.stdout.isatty():
     # Simple logging for terminals
-    formatstr="%(levelname)s | %(message)s"
+    _formatstr="%(levelname)s | %(message)s"
 else:
     # JSON logging for containers
-    formatstr="".join((
+    _formatstr="".join((
         "{",
         '"message": "%(message)s", ',
         '"severity": "%(levelname)s", "timestamp": "%(asctime)s.%(msecs)03dZ", ',
@@ -95,10 +96,13 @@ else:
         "}",
     ))
 
+
+
+_loglevel: int | str = logging.getLevelName(os.getenv("LOGLEVEL", "INFO").upper())
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO if isinstance(_loglevel, str) else _loglevel,
     stream=sys.stdout,
-    format=formatstr,
+    format=_formatstr,
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
 
