@@ -92,6 +92,12 @@ class ArchiverService(ports.ArchiveUseCase):
                     "failed_times": [t.strftime("%d %H:%M") for t in failed_times],
                 })
 
+                # Postprocess the dataset as required
+                postprocess_result = store.postprocess(self._mr.metadata.postprocess_options)
+                if isinstance(postprocess_result, Failure):
+                    monitor.join() # TODO: Make this a context manager instead
+                    return Result.from_failure(postprocess_result.failure())
+
                 monitor.join()
                 notify_result = self._nr.notify(
                     entities.StoreCreatedNotification(
