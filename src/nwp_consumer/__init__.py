@@ -122,4 +122,3 @@ logging.basicConfig(
 
 for logger in ["numcodecs", "numexpr", "cfgrib"]:
     logging.getLogger(logger).setLevel(logging.WARNING)
-

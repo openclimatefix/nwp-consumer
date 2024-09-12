@@ -11,11 +11,6 @@ from returns.result import Failure, Result, ResultE, Success
 
 from nwp_consumer.internal import entities, ports
 
-from ._performance import PerformanceMonitor
-
-if TYPE_CHECKING:
-    from ..entities import TensorStore
-
 log = logging.getLogger("nwp-consumer")
 
 
@@ -44,14 +39,14 @@ class ConsumerService(ports.ConsumeUseCase):
 
     @override
     def consume(self, it: dt.datetime | None = None) -> ResultE[pathlib.Path]:
-        monitor = PerformanceMonitor()
+        monitor = entities.PerformanceMonitor()
 
         if it is None:
             it = self._mr.metadata.determine_latest_it_from(dt.datetime.now(tz=dt.UTC))
         log.info(f"Consuming data from {self._mr.metadata.name} for {it:%Y-%m-%d %H:%M}")
 
         # Create a store for the init time
-        init_store_result: ResultE[TensorStore] = entities.TensorStore.initialize_empty_store(
+        init_store_result: ResultE[entities.TensorStore] = entities.TensorStore.initialize_empty_store(
             name=self._mr.metadata.name,
             coords=dataclasses.replace(self._mr.metadata.expected_coordinates, init_time=[it]),
         )

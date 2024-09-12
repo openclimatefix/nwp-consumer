@@ -4,17 +4,12 @@ import dataclasses
 import datetime as dt
 import logging
 import pathlib
-from typing import TYPE_CHECKING, override
+from typing import override
 
 from joblib import Parallel
 from returns.result import Failure, Result, ResultE, Success
 
 from nwp_consumer.internal import entities, ports
-
-from ._performance import PerformanceMonitor
-
-if TYPE_CHECKING:
-    from ..entities import TensorStore
 
 log = logging.getLogger("nwp-consumer")
 
@@ -41,12 +36,12 @@ class ArchiverService(ports.ArchiveUseCase):
 
     @override
     def archive(self, year: int, month: int) -> ResultE[pathlib.Path]:
-        monitor = PerformanceMonitor()
+        monitor = entities.PerformanceMonitor()
 
         init_times = self._mr.metadata.month_its(year=year, month=month)
 
         # Create a store for the archive
-        init_store_result: ResultE[TensorStore] = entities.TensorStore.initialize_empty_store(
+        init_store_result: ResultE[entities.TensorStore] = entities.TensorStore.initialize_empty_store(
             name=self._mr.metadata.name,
             coords=dataclasses.replace(
                 self._mr.metadata.expected_coordinates,
