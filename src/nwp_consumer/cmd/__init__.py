@@ -1,0 +1,1 @@
+"""Entrypoints for the nwp_consumer application."""

@@ -135,7 +135,7 @@ add-package = ["src/nwp_consumer"]
 project-base-dir = "src/nwp_consumer"
 docformat = "google"
 html-output = "docs"
-theme = "readthedocs"
+theme = "classic"
 privacy = [
     "HIDDEN:**.test_*",
 ]
