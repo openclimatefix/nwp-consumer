@@ -92,6 +92,11 @@ class ArchiverService(ports.ArchiveUseCase):
 
                     del da_result_generator
 
+                # Add the failed times to the store's metadata
+                store.update_attrs({
+                    "failed_times": [t.strftime("%d %H:%M") for t in failed_times],
+                })
+
                 monitor.join()
                 notify_result = self._nr.notify(
                     entities.StoreCreatedNotification(

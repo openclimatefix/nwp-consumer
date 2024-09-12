@@ -32,7 +32,15 @@ class DagsterPipesNotificationRepository(ports.NotificationRepository):
         with open_dagster_pipes():
             context = PipesContext.get()
             context.report_asset_materialization(
-                metadata=dataclasses.asdict(message),
+                metadata={
+                    "filename": {"raw_value": message.filename, "type": "text"},
+                    "size_mb": {"raw_value": message.size_mb, "type": "float"},
+                    "memory_mb": {"raw_value": message.performance.memory_mb, "type": "float"},
+                    "duration_minutes": {
+                        "raw_value": int(message.performance.duration_seconds / 60),
+                        "type": "int",
+                    },
+                },
             )
         return Result.from_value("Notification sent to dagster successfully.")
 

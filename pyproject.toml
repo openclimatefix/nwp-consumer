@@ -18,6 +18,7 @@ authors = [
 classifiers = ["Programming Language :: Python :: 3"]
 dependencies = [
     "dask >= 2024.8.0",
+    "eccodes >= 2.37.0",
     "cfgrib >= 0.9.10.4",
     "dagster-pipes >= 1.8.5",
     "joblib >= 1.4.2",
