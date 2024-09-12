@@ -39,6 +39,11 @@ class TestTensorStore(unittest.TestCase):
                 raise ValueError(f"Failed to initialize test store: {e}.")
 
 
+    def test_initialize_empty_store(self) -> None:
+        """Test the initialize_empty_store method."""
+        # TODO
+        pass
+
     def test_write_to_region(self) -> None:
         """Test the write_to_region method."""
         # TODO

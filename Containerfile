@@ -25,6 +25,7 @@ COPY README.md README.md
 RUN /venv/bin/pip install .
 RUN rm -r /venv/share/eccodes/definitions/bufr
 RUN rm -r /venv/lib/python3.12/site-packages/pandas/tests
+RUN rm -r /venv/lib/python3.12/site-packages/pip
 
 # Copy the virtualenv into a distroless image
 # * These are small images that only contain the runtime dependencies

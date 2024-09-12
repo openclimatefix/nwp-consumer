@@ -19,6 +19,7 @@ from importlib.metadata import PackageNotFoundError, version
 from typing import Any
 
 import dask.array
+import numpy as np
 import pandas as pd
 import xarray as xr
 import zarr
@@ -88,6 +89,11 @@ class TensorStore:
 
         This method writes a blank dataarray to disk based on the input coordinates,
         which define the dimension labels and tick values of the output dataset object.
+
+        If the store already exists, it will be overwritten, unless the 'overwrite_existing'
+        flag is set to False. In this case, the existing store will be used only if its
+        coordinates are consistent with the expected coordinates.
+
         The dataarray is 'blank' because it is written via::
 
             dataarray.to_zarr("<example>.zarr", compute=False)
@@ -110,6 +116,7 @@ class TensorStore:
         Args:
             name: The name of the tensor.
             coords: The coordinates of the store.
+            overwrite_existing: Whether to overwrite an existing store.
 
         Returns:
             An indicator of a successful store write containing the number of bytes written.
@@ -180,14 +187,26 @@ class TensorStore:
         match (os.path.exists(store_path), overwrite_existing):
             case (True, False):
                 store_da: xr.DataArray = xr.open_dataarray(store_path, engine="zarr")
-                if store_da.coords != da.coords:
-                    return Result.from_failure(
-                        ValueError(
-                            "Cannot use existing store due to mismatched coordinates. "
-                            "Use 'overwrite_existing=True' or move the existing store at "
-                            f"'{store_path}' to a new location. "
-                        ),
-                    )
+                for dim in store_da.dims:
+                    if dim not in da.dims:
+                        return Result.from_failure(
+                            ValueError(
+                                "Cannot use existing store due to mismatched coordinates. "
+                                f"Dimension '{dim}' in existing store not found in new store. "
+                                "Use 'overwrite_existing=True' or move the existing store at "
+                                f"'{store_path}' to a new location. ",
+                            ),
+                        )
+                    if not np.array_equal(store_da.coords[dim].values, da.coords[dim].values):
+                        return Result.from_failure(
+                            ValueError(
+                                "Cannot use existing store due to mismatched coordinates. "
+                                f"Dimension '{dim}' in existing store has different coordinate "
+                                "values from specified. "
+                                "Use 'overwrite_existing=True' or move the existing store at "
+                                f"'{store_path}' to a new location.",
+                            ),
+                        )
             case (_, _):
                 try:
                     # Write the dataset to a skeleton zarr file
