@@ -3,7 +3,7 @@
 import logging
 from typing import override
 
-from returns.result import Result, ResultE
+from returns.result import ResultE, Success
 
 from nwp_consumer.internal import entities, ports
 
@@ -19,5 +19,5 @@ class StdoutNotificationRepository(ports.NotificationRepository):
         message: entities.StoreCreatedNotification | entities.StoreAppendedNotification,
     ) -> ResultE[str]:
         log.info(f"{message}")
-        return Result.from_value("Notification sent to stdout successfully.")
+        return Success("Notification sent to stdout successfully.")
 

@@ -6,12 +6,15 @@ tracks relevant information about the model repository and the data
 it provides. This might be helpful in determining the quality of the
 data, defining pipelines for processing, or establishing the availability
 for a live service.
+
+In this instance, the `ModelMetadata` refers to information pertaining
+to the model used to generate the data itself, whilst the
+`ModelRepositoryMetadata` refers to information about the repository
+where NWP data produced by the model resides.
 """
 
 import dataclasses
 import datetime as dt
-import pathlib
-from collections.abc import Iterator
 
 import pandas as pd
 
@@ -20,14 +23,60 @@ from .postprocess import PostProcessOptions
 
 
 @dataclasses.dataclass(slots=True)
-class ModelRepositoryMetadata:
-    """Metadata for an NWP Model repository."""
+class ModelMetadata:
+    """Metadata for an NWP model."""
 
     name: str
     """The name of the model.
 
-    Also used to name the tensor in the zarr store.
+    Used to name the tensor in the zarr store.
     """
+
+    resolution: str
+    """The resolution of the model with units."""
+
+    expected_coordinates: NWPDimensionCoordinateMap
+    """The expected dimension coordinate mapping.
+
+    This is a dictionary mapping dimension labels to their coordinate values,
+    for a single init time dataset, e.g.
+
+    >>> {
+    >>>     "init_time": [dt.datetime(2021, 1, 1, 0, 0), ...],
+    >>>     "step": [1, 2, ...],
+    >>>     "latitude": [90, 89.75, 89.5, ...],
+    >>>     "longitude": [180, 179, ...],
+    >>> }
+
+    To work this out, it can be useful to use the 'grib_ls' tool from eccodes:
+
+    >>> grib_ls -n geography -wcount=13 raw_file.grib
+
+    Which prints grid data from the grib file.
+    """
+
+    def __str__(self) -> str:
+        """Return a pretty-printed string representation of the metadata."""
+        pretty: str = "".join((
+            "Model:",
+            "\n\t{self.name} ({self.resolution} resolution)",
+            "\tCoordinates:",
+            "\n".join(
+                f"\t\t{dim}: {vals}"
+                if len(vals) < 5
+                else f"\t\t{dim}: {vals[:3]} ... {vals[-3:]}"
+                for dim, vals in self.expected_coordinates.__dict__.items()
+            ),
+        ))
+        return pretty
+
+
+@dataclasses.dataclass(slots=True)
+class ModelRepositoryMetadata:
+    """Metadata for an NWP Model repository."""
+
+    name: str
+    """The name of the model repository."""
 
     is_archive: bool
     """Whether the repository is a complete archival set.
@@ -67,26 +116,6 @@ class ModelRepositoryMetadata:
     downloading data from the repository.
     """
 
-    expected_coordinates: NWPDimensionCoordinateMap
-    """The expected dimension coordinate mapping.
-
-    This is a dictionary mapping dimension labels to their coordinate values,
-    for a single init time dataset, e.g.
-
-    >>> {
-    >>>     "init_time": [dt.datetime(2021, 1, 1, 0, 0), ...],
-    >>>     "step": [1, 2, ...],
-    >>>     "latitude": [90, 89.75, 89.5, ...],
-    >>>     "longitude": [180, 179, ...],
-    >>> }
-
-    To work this out, it can be useful to use the 'grib_ls' tool from eccodes:
-
-    >>> grib_ls -n geography -wcount=13 raw_file.grib
-
-    Which prints grid data from the grib file.
-    """
-
     postprocess_options: PostProcessOptions
     """Options for post-processing the data."""
 
@@ -117,48 +146,15 @@ class ModelRepositoryMetadata:
 
     def __str__(self) -> str:
         """Return a pretty-printed string representation of the metadata."""
-        pretty: str = "\n".join((
-            f"Model: {self.name} ({'archive' if self.is_archive else 'live/rolling'} dataset.)",
-            f"\truns at: {self.running_hours} hours (available after {self.delay_minutes} minute delay)",
-            "\tCoordinates:",
-            "\n".join(f"\t\t{dim}: {vals}"
-                      if len(vals) < 5
-                      else f"\t\t{dim}: {vals[:3]} ... {vals[-3:]}"
-                      for dim, vals in self.expected_coordinates.items()
-            ),
-            "Environment variables:",
-            "\tRequired:",
+        pretty: str = "".join((
+            "Model Repository: ",
+            f"\n\t{self.name} ({'archive' if self.is_archive else 'live/rolling'} dataset.)",
+            f"\n\truns at: {self.running_hours} hours ",
+            "(available after {self.delay_minutes} minute delay)",
+            "\nEnvironment variables:",
+            "\n\tRequired:",
             "\n".join(f"\t\t{var}" for var in self.required_env),
-            "\tOptional:",
+            "\n\tOptional:",
             "\n".join(f"\t\t{var}={val}" for var, val in self.optional_env.items()),
         ))
         return pretty
-
-@dataclasses.dataclass(slots=True)
-class ModelFileMetadata:
-    """Metadata for a raw file."""
-
-    name: str
-    """The name of the file."""
-
-    path: pathlib.Path
-    """The relevant (remote or local) path to the file."""
-
-    scheme: str
-    """The scheme of the path (e.g. 'https', 'ftp', 'file')."""
-
-    extension: str
-    """The file extension, including the dot (e.g. '.grib')."""
-
-    size_bytes: int
-    """The size of the file in bytes."""
-
-    parameters: list[str]
-    """The parameters within the file."""
-
-    steps: list[int]
-    """The steps contained in the file."""
-
-    init_time: dt.datetime
-    """The init time the file data corresponds to."""
-

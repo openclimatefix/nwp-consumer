@@ -12,7 +12,7 @@ class TestPostProcessOptions(unittest.TestCase):
 
         self.assertFalse(
             test_class.requires_postprocessing(),
-            msg="Empty class should not require postprocessing."
+            msg="Empty class should not require postprocessing.",
         )
 
     def test_requires_rewrite(self) -> None:
@@ -23,3 +23,7 @@ class TestPostProcessOptions(unittest.TestCase):
             test_class.requires_rewrite(),
             msg="Empty class should not require rewriting.",
         )
+
+
+if __name__ == "__main__":
+    unittest.main()

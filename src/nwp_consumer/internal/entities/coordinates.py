@@ -42,9 +42,9 @@ import numpy as np
 import pandas as pd
 import pytz
 import xarray as xr
-from returns.result import Result, ResultE
+from returns.result import Failure, ResultE, Success
 
-from .parameters import Parameter, params
+from .parameters import Parameter
 
 
 @dataclasses.dataclass(slots=True)
@@ -121,49 +121,50 @@ class NWPDimensionCoordinateMap:
         >>> > idxs = xr_data.coords.indexes
         >>> > NWPDimensionCoordinateMap.from_pandas(idxs)
         >>> {
-        >>>     "init_time": [dt.datetime(2021, 1, 1, 0, 0, ...],
-        >>>     "step": [1, 2, ...],
-        >>>     "variable": [Parameter(name="relative_humidity_gl", ...), ...],
-        >>>     "latitude": [90, ...],
-        >>>     "longitude": [45, ...],
+        >>>     "init_time": [dt.datetime(2021, 1, 1, 0, 0)],
+        >>>     "step": [1, 2],
+        >>>     "variable": [Parameter.TEMPERATURE_SL],
+        >>>     "latitude": [90, 80, 70],
+        >>>     "longitude": [45, 50, 55],
         >>> }
 
         See Also:
             `NWPDimensionCoordinateMap.to_pandas` for the reverse operation.
         """
         if not all(key in pd_indexes for key in ["init_time", "step", "variable"]):
-            return Result.from_failure(
-                KeyError(
-                    f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
-                    " as required keys 'init_time', 'step', and 'variable' are not all present. "
-                    f"Got: {pd_indexes.keys()}",
-                ),
-            )
-        if not all(param in params.names() for param in pd_indexes["variable"].to_list()):
-            unknown_params: list[str] = list(
-                set(pd_indexes["variable"].to_list()).difference(set(params.names())),
-            )
-            return Result.from_failure(
-                ValueError(
-                    f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
-                    f"as the 'variable' dimension contains unknown parameters: {unknown_params}",
-                    "Ensure the parameter names match the entities parameters defined in "
-                    "`entities.parameters.params`.",
-                ),
-            )
+            return Failure(KeyError(
+                f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
+                "as required keys 'init_time', 'step', and 'variable' are not all present. "
+                f"Got: '{list(pd_indexes.keys())}'",
+            ))
+        if not all(len(pd_indexes[key].to_list()) > 0 for key in ["init_time", "step", "variable"]):
+            return Failure(ValueError(
+                f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
+                "as the 'init_time', 'step', and 'variable' dimensions must have "
+                "at least one coordinate value.",
+            ))
+        input_parameter_set: set[str] = set(pd_indexes["variable"].to_list())
+        known_parameter_set: set[str] = {str(p) for p in Parameter}
+        if not input_parameter_set.issubset(known_parameter_set):
+            return Failure(ValueError(
+                f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
+                "as the 'variable' dimension contains unknown parameters: ",
+                f"'{list(input_parameter_set.difference(known_parameter_set))}'. "
+                "Ensure the parameter names match the names of the standard parameter set "
+                "defined by the `entities.Parameter` Enum.",
+            ))
         if not all(key in [f.name for f in dataclasses.fields(cls)] for key in pd_indexes):
             unknown_keys: list[str] = list(
                 set(pd_indexes.keys()).difference([f.name for f in dataclasses.fields(cls)]),
             )
-            return Result.from_failure(
-                KeyError(
-                    f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
-                    f"as unknown keys were encountered: {unknown_keys}.",
-                ),
-            )
+            return Failure(KeyError(
+                f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
+                f"as unknown index/dimension keys were encountered: {unknown_keys}.",
+            ))
+        # TODO: Ensure correct ordering of lat/long?
 
         # Convert the pandas Index objects to lists of the appropriate types
-        return Result.from_value(
+        return Success(
             cls(
                 # NOTE: The timezone information is stripped from the datetime objects
                 # as numpy cannot handle timezone-aware datetime objects. As such, it
@@ -173,7 +174,13 @@ class NWPDimensionCoordinateMap:
                     for ts in pd_indexes["init_time"].to_list()
                 ],
                 step=[np.timedelta64(ts, "h").astype(int) for ts in pd_indexes["step"].to_list()],
-                variable=[params.get(param) for param in pd_indexes["variable"].to_list()],
+                # NOTE: This list comprehension can be done safely, as above we have
+                # already performed a check on the pandas variable names being a subset
+                # of the `Parameter` enum value names.
+                variable=[
+                    Parameter(pdp)
+                    for pdp in pd_indexes["variable"].to_list()
+                ],
                 # NOTE: For latitude and longitude values, we round to 4 decimal places
                 # to avoid floating point precision issues when comparing values.
                 # It is important to note that this places a limit on the precision
@@ -189,7 +196,8 @@ class NWPDimensionCoordinateMap:
         )
 
     @classmethod
-    def from_xarray(cls, xarray_obj: xr.DataArray | xr.Dataset) -> ResultE["NWPDimensionCoordinateMap"]:
+    def from_xarray(cls, xarray_obj: xr.DataArray | xr.Dataset) \
+            -> ResultE["NWPDimensionCoordinateMap"]:
         """Create a new NWPDimensionCoordinateMap from an XArray DataArray or Dataset object."""
         return cls.from_pandas(xarray_obj.coords.indexes)   # type: ignore
 
@@ -221,7 +229,7 @@ class NWPDimensionCoordinateMap:
                 ],
             ),
             "step": pd.Index([np.timedelta64(np.timedelta64(h, "h"), "ns") for h in self.step]),
-            "variable": pd.Index([p.name for p in self.variable]),
+            "variable": pd.Index([p.value for p in self.variable]),
         } | {
             dim: pd.Index(getattr(self, dim))
             for dim in self.dims
@@ -249,6 +257,12 @@ class NWPDimensionCoordinateMap:
 
         The returned dictionary of slices defines the region of the base map covered
         by the instances dimension mapping.
+
+        Note that xarray does have its own implementation of this: the "region='auto'"
+        argument to the "to_zarr" method performs a similar function. This is
+        reimplemented in this package partly to ensure consistency of behaviour,
+        partly to enable more descriptive logging in failure states, and partly to
+        enable extending the functionality.
 
         Args:
             inner: The dimension coordinate dictionary of the smaller dataset.
@@ -282,7 +296,7 @@ class NWPDimensionCoordinateMap:
         """
         # Ensure the inner and outer maps have the same rank and dimension labels
         if inner.dims != self.dims:
-            return Result.from_failure(
+            return Failure(
                 KeyError(
                     "Cannot find slices in non-matching coordinate mappings: "
                     "both objects must have identical dimensions (rank and labels)."
@@ -293,54 +307,57 @@ class NWPDimensionCoordinateMap:
         # Ensure the inner map is entirely contained within the outer map
         slices = {}
         for inner_dim_label in inner.dims:
-            if inner_dim_label == "variable":
-                inner_dim_coords = [p.name for p in inner.variable]
-                outer_dim_coords = [p.name for p in self.variable]
-            else:
-                inner_dim_coords = getattr(inner, inner_dim_label)
-                outer_dim_coords = getattr(self, inner_dim_label)
+            inner_dim_coords = getattr(inner, inner_dim_label)
+            outer_dim_coords = getattr(self, inner_dim_label)
             if len(inner_dim_coords) > len(outer_dim_coords):
-                return Result.from_failure(
+                return Failure(
                     ValueError(
                         f"Coordinate values for dimension '{inner_dim_label}' in the inner map "
                         "exceed the number of coordinate values in the outer map. "
-                        f"Got: {len(inner_dim_coords)}' (> {len(outer_dim_coords)}) "
-                        "coordinate values.",
+                        f"Got: {len(inner_dim_coords)} (> {len(outer_dim_coords)}) "
+                        f"coordinate values.",
                     ),
                 )
             if not set(inner_dim_coords).issubset(set(outer_dim_coords)):
                 diff_coords = list(set(inner_dim_coords).difference(set(outer_dim_coords)))
                 first_diff_index: int = inner_dim_coords.index(diff_coords[0])
-                return Result.from_failure(
+                return Failure(
                     ValueError(
                         f"Coordinate values for dimension '{inner_dim_label}' not all present "
                         "within outer dimension map. The inner map must be entirely contained "
                         "within the outer map along every dimension. "
-                        f"Got: {len(diff_coords)}/{len(outer_dim_coords)} differing coordinate values. "
+                        f"Got: {len(diff_coords)}/{len(outer_dim_coords)} differing values. "
                         f"First differing value: '{diff_coords[0]}' (inner[{first_diff_index}]) != "
                         f"'{outer_dim_coords[first_diff_index]}' (outer[{first_diff_index}]).",
                     ),
                 )
 
-            # Ensure the inner map's coordinate values are contiguous in the outer map
+            # Ensure the inner map's coordinate values are contiguous in the outer map.
+            # * First, get the index of the corresponding value in the outer map for each
+            #   coordinate value in the inner map:
             outer_dim_indices = sorted(
                 [outer_dim_coords.index(c) for c in inner_dim_coords],
             )
             contiguous_index_run = list(range(outer_dim_indices[0], outer_dim_indices[-1] + 1))
             if outer_dim_indices != contiguous_index_run:
                 idxs = np.argwhere(np.gradient(outer_dim_indices) > 1).flatten()
-                return Result.from_failure(
+                # TODO: Sometimes, providers send their data in multiple files, the area
+                # TODO: of which might loop around the edges of the grid. In this case, it would
+                # TODO: be useful to determine if the run is non-contiguous only in that it wraps
+                # TODO: around that boundary, and in that case, split it and write it in two goes.
+                return Failure(
                     ValueError(
                         f"Coordinate values for dimension '{inner_dim_label}' do not correspond "
                         f"with a contiguous index set in the outer dimension map. "
-                        f"Non-contiguous values '{[outer_dim_indices[i] for i in idxs]}' "
+                        f"Non-contiguous values '{[outer_dim_coords[i] for i in idxs]} "
+                        f"(index {[outer_dim_indices[i] for i in idxs]})' "
                         f"adjacent in dimension coordinates.",
                     ),
                 )
 
             slices[inner_dim_label] = slice(outer_dim_indices[0], outer_dim_indices[-1] + 1)
 
-        return Result.from_value(slices)
+        return Success(slices)
 
     def default_chunking(self) -> dict[str, int]:
         """The expected chunk sizes for each dimension.

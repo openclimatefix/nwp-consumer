@@ -2,13 +2,15 @@ import dataclasses
 import datetime as dt
 import unittest
 
+import pandas as pd
 from returns.result import Failure, Success
 
 from .coordinates import NWPDimensionCoordinateMap
-from .parameters import params
+from .parameters import Parameter
 
 
 class TestCoordinates(unittest.TestCase):
+    """Test the business methods of the NWPDimensionCoordinateMap class."""
 
     def test_determine_region(self) -> None:
 
@@ -23,9 +25,9 @@ class TestCoordinates(unittest.TestCase):
             init_time=[dt.datetime(2021, 1, 1, i, tzinfo=dt.UTC) for i in range(0, 9, 3)],
             step=list(range(12)),
             variable=[
-                params.temperature_sl,
-                params.cloud_cover_high,
-                params.total_precipitation_rate_gl,
+                Parameter.TEMPERATURE_SL,
+                Parameter.CLOUD_COVER_HIGH,
+                Parameter.TOTAL_PRECIPITATION_RATE_GL,
             ],
             latitude=[60.0, 61.0, 62.0],
             longitude=[10.0, 11.0, 12.0],
@@ -89,7 +91,7 @@ class TestCoordinates(unittest.TestCase):
                     init_time=outer.init_time[:1],
                     step=[15],
                     variable=outer.variable,
-                    latitude=[*outer.latitude, 64.0],
+                    latitude=[12, 13, 14, 15],
                     longitude=outer.longitude,
                     ),
                 expected_slices={},
@@ -113,40 +115,138 @@ class TestCoordinates(unittest.TestCase):
                 if t.should_error:
                     self.assertTrue(
                         isinstance(result, Failure),
-                        msg="Expected error to be returned.",
+                        msg=f"{t.name}: Expected error to be returned.",
                     )
                 else:
                     self.assertEqual(result, Success(t.expected_slices))
 
     def test_to_pandas(self) -> None:
-        coords: NWPDimensionCoordinateMap = NWPDimensionCoordinateMap(
-            init_time=[dt.datetime(2021, 1, 1, i, tzinfo=dt.UTC) for i in range(0, 9, 3)],
-            step=list(range(12)),
-            variable=[
-                params.temperature_sl,
-                params.cloud_cover_high,
-                params.total_precipitation_rate_gl,
-            ],
-            latitude=[60.0, 61.0, 62.0],
-            longitude=[10.0, 11.0, 12.0],
-        )
 
-        out = coords.to_pandas()
+        @dataclasses.dataclass
+        class TestCase:
+            name: str
+            coords: NWPDimensionCoordinateMap
+            expected_indexes: dict[str, pd.Index] # type: ignore
 
-        self.assertEqual(out["init_time"].dtype, "datetime64[ns]")
-        self.assertEqual(out["step"].dtype, "timedelta64[ns]")
-        self.assertEqual(out["variable"].dtype, "object")
-        self.assertEqual(out["latitude"].dtype, "float64")
-        self.assertEqual(out["longitude"].dtype, "float64")
+        tests = [
+            TestCase(
+                name="valid_data",
+                coords=NWPDimensionCoordinateMap(
+                    init_time=[dt.datetime(2021, 1, 1, i, tzinfo=dt.UTC) for i in range(0, 9, 3)],
+                    step=list(range(12)),
+                    variable=[
+                        Parameter.TEMPERATURE_SL,
+                        Parameter.CLOUD_COVER_HIGH,
+                        Parameter.TOTAL_PRECIPITATION_RATE_GL,
+                    ],
+                    latitude=[60.0, 61.0, 62.0],
+                    longitude=[10.0, 11.0, 12.0],
+                ),
+                expected_indexes={
+                    "init_time": pd.to_datetime([
+                        "2021-01-01T00:00:00Z",
+                        "2021-01-01T03:00:00Z",
+                        "2021-01-01T06:00:00Z",
+                    ]),
+                    "step": pd.Index([hour * 60 * 60 * 1000000000 for hour in range(12)]),
+                    "variable": pd.Index([
+                        Parameter.TEMPERATURE_SL.value,
+                        Parameter.CLOUD_COVER_HIGH.value,
+                        Parameter.TOTAL_PRECIPITATION_RATE_GL.value,
+                    ]),
+                    "latitude": pd.Index([60.0, 61.0, 62.0]),
+                    "longitude": pd.Index([10.0, 11.0, 12.0]),
+                },
+            ),
+        ]
+
+        for t in tests:
+            with self.subTest(name=t.name):
+                result = t.coords.to_pandas()
+                self.assertEqual(result["init_time"].dtype, "datetime64[ns]")
+                self.assertListEqual(list(result.keys()), list(t.expected_indexes.keys()))
+                for key in result:
+                    self.assertListEqual(
+                        result[key].values.tolist(),
+                        t.expected_indexes[key].values.tolist())
 
     def test_from_pandas(self) -> None:
-        # TODO: Implement this test
-        pass
+        @dataclasses.dataclass
+        class TestCase:
+            name: str
+            data: dict[str, pd.Index]  # type: ignore
+            expected_coordinates: NWPDimensionCoordinateMap | None
+            should_error: bool
 
-    def test_roundtrip(self) -> None:
-        # TODO: Implement this test
-        pass
+        tests = [
+            TestCase(
+                name="valid_data",
+                data={
+                    "init_time": pd.to_datetime(["2021-01-01T00:00:00Z", "2021-01-01T03:00:00Z"]),
+                    "step": pd.to_timedelta(["0 days", "3 days"]),
+                    "variable": pd.Index(["temperature_sl", "cloud_cover_high"]),
+                    "latitude": pd.Index([60.0, 61.0]),
+                    "longitude": pd.Index([10.0, 11.0]),
+                },
+                expected_coordinates=NWPDimensionCoordinateMap(
+                    init_time=[
+                        dt.datetime(2021, 1, 1, 0, tzinfo=dt.UTC),
+                        dt.datetime(2021, 1, 1, 3, tzinfo=dt.UTC)],
+                    step=[0, 72],
+                    variable=[Parameter.TEMPERATURE_SL, Parameter.CLOUD_COVER_HIGH],
+                    latitude=[60.0, 61.0],
+                    longitude=[10.0, 11.0],
+                ),
+                should_error=False,
+            ),
+            TestCase(
+                name="missing_required_keys",
+                data={
+                    "init_time": pd.to_datetime(["2021-01-01T00:00:00Z", "2021-01-01T03:00:00Z"]),
+                    "step": pd.to_timedelta(["0 days", "3 days"]),
+                    "latitude": pd.Index([60.0, 61.0]),
+                    "longitude": pd.Index([10.0, 11.0]),
+                },
+                expected_coordinates=None,
+                should_error=True,
+            ),
+            TestCase(
+                name="unknown_parameter",
+                data={
+                    "init_time": pd.to_datetime(["2021-01-01T00:00:00Z", "2021-01-01T03:00:00Z"]),
+                    "step": pd.to_timedelta(["0 hours", "1 hours", "2 hours", "3 hours"]),
+                    "variable": pd.Index(["temperature_sl", "not_a_variable"]),
+                    "latitude": pd.Index([60.0, 61.0]),
+                    "longitude": pd.Index([10.0, 11.0], dtype="int64"),
+                },
+                expected_coordinates=None,
+                should_error=True,
+            ),
+            TestCase(
+                name="unknown_keys",
+                data={
+                    "init_time": pd.to_datetime(["2021-01-01T00:00:00Z", "2021-01-01T03:00:00Z"]),
+                    "step": pd.to_timedelta(["0 days", "3 days"]),
+                    "variable": pd.Index(["temperature_sl", "cloud_cover_high"]),
+                    "latitude": pd.Index([60.0, 61.0]),
+                    "longitude": pd.Index([10.0, 11.0]),
+                    "unknown": pd.Index(["unknown"]),
+                },
+                expected_coordinates=None,
+                should_error=True,
+            ),
+        ]
 
+        for t in tests:
+            with self.subTest(name=t.name):
+                result = NWPDimensionCoordinateMap.from_pandas(t.data)
+                if t.should_error:
+                    self.assertTrue(
+                        isinstance(result, Failure),
+                        msg=f"{t.name}: Expected error to be returned.",
+                    )
+                else:
+                    self.assertEqual(result, Success(t.expected_coordinates))
 
 
 if __name__ == "__main__":

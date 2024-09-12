@@ -17,38 +17,48 @@ authors = [
 ]
 classifiers = ["Programming Language :: Python :: 3"]
 dependencies = [
-    "dask >= 2024.8.0",
-    "eccodes >= 2.37.0",
-    "cfgrib >= 0.9.10.4",
-    "dagster-pipes >= 1.8.5",
-    "joblib >= 1.4.2",
-    "numpy >= 1.23.2",
-    "ocf-blosc2 >= 0.0.3",
-    "psutil >= 5.9.6",
-    "returns >= 0.23.0",
-    "requests >= 2.31.0",
-    "xarray >= 2023.11.0",
-    "zarr >= 2.16.1"
+    "dask == 2024.8.1",
+    "eccodes == 2.38.1",
+    "ecmwf-api-client == 1.6.3",
+    "cfgrib == 0.9.14.0",
+    "dagster-pipes == 1.8.5",
+    "joblib == 1.4.2",
+    "numpy == 2.1.0",
+    "ocf-blosc2 == 0.0.11",
+    "psutil == 6.0.0",
+    "requests == 2.32.3",
+    "returns == 0.23.0",
+    "s3fs == 2024.9.0",
+    "xarray == 2024.9.0",
+    "zarr == 2.18.2"
 ]
 
 [project.optional-dependencies]
 test = [
-    "botocore == 1.33.7",  # Required for moto, prevents installing the whole of boto3
     "flask == 3.0.0",
     "flask-cors == 4.0.0",
     "moto[s3,server] == 4.2.11",
     "unittest-xml-reporting == 3.2.0",
+    "hypothesis == 6.115.3",
 ]
 lint = [
-    "mypy >= 1.10.1",
-    "ruff >= 0.6.0",
+    "returns[compatible-mypy]",
+    "ruff == 0.6.9",
+    "pandas-stubs",
+    "types-psutil",
+    "types-pytz",
+    "types-pyyaml",
 ]
 docs = [
     "pydoctor >= 24.3.0",
 ]
 dev = [
-    "nwp-consumer[test,lint]",
-    "pydoctor >= 24.3.0",
+    "nwp-consumer[test,lint,docs]",
+]
+lsp = [
+    "python-lsp-server",
+    "pylsp-mypy",
+    "python-lsp-ruff",
 ]
 
 [project.scripts]
@@ -57,8 +67,12 @@ nwp-consumer-cli = "nwp_consumer.cmd.main:run_cli"
 [project.urls]
 repository = "https://github.com/openclimatefix/nwp-consumer"
 
-[tool.setuptools]
-include-package-data = false
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["test*"]
+
+[tool.setuptools.package-data]
+"*" = ["py.typed", "*.pyi"]
 
 [tool.setuptools-git-versioning]
 enabled = true
@@ -74,7 +88,6 @@ pythonVersion = "3.12"
 # * See https://mypy.readthedocs.io/en/stable/index.html
 [tool.mypy]
 python_version = "3.12"
-dmypy = true
 strict = true
 warn_unreachable = true
 warn_return_any = true
@@ -83,6 +96,18 @@ plugins = [
     "returns.contrib.mypy.returns_plugin",
     "numpy.typing.mypy_plugin",
 ]
+
+[[tool.mypy.overrides]]
+# Ignore missing imports for libraries that don't have them.
+# If they are ever made, remove from here!
+module = [
+    "cfgrib",
+    "joblib",
+    "ocf_blosc2",
+    "s3fs",
+    "zarr",
+]
+ignore_missing_imports = true
 
 # Ruff configuration
 # * See https://beta.ruff.rs/docs/

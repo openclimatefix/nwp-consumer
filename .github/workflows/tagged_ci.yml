@@ -1,0 +1,121 @@
+# Workflow that runs on new SemVer tags on the default branch
+
+name: Default Branch SemVer Tagged CI (Python)
+
+on:
+  push:
+    branches: ['main']
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+    paths-ignore: ['README.md']
+
+# Specify concurrency such that only one workflow can run at a time
+# * Different workflow files are not affected
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+# Registry for storing Container images
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+
+jobs:
+
+  # Job to create a container
+  # Job for building container image
+  # * Builds and pushes an OCI Container image to the registry defined in the environment variables
+  build-container:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    needs: ["lint-typecheck", "test-unit"]
+
+    steps:
+      # Do a non-shallow clone of the repo to ensure tags are present
+      # * This allows setuptools-git-versioning to automatically set the version
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Tag the built image according to the event type
+      # The event is a semver release, so use the version
+      - name: Extract metadata (tags, labels) for Container
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: type=semver,pattern={{version}}
+
+      # Build and push the Container image to the registry
+      # * Creates a multiplatform-aware image
+      # * Pulls build cache from the registry and pushes new cache back
+      - name: Build and push container image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: Containerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
+
+
+  # Job to build and publish the package on PyPi as a wheel
+  build-wheel:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Do a non-shallow clone of the repo to ensure tags are present
+      # * This allows setuptools-git-versioning to automatically set the version
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Install editable package and required dependencies
+        run: uv sync
+
+      # Building the wheel dynamically assigns the version according to git
+      # * The setuptools_git_versioning package reads the git tags and assigns the version
+      # * The version is then used in the wheel filename and made available in the package
+      # * setuptools_git_versioning is configured in pyproject.toml
+      - name: Build wheel
+        run: uv pip wheel . --no-deps --wheel-dir dist
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel
+          path: dist/*.whl
+
+      - name: Publish wheel
+        uses: pypa/gh-action-pypi-publish@v1.10
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}

@@ -56,3 +56,7 @@ class PerformanceMonitor(Thread):
         self.stop = True
         self.end_time = time.time()
         super().join(timeout=timeout)
+
+    def __enter__(self) -> "PerformanceMonitor":
+        """Enter a context."""
+        return self

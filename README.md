@@ -1,23 +1,22 @@
-# nwp-consumer
+# NWP Consumer
 
-A microservice for multi-source consumption of NWP data, storing it in a common format.
+**Download and convert weather data for use in ML pipelines**
 
-[![contributors badge](https://img.shields.io/github/contributors/openclimatefix/nwp-consumer?color=FFFFFF)](https://github.com/openclimatefix/nwp-consumer/graphs/contributors)
-[![workflows badge](https://img.shields.io/github/actions/workflow/status/openclimatefix/nwp-consumer/ci.yml?branch=maine&color=FFD053)](https://github.com/openclimatefix/nwp-consumer/actions/workflows/ci.yml)
-[![issues badge](https://img.shields.io/github/issues/openclimatefix/nwp-consumer?color=FFAC5F)](https://github.com/openclimatefix/nwp-consumer/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc)
 [![tags badge](https://img.shields.io/github/v/tag/openclimatefix/nwp-consumer?include_prereleases&sort=semver&color=7BCDF3)](https://github.com/openclimatefix/nwp-consumer/tags)
 [![pypi badge](https://img.shields.io/pypi/v/nwp-consumer?&color=086788)](https://pypi.org/project/nwp-consumer)
 [![documentation badge](https://img.shields.io/badge/docs-latest-333333)](https://openclimatefix.github.io/nwp-consumer/)
-
-## Overview
+[![contributors badge](https://img.shields.io/github/contributors/openclimatefix/nwp-consumer?color=FFFFFF)](https://github.com/openclimatefix/nwp-consumer/graphs/contributors)
+[![workflows badge](https://img.shields.io/github/actions/workflow/status/openclimatefix/nwp-consumer/branch_ci.yml?branch=main&color=FFD053)](https://github.com/openclimatefix/nwp-consumer/actions/workflows/ci.yml)
+[![ease of contribution: easy](https://img.shields.io/badge/ease%20of%20contribution:%20easy-32bd50)](https://github.com/openclimatefix/ocf-meta-repo?tab=readme-ov-file#overview-of-ocfs-nowcasting-repositories)
 
 Some renewables, such as solar and wind, generate power according to the weather conditions.
-As such, in order to forecast this generation, predictions of the upcoming weather conditions are required.
+Any forecasting therefore requires predictions of how these conditions will change.
 Many meteorological organisations provide Numerical Weather Prediction (NWP) data,
 which can then used for model training and inference. 
 
 This data is often very large and can come in various formats.
-These formats are not necessarily suitable for training, so may require preprocessing and conversion. 
+Furthermore, these formats are not necessarily suitable for training,
+so may require preprocessing and conversion. 
 
 This package aims to streamline the collection and processing of this NWP data.
 
@@ -43,6 +42,8 @@ $ docker pull ghcr.io/openclimatefix/nwp-consumer
 
 ## Example usage
 
+**To create an archive of GFS data:**
+
 TODO
 
 ## Documentation
@@ -54,6 +55,36 @@ To build the documentation, run the following command in the repository root:
 
 ```bash
 $ python -m pydoctor
+```
+
+## FAQ
+
+### How do I authenticate with model repositories that require accounts?
+
+
+
+## Development
+ 
+This project uses [MyPy](https://mypy.readthedocs.io/en/stable/) for static type checking
+and [Ruff](https://docs.astral.sh/ruff/) for linting.
+Installing the development dependencies makes them available in your virtual environment.
+
+Use them via:
+
+```bash
+$ python -m mypy .
+$ python -m ruff check .
+```
+
+Be sure to do this periodically while developing to catch any errors early
+and prevent headaches with the CI pipeline.
+
+### Running the test suite
+
+Run the unittests with:
+
+```bash
+$ python -m unittest discover -s src/nwp_consumer -p "test_*.py"
 ```
 
 ## Further reading
@@ -81,9 +112,24 @@ src and flat layouts.
 
 ## Contributing and community
 
-- See the [OCF Organisation Repo](https://github.com/openclimatefix) for details on contributing.
-- Find out more about OCF in the [Meta Repo](https://github.com/openclimatefix/ocf-meta-repo).
-- Follow OCF on [Twitter](https://twitter.com/OpenClimateFix).
-- Check out the OCF blog at https://openclimatefix.org/blog for updates.
+[![issues badge](https://img.shields.io/github/issues/openclimatefix/ocf-template?color=FFAC5F)](https://github.com/openclimatefix/ocf-template/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc)
 
-![OCF Logo](https://cdn.prod.website-files.com/62d92550f6774db58d441cca/6324a2038936ecda71599a8b_OCF_Logo_black_trans.png)
+- PR's are welcome! See the [Organisation Profile](https://github.com/openclimatefix) for details on contributing
+- Find out about our other projects in the [OCF Meta Repo](https://github.com/openclimatefix/ocf-meta-repo)
+- Check out the [OCF blog](https://openclimatefix.org/blog) for updates
+- Follow OCF on [LinkedIn](https://uk.linkedin.com/company/open-climate-fix)
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+---
+
+*Part of the [Open Climate Fix](https://github.com/orgs/openclimatefix/people) community.*
+
+[![OCF Logo](https://cdn.prod.website-files.com/62d92550f6774db58d441cca/6324a2038936ecda71599a8b_OCF_Logo_black_trans.png)](https://openclimatefix.org)

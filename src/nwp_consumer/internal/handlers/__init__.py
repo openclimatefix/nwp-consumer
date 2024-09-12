@@ -25,3 +25,7 @@ This module contains implementations for the following driving actors:
 """
 
 from .cli import CLIHandler
+
+__all__ = [
+    "CLIHandler"
+]

@@ -1,20 +1,17 @@
 """Implementation of the NWP consumer services."""
 
 import dataclasses
-import datetime as dt
 import logging
 import pathlib
 from typing import TYPE_CHECKING, override
 
 from joblib import Parallel
-from returns.result import Failure, Result, ResultE, Success
+from returns.result import Failure, ResultE, Success
 
 from nwp_consumer.internal import entities, ports
 
-from ._performance import PerformanceMonitor
-
 if TYPE_CHECKING:
-    from ..entities import TensorStore
+    import datetime as dt
 
 log = logging.getLogger("nwp-consumer")
 
@@ -27,60 +24,72 @@ class ArchiverService(ports.ArchiveUseCase):
     and writing it to a Zarr store.
     """
 
-    _mr: ports.ModelRepository
-    _nr: ports.NotificationRepository
+    mr: type[ports.ModelRepository]
+    nr: type[ports.NotificationRepository]
 
     def __init__(
         self,
-        model_repository: ports.ModelRepository,
-        notification_repository: ports.NotificationRepository,
+        model_repository: type[ports.ModelRepository],
+        notification_repository: type[ports.NotificationRepository],
     ) -> None:
         """Create a new instance."""
-        self._mr = model_repository
-        self._nr = notification_repository
+        self.mr = model_repository
+        self.nr = notification_repository
 
     @override
     def archive(self, year: int, month: int) -> ResultE[pathlib.Path]:
-        monitor = PerformanceMonitor()
+        monitor = entities.PerformanceMonitor()
 
-        init_times = self._mr.metadata.month_its(year=year, month=month)
+        init_times = self.mr.repository().month_its(year=year, month=month)
 
         # Create a store for the archive
-        init_store_result: ResultE[TensorStore] = entities.TensorStore.initialize_empty_store(
-            name=self._mr.metadata.name,
-            coords=dataclasses.replace(
-                self._mr.metadata.expected_coordinates,
-                init_time=init_times,
-            ),
-            overwrite_existing=False,
-        )
+        init_store_result: ResultE[entities.TensorStore] = \
+            entities.TensorStore.initialize_empty_store(
+                name=self.mr.repository().name,
+                coords=dataclasses.replace(
+                    self.mr.model().expected_coordinates,
+                    init_time=init_times,
+                ),
+                overwrite_existing=False,
+            )
 
         match init_store_result:
             case Failure(e):
                 monitor.join()  # TODO: Make this a context manager instead
-                return Result.from_failure(OSError(
+                return Failure(OSError(
                     f"Failed to initialize store for {year}-{month}: {e}"),
                 )
             case Success(store):
                 missing_times_result = store.missing_times()
                 if isinstance(missing_times_result, Failure):
                     monitor.join()
-                    return Result.from_failure(missing_times_result.failure())
+                    return Failure(missing_times_result.failure())
                 log.info(f"{len(missing_times_result.unwrap())} missing init_times in store.")
 
                 failed_times: list[dt.datetime] = []
                 for n, it in enumerate(missing_times_result.unwrap()):
                     log.info(
-                        f"Consuming data from {self._mr.metadata.name} for {it:%Y-%m-%d %H:%M} "
+                        f"Consuming data from {self.mr.repository().name} for {it:%Y-%m-%d %H:%M} "
                         f"(time {n + 1}/{len(missing_times_result.unwrap())})",
                     )
 
+                    # Authenticate with the model repository
+                    amr_result = self.mr.authenticate()
+                    if isinstance(amr_result, Failure):
+                        monitor.join()
+                        return Failure(OSError(
+                            "Unable to authenticate with model repository "
+                            f"'{self.mr.repository().name}': "
+                            f"{amr_result.failure()}",
+                        ))
+                    amr = amr_result.unwrap()
+
                     # Create a generator to fetch and process raw data
                     da_result_generator = Parallel(
-                        n_jobs=self._mr.metadata.max_connections - 1,
+                        n_jobs=self.mr.repository().max_connections - 1,
                         prefer="threads",
                         return_as="generator_unordered",
-                    )(self._mr.fetch_init_data(it=it))
+                    )(amr.fetch_init_data(it=it))
 
                     # Regionally write the results of the generator as they are ready
                     for da_result in da_result_generator:
@@ -97,9 +106,15 @@ class ArchiverService(ports.ArchiveUseCase):
                     "failed_times": [t.strftime("%d %H:%M") for t in failed_times],
                 })
 
+                # Postprocess the dataset as required
+                # postprocess_result = store.postprocess(self._mr.metadata().postprocess_options)
+                # if isinstance(postprocess_result, Failure):
+                #    monitor.join() # TODO: Make this a context manager instead
+                #    return Failure(postprocess_result.failure())
+
                 monitor.join()
-                notify_result = self._nr.notify(
-                    entities.StoreCreatedNotification(
+                notify_result = self.nr().notify(
+                    message=entities.StoreCreatedNotification(
                         filename=store.path.name,
                         size_mb=store.size_mb,
                         performance=entities.PerformanceMetadata(
@@ -109,12 +124,14 @@ class ArchiverService(ports.ArchiveUseCase):
                     ),
                 )
                 if isinstance(notify_result, Failure):
-                    log.error("Failed to notify of store creation")
-                    return notify_result
+                    return Failure(OSError(
+                        "Failed to notify of store creation: "
+                        f"{notify_result.failure()}",
+                    ))
 
-                return Result.from_value(store.path)
+                return Success(store.path)
 
             case _:
-                return Result.from_failure(
+                return Failure(
                     TypeError(f"Unexpected result type: {type(init_store_result)}"),
                 )

@@ -6,7 +6,7 @@ import logging
 
 from returns.result import Failure, Success
 
-from nwp_consumer.internal import entities, ports
+from nwp_consumer.internal import ports
 
 log = logging.getLogger("nwp-consumer")
 

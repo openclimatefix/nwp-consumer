@@ -14,7 +14,6 @@ import logging
 import os
 import pathlib
 import shutil
-import time
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any
 
@@ -23,11 +22,10 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import zarr
-from returns.result import Failure, Result, ResultE, Success
-from zarr._storage.store import Store
+from returns.result import Failure, ResultE, Success
 
 from .coordinates import NWPDimensionCoordinateMap
-from .parameters import Parameter, params
+from .parameters import Parameter
 from .postprocess import PostProcessOptions
 
 log = logging.getLogger("nwp-consumer")
@@ -129,7 +127,7 @@ class TensorStore:
             A new instance of the TensorStore class.
         """
         if not isinstance(coords.init_time, list) or len(coords.init_time) == 0:
-            return Result.from_failure(
+            return Failure(
                 ValueError(
                     "Cannot initialize store with 'init_time' dimension coordinates not "
                     "specified via a populated list. Check instantiation of "
@@ -142,7 +140,7 @@ class TensorStore:
             store_range = f"{coords.init_time[0]:%Y%m%d%H}-{coords.init_time[-1]:%Y%m%d%H}"
 
         store_path = pathlib.Path(
-            f"{os.getenv('NWP_WORKDIR', f'~/.local/cache/nwp/{name}')}/{store_range}.zarr",
+            f"{os.getenv('ZARRDIR', f'~/.local/cache/nwp/{name}/data')}/{store_range}.zarr",
         )
 
         # * Define a set of chunks allowing for intermediate parallel writes
@@ -159,7 +157,7 @@ class TensorStore:
         }
         # Create a dask array of zeros with the shape of the dataset
         # * The values of this are ignored, only the shape and chunks are used
-        dummy_values = dask.array.zeros(
+        dummy_values = dask.array.zeros(  # type: ignore
             shape=list(coords.shapemap.values()),
             chunks=tuple([intermediate_chunks[k] for k in coords.shapemap]),
         )
@@ -168,9 +166,12 @@ class TensorStore:
                 f"nwp-consumer {__version__} at ",
                 f"{dt.datetime.now(tz=dt.UTC).strftime('%Y-%m-%d %H:%M')}",
             )),
-            "variables": json.dumps(
-                {p.name: {"description": p.description, "units": p.units} for p in coords.variable},
-            ),
+            "variables": json.dumps({
+                p.value: {
+                    "description": p.metadata().description,
+                    "units": p.metadata().units,
+                } for p in coords.variable
+            }),
         }
         # Create a DataArray object with the given coordinates and dummy values
         da: xr.DataArray = xr.DataArray(
@@ -189,7 +190,7 @@ class TensorStore:
                 store_da: xr.DataArray = xr.open_dataarray(store_path, engine="zarr")
                 for dim in store_da.dims:
                     if dim not in da.dims:
-                        return Result.from_failure(
+                        return Failure(
                             ValueError(
                                 "Cannot use existing store due to mismatched coordinates. "
                                 f"Dimension '{dim}' in existing store not found in new store. "
@@ -198,7 +199,7 @@ class TensorStore:
                             ),
                         )
                     if not np.array_equal(store_da.coords[dim].values, da.coords[dim].values):
-                        return Result.from_failure(
+                        return Failure(
                             ValueError(
                                 "Cannot use existing store due to mismatched coordinates. "
                                 f"Dimension '{dim}' in existing store has different coordinate "
@@ -212,7 +213,7 @@ class TensorStore:
                     # Write the dataset to a skeleton zarr file
                     # * 'compute=False' enables only saving metadata
                     # * 'mode="w"' overwrites any existing store
-                    da.to_zarr(
+                    _ = da.to_zarr(
                         store=store_path,
                         compute=False,
                         mode="w",
@@ -222,7 +223,7 @@ class TensorStore:
                     # Ensure the store is readable
                     store_da = xr.open_dataarray(store_path, engine="zarr")
                 except Exception as e:
-                    return Result.from_failure(
+                    return Failure(
                         OSError(
                             f"Failed writing blank store to disk: {e}",
                         ),
@@ -230,14 +231,14 @@ class TensorStore:
         # Check the resultant array's coordinates can be converted back
         coordinate_map_result = NWPDimensionCoordinateMap.from_xarray(store_da)
         if isinstance(coordinate_map_result, Failure):
-            return Result.from_failure(
+            return Failure(
                 OSError(
                     f"Error reading back coordinates of initialized store "
                     f"from disk (possible corruption): {coordinate_map_result}",
                 ),
             )
 
-        return Result.from_value(
+        return Success(
             cls(
                 name=name,
                 path=store_path,
@@ -274,14 +275,14 @@ class TensorStore:
                 self.coordinate_map.determine_region,
             )
             if isinstance(region_result, Failure):
-                return Result.from_failure(region_result.failure())
+                return Failure(region_result.failure())
             region = region_result.unwrap()
 
         # Perform the regional write
         try:
             da.to_zarr(store=self.path, region=region, consolidated=True)
         except Exception as e:
-            return Result.from_failure(
+            return Failure(
                 OSError(
                     f"Error writing to region of store: {e}",
                 ),
@@ -291,7 +292,7 @@ class TensorStore:
         nbytes: int = da.nbytes
         del da
         self.size_mb += nbytes // (1024**2)
-        return Result.from_value(nbytes)
+        return Success(nbytes)
 
     def validate_store(self) -> ResultE[bool]:
         """Validate the store.
@@ -306,27 +307,27 @@ class TensorStore:
         coords_result = NWPDimensionCoordinateMap.from_xarray(store_da)
         match coords_result:
             case Failure(e):
-                return Result.from_failure(e)
+                return Failure(e)
             case Success(coords):
                 if coords != self.coordinate_map:
-                    return Result.from_failure(
-                        ValueError(
-                            "Coordinate consistency check failed: "
-                            "Store coordinates do not match expected coordinates. "
-                            f"Expected: {self.coordinate_map}. Got: {coords}.",
-                        ),
-                    )
+                    return Failure(ValueError(
+                        "Coordinate consistency check failed: "
+                        "Store coordinates do not match expected coordinates. "
+                        f"Expected: {self.coordinate_map}. Got: {coords}.",
+                    ))
 
         # Validity check on the parameters of the store
         for param in self.coordinate_map.variable:
             scan_result: ResultE[ParameterScanResult] = self.scan_parameter_values(p=param)
             match scan_result:
                 case Failure(e):
-                    return Result.from_failure(e)
+                    return Failure(e)
                 case Success(scan):
                     log.debug(f"Scanned parameter {param.name}: {scan.__repr__()}")
                     if not scan.is_valid or scan.has_nulls:
-                        return Result.from_value(False)
+                        return Success(False)
+
+        return Success(True)
 
     def scan_parameter_values(self, p: Parameter) -> ResultE[ParameterScanResult]:
         """Scan the values of a parameter in the store.
@@ -342,22 +343,23 @@ class TensorStore:
             A ParameterScanResult object.
         """
         if p not in self.coordinate_map.variable:
-            return Result.from_failure(
-                KeyError(
-                    "Parameter scan failed: "
-                    f"Cannot validate unknown parameter: {p.name}. "
-                    "Ensure the parameter has been renamed to match the entities "
-                    "parameters defined in `entities.parameters` if desired, or "
-                    "add the parameter to the entities parameters if it is new. "
-                    f"Store parameters: {[p.name for p in self.coordinate_map.variable]}. "
-                    f"Known parameters: {params.names()}",
-                ),
-            )
+            return Failure(KeyError(
+                "Parameter scan failed: "
+                f"Cannot validate unknown parameter: {p.name}. "
+                "Ensure the parameter has been renamed to match the entities "
+                "parameters defined in `entities.parameters` if desired, or "
+                "add the parameter to the entities parameters if it is new. "
+                f"Store parameters: {[p.name for p in self.coordinate_map.variable]}.",
+            ))
         store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")
 
-        mean = store_da.mean().values
+        # Calculating the mean of a dataarray returns another dataarray, so it
+        # must be converted to a numpy array via `values`. Even though it is a
+        # single number in this case, type checkers don't know that, so the
+        # second call to `mean()` helps to reassure them its a float.
+        mean = store_da.mean().values.mean()
 
-        return Result.from_value(
+        return Success(
             ParameterScanResult(
                 mean=mean,
                 is_valid=True,
@@ -405,7 +407,7 @@ class TensorStore:
                 coordinates_result = NWPDimensionCoordinateMap.from_xarray(store_da)
                 match coordinates_result:
                     case Failure(e):
-                        return Result.from_failure(e)
+                        return Failure(e)
                     case Success(coords):
                         self.coordinate_map = coords
 
@@ -421,7 +423,7 @@ class TensorStore:
                     # * See https://github.com/sgkit-dev/sgkit/issues/991
                     # * and https://github.com/pydata/xarray/issues/3476
                     store_da.coords["variable"].encoding.clear()
-                    zstore: xr.backends.zarr.ZarrStore = store_da.to_zarr(
+                    _ = store_da.to_zarr(
                         store=processed_path,
                         mode="w",
                         encoding=self.encoding,
@@ -429,7 +431,7 @@ class TensorStore:
                     )
                     self.path = processed_path
                 except Exception as e:
-                    return Result.from_failure(
+                    return Failure(
                         OSError(
                             f"Error encountered writing postprocessed store: {e}",
                         ),
@@ -443,17 +445,17 @@ class TensorStore:
                 try:
                     shutil.make_archive(self.path.name, "zip", self.path)
                 except Exception as e:
-                    return Result.from_failure(
+                    return Failure(
                         OSError(
                             f"Error encountered zipping store: {e}",
                         ),
                     )
 
             log.debug("Postprocessing complete for store %s", self.name)
-            return Result.from_value(self.path)
+            return Success(self.path)
 
         else:
-            return Result.from_value(self.path)
+            return Success(self.path)
 
     def update_attrs(self, attrs: dict[str, str]) -> ResultE[pathlib.Path]:
         """Update the attributes of the store.
@@ -463,7 +465,7 @@ class TensorStore:
         group: zarr.Group = zarr.open_group(self.path.as_posix())
         group.attrs.update(attrs)
         zarr.consolidate_metadata(self.path.as_posix())
-        return Result.from_value(self.path)
+        return Success(self.path)
 
     def missing_times(self) -> ResultE[list[dt.datetime]]:
         """Find the missing init_time in the store.
@@ -475,7 +477,7 @@ class TensorStore:
         try:
             store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")
         except Exception as e:
-            return Result.from_failure(OSError(
+            return Failure(OSError(
                 "Cannot determine missing times in store due to "
                 f"error reading '{self.path}': {e}",
             ))
@@ -486,6 +488,6 @@ class TensorStore:
                 if d != "init_time"
             }).isnull().all().values:
                 missing_times.append(pd.Timestamp(it).to_pydatetime().replace(tzinfo=dt.UTC))
-        return Result.from_value(missing_times)
+        return Success(missing_times)
 
 
