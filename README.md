@@ -1,6 +1,6 @@
-# nwp-consumer
+# NWP Consumer
 
-A microservice for multi-source consumption of NWP data, storing it in a common format.
+**Download and convert weather data for use in ML pipelines**
 
 [![contributors badge](https://img.shields.io/github/contributors/openclimatefix/nwp-consumer?color=FFFFFF)](https://github.com/openclimatefix/nwp-consumer/graphs/contributors)
 [![workflows badge](https://img.shields.io/github/actions/workflow/status/openclimatefix/nwp-consumer/ci.yml?branch=maine&color=FFD053)](https://github.com/openclimatefix/nwp-consumer/actions/workflows/ci.yml)
@@ -9,15 +9,15 @@ A microservice for multi-source consumption of NWP data, storing it in a common 
 [![pypi badge](https://img.shields.io/pypi/v/nwp-consumer?&color=086788)](https://pypi.org/project/nwp-consumer)
 [![documentation badge](https://img.shields.io/badge/docs-latest-333333)](https://openclimatefix.github.io/nwp-consumer/)
 
-## Overview
 
 Some renewables, such as solar and wind, generate power according to the weather conditions.
-As such, in order to forecast this generation, predictions of the upcoming weather conditions are required.
+Any forecasting therefore requires predictions of how these conditions will change.
 Many meteorological organisations provide Numerical Weather Prediction (NWP) data,
 which can then used for model training and inference. 
 
 This data is often very large and can come in various formats.
-These formats are not necessarily suitable for training, so may require preprocessing and conversion. 
+Furthermore, these formats are not necessarily suitable for training,
+so may require preprocessing and conversion. 
 
 This package aims to streamline the collection and processing of this NWP data.
 

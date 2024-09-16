@@ -1,2 +1,0 @@
-[console_scripts]
-nwp-consumer-cli = nwp_consumer.cmd.main:run_cli
