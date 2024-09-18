@@ -44,6 +44,7 @@ from distutils.util import strtobool
 
 import dask
 import dask.distributed
+import sentry_sdk
 import structlog
 from docopt import docopt
 
@@ -57,6 +58,18 @@ with contextlib.suppress(importlib.metadata.PackageNotFoundError):
     __version__ = importlib.metadata.version("package-name")
 
 log = structlog.getLogger()
+
+#sentry
+sentry_sdk.set_tag("app_name", "nwp_consumer")
+sentry_sdk.set_tag("version", __version__)
+
+log = structlog.stdlib.get_logger()
+
+sentry_sdk.init(
+    dsn=os.getenv("SENTRY_DSN"),
+    environment=os.getenv("ENVIRONMENT", "local"),
+    traces_sample_rate=1
+)
 
 
 def run(argv: list[str]) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
