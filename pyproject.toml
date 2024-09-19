@@ -34,7 +34,7 @@ dependencies = [
     "structlog >= 23.2.0",
     "urllib3 >= 2.0.2",
     "xarray >= 2023.11.0",
-    "zarr >= 2.16.1",
+    "zarr >= 2.16.1"
     sentry-sdk = "^2.1.1"
 
 ]
