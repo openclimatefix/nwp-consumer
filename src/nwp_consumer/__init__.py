@@ -110,8 +110,6 @@ else:
         "}",
     ))
 
-
-
 _loglevel: int | str = logging.getLevelName(os.getenv("LOGLEVEL", "INFO").upper())
 logging.basicConfig(
     level=logging.INFO if isinstance(_loglevel, str) else _loglevel,
