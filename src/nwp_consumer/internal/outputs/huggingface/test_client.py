@@ -22,7 +22,7 @@ class TestHuggingFaceClient(unittest.TestCase):
     def test_get_size(self) -> None:
         """Test that the size of a file is returned correctly."""
         name_size_map: dict[str, int] = {
-            "README.md": 5292,
+            "README.md": 5276,
             "data": 471355396,
         }
         for name, exp in name_size_map.items():
