@@ -33,7 +33,7 @@ dependencies = [
     "requests >= 2.31.0",
     "structlog >= 23.2.0",
     "urllib3 >= 2.0.2",
-    "xarray >= 2023.11.0",
+    "xarray >= 2023.11.0, < 2024.9.0",
     "zarr >= 2.16.1",
     "sentry-sdk >= 2.1.1"
 ]
