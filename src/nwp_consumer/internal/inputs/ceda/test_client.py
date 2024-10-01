@@ -60,6 +60,7 @@ class TestClient_MapCachedRaw(unittest.TestCase):
             dict(out.sizes.items()),
         )
         # Ensure the correct variables are in the variable dimension
+        print(out.data_vars.keys())
         self.assertCountEqual(
             ["dlwrf", "dswrf", "hcc", "lcc", "mcc", "sde"],
             list(out.data_vars.keys()),
