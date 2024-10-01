@@ -140,7 +140,7 @@ class S3Client(internal.FetcherInterface):
             .chunk(
                 {
                     "init_time": 1,
-                    "step": 1,
+                    "step": -1,
                     "latitude": len(ds.latitude) // 2,
                     "longitude": len(ds.longitude) // 2,
                 },
