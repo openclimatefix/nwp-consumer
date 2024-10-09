@@ -9,7 +9,6 @@ See Also:
     - https://docs.dagster.io/concepts/dagster-pipes/subprocess/create-subprocess-asset
 """
 
-import dataclasses
 import logging
 from typing import override
 

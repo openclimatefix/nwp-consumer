@@ -7,8 +7,8 @@ from returns.pipeline import is_successful
 
 from nwp_consumer.internal import entities
 
-from .metoffice_global import CedaMetOfficeGlobalModelRepository
 from ...entities import NWPDimensionCoordinateMap
+from .metoffice_global import CedaMetOfficeGlobalModelRepository
 
 
 class TestCedaMetOfficeGlobalModelRepository(unittest.TestCase):

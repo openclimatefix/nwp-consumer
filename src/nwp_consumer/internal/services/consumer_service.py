@@ -4,7 +4,7 @@ import dataclasses
 import datetime as dt
 import logging
 import pathlib
-from typing import TYPE_CHECKING, override
+from typing import override
 
 from joblib import Parallel
 from returns.result import Failure, Result, ResultE, Success

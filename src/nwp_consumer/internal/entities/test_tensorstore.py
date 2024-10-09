@@ -3,9 +3,9 @@ import datetime as dt
 import unittest
 
 import numpy as np
+import xarray as xr
 from returns.pipeline import is_successful
 from returns.result import Failure, Success
-import xarray as xr
 
 from . import NWPDimensionCoordinateMap
 from .parameters import params

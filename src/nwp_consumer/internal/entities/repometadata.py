@@ -11,7 +11,6 @@ for a live service.
 import dataclasses
 import datetime as dt
 import pathlib
-from collections.abc import Iterator
 
 import pandas as pd
 

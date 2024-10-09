@@ -21,7 +21,7 @@ from collections.abc import Callable, Iterator
 import xarray as xr
 from returns.result import ResultE
 
-from nwp_consumer.internal import config, entities
+from nwp_consumer.internal import entities
 
 
 class ModelRepository(abc.ABC):
