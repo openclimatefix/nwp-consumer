@@ -1,3 +1,5 @@
+"""Entrypoints to the nwp-consumer service."""
+
 import argparse
 import logging
 import os
@@ -10,9 +12,9 @@ log = logging.getLogger("nwp-consumer")
 def parse_env() -> argparse.Namespace:
     """Parse from the environment."""
     config = argparse.Namespace()
-    match os.getenv("NWP_CONSUMER_MODEL_REPOSITORY"):
+    match os.getenv("MODEL_REPOSITORY"):
         case None:
-            log.error("NWP_CONSUMER_MODEL_REPOSITORY is not set in environment.")
+            log.error("MODEL_REPOSITORY is not set in environment.")
             sys.exit(1)
         case "ceda-metoffice-global":
             config.model_repository = repositories.CedaMetOfficeGlobalModelRepository()
@@ -20,7 +22,7 @@ def parse_env() -> argparse.Namespace:
             log.error(f"Unknown model: {model}")
             sys.exit(1)
 
-    match os.getenv("NWP_CONSUMER_NOTIFICATION_REPOSITORY", "stdout"):
+    match os.getenv("NOTIFICATION_REPOSITORY", "stdout"):
         case "stdout":
             config.notification_repository = repositories.StdoutNotificationRepository()
         case "dagster-pipes":
@@ -48,3 +50,4 @@ def run_cli() -> None:
     )
     returncode: int = c.run()
     sys.exit(returncode)
+

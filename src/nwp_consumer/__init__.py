@@ -1,5 +1,30 @@
 """NWP Consumer.
 
+Usage Documentation
+===================
+
+Configuration
+-------------
+
+The following environment variables can be used to configure the application:
+
++-------------------------------+-------------------------------------+-------------------------------------+
+| Key                           | Description                         | Default                             |
++===============================+=====================================+=====================================+
+| LOGLEVEL                      | The logging level for the app.      | INFO                                |
++-------------------------------+-------------------------------------+-------------------------------------+
+| RAWDIR                        | The working directory for the app.  | ~/.local/cache/nwp/{MODEL}/raw      |
+|                               | Can be a local path or an S3 URI.   |                                     |
++-------------------------------+-------------------------------------+-------------------------------------+
+| ZARRDIR                       | The output directory for the app.   | ~/.local/cache/nwp/{MODEL}/data     |
+|                               | Can be a local path or an S3 URI.   |                                     |
++-------------------------------+-------------------------------------+-------------------------------------+
+| NOTIFICATION_REPOSITORY       | The notification repository to use. | stdout                              |
++-------------------------------+-------------------------------------+-------------------------------------+
+| MODEL_REPOSITORY              | The model repository to use.        | ceda-metoffice-global               |
++-------------------------------+-------------------------------------+-------------------------------------+
+
+
 Development Documentation
 =========================
 
