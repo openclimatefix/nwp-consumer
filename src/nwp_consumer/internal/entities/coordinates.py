@@ -250,6 +250,12 @@ class NWPDimensionCoordinateMap:
         The returned dictionary of slices defines the region of the base map covered
         by the instances dimension mapping.
 
+        Note that xarray deos have its own implementation of this: the "region='auto'"
+        argument to the "to_zarr" method performs a similar function. This is
+        reimplemented in this package partly to ensure consistency of behaviour,
+        partly to enable more descriptive logging in failure states, and partly to
+        enable extending the functionality.
+
         Args:
             inner: The dimension coordinate dictionary of the smaller dataset.
 
@@ -329,6 +335,10 @@ class NWPDimensionCoordinateMap:
             contiguous_index_run = list(range(outer_dim_indices[0], outer_dim_indices[-1] + 1))
             if outer_dim_indices != contiguous_index_run:
                 idxs = np.argwhere(np.gradient(outer_dim_indices) > 1).flatten()
+                # TODO: Sometimes, providers send their data in multiple files, the area
+                # of which might loop around the edges of the grid. In this case, it would
+                # be useful to determine if the run is non-contiguous only in that it wraps
+                # around that boundary, and in that case, split it and write it in two goes.
                 return Result.from_failure(
                     ValueError(
                         f"Coordinate values for dimension '{inner_dim_label}' do not correspond "

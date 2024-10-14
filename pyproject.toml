@@ -20,6 +20,7 @@ dependencies = [
     "dask >= 2024.8.0",
     "dacite >= 1.8.1",
     "eccodes >= 2.37.0",
+    "ecmwf-api-client >= 1.6.3",
     "cfgrib >= 0.9.10.4",
     "dagster-pipes >= 1.8.5",
     "joblib >= 1.4.2",
@@ -75,7 +76,6 @@ pythonVersion = "3.12"
 # * See https://mypy.readthedocs.io/en/stable/index.html
 [tool.mypy]
 python_version = "3.12"
-dmypy = true
 strict = true
 warn_unreachable = true
 warn_return_any = true

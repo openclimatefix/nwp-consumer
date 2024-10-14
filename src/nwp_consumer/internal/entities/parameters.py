@@ -107,6 +107,10 @@ class Parameters:
     """U component of wind at 100m above ground level (m/s)."""
     wind_v_component_100m: Parameter
     """V component of wind at 100m above ground level (m/s)."""
+    wind_u_component_200m: Parameter
+    """U component of wind at 200m above ground level (m/s)."""
+    wind_v_component_200m: Parameter
+    """V component of wind at 200m above ground level (m/s)."""
     snow_depth_gl: Parameter
     """Depth of snow on the ground (m)."""
     cloud_cover_high: Parameter
@@ -197,6 +201,20 @@ params = Parameters(
                     "Defined as the horizontal speed of the wind in the northward direction.",
         units="m/s",
         limits=ParameterLimits(upper=100, lower=-100),
+    ),
+    wind_u_component_200m=Parameter(
+        name="wind_u_component_200m",
+        description="U component of wind at 200m above ground level. "
+                    "Defined as the horizontal speed of the wind in the eastward direction.",
+        units="m/s",
+        limits=ParameterLimits(upper=150, lower=-150),
+    ),
+    wind_v_component_200m=Parameter(
+        name="wind_v_component_200m",
+        description="V component of wind at 200m above ground level. "
+                    "Defined as the horizontal speed of the wind in the northward direction.",
+        units="m/s",
+        limits=ParameterLimits(upper=150, lower=-150),
     ),
     snow_depth_gl=Parameter(
         name="snow_depth_gl",
