@@ -308,8 +308,12 @@ class Client(internal.FetcherInterface):
             "rprate": internal.OCFParameter.RainPrecipitationRate,
             "tprate": internal.OCFParameter.RainPrecipitationRate,
             "sd": internal.OCFParameter.SnowDepthWaterEquivalent,
+            # There is some weird behaviour with the radiation parameters, and different setups
+            # this is a catch all situation (hopefully)
             "dswrf": internal.OCFParameter.DownwardShortWaveRadiationFlux,
+            "sdswrf": internal.OCFParameter.DownwardShortWaveRadiationFlux,
             "dlwrf": internal.OCFParameter.DownwardLongWaveRadiationFlux,
+            "sdlwrf": internal.OCFParameter.DownwardLongWaveRadiationFlux,
         }
 
 
