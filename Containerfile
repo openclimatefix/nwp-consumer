@@ -36,7 +36,8 @@ RUN rm -r /venv/lib/python3.12/site-packages/pip
 # Copy the virtualenv into a distroless image
 # * These are small images that only contain the runtime dependencies
 FROM gcr.io/distroless/python3-debian11
-ENV NWP_WORKDIR=/work
+ENV RAWDIR=/work/raw
+ENV ZARRDIR=/work/data
 ENV ECCODES_DEFINITION_PATH=/venv/share/eccodes/definitions
 WORKDIR /app
 COPY --from=build-app /venv /venv
