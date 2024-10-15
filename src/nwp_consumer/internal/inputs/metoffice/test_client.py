@@ -28,7 +28,6 @@ class TestClient_Init(unittest.TestCase):
 class TestClient(unittest.TestCase):
     """Tests for the MetOfficeClient."""
 
-    @unittest.skip("Broken on github ci")
     def test_mapCachedRaw(self) -> None:
 
         tests = [
