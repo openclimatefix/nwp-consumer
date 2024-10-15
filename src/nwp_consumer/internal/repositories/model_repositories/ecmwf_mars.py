@@ -6,12 +6,16 @@ your data provider to a location of choice, in this case an S3 bucket.
 
 import datetime as dt
 import logging
+import cfgrib
+import os
+import pathlib
 from collections.abc import Callable, Iterator
 from typing import override
-from joblib import delayed
 
+import s3fs
 import xarray as xr
-from returns.result import ResultE
+from joblib import delayed
+from returns.result import Failure, Result, ResultE
 
 from nwp_consumer.internal import entities, ports
 
@@ -20,6 +24,9 @@ log = logging.getLogger("nwp-consumer")
 
 class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
     """Model repository implementation for ECMWF live data from S3."""
+
+    bucket: str | None = None
+    _fs: s3fs.S3FileSystem | None = None
 
     @override
     @property
@@ -66,40 +73,55 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
 
     @override
     def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[..., ResultE[xr.DataArray]]]:
-        bucket: str = os.environ["ECMWF_REALTIME_S3_BUCKET"]
-        try:
-            fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
-                key=os.environ["ECMWF_REALTIME_S3_ACCESS_KEY"],
-                secret=os.environ["ECMWF_REALTIME_S3_ACCESS_SECRET"],
-                client_kwargs={
-                    "endpoint_url": os.environ.get("AWS_ENDPOINT_URL", None),
-                    "region_name": os.environ["ECMWF_REALTIME_S3_REGION"],
-            )
-        except Exception as e:
-            yield delayed(Result.from_failure)(ConnectionError(
-                "Failed to connect to S3 for ECMWF data. "
-                f"Credentials may be wrong or undefined. Encountered error: {e}",
-            ))
+        authenticate_result = self.authenticate()
+        if isinstance(authenticate_result, Failure):
+            yield delayed(Result.from_failure)(authenticate_result.failure())
+            return
+
         # List relevant files in the S3 bucket
         try:
             urls: list[str] = [
-                f"s3://{bucket}/ecmwf/{f}"
-                for f in fs.ls((bucket / "ecmwf").as_posix())
-                if it.strftime("A1D%m%d%H%M") in f
+                f"s3://{self.bucket}/ecmwf/{f}"
+                for f in self._fs.ls((self.bucket / "ecmwf").as_posix())
+                if it.strftime("%m%d%H%M") in f
             ]
-        except Exception as e:
+        except Exception:
             yield delayed(Result.from_failure)(ValueError(
-                f"Failed to list files in bucket path '{bucket}/ecmwf'. "
+                f"Failed to list files in bucket path '{self.bucket}/ecmwf'. "
                 "Ensure the path exists and is accessible. Encountered error: {e}",
             ))
         if len(urls) == 0:
             yield delayed(Result.from_failure)(ValueError(
                 f"No raw files found for init time '{it.strftime('%Y-%m-%d %H:%M')}' "
-                f"in bucket path '{bucket}/ecmwf'. Ensure files exist at the given path "
-                "named with the 'A1DMMDDHHMM...' prefix.",
+                f"in bucket path '{self.bucket}/ecmwf'. Ensure files exist at the given path "
+                "named with the 'A1...MMDDHHMM...' pattern.",
             ))
-        for file in files:
+        for url in urls:
+            # TODO: All files for ECMWF live contain multiple datasets
             yield delayed(self._download_and_convert)(url=url)
+
+    def authenticate(self) -> ResultE[None]:
+        """Authenticate with the S3 bucket.
+
+        Returns:
+            The authenticated S3 filesystem object.
+        """
+        try:
+            self.bucket: str = os.environ["ECMWF_REALTIME_S3_BUCKET"]
+            self._fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
+                key=os.environ["ECMWF_REALTIME_S3_ACCESS_KEY"],
+                secret=os.environ["ECMWF_REALTIME_S3_ACCESS_SECRET"],
+                client_kwargs={
+                    "endpoint_url": os.environ.get("AWS_ENDPOINT_URL", None),
+                    "region_name": os.environ["ECMWF_REALTIME_S3_REGION"],
+                },
+            )
+        except Exception as e:
+            return ResultE.failure(ConnectionError(
+                "Failed to connect to S3 for ECMWF data. "
+                f"Credentials may be wrong or undefined. Encountered error: {e}",
+            ))
+        return Result.from_success(None)
 
 
     def _download_and_convert(self, url: str) -> ResultE[xr.DataArray]:
@@ -112,7 +134,55 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
         Args:
             url: The URL to the S3 object.
         """
-        # TODO
-        pass
+        if self.bucket is None or self._fs is None:
+            return Result.from_failure(
+                ConnectionError(
+                    "Attempted to download file from S3 while not authenticated. "
+                    "Ensure the 'authenticate' method has been called prior to download.",
+                ),
+            )
+
+        local_path: pathlib.Path = (
+            pathlib.Path(
+                os.getenv("RAWDIR", f"~/.local/cache/nwp/{self.metadata.name}/raw"),
+            ) / url.split("/")[-1]
+        )
+
+        # Only download the file if not already present
+        if not local_path.exists():
+            log.debug("Requesting file from S3 at: '%s'", url)
+            try:
+                with local_path.open("wb") as lf, self._fs.open(url, "rb") as rf:
+                    for chunk in iter(lambda: rf.read(12 * 1024), b""):
+                        lf.write(chunk)
+                        lf.flush()
+
+                    if local_path.stat().st_size != self._fs.info(url)["size"]:
+                        raise ValueError(
+                            f"Failed to download file from S3 at '{url}'. "
+                            "File size mismatch. File may be corrupted.",
+                        )
+
+            except Exception as e:
+                return Result.from_failure(
+                    OSError(
+                        f"Failed to download file from S3 at '{url}'. Encountered error: {e}",
+                    ),
+                )
+
+        return Result.from_value(local_path)
+
+    def _convert(self, path: pathlib.Path) -> ResultE[xr.DataArray]:
+        """Convert a grib file to an xarray DataArray.
+
+        Args:
+            local_path: The path to the grib file.
+        """
+        try:
+            dss = cfgrib.open_datasets(path)
+        except Exception as e:
+            return Result.from_failure(OSError(f"Error opening '{path}' as xarray Dataset: {e}"))
+        try:
+
 
 

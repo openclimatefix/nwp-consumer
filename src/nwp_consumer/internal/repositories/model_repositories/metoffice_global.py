@@ -228,10 +228,8 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
 
         local_path: pathlib.Path = (
             pathlib.Path(
-                f"{os.getenv('RAWDIR', f'~/.local/cache/nwp/{self.metadata.name}')}/raw",
-            )
-            / url.split("/")[-1]
-        )
+                os.getenv("RAWDIR", f'~/.local/cache/nwp/{self.metadata.name}/raw'),
+            ) / url.split("/")[-1]
 
         # Don't download the file if it already exists
         if not local_path.exists():
