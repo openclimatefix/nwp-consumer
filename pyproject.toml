@@ -17,25 +17,24 @@ authors = [
 ]
 classifiers = ["Programming Language :: Python :: 3"]
 dependencies = [
-    "cfgrib >= 0.9.10.4",
-    "dask[distributed] >= 2024.1.0, <2024.7",
-    "docopt >= 0.6.2",
-    "ecmwf-api-client >= 1.6.3",
-    "fsspec[s3] >= 2023.12.1",
-    "huggingface-hub >= 0.19.4",
-    "marshmallow >= 3.20.1",
-    "marshmallow-dataclass >= 8.6.0",
-    "meteomatics >= 2.11.1",
-    "numpy >= 1.23.2",
-    "ocf-blosc2 >= 0.0.3",
-    "psutil >= 5.9.6",
-    "pyproj >= 3.6.1",
-    "requests >= 2.31.0",
-    "structlog >= 23.2.0",
-    "urllib3 >= 2.0.2",
-    "xarray >= 2023.11.0, <2024.7",
-    "zarr >= 2.16.1",
-    "sentry-sdk >= 2.1.1"
+    "cfgrib == 0.9.13.0",
+    "dask[distributed] == 2024.6.2",
+    "docopt == 0.6.2",
+    "ecmwf-api-client == 1.6.3",
+    "fsspec[s3] == 2024.6.1",
+    "huggingface-hub == 0.23.4",
+    "marshmallow == 3.21.3",
+    "marshmallow-dataclass == 8.7.0",
+    "numpy == 2.0.0",
+    "ocf-blosc2 == 0.0.4",
+    "psutil == 6.0.0",
+    "pyproj == 3.6.1",
+    "requests == 2.32.3",
+    "structlog == 24.2.0",
+    "urllib3 == 2.0.7",
+    "xarray == 2024.6.0",
+    "zarr == 2.18.2",
+    "sentry-sdk == 2.1.1"
 ]
 
 [project.optional-dependencies]
