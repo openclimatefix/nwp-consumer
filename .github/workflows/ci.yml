@@ -55,7 +55,7 @@ jobs:
       - name: Build venv
         run: |
           apt -qq update && apt -qq install -y build-essential
-          conda create -p ./venv python=3.12
+          conda create -p ./venv python=3.11
           ./venv/bin/python -m pip install --upgrade -q pip wheel setuptools
         if: steps.restore-cache.outputs.cache-hit != 'true'
 
