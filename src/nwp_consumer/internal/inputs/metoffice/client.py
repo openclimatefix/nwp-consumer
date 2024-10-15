@@ -235,6 +235,17 @@ class Client(internal.FetcherInterface):
                 parameterDataset = parameterDataset.rename(
                     {currentName: internal.OCFParameter.WindSpeedSurfaceAdjustedAGL.value},
                 )
+            
+            # There is some weird behaviour with the radiation parameters, and different setups
+            # this is a catch all situation (hopefully)
+            case "sdswrf", 7:
+                parameterDataset = parameterDataset.rename(
+                    {currentName: 'dswrf'},
+                )
+            case "sdlwrf", 3:
+                parameterDataset = parameterDataset.rename(
+                    {currentName: 'dlwrf'},
+                )
 
         # Map the data to the internal dataset representation
         # * Transpose the Dataset so that the dimensions are correctly ordered
@@ -312,12 +323,8 @@ class Client(internal.FetcherInterface):
             "rprate": internal.OCFParameter.RainPrecipitationRate,
             "tprate": internal.OCFParameter.RainPrecipitationRate,
             "sd": internal.OCFParameter.SnowDepthWaterEquivalent,
-            # There is some weird behaviour with the radiation parameters, and different setups
-            # this is a catch all situation (hopefully)
             "dswrf": internal.OCFParameter.DownwardShortWaveRadiationFlux,
-            "sdswrf": internal.OCFParameter.DownwardShortWaveRadiationFlux,
             "dlwrf": internal.OCFParameter.DownwardLongWaveRadiationFlux,
-            "sdlwrf": internal.OCFParameter.DownwardLongWaveRadiationFlux,
         }
 
 
