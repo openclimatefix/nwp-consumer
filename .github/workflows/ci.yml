@@ -44,12 +44,12 @@ jobs:
       # Restore cached virtualenv, if available
       # * The pyproject.toml hash is part of the cache key, invalidating
       #   the cache if the file changes
-#      - name: Restore cached virtualenv
-#        id: restore-cache
-#        uses: actions/cache/restore@v3
-#        with:
-#          path: ./venv
-#          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
+      - name: Restore cached virtualenv
+        id: restore-cache
+        uses: actions/cache/restore@v3
+        with:
+          path: ./venv
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
 
       # Should mirror the build-venv stage in the Containerfile
       - name: Build venv
@@ -85,12 +85,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Restore cached virtualenv
-#      - name: Restore cached virtualenv
-#        uses: actions/cache/restore@v3
-#        with:
-#          path: ./venv
-#          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
+#       Restore cached virtualenv
+      - name: Restore cached virtualenv
+        uses: actions/cache/restore@v3
+        with:
+          path: ./venv
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}
 
       - name: Install package
         run: ./venv/bin/python -m pip install -q .
