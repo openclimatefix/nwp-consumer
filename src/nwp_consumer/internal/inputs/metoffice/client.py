@@ -200,6 +200,9 @@ class Client(internal.FetcherInterface):
                     "y": "auto",
                 },
             )
+            print('XXXXX')
+            print(parameterDataset)
+            print('XXXXX')
         except Exception as e:
             log.warn(
                 event="error loading raw file as dataset",
