@@ -54,7 +54,8 @@ class TestClient(unittest.TestCase):
 
                 # Ensure the dimensions of the variables are correct
                 for data_var in out.data_vars:
-                    self.assertEqual(list(out[data_var].dims), tst["expected_dims"])
+                    self.assertEqual(list(out[data_var].dims), tst["expected_dims"],
+                                     msg=f'Dims "{list(out[data_var].dims)}" not as expected in {tst}')
                 # Ensure the correct variable is in the data_vars
                 self.assertTrue(tst["expected_var"] in list(out.data_vars.keys()))
                 # Ensure no unknowns
