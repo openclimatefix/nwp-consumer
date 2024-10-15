@@ -55,7 +55,7 @@ jobs:
       - name: Build venv
         run: |
           apt -qq update && apt -qq install -y build-essential
-          conda create -p ./venv python=3.11
+          conda create -p ./venv python=3.12
           ./venv/bin/python -m pip install --upgrade -q pip wheel setuptools
         if: steps.restore-cache.outputs.cache-hit != 'true'
 
@@ -85,7 +85,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-#       Restore cached virtualenv
+      # Restore cached virtualenv
       - name: Restore cached virtualenv
         uses: actions/cache/restore@v3
         with:

@@ -200,9 +200,6 @@ class Client(internal.FetcherInterface):
                     "y": "auto",
                 },
             )
-            print('XXXXX')
-            print(parameterDataset)
-            print('XXXXX')
         except Exception as e:
             log.warn(
                 event="error loading raw file as dataset",
@@ -215,10 +212,6 @@ class Client(internal.FetcherInterface):
         # 1. Rename the parameter to the OCF short name
         currentName = next(iter(parameterDataset.data_vars))
         parameterNumber = parameterDataset[currentName].attrs["GRIB_parameterNumber"]
-        print('YYYYY')
-        print(currentName)
-        print(parameterNumber)
-        print('YYYYY')
 
         # The two wind dirs are the only parameters read in as "unknown"
         # * Tell them apart via the parameterNumber attribute
@@ -235,7 +228,7 @@ class Client(internal.FetcherInterface):
                 parameterDataset = parameterDataset.rename(
                     {currentName: internal.OCFParameter.WindSpeedSurfaceAdjustedAGL.value},
                 )
-            
+
             # There is some weird behaviour with the radiation parameters, and different setups
             # this is a catch all situation (hopefully)
             case "sdswrf", 7:
