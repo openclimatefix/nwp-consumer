@@ -215,6 +215,10 @@ class Client(internal.FetcherInterface):
         # 1. Rename the parameter to the OCF short name
         currentName = next(iter(parameterDataset.data_vars))
         parameterNumber = parameterDataset[currentName].attrs["GRIB_parameterNumber"]
+        print('YYYYY')
+        print(currentName)
+        print(parameterNumber)
+        print('YYYYY')
 
         # The two wind dirs are the only parameters read in as "unknown"
         # * Tell them apart via the parameterNumber attribute
