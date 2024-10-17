@@ -14,6 +14,7 @@ import logging
 import os
 import pathlib
 import shutil
+from collections.abc import Collection
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any
 
@@ -22,6 +23,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import zarr
+from returns.iterables import Fold
 from returns.result import Failure, Result, ResultE, Success
 
 from .coordinates import NWPDimensionCoordinateMap
@@ -291,6 +293,21 @@ class TensorStore:
         self.size_mb += nbytes // (1024**2)
         return Result.from_value(nbytes)
 
+    def write_to_region_multi(self, das: list[xr.DataArray]) -> ResultE[list[int]]:
+        """Wrapper around write_to_region for multiple inputs.
+
+        The behaviour is defined by the `Fold.collect` method, so any one failure
+        will cause the entire operation to fail.
+        """
+        # TODO: 2024-10-17 - This method is not yet implemented
+        collected_result: ResultE[list[int]] = Fold.collect(
+            [self.write_to_region(da) for da in das],
+            Success(()),
+        )
+
+        return collected_result
+
+
     def validate_store(self) -> ResultE[bool]:
         """Validate the store.
 
@@ -353,7 +370,11 @@ class TensorStore:
             )
         store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")
 
-        mean = store_da.mean().values
+        # Calculating the mean of a dataarray returns another dataarray, so it
+        # must be converted to a numpy array via `values`. Even though it is a
+        # single number in this case, type checkers don't know that, so the
+        # second call to `mean()` helps to reassure them its a float.
+        mean = store_da.mean().values.mean()
 
         return Result.from_value(
             ParameterScanResult(

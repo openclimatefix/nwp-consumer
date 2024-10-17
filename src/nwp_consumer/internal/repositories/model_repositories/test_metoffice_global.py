@@ -3,7 +3,8 @@ import datetime as dt
 import os
 import unittest
 
-from returns.pipeline import is_successful
+from returns.pipeline import is_successful, flow
+from returns.pointfree import bind, map
 
 from nwp_consumer.internal import entities
 
@@ -52,16 +53,17 @@ class TestCedaMetOfficeGlobalModelRepository(unittest.TestCase):
         ]
 
         for test in tests:
-            with self.subTest(area=test.area):
-                result = c._download_and_convert(test.url, region=test.crop)
+            with (self.subTest(area=test.area)):
+                result = c._download_and_convert(test.url)
 
                 self.assertTrue(is_successful(result), msg=f"Error: {result}")
 
                 # Check resultant array is a subset of the expected coordinates
-                region_result = result.bind(
-                    NWPDimensionCoordinateMap.from_xarray,
-                ).bind(
-                    test_coordinates.determine_region,
+                # TODO: 2024-10-17 - Make this work with collection
+                result = flow(
+                    result,
+                    bind(NWPDimensionCoordinateMap.from_xarray),
+                    bind(test_coordinates.determine_region),
                 )
-                self.assertTrue(is_successful(region_result), msg=f"Error: {region_result}")
+                self.assertTrue(is_successful(result), msg=f"Error: {result}")
 

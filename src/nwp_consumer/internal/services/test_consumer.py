@@ -44,7 +44,7 @@ class DummyModelRepository(ports.ModelRepository):
         )
 
     @override
-    def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[[], ResultE[xr.DataArray]]]:
+    def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         """See parent class."""
 
         def gen_dataset(s: int, variable: str) -> ResultE[xr.DataArray]:

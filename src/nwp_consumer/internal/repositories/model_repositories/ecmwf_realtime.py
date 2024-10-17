@@ -6,16 +6,16 @@ your data provider to a location of choice, in this case an S3 bucket.
 
 import datetime as dt
 import logging
-import cfgrib
 import os
 import pathlib
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Collection
 from typing import override
 
+import cfgrib
 import s3fs
 import xarray as xr
 from joblib import delayed
-from returns.result import Failure, Result, ResultE
+from returns.result import Failure, Result, ResultE, Success
 
 from nwp_consumer.internal import entities, ports
 
@@ -25,12 +25,18 @@ log = logging.getLogger("nwp-consumer")
 class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
     """Model repository implementation for ECMWF live data from S3."""
 
-    bucket: str | None = None
-    _fs: s3fs.S3FileSystem | None = None
+    bucket: str
+    _fs: s3fs.S3FileSystem
 
+    def __init__(self, bucket: str, fs: s3fs.S3FileSystem) -> None:
+        """Create a new instance of the class."""
+        self.bucket = bucket
+        self._fs = fs
+
+
+    @staticmethod
     @override
-    @property
-    def metadata(self) -> entities.ModelRepositoryMetadata:
+    def metadata() -> entities.ModelRepositoryMetadata:
         return entities.ModelRepositoryMetadata(
             name="ecmwf_realtime_operational_uk_11km",
             is_archive=False,
@@ -65,14 +71,15 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
                     entities.params.snow_depth_gl,
                     entities.params.visibility_sl,
                 ],
-                latitude=[float(f"{lat:.4f}") for lat in range(90, -90 - 0.1, -0.1)],
-                longitude=[float(f"{lon:.4f}") for lon in range(-180, 180 + 0.1, 0.1)],
+                latitude=[float(f"{lat/10:.2f}") for lat in range(900, -900 - 1, -1)],
+                longitude=[float(f"{lon/10:.2f}") for lon in range(-1800, 1800 + 1, 1)],
             ),
             postprocess_options=entities.PostProcessOptions(),
         )
 
     @override
-    def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[..., ResultE[xr.DataArray]]]:
+    def fetch_init_data(self, it: dt.datetime) \
+            -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         authenticate_result = self.authenticate()
         if isinstance(authenticate_result, Failure):
             yield delayed(Result.from_failure)(authenticate_result.failure())
@@ -82,33 +89,36 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
         try:
             urls: list[str] = [
                 f"s3://{self.bucket}/ecmwf/{f}"
-                for f in self._fs.ls((self.bucket / "ecmwf").as_posix())
+                for f in self._fs.ls(f"{self.bucket}/ecmwf")
                 if it.strftime("%m%d%H%M") in f
             ]
-        except Exception:
+        except Exception as e:
             yield delayed(Result.from_failure)(ValueError(
                 f"Failed to list files in bucket path '{self.bucket}/ecmwf'. "
                 "Ensure the path exists and is accessible. Encountered error: {e}",
             ))
+            return
+
         if len(urls) == 0:
             yield delayed(Result.from_failure)(ValueError(
                 f"No raw files found for init time '{it.strftime('%Y-%m-%d %H:%M')}' "
                 f"in bucket path '{self.bucket}/ecmwf'. Ensure files exist at the given path "
                 "named with the 'A1...MMDDHHMM...' pattern.",
             ))
+
         for url in urls:
-            # TODO: All files for ECMWF live contain multiple datasets
             yield delayed(self._download_and_convert)(url=url)
 
-    def authenticate(self) -> ResultE[None]:
+    @classmethod
+    def authenticate(cls) -> ResultE["ECMWFRealTimeS3ModelRepository"]:
         """Authenticate with the S3 bucket.
 
         Returns:
             The authenticated S3 filesystem object.
         """
         try:
-            self.bucket: str = os.environ["ECMWF_REALTIME_S3_BUCKET"]
-            self._fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
+            bucket: str = os.environ["ECMWF_REALTIME_S3_BUCKET"]
+            _fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
                 key=os.environ["ECMWF_REALTIME_S3_ACCESS_KEY"],
                 secret=os.environ["ECMWF_REALTIME_S3_ACCESS_SECRET"],
                 client_kwargs={
@@ -117,14 +127,15 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
                 },
             )
         except Exception as e:
-            return ResultE.failure(ConnectionError(
+            return Failure(ConnectionError(
                 "Failed to connect to S3 for ECMWF data. "
                 f"Credentials may be wrong or undefined. Encountered error: {e}",
             ))
-        return Result.from_success(None)
+
+        return Success(cls(bucket=bucket, fs=_fs))
 
 
-    def _download_and_convert(self, url: str) -> ResultE[xr.DataArray]:
+    def _download_and_convert(self, url: str) -> ResultE[Collection[xr.DataArray]]:
         # TODO
         pass
 
@@ -144,7 +155,7 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
 
         local_path: pathlib.Path = (
             pathlib.Path(
-                os.getenv("RAWDIR", f"~/.local/cache/nwp/{self.metadata.name}/raw"),
+                os.getenv("RAWDIR", f"~/.local/cache/nwp/{self.metadata().name}/raw"),
             ) / url.split("/")[-1]
         )
 
@@ -172,17 +183,21 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
 
         return Result.from_value(local_path)
 
-    def _convert(self, path: pathlib.Path) -> ResultE[xr.DataArray]:
+    @staticmethod
+    def _convert(path: pathlib.Path) -> ResultE[list[xr.DataArray]]:
         """Convert a grib file to an xarray DataArray.
 
         Args:
-            local_path: The path to the grib file.
+            path: The path to the grib file.
         """
         try:
-            dss = cfgrib.open_datasets(path)
+            dss: list[xr.Dataset] = cfgrib.open_datasets(path.as_posix())
         except Exception as e:
             return Result.from_failure(OSError(f"Error opening '{path}' as xarray Dataset: {e}"))
-        try:
+        # TODO: Rename the variables to match the expected names
+        # TODO 2024-10-18: Change all calls to `metadata` to use the new staticmethod
+        pass
+
 
 
 

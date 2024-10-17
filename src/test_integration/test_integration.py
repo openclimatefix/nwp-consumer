@@ -7,7 +7,7 @@ from returns.pipeline import is_successful
 
 
 class TestIntegration(unittest.TestCase):
-    def test_ceda_metoffice_global_model(self):
+    def test_ceda_metoffice_global_model(self) -> None:
         c = handlers.CLIHandler(
             consumer_usecase=services.ConsumerService(
                 model_repository=repositories.CedaMetOfficeGlobalModelRepository(),

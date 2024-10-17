@@ -17,7 +17,6 @@ import abc
 import datetime as dt
 import pathlib
 from collections.abc import Callable, Iterator
-
 import xarray as xr
 from returns.result import ResultE
 
@@ -43,11 +42,14 @@ class ModelRepository(abc.ABC):
     """
 
     @abc.abstractmethod
-    def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[..., ResultE[xr.DataArray]]]:
+    def fetch_init_data(self, it: dt.datetime) \
+            -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         """Fetch raw data files for an init time as xarray datasets.
 
         As per the typing, the return value is a generator of functions that
-        may produce one or more xarray datasets. This is done to allow for lazy evaluation:
+        may produce one or more xarray datasets.
+        The generator-of-functions approach (typed here as `Iterator[Callable...]`)
+        is important, as it allows for lazy evaluation:
         by returning a generator of delayed objects, joblib can parallelize
         the download and the results can be accumulated in a low-memory fashion (see
         `the JobLib documentation on parallel generators
@@ -55,27 +57,41 @@ class ModelRepository(abc.ABC):
 
         An example psuedocode implementation is shown below:
 
-        >>> from joblib import Parallel, delayed
+        >>> from joblib import delayed
+        >>> from returns.result import Result, ResultE
+        >>> from typing import override
+        >>> from collections.abc import Callable, Iterator
         >>> import xarray as xr
-        >>> import nwp_consumer.internal.entities as entities
-        >>> from returns.result import ResultE, Result
         >>> import datetime as dt
         >>>
         >>> # Pseudocode for a model_repositories repository
-        >>> class MyModelRepository(entities.ModelRepository):
-        ...     def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[..., ResultE[xr.DataArray]]]:
-        ...         '''Overrides the abstract method.'''
+        >>> class MyModelRepository(ModelRepository):
+        ...     @override
+        ...     def fetch_init_data(self, it: dt.datetime) \
+        ...             -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         ...         for file in ["raw_file1.grib", "raw_file2.grib"]:
         ...             yield delayed(self._download_and_convert)(file)
         ...
-        ...     def _download_and_convert(self, file: str) -> ResultE[xr.DataArray]:
+        ...     def _download_and_convert(self, file: str) -> ResultE[list[xr.DataArray]]:
         ...         '''Download and convert a raw file to an xarray dataset.'''
-        ...         return Result.from_value(xr.open_dataset(file).to_dataarray())
+        ...         return Result.from_value([xr.open_dataset(file).to_dataarray()])
 
-        .. important:: No downloading or processing should be done in this method. All of that
+        .. important:: No downloading or processing should be done in this method*. All of that
           should be handled in the function that is yielded by the generator -
           ``_download_and_convert`` in the example above.
           This is to allow for parallelization of the download and processing.
+
+        *It is however, worth considering the most efficient way to download and process the data.
+        The above assumes that the data comes in many files, but there is a possibility of the
+        case where the source provides one large file with many underlying datasets within.
+        In this case, it may be more efficient to download the large file in the
+        `fetch_init_data` method and then process the datasets within via the yielded functions.
+
+        TODO: For the moment, this returns a list of `xarray.DataArray` objects. It may be
+        TODO: more efficient to return a generator here to avoid reading all the datasets into
+        TODO: memory at once, however, often the source of these datasets is `cfgrib.open_datasets`
+        TODO: which has no option for returning a generator, hence the current choice of `list`.
+        TODO: This may be revisited in the future.
 
         Args:
             it: The initialization time for which to fetch data.
@@ -86,9 +102,9 @@ class ModelRepository(abc.ABC):
         pass
 
 
-    @property
+    @staticmethod
     @abc.abstractmethod
-    def metadata(self) -> entities.ModelRepositoryMetadata:
+    def metadata() -> entities.ModelRepositoryMetadata:
         """Metadata about the model repository.
 
         See Also:

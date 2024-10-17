@@ -4,6 +4,7 @@ import unittest
 
 from . import NWPDimensionCoordinateMap
 from .repometadata import ModelRepositoryMetadata
+from .postprocess import PostProcessOptions
 
 
 class TestModelRepositoryMetadata(unittest.TestCase):
@@ -23,7 +24,7 @@ class TestModelRepositoryMetadata(unittest.TestCase):
             variable=[],
         ),
         max_connections=1,
-        postprocess_options=None,
+        postprocess_options=PostProcessOptions(),
     )
 
     def test_determine_latest_it_from(self) -> None:

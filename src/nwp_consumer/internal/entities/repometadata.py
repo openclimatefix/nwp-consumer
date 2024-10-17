@@ -123,7 +123,7 @@ class ModelRepositoryMetadata:
             "\n".join(f"\t\t{dim}: {vals}"
                       if len(vals) < 5
                       else f"\t\t{dim}: {vals[:3]} ... {vals[-3:]}"
-                      for dim, vals in self.expected_coordinates.items()
+                      for dim, vals in self.expected_coordinates.__dict__.items()
             ),
             "Environment variables:",
             "\tRequired:",
