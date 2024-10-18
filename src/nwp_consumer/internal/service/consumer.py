@@ -115,6 +115,7 @@ class NWPConsumerService:
             event="creating latest zarr for initTime",
             inittime=latestInitTime.strftime("%Y/%m/%d %H:%M"),
             path=(self.zarrdir / "latest.zarr.zip").as_posix(),
+            cache_paths=cachedPaths
         )
 
         # Create a pipeline to convert the raw files and merge them as a dataset
