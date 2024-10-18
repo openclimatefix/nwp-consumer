@@ -38,13 +38,13 @@ class ArchiverService(ports.ArchiveUseCase):
     def archive(self, year: int, month: int) -> ResultE[pathlib.Path]:
         monitor = entities.PerformanceMonitor()
 
-        init_times = self._mr.metadata.month_its(year=year, month=month)
+        init_times = self._mr.metadata().month_its(year=year, month=month)
 
         # Create a store for the archive
         init_store_result: ResultE[entities.TensorStore] = entities.TensorStore.initialize_empty_store(
-            name=self._mr.metadata.name,
+            name=self._mr.metadata().name,
             coords=dataclasses.replace(
-                self._mr.metadata.expected_coordinates,
+                self._mr.metadata().expected_coordinates,
                 init_time=init_times,
             ),
             overwrite_existing=False,
@@ -66,13 +66,13 @@ class ArchiverService(ports.ArchiveUseCase):
                 failed_times: list[dt.datetime] = []
                 for n, it in enumerate(missing_times_result.unwrap()):
                     log.info(
-                        f"Consuming data from {self._mr.metadata.name} for {it:%Y-%m-%d %H:%M} "
+                        f"Consuming data from {self._mr.metadata().name} for {it:%Y-%m-%d %H:%M} "
                         f"(time {n + 1}/{len(missing_times_result.unwrap())})",
                     )
 
                     # Create a generator to fetch and process raw data
                     da_result_generator = Parallel(
-                        n_jobs=self._mr.metadata.max_connections - 1,
+                        n_jobs=self._mr.metadata().max_connections - 1,
                         prefer="threads",
                         return_as="generator_unordered",
                     )(self._mr.fetch_init_data(it=it))
@@ -93,7 +93,7 @@ class ArchiverService(ports.ArchiveUseCase):
                 })
 
                 # Postprocess the dataset as required
-                # postprocess_result = store.postprocess(self._mr.metadata.postprocess_options)
+                # postprocess_result = store.postprocess(self._mr.metadata().postprocess_options)
                 # if isinstance(postprocess_result, Failure):
                 #    monitor.join() # TODO: Make this a context manager instead
                 #    return Result.from_failure(postprocess_result.failure())

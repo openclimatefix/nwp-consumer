@@ -27,7 +27,7 @@ from returns.iterables import Fold
 from returns.result import Failure, Result, ResultE, Success
 
 from .coordinates import NWPDimensionCoordinateMap
-from .parameters import Parameter, params
+from .parameters import ParameterData, params
 from .postprocess import PostProcessOptions
 
 log = logging.getLogger("nwp-consumer")
@@ -343,7 +343,7 @@ class TensorStore:
                     if not scan.is_valid or scan.has_nulls:
                         return Result.from_value(False)
 
-    def scan_parameter_values(self, p: Parameter) -> ResultE[ParameterScanResult]:
+    def scan_parameter_values(self, p: ParameterData) -> ResultE[ParameterScanResult]:
         """Scan the values of a parameter in the store.
 
         Extracts data from the values of the given parameter in the store.

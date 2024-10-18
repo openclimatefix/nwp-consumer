@@ -16,9 +16,9 @@ from nwp_consumer.internal.services.consumer_service import ConsumerService
 
 class DummyModelRepository(ports.ModelRepository):
 
+    @staticmethod
     @override
-    @property
-    def metadata(self) -> entities.ModelRepositoryMetadata:
+    def metadata() -> entities.ModelRepositoryMetadata:
         """See parent class."""
         return entities.ModelRepositoryMetadata(
             name="dummy",
@@ -34,6 +34,7 @@ class DummyModelRepository(ports.ModelRepository):
                 init_time=[dt.datetime(2021, 1, 1, 0, 0, tzinfo=dt.UTC)],
                 step=list(range(0, 48, 1)),
                 variable=[
+                    # TODO: Fix
                     entities.params.temperature_sl,
                     entities.params.downward_shortwave_radiation_flux_gl,
                     entities.params.cloud_cover_high,
@@ -50,10 +51,10 @@ class DummyModelRepository(ports.ModelRepository):
         def gen_dataset(s: int, variable: str) -> ResultE[xr.DataArray]:
             """Define a generator that provides one variable at one step."""
             da = xr.DataArray(
-                name=self.metadata.name,
+                name=self.metadata().name,
                 dims=["init_time", "step", "variable", "latitude", "longitude"],
                 data=np.random.rand(1, 1, 1, 721, 1440),
-                coords=self.metadata.expected_coordinates.to_pandas() | {
+                coords=self.metadata().expected_coordinates.to_pandas() | {
                     "init_time": [np.datetime64(it.replace(tzinfo=None), "ns")],
                     "step": [s],
                     "variable": [variable],
@@ -62,8 +63,8 @@ class DummyModelRepository(ports.ModelRepository):
             return Result.from_value(da)
 
 
-        for s in self.metadata.expected_coordinates.step:
-            for v in self.metadata.expected_coordinates.variable:
+        for s in self.metadata().expected_coordinates.step:
+            for v in self.metadata().expected_coordinates.variable:
                 yield delayed(gen_dataset)(s, v.name)
 
 

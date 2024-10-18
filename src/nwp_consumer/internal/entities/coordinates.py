@@ -42,9 +42,9 @@ import numpy as np
 import pandas as pd
 import pytz
 import xarray as xr
-from returns.result import Result, ResultE
+from returns.result import Failure, Result, ResultE, Success
 
-from .parameters import Parameter, params
+from .parameters import Parameter
 
 
 @dataclasses.dataclass(slots=True)
@@ -121,46 +121,42 @@ class NWPDimensionCoordinateMap:
         >>> > idxs = xr_data.coords.indexes
         >>> > NWPDimensionCoordinateMap.from_pandas(idxs)
         >>> {
-        >>>     "init_time": [dt.datetime(2021, 1, 1, 0, 0, ...],
-        >>>     "step": [1, 2, ...],
-        >>>     "variable": [Parameter(name="relative_humidity_gl", ...), ...],
-        >>>     "latitude": [90, ...],
-        >>>     "longitude": [45, ...],
+        >>>     "init_time": [dt.datetime(2021, 1, 1, 0, 0)],
+        >>>     "step": [1, 2],
+        >>>     "variable": [Parameter.TEMPERATURE_SL],
+        >>>     "latitude": [90, 80, 70],
+        >>>     "longitude": [45, 50, 55],
         >>> }
 
         See Also:
             `NWPDimensionCoordinateMap.to_pandas` for the reverse operation.
         """
         if not all(key in pd_indexes for key in ["init_time", "step", "variable"]):
-            return Result.from_failure(
-                KeyError(
-                    f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
-                    " as required keys 'init_time', 'step', and 'variable' are not all present. "
-                    f"Got: {pd_indexes.keys()}",
-                ),
-            )
-        if not all(param in params.names() for param in pd_indexes["variable"].to_list()):
+            return Failure(KeyError(
+                f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
+                "as required keys 'init_time', 'step', and 'variable' are not all present. "
+                f"Got: {pd_indexes.keys()}",
+            ))
+        pd_parameterset: set[str] = set(pd_indexes["variable"].to_list())
+        known_parameterset: set[str] = {p.value.name for p in Parameter}
+        if not pd_parameterset.issubset(known_parameterset):
             unknown_params: list[str] = list(
-                set(pd_indexes["variable"].to_list()).difference(set(params.names())),
+                pd_parameterset.difference(known_parameterset),
             )
-            return Result.from_failure(
-                ValueError(
-                    f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
-                    f"as the 'variable' dimension contains unknown parameters: {unknown_params}",
-                    "Ensure the parameter names match the entities parameters defined in "
-                    "`entities.parameters.params`.",
-                ),
-            )
+            return Failure(ValueError(
+                f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
+                f"as the 'variable' dimension contains unknown parameters: {unknown_params}. ",
+                "Ensure the parameter names match the names of the standard parameter set "
+                "defined by the `entities.Parameter` Enum.",
+            ))
         if not all(key in [f.name for f in dataclasses.fields(cls)] for key in pd_indexes):
             unknown_keys: list[str] = list(
                 set(pd_indexes.keys()).difference([f.name for f in dataclasses.fields(cls)]),
             )
-            return Result.from_failure(
-                KeyError(
-                    f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
-                    f"as unknown keys were encountered: {unknown_keys}.",
-                ),
-            )
+            return Failure(KeyError(
+                f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
+                f"as unknown index/dimension keys were encountered: {unknown_keys}.",
+            ))
 
         # Convert the pandas Index objects to lists of the appropriate types
         return Result.from_value(
@@ -173,7 +169,14 @@ class NWPDimensionCoordinateMap:
                     for ts in pd_indexes["init_time"].to_list()
                 ],
                 step=[np.timedelta64(ts, "h").astype(int) for ts in pd_indexes["step"].to_list()],
-                variable=[params.get(param) for param in pd_indexes["variable"].to_list()],
+                # NOTE: This list comprehension can be done safely, as above we have
+                # already performed a check on the pandas variable names being a subset
+                # of the `Parameter` enum value names.
+                variable=[
+                    kp for kp in Parameter
+                    for pdp in pd_indexes["variable"].to_list()
+                    if kp.value.name == pdp
+                ],
                 # NOTE: For latitude and longitude values, we round to 4 decimal places
                 # to avoid floating point precision issues when comparing values.
                 # It is important to note that this places a limit on the precision
@@ -189,7 +192,8 @@ class NWPDimensionCoordinateMap:
         )
 
     @classmethod
-    def from_xarray(cls, xarray_obj: xr.DataArray | xr.Dataset) -> ResultE["NWPDimensionCoordinateMap"]:
+    def from_xarray(cls, xarray_obj: xr.DataArray | xr.Dataset) \
+            -> ResultE["NWPDimensionCoordinateMap"]:
         """Create a new NWPDimensionCoordinateMap from an XArray DataArray or Dataset object."""
         return cls.from_pandas(xarray_obj.coords.indexes)   # type: ignore
 

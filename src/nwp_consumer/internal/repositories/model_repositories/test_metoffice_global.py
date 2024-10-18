@@ -27,7 +27,7 @@ class TestCedaMetOfficeGlobalModelRepository(unittest.TestCase):
 
         test_it: dt.datetime = dt.datetime(2021, 1, 1, 0, tzinfo=dt.UTC)
         test_coordinates: entities.NWPDimensionCoordinateMap = dataclasses.replace(
-            c.metadata.expected_coordinates,
+            c.metadata().expected_coordinates,
             init_time=[test_it],
         )
 

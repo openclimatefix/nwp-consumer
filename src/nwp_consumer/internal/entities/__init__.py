@@ -19,7 +19,7 @@ from .repometadata import ModelRepositoryMetadata, ModelFileMetadata
 from .tensorstore import ParameterScanResult, TensorStore
 from .postprocess import PostProcessOptions, CodecOptions
 from .notification import PerformanceMetadata, StoreCreatedNotification, StoreAppendedNotification
-from .parameters import params
+from .parameters import Parameter
 from .coordinates import NWPDimensionCoordinateMap
 from .performance import PerformanceMonitor
 
@@ -33,7 +33,7 @@ __all__ = [
     "PerformanceMetadata",
     "StoreCreatedNotification",
     "StoreAppendedNotification",
-    "params",
+    "Parameter",
     "NWPDimensionCoordinateMap",
     "PerformanceMonitor",
 ]

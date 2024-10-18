@@ -8,7 +8,7 @@ import datetime as dt
 import logging
 import os
 import pathlib
-from collections.abc import Callable, Iterator, Collection
+from collections.abc import Callable, Collection, Iterator
 from typing import override
 
 import cfgrib
@@ -55,21 +55,21 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
                 init_time=[],
                 step=list(range(0, 84, 1)),
                 variable=[
-                    entities.params.wind_u_component_10m,
-                    entities.params.wind_u_component_100m,
-                    entities.params.wind_v_component_10m,
-                    entities.params.wind_v_component_100m,
-                    entities.params.wind_u_component_200m,
-                    entities.params.wind_v_component_200m,
-                    entities.params.temperature_sl,
-                    entities.params.downward_shortwave_radiation_flux_gl,
-                    entities.params.downward_longwave_radiation_flux_gl,
-                    entities.params.cloud_cover_high,
-                    entities.params.cloud_cover_medium,
-                    entities.params.cloud_cover_low,
-                    entities.params.cloud_cover_total,
-                    entities.params.snow_depth_gl,
-                    entities.params.visibility_sl,
+                    entities.Parameter.WIND_U_COMPONENT_10m,
+                    entities.Parameter.WIND_V_COMPONENT_10m,
+                    entities.Parameter.WIND_U_COMPONENT_100m,
+                    entities.Parameter.WIND_V_COMPONENT_100m,
+                    entities.Parameter.WIND_U_COMPONENT_200m,
+                    entities.Parameter.WIND_V_COMPONENT_200m,
+                    entities.Parameter.TEMPERATURE_SL,
+                    entities.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
+                    entities.Parameter.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL,
+                    entities.Parameter.CLOUD_COVER_HIGH,
+                    entities.Parameter.CLOUD_COVER_MEDIUM,
+                    entities.Parameter.CLOUD_COVER_LOW,
+                    entities.Parameter.CLOUD_COVER_TOTAL,
+                    entities.Parameter.SNOW_DEPTH_GL,
+                    entities.Parameter.VISIBILITY_SL,
                 ],
                 latitude=[float(f"{lat/10:.2f}") for lat in range(900, -900 - 1, -1)],
                 longitude=[float(f"{lon/10:.2f}") for lon in range(-1800, 1800 + 1, 1)],
@@ -82,7 +82,7 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
             -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         authenticate_result = self.authenticate()
         if isinstance(authenticate_result, Failure):
-            yield delayed(Result.from_failure)(authenticate_result.failure())
+            yield delayed(Failure)(authenticate_result.failure())
             return
 
         # List relevant files in the S3 bucket
@@ -93,14 +93,14 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
                 if it.strftime("%m%d%H%M") in f
             ]
         except Exception as e:
-            yield delayed(Result.from_failure)(ValueError(
+            yield delayed(Failure)(ValueError(
                 f"Failed to list files in bucket path '{self.bucket}/ecmwf'. "
-                "Ensure the path exists and is accessible. Encountered error: {e}",
+                f"Ensure the path exists and is accessible. Encountered error: {e}",
             ))
             return
 
         if len(urls) == 0:
-            yield delayed(Result.from_failure)(ValueError(
+            yield delayed(Failure)(ValueError(
                 f"No raw files found for init time '{it.strftime('%Y-%m-%d %H:%M')}' "
                 f"in bucket path '{self.bucket}/ecmwf'. Ensure files exist at the given path "
                 "named with the 'A1...MMDDHHMM...' pattern.",
@@ -146,12 +146,10 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
             url: The URL to the S3 object.
         """
         if self.bucket is None or self._fs is None:
-            return Result.from_failure(
-                ConnectionError(
-                    "Attempted to download file from S3 while not authenticated. "
-                    "Ensure the 'authenticate' method has been called prior to download.",
-                ),
-            )
+            return Failure(ConnectionError(
+                "Attempted to download file from S3 while not authenticated. "
+                "Ensure the 'authenticate' method has been called prior to download.",
+            ))
 
         local_path: pathlib.Path = (
             pathlib.Path(
@@ -175,11 +173,9 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
                         )
 
             except Exception as e:
-                return Result.from_failure(
-                    OSError(
-                        f"Failed to download file from S3 at '{url}'. Encountered error: {e}",
-                    ),
-                )
+                return Failure(OSError(
+                    f"Failed to download file from S3 at '{url}'. Encountered error: {e}",
+                ))
 
         return Result.from_value(local_path)
 
@@ -195,7 +191,6 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
         except Exception as e:
             return Result.from_failure(OSError(f"Error opening '{path}' as xarray Dataset: {e}"))
         # TODO: Rename the variables to match the expected names
-        # TODO 2024-10-18: Change all calls to `metadata` to use the new staticmethod
         pass
 
 

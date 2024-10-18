@@ -40,9 +40,11 @@ test = [
     "flask-cors == 4.0.0",
     "moto[s3,server] == 4.2.11",
     "unittest-xml-reporting == 3.2.0",
+    "hypothesis == 6.115.3",
 ]
 lint = [
     "returns[compatible-mypy]",
+    "ruff == 0.6.9",
     "pandas-stubs",
     "types-psutil",
     "types-pytz",
@@ -53,6 +55,11 @@ docs = [
 ]
 dev = [
     "nwp-consumer[test,lint,docs]",
+]
+lsp = [
+    "python-lsp-server",
+    "pylsp-mypy",
+    "python-lsp-ruff",
 ]
 
 [project.scripts]

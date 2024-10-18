@@ -7,8 +7,8 @@ import xarray as xr
 from returns.pipeline import is_successful
 from returns.result import Failure, Success
 
-from . import NWPDimensionCoordinateMap
-from .parameters import params
+from . import NWPDimensionCoordinateMap, Parameter
+from .parameters import Parameter
 from .postprocess import PostProcessOptions
 from .tensorstore import TensorStore
 
@@ -23,7 +23,7 @@ class TestTensorStore(unittest.TestCase):
         self.test_coords = NWPDimensionCoordinateMap(
             init_time=[dt.datetime(2021, 1, 1, h, tzinfo=dt.UTC) for h in [0, 6, 12, 18]],
             step=[1, 2, 3, 4],
-            variable=[params.temperature_sl],
+            variable=[Parameter.TEMPERATURE_SL],
             latitude=np.linspace(90, -90, 12).tolist(),
             longitude=np.linspace(0, 360, 18).tolist(),
         )

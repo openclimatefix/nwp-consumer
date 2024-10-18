@@ -1,11 +1,16 @@
 import dataclasses
 import datetime as dt
 import unittest
+from typing import TYPE_CHECKING
 
+from hypothesis import given, strategies as st
 from returns.result import Failure, Success
 
+from .parameters import Parameter
 from .coordinates import NWPDimensionCoordinateMap
-from .parameters import params
+
+if TYPE_CHECKING:
+    pass
 
 
 class TestCoordinates(unittest.TestCase):
@@ -23,9 +28,9 @@ class TestCoordinates(unittest.TestCase):
             init_time=[dt.datetime(2021, 1, 1, i, tzinfo=dt.UTC) for i in range(0, 9, 3)],
             step=list(range(12)),
             variable=[
-                params.temperature_sl,
-                params.cloud_cover_high,
-                params.total_precipitation_rate_gl,
+                Parameter.TEMPERATURE_SL,
+                Parameter.CLOUD_COVER_HIGH,
+                Parameter.TOTAL_PRECIPITATION_RATE_GL,
             ],
             latitude=[60.0, 61.0, 62.0],
             longitude=[10.0, 11.0, 12.0],
@@ -123,9 +128,9 @@ class TestCoordinates(unittest.TestCase):
             init_time=[dt.datetime(2021, 1, 1, i, tzinfo=dt.UTC) for i in range(0, 9, 3)],
             step=list(range(12)),
             variable=[
-                params.temperature_sl,
-                params.cloud_cover_high,
-                params.total_precipitation_rate_gl,
+                Parameter.TEMPERATURE_SL,
+                Parameter.CLOUD_COVER_HIGH,
+                Parameter.TOTAL_PRECIPITATION_RATE_GL,
             ],
             latitude=[60.0, 61.0, 62.0],
             longitude=[10.0, 11.0, 12.0],
@@ -143,9 +148,12 @@ class TestCoordinates(unittest.TestCase):
         # TODO: Implement this test
         pass
 
-    def test_roundtrip(self) -> None:
-        # TODO: Implement this test
-        pass
+    @given(st.builds(NWPDimensionCoordinateMap))
+    def test_from_pandas_inverts_to_pandas(self, s: NWPDimensionCoordinateMap) -> None:
+        there = s.to_pandas()
+        back = NWPDimensionCoordinateMap.from_pandas(there)
+        self.assertEqual(s, back.unwrap())
+
 
 
 
