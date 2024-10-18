@@ -125,22 +125,28 @@ class NWPConsumerService:
             .fold(lambda ds1, ds2: _mergeDatasets([ds1, ds2]))
             .compute()
         )
+        log.info('Made latest Dataset')
         if not _dataQualityFilter(ds=latestDataset):
             return []
         if self.rename_vars:
+            log.info('Renaming variables')
             for var in latestDataset.data_vars:
                 if var in self.fetcher.parameterConformMap():
                     latestDataset = latestDataset.rename(
                         {var: self.fetcher.parameterConformMap()[var].value}
                     )
         if self.variable_dim:
+            log.info('Transposing dataset to variable dimension')
             latestDataset = (
                 latestDataset.to_array(dim="variable", name=self.fetcher.datasetName())
                 .to_dataset()
                 .transpose("variable", ...)
             )
+        log.info('Making dataset')
         datasets = dask.bag.from_sequence([latestDataset])
+        log.info('Caching as zipped zarr')
         # Save as zipped zarr
+        log.info('Saving as zip zarr')
         if self.storer.exists(dst=self.zarrdir / "latest.zarr.zip"):
             self.storer.delete(p=self.zarrdir / "latest.zarr.zip")
         storedFiles = (
@@ -150,6 +156,7 @@ class NWPConsumerService:
         )
 
         # Save as regular zarr
+        log.info('Saving as zarr')
         if self.storer.exists(dst=self.zarrdir / "latest.zarr"):
             self.storer.delete(p=self.zarrdir / "latest.zarr")
         storedFiles += (
@@ -159,6 +166,7 @@ class NWPConsumerService:
         )
 
         # Delete the cached files
+        log.info('Deleting cached files')
         for f in cachedPaths:
             f.unlink(missing_ok=True)
 
