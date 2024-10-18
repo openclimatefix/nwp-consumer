@@ -409,6 +409,9 @@ def _generate_encoding(ds: xr.Dataset) -> dict[str, dict[str, str] | dict[str, B
 
 def _dataQualityFilter(ds: xr.Dataset) -> bool:
     """Filter out data that is not of sufficient quality."""
+
+    log.info(event="Checking data quality")
+
     if ds == xr.Dataset():
         return False
 
@@ -420,6 +423,8 @@ def _dataQualityFilter(ds: xr.Dataset) -> bool:
                 initTime=str(ds.coords["init_time"].values[0])[:16],
                 variable=data_var,
             )
+
+    log.info(event="Checking data quality: Complete")
 
     return True
 
