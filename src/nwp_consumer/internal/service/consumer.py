@@ -121,11 +121,12 @@ class NWPConsumerService:
         # * Then cache the dataset as a zarr file and store it in the store
         bag: dask.bag.Bag = dask.bag.from_sequence(cachedPaths)
         log.info('Made dask bag')
-        latestDataset = (
-            bag.map(lambda tfp: self.fetcher.mapCachedRaw(p=tfp))
-            .fold(lambda ds1, ds2: _mergeDatasets([ds1, ds2]))
-            .compute()
-        )
+        latestDataset = bag.map(lambda tfp: self.fetcher.mapCachedRaw(p=tfp))
+        log.info('Doing fold')
+        latestDataset = latestDataset.fold(lambda ds1, ds2: _mergeDatasets([ds1, ds2]))
+        log.info('Doing compute')
+        latestDataset = latestDataset.compute()
+
         log.info('Made latest Dataset')
         if not _dataQualityFilter(ds=latestDataset):
             return []
