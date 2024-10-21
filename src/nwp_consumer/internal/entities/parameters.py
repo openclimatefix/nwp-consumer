@@ -21,7 +21,7 @@ See Also:
 """
 
 import dataclasses
-from enum import Enum
+from enum import StrEnum, auto
 
 
 @dataclasses.dataclass(slots=True)
@@ -82,132 +82,181 @@ class ParameterData:
         return self.name
 
 
-class Parameter(Enum):
-    """Parameters of interest to OCF."""
-    TEMPERATURE_SL = ParameterData(
-       name="temperature_sl",
-       description="Temperature at screen level",
-       units="C",
-       limits=ParameterLimits(upper=60, lower=-90),
-    )
-    DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL = ParameterData(
-       name="downward_shortwave_radiation_flux_gl",
-       description="Downward shortwave radiation flux at ground level. "
-           "Defined as the mean amount of solar radiation incident on the surface "
-           "expected over the next hour.",
-       units="W/m^2",
-       limits=ParameterLimits(upper=1500, lower=0),
-    )
-    DOWNWARD_LONGWAVE_RADIATION_FLUX_GL = ParameterData(
-       name="downward_longwave_radiation_flux_gl",
-       description="Downward longwave radiation flux at ground level. "
-           "Defined as the mean amount of thermal radiation incident on the surface "
-           "expected over the next hour.",
-       units="W/m^2",
-       limits=ParameterLimits(upper=500, lower=0),
-    )
-    RELATIVE_HUMIDITY_SL = ParameterData(
-       name="relative_humidity_sl",
-       description="Relative humidity at screen level. "
-                   "Defined as the ratio of partial pressure of water vapour "
-                   "to the equilibrium vapour pressure of water",
-       units="%",
-       limits=ParameterLimits(upper=100, lower=0),
-    )
-    VISIBILITY_SL = ParameterData(
-       name="visibility_sl",
-       description="Visibility at screen level. "
-                   "Defined as the distance at which an object can be seen "
-                   "horizontally in daylight conditions.",
-       units="m",
-       limits=ParameterLimits(upper=4500, lower=0),
-    )
-    WIND_U_COMPONENT_10m = ParameterData(
-       name="wind_u_component_10m",
-       description="U component of wind at 10m above ground level. "
-                   "Defined as the horizontal speed of the wind in the eastward direction.",
-       units="m/s",
-       limits=ParameterLimits(upper=100, lower=-100),
-    )
-    WIND_V_COMPONENT_10m = ParameterData(
-       name="wind_v_component_10m",
-       description="V component of wind at 10m above ground level. "
-                   "Defined as the horizontal speed of the wind in the northward direction.",
-       units="m/s",
-       limits=ParameterLimits(upper=100, lower=-100),  # Non-tornadic winds are usually < 100m/s
-    )
-    WIND_U_COMPONENT_100m = ParameterData(
-       name="wind_u_component_100m",
-       description="U component of wind at 100m above ground level. "
-                   "Defined as the horizontal speed of the wind in the eastward direction.",
-       units="m/s",
-       limits=ParameterLimits(upper=100, lower=-100),
-    )
-    WIND_V_COMPONENT_100m = ParameterData(
-       name="wind_v_component_100m",
-       description="V component of wind at 100m above ground level. "
-                   "Defined as the horizontal speed of the wind in the northward direction.",
-       units="m/s",
-       limits=ParameterLimits(upper=100, lower=-100),
-    )
-    WIND_U_COMPONENT_200m = ParameterData(
-       name="wind_u_component_200m",
-       description="U component of wind at 200m above ground level. "
-                   "Defined as the horizontal speed of the wind in the eastward direction.",
-       units="m/s",
-       limits=ParameterLimits(upper=150, lower=-150),
-    )
-    WIND_V_COMPONENT_200m = ParameterData(
-       name="wind_v_component_200m",
-       description="V component of wind at 200m above ground level. "
-                   "Defined as the horizontal speed of the wind in the northward direction.",
-       units="m/s",
-       limits=ParameterLimits(upper=150, lower=-150),
-    )
-    SNOW_DEPTH_GL = ParameterData(
-       name="snow_depth_gl",
-       description="Depth of snow on the ground.",
-       units="m",
-       limits=ParameterLimits(upper=12, lower=0),
-    )
-    CLOUD_COVER_HIGH = ParameterData(
-       name="cloud_cover_high",
-       description="Fraction of grid square covered by high-level cloud. "
-           "Defined as the ratio of the area of the grid square covered by high-level "
-           "(>6km) cloud to the square's total area.",
-       units="UI",
-       limits=ParameterLimits(upper=1, lower=0),
-    )
-    CLOUD_COVER_MEDIUM = ParameterData(
-       name="cloud_cover_medium",
-       description="Fraction of grid square covered by medium-level cloud. "
-           "Defined as the ratio of the area of the grid square covered by medium-level "
-           "(2-6km) cloud to the square's total area.",
-       units="UI",
-       limits=ParameterLimits(upper=1, lower=0),
-    )
-    CLOUD_COVER_LOW = ParameterData(
-       name="cloud_cover_low",
-       description="Fraction of grid square covered by low-level cloud. "
-           "Defined as the ratio of the area of the grid square covered by low-level "
-           "(<2km) cloud to the square's total area.",
-       units="UI",
-       limits=ParameterLimits(upper=1, lower=0),
-    )
-    CLOUD_COVER_TOTAL = ParameterData(
-       name="cloud_cover_total",
-       description="Fraction of grid square covered by any cloud. "
-           "Defined as the ratio of the area of the grid square covered by any "
-           "cloud to the square's total area.",
-       units="UI",
-       limits=ParameterLimits(upper=1, lower=0),
-    )
-    TOTAL_PRECIPITATION_RATE_GL = ParameterData(
-       name="total_precipitation_rate_gl",
-       description="Total precipitation rate at ground level. "
-           "Defined as the rate at which liquid is deposited on the ground "
-           "including rain, snow, and hail.",
-       units="kg/m^2/s",
-       limits=ParameterLimits(upper=0.2, lower=0),
-    )
+class Parameter(StrEnum):
+    """Parameters of interest to OCF.
 
+    Inheriting from StrEnum and using `auto()` makes the values
+    of the enums equal to the lowercased enum name.
+
+    See Also:
+        - https://docs.python.org/3/library/enum.html#enum.StrEnum
+    """
+
+    TEMPERATURE_SL = auto()
+    DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL = auto()
+    DOWNWARD_LONGWAVE_RADIATION_FLUX_GL = auto()
+    RELATIVE_HUMIDITY_SL = auto()
+    VISIBILITY_SL = auto()
+    WIND_U_COMPONENT_10m = auto()
+    WIND_V_COMPONENT_10m = auto()
+    WIND_U_COMPONENT_100m = auto()
+    WIND_V_COMPONENT_100m = auto()
+    WIND_U_COMPONENT_200m = auto()
+    WIND_V_COMPONENT_200m = auto()
+    SNOW_DEPTH_GL = auto()
+    CLOUD_COVER_HIGH = auto()
+    CLOUD_COVER_MEDIUM = auto()
+    CLOUD_COVER_LOW = auto()
+    CLOUD_COVER_TOTAL = auto()
+    TOTAL_PRECIPITATION_RATE_GL = auto()
+
+    def metadata(self) -> ParameterData:
+        """Get the metadata for the parameter."""
+        match self:
+            case self.TEMPERATURE_SL:
+                return ParameterData(
+                    name=str(self),
+                    description="Temperature at screen level",
+                    units="C",
+                    limits=ParameterLimits(upper=60, lower=-90),
+                )
+            case self.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL:
+                return ParameterData(
+                    name=str(self),
+                    description="Downward shortwave radiation flux at ground level. "
+                                "Defined as the mean amount of solar radiation incident on the surface "
+                                "expected over the next hour.",
+                    units="W/m^2",
+                    limits=ParameterLimits(upper=1500, lower=0),
+                )
+            case self.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL:
+                return ParameterData(
+                    name=str(self),
+                    description="Downward longwave radiation flux at ground level. "
+                                "Defined as the mean amount of thermal radiation incident on the surface "
+                                "expected over the next hour.",
+                    units="W/m^2",
+                    limits=ParameterLimits(upper=500, lower=0),
+                )
+            case self.RELATIVE_HUMIDITY_SL:
+                return ParameterData(
+                    name=str(self),
+                    description="Relative humidity at screen level. "
+                                "Defined as the ratio of partial pressure of water vapour "
+                                "to the equilibrium vapour pressure of water",
+                    units="%",
+                    limits=ParameterLimits(upper=100, lower=0),
+                )
+            case self.VISIBILITY_SL:
+                return ParameterData(
+                    name=str(self),
+                    description="Visibility at screen level. "
+                                "Defined as the distance at which an object can be seen "
+                                "horizontally in daylight conditions.",
+                    units="m",
+                    limits=ParameterLimits(upper=4500, lower=0),
+                )
+            case self.WIND_U_COMPONENT_10m:
+                return ParameterData(
+                    name=str(self),
+                    description="U component of wind at 10m above ground level. "
+                                "Defined as the horizontal speed of the wind in the eastward direction.",
+                    units="m/s",
+                    limits=ParameterLimits(upper=100, lower=-100),
+                )
+            case self.WIND_V_COMPONENT_10m:
+                return ParameterData(
+                    name=str(self),
+                    description="V component of wind at 10m above ground level. "
+                                "Defined as the horizontal speed of the wind in the northward direction.",
+                    units="m/s",
+                    # Non-tornadic winds are usually < 100m/s
+                    limits=ParameterLimits(upper=100, lower=-100),
+                )
+            case self.WIND_U_COMPONENT_100m:
+                return ParameterData(
+                    name=str(self),
+                    description="U component of wind at 100m above ground level. "
+                                "Defined as the horizontal speed of the wind in the eastward direction.",
+                    units="m/s",
+                    limits=ParameterLimits(upper=100, lower=-100),
+                )
+            case self.WIND_V_COMPONENT_100m:
+                return ParameterData(
+                    name=str(self),
+                    description="V component of wind at 100m above ground level. "
+                                "Defined as the horizontal speed of the wind in the northward direction.",
+                    units="m/s",
+                    limits=ParameterLimits(upper=100, lower=-100),
+                )
+            case self.WIND_U_COMPONENT_200m:
+                return ParameterData(
+                    name=str(self),
+                    description="U component of wind at 200m above ground level. "
+                                "Defined as the horizontal speed of the wind in the eastward direction.",
+                    units="m/s",
+                    limits=ParameterLimits(upper=150, lower=-150),
+                )
+            case self.WIND_V_COMPONENT_200m:
+                return ParameterData(
+                    name=str(self),
+                    description="V component of wind at 200m above ground level. "
+                                "Defined as the horizontal speed of the wind in the northward direction.",
+                    units="m/s",
+                    limits=ParameterLimits(upper=150, lower=-150),
+                )
+            case self.SNOW_DEPTH_GL:
+                return ParameterData(
+                    name=str(self),
+                    description="Depth of snow on the ground.",
+                    units="m",
+                    limits=ParameterLimits(upper=12, lower=0),
+                )
+            case self.CLOUD_COVER_HIGH:
+                return ParameterData(
+                    name=str(self),
+                    description="Fraction of grid square covered by high-level cloud. "
+                                "Defined as the ratio of the area of the grid square covered by high-level "
+                                "(>6km) cloud to the square's total area.",
+                    units="UI",
+                    limits=ParameterLimits(upper=1, lower=0),
+                )
+            case self.CLOUD_COVER_MEDIUM:
+                return ParameterData(
+                    name=str(self),
+                    description="Fraction of grid square covered by medium-level cloud. "
+                                "Defined as the ratio of the area of the grid square covered by medium-level "
+                                "(2-6km) cloud to the square's total area.",
+                    units="UI",
+                    limits=ParameterLimits(upper=1, lower=0),
+                )
+            case self.CLOUD_COVER_LOW:
+                return ParameterData(
+                    name=str(self),
+                    description="Fraction of grid square covered by low-level cloud. "
+                                "Defined as the ratio of the area of the grid square covered by low-level "
+                                "(<2km) cloud to the square's total area.",
+                    units="UI",
+                    limits=ParameterLimits(upper=1, lower=0),
+                )
+            case self.CLOUD_COVER_TOTAL:
+                return ParameterData(
+                    name=str(self),
+                    description="Fraction of grid square covered by any cloud. "
+                                "Defined as the ratio of the area of the grid square covered by any "
+                                "cloud to the square's total area.",
+                    units="UI",
+                    limits=ParameterLimits(upper=1, lower=0),
+                )
+            case self.TOTAL_PRECIPITATION_RATE_GL:
+                return ParameterData(
+                    name=str(self),
+                    description="Total precipitation rate at ground level. "
+                                "Defined as the rate at which liquid is deposited on the ground "
+                                "including rain, snow, and hail.",
+                    units="kg/m^2/s",
+                    limits=ParameterLimits(upper=0.2, lower=0),
+                )
+            case _:
+                # Shouldn't happen thanks to the test case in test_parameters.py
+                raise ValueError(f"Unknown parameter: {self}")

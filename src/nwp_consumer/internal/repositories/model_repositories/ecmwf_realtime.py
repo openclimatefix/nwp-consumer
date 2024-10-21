@@ -80,10 +80,6 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
     @override
     def fetch_init_data(self, it: dt.datetime) \
             -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
-        authenticate_result = self.authenticate()
-        if isinstance(authenticate_result, Failure):
-            yield delayed(Failure)(authenticate_result.failure())
-            return
 
         # List relevant files in the S3 bucket
         try:
@@ -95,7 +91,8 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
         except Exception as e:
             yield delayed(Failure)(ValueError(
                 f"Failed to list files in bucket path '{self.bucket}/ecmwf'. "
-                f"Ensure the path exists and is accessible. Encountered error: {e}",
+                "Ensure the path exists and the caller has relevant access permissions. "
+                f"Encountered error: {e}",
             ))
             return
 
@@ -103,7 +100,7 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
             yield delayed(Failure)(ValueError(
                 f"No raw files found for init time '{it.strftime('%Y-%m-%d %H:%M')}' "
                 f"in bucket path '{self.bucket}/ecmwf'. Ensure files exist at the given path "
-                "named with the 'A1...MMDDHHMM...' pattern.",
+                "named with the '...MMDDHHMM...' pattern.",
             ))
 
         for url in urls:

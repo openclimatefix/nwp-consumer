@@ -138,7 +138,7 @@ class NWPDimensionCoordinateMap:
                 f"Got: {pd_indexes.keys()}",
             ))
         pd_parameterset: set[str] = set(pd_indexes["variable"].to_list())
-        known_parameterset: set[str] = {p.value.name for p in Parameter}
+        known_parameterset: set[str] = {str(p) for p in Parameter}
         if not pd_parameterset.issubset(known_parameterset):
             unknown_params: list[str] = list(
                 pd_parameterset.difference(known_parameterset),
@@ -173,9 +173,8 @@ class NWPDimensionCoordinateMap:
                 # already performed a check on the pandas variable names being a subset
                 # of the `Parameter` enum value names.
                 variable=[
-                    kp for kp in Parameter
+                    Parameter(pdp)
                     for pdp in pd_indexes["variable"].to_list()
-                    if kp.value.name == pdp
                 ],
                 # NOTE: For latitude and longitude values, we round to 4 decimal places
                 # to avoid floating point precision issues when comparing values.
@@ -225,7 +224,7 @@ class NWPDimensionCoordinateMap:
                 ],
             ),
             "step": pd.Index([np.timedelta64(np.timedelta64(h, "h"), "ns") for h in self.step]),
-            "variable": pd.Index([p.name for p in self.variable]),
+            "variable": pd.Index([p.value for p in self.variable]),
         } | {
             dim: pd.Index(getattr(self, dim))
             for dim in self.dims
@@ -254,7 +253,7 @@ class NWPDimensionCoordinateMap:
         The returned dictionary of slices defines the region of the base map covered
         by the instances dimension mapping.
 
-        Note that xarray deos have its own implementation of this: the "region='auto'"
+        Note that xarray does have its own implementation of this: the "region='auto'"
         argument to the "to_zarr" method performs a similar function. This is
         reimplemented in this package partly to ensure consistency of behaviour,
         partly to enable more descriptive logging in failure states, and partly to
@@ -303,12 +302,8 @@ class NWPDimensionCoordinateMap:
         # Ensure the inner map is entirely contained within the outer map
         slices = {}
         for inner_dim_label in inner.dims:
-            if inner_dim_label == "variable":
-                inner_dim_coords = [p.name for p in inner.variable]
-                outer_dim_coords = [p.name for p in self.variable]
-            else:
-                inner_dim_coords = getattr(inner, inner_dim_label)
-                outer_dim_coords = getattr(self, inner_dim_label)
+            inner_dim_coords = getattr(inner, inner_dim_label)
+            outer_dim_coords = getattr(self, inner_dim_label)
             if len(inner_dim_coords) > len(outer_dim_coords):
                 return Result.from_failure(
                     ValueError(
@@ -326,13 +321,15 @@ class NWPDimensionCoordinateMap:
                         f"Coordinate values for dimension '{inner_dim_label}' not all present "
                         "within outer dimension map. The inner map must be entirely contained "
                         "within the outer map along every dimension. "
-                        f"Got: {len(diff_coords)}/{len(outer_dim_coords)} differing coordinate values. "
+                        f"Got: {len(diff_coords)}/{len(outer_dim_coords)} differing values. "
                         f"First differing value: '{diff_coords[0]}' (inner[{first_diff_index}]) != "
                         f"'{outer_dim_coords[first_diff_index]}' (outer[{first_diff_index}]).",
                     ),
                 )
 
-            # Ensure the inner map's coordinate values are contiguous in the outer map
+            # Ensure the inner map's coordinate values are contiguous in the outer map.
+            # * First, get the index of the corresponding value in the outer map for each
+            #   coordinate value in the inner map:
             outer_dim_indices = sorted(
                 [outer_dim_coords.index(c) for c in inner_dim_coords],
             )
@@ -340,9 +337,9 @@ class NWPDimensionCoordinateMap:
             if outer_dim_indices != contiguous_index_run:
                 idxs = np.argwhere(np.gradient(outer_dim_indices) > 1).flatten()
                 # TODO: Sometimes, providers send their data in multiple files, the area
-                # of which might loop around the edges of the grid. In this case, it would
-                # be useful to determine if the run is non-contiguous only in that it wraps
-                # around that boundary, and in that case, split it and write it in two goes.
+                # TODO: of which might loop around the edges of the grid. In this case, it would
+                # TODO: be useful to determine if the run is non-contiguous only in that it wraps
+                # TODO: around that boundary, and in that case, split it and write it in two goes.
                 return Result.from_failure(
                     ValueError(
                         f"Coordinate values for dimension '{inner_dim_label}' do not correspond "

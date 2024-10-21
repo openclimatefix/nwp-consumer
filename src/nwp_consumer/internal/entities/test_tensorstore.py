@@ -7,7 +7,7 @@ import xarray as xr
 from returns.pipeline import is_successful
 from returns.result import Failure, Success
 
-from . import NWPDimensionCoordinateMap, Parameter
+from .coordinates import NWPDimensionCoordinateMap
 from .parameters import Parameter
 from .postprocess import PostProcessOptions
 from .tensorstore import TensorStore
@@ -133,3 +133,5 @@ class TestTensorStore(unittest.TestCase):
                 missing_times = result.unwrap()
                 self.assertListEqual(missing_times, t.expected)
 
+if __name__ == "__main__":
+    unittest.main()

@@ -122,17 +122,17 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
                 init_time=[],
                 step=list(range(0, 48, 1)),
                 variable=[
-                    entities.params.downward_shortwave_radiation_flux_gl,
-                    entities.params.cloud_cover_total,
-                    entities.params.cloud_cover_high,
-                    entities.params.cloud_cover_low,
-                    entities.params.cloud_cover_medium,
-                    entities.params.relative_humidity_sl,
-                    entities.params.snow_depth_gl,
-                    entities.params.temperature_sl,
-                    entities.params.wind_u_component_10m,
-                    entities.params.wind_v_component_10m,
-                    entities.params.visibility_sl,
+                    entities.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
+                    entities.Parameter.CLOUD_COVER_TOTAL,
+                    entities.Parameter.CLOUD_COVER_HIGH,
+                    entities.Parameter.CLOUD_COVER_LOW,
+                    entities.Parameter.CLOUD_COVER_MEDIUM,
+                    entities.Parameter.RELATIVE_HUMIDITY_SL,
+                    entities.Parameter.SNOW_DEPTH_GL,
+                    entities.Parameter.TEMPERATURE_SL,
+                    entities.Parameter.WIND_U_COMPONENT_10m,
+                    entities.Parameter.WIND_V_COMPONENT_10m,
+                    entities.Parameter.VISIBILITY_SL,
                 ],
                 latitude=[
                     float(f"{lat:.4f}") for lat in np.arange(89.856, -89.856 - 0.156, -0.156)
@@ -337,17 +337,17 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
             ds: The xarray dataset to rename.
         """
         rename_map: dict[str, str] = {
-            "t": entities.params.temperature_sl.name,
-            "r": entities.params.relative_humidity_sl.name,
-            "sf": entities.params.snow_depth_gl.name,
-            "prate": entities.params.total_precipitation_rate_gl.name,
-            "swavr": entities.params.downward_shortwave_radiation_flux_gl.name,
-            "u": entities.params.wind_u_component_10m.name,
-            "v": entities.params.wind_v_component_10m.name,
-            "vis": entities.params.visibility_sl.name,
-            "hcc": entities.params.cloud_cover_high.name,
-            "lcc": entities.params.cloud_cover_low.name,
-            "mcc": entities.params.cloud_cover_medium.name,
+            "t": entities.Parameter.TEMPERATURE_SL.value,
+            "r": entities.Parameter.RELATIVE_HUMIDITY_SL.value,
+            "sf": entities.Parameter.SNOW_DEPTH_GL.value,
+            "prate": entities.Parameter.TOTAL_PRECIPITATION_RATE_GL.value,
+            "swavr": entities.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL.value,
+            "u": entities.Parameter.WIND_U_COMPONENT_10m.value,
+            "v": entities.Parameter.WIND_V_COMPONENT_10m.value,
+            "vis": entities.Parameter.VISIBILITY_SL.value,
+            "hcc": entities.Parameter.CLOUD_COVER_HIGH.value,
+            "lcc": entities.Parameter.CLOUD_COVER_LOW.value,
+            "mcc": entities.Parameter.CLOUD_COVER_MEDIUM.value,
         }
         for old, new in rename_map.items():
             if old in ds.data_vars:

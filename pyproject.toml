@@ -68,8 +68,9 @@ nwp-consumer-cli = "nwp_consumer.cmd.main:run_cli"
 [project.urls]
 repository = "https://github.com/openclimatefix/nwp-consumer"
 
-[tool.setuptools]
-package-dir = {"nwp_consumer" = "src/nwp_consumer"}
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["test*"]
 
 [tool.setuptools.package-data]
 "*" = ["py.typed", "*.pyi"]

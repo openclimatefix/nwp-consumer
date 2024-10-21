@@ -23,3 +23,7 @@ class TestPostProcessOptions(unittest.TestCase):
             test_class.requires_rewrite(),
             msg="Empty class should not require rewriting.",
         )
+
+
+if __name__ == "__main__":
+    unittest.main()

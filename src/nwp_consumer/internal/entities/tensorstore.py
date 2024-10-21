@@ -14,7 +14,6 @@ import logging
 import os
 import pathlib
 import shutil
-from collections.abc import Collection
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any
 
@@ -27,7 +26,7 @@ from returns.iterables import Fold
 from returns.result import Failure, Result, ResultE, Success
 
 from .coordinates import NWPDimensionCoordinateMap
-from .parameters import ParameterData, params
+from .parameters import Parameter, ParameterData
 from .postprocess import PostProcessOptions
 
 log = logging.getLogger("nwp-consumer")
@@ -168,9 +167,12 @@ class TensorStore:
                 f"nwp-consumer {__version__} at ",
                 f"{dt.datetime.now(tz=dt.UTC).strftime('%Y-%m-%d %H:%M')}",
             )),
-            "variables": json.dumps(
-                {p.name: {"description": p.description, "units": p.units} for p in coords.variable},
-            ),
+            "variables": json.dumps({
+                p.name: {
+                    "description": p.metadata().description,
+                    "units": p.metadata().units,
+                } for p in coords.variable
+            }),
         }
         # Create a DataArray object with the given coordinates and dummy values
         da: xr.DataArray = xr.DataArray(
@@ -334,7 +336,7 @@ class TensorStore:
 
         # Validity check on the parameters of the store
         for param in self.coordinate_map.variable:
-            scan_result: ResultE[ParameterScanResult] = self.scan_parameter_values(p=param)
+            scan_result: ResultE[ParameterScanResult] = self.scan_parameter_values(p=param.metadata())
             match scan_result:
                 case Failure(e):
                     return Result.from_failure(e)
@@ -364,8 +366,7 @@ class TensorStore:
                     "Ensure the parameter has been renamed to match the entities "
                     "parameters defined in `entities.parameters` if desired, or "
                     "add the parameter to the entities parameters if it is new. "
-                    f"Store parameters: {[p.name for p in self.coordinate_map.variable]}. "
-                    f"Known parameters: {params.names()}",
+                    f"Store parameters: {[p.name for p in self.coordinate_map.variable]}.",
                 ),
             )
         store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")

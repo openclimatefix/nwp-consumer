@@ -3,12 +3,11 @@ import datetime as dt
 import os
 import unittest
 
-from returns.pipeline import is_successful, flow
-from returns.pointfree import bind, map
+from returns.pipeline import flow, is_successful
+from returns.pointfree import bind
 
 from nwp_consumer.internal import entities
 
-from ...entities import NWPDimensionCoordinateMap
 from .metoffice_global import CedaMetOfficeGlobalModelRepository
 
 
@@ -22,8 +21,9 @@ class TestCedaMetOfficeGlobalModelRepository(unittest.TestCase):
     def test__download_and_convert(self) -> None:
         """Test the _download_and_convert method."""
 
-        c = CedaMetOfficeGlobalModelRepository()
-        _ = c.authenticate()
+        auth_result = CedaMetOfficeGlobalModelRepository.authenticate()
+        self.assertTrue(is_successful(auth_result), msg=f"Error: {auth_result.failure}")
+        c = auth_result.unwrap()
 
         test_it: dt.datetime = dt.datetime(2021, 1, 1, 0, tzinfo=dt.UTC)
         test_coordinates: entities.NWPDimensionCoordinateMap = dataclasses.replace(
@@ -58,12 +58,18 @@ class TestCedaMetOfficeGlobalModelRepository(unittest.TestCase):
 
                 self.assertTrue(is_successful(result), msg=f"Error: {result}")
 
-                # Check resultant array is a subset of the expected coordinates
-                # TODO: 2024-10-17 - Make this work with collection
-                result = flow(
-                    result,
-                    bind(NWPDimensionCoordinateMap.from_xarray),
-                    bind(test_coordinates.determine_region),
-                )
-                self.assertTrue(is_successful(result), msg=f"Error: {result}")
+                for da in result.unwrap():
+                    # Check resultant arrays are a subset of the expected coordinates
+                    subset_result = flow(
+                        da,
+                        entities.NWPDimensionCoordinateMap.from_xarray,
+                        bind(test_coordinates.determine_region),
+                    )
 
+                    self.assertTrue(
+                        is_successful(subset_result),
+                        msg=f"Error: {subset_result}",
+                    )
+
+if __name__ == "__main__":
+    unittest.main()

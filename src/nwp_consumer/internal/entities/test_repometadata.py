@@ -53,3 +53,7 @@ class TestModelRepositoryMetadata(unittest.TestCase):
             with self.subTest(name=test.name):
                 result = self.metadata.determine_latest_it_from(test.t)
                 self.assertEqual(result, test.expected)
+
+
+if __name__ == "__main__":
+    unittest.main()

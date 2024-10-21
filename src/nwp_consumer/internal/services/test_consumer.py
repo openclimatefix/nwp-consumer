@@ -34,10 +34,9 @@ class DummyModelRepository(ports.ModelRepository):
                 init_time=[dt.datetime(2021, 1, 1, 0, 0, tzinfo=dt.UTC)],
                 step=list(range(0, 48, 1)),
                 variable=[
-                    # TODO: Fix
-                    entities.params.temperature_sl,
-                    entities.params.downward_shortwave_radiation_flux_gl,
-                    entities.params.cloud_cover_high,
+                    entities.Parameter.TEMPERATURE_SL,
+                    entities.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
+                    entities.Parameter.CLOUD_COVER_HIGH,
                 ],
                 latitude=np.linspace(90, -90, 721).tolist(),
                 longitude=np.linspace(-180, 179.8, 1440).tolist(),
