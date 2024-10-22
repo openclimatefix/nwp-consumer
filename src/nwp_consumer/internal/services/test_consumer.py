@@ -44,10 +44,11 @@ class DummyModelRepository(ports.ModelRepository):
         )
 
     @override
-    def fetch_init_data(self, it: dt.datetime) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
+    def fetch_init_data(self, it: dt.datetime) \
+            -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         """See parent class."""
 
-        def gen_dataset(s: int, variable: str) -> ResultE[xr.DataArray]:
+        def gen_dataset(step: int, variable: str) -> ResultE[list[xr.DataArray]]:
             """Define a generator that provides one variable at one step."""
             da = xr.DataArray(
                 name=self.metadata().name,
@@ -55,16 +56,16 @@ class DummyModelRepository(ports.ModelRepository):
                 data=np.random.rand(1, 1, 1, 721, 1440),
                 coords=self.metadata().expected_coordinates.to_pandas() | {
                     "init_time": [np.datetime64(it.replace(tzinfo=None), "ns")],
-                    "step": [s],
+                    "step": [step],
                     "variable": [variable],
                 },
             )
-            return Result.from_value(da)
+            return Result.from_value([da])
 
 
         for s in self.metadata().expected_coordinates.step:
             for v in self.metadata().expected_coordinates.variable:
-                yield delayed(gen_dataset)(s, v.name)
+                yield delayed(gen_dataset)(s, v.value)
 
 
 class DummyNotificationRepository(ports.NotificationRepository):
@@ -109,3 +110,7 @@ class TestParallelConsumer(unittest.TestCase):
             ["init_time", "step", "variable", "latitude", "longitude"],
         )
 
+
+
+if __name__ == "__main__":
+    unittest.main()

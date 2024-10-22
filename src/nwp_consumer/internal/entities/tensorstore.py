@@ -295,21 +295,6 @@ class TensorStore:
         self.size_mb += nbytes // (1024**2)
         return Result.from_value(nbytes)
 
-    def write_to_region_multi(self, das: list[xr.DataArray]) -> ResultE[list[int]]:
-        """Wrapper around write_to_region for multiple inputs.
-
-        The behaviour is defined by the `Fold.collect` method, so any one failure
-        will cause the entire operation to fail.
-        """
-        # TODO: 2024-10-17 - This method is not yet implemented
-        collected_result: ResultE[list[int]] = Fold.collect(
-            [self.write_to_region(da) for da in das],
-            Success(()),
-        )
-
-        return collected_result
-
-
     def validate_store(self) -> ResultE[bool]:
         """Validate the store.
 

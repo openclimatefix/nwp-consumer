@@ -135,17 +135,15 @@ class NWPDimensionCoordinateMap:
             return Failure(KeyError(
                 f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
                 "as required keys 'init_time', 'step', and 'variable' are not all present. "
-                f"Got: {pd_indexes.keys()}",
+                f"Got: '{list(pd_indexes.keys())}'",
             ))
-        pd_parameterset: set[str] = set(pd_indexes["variable"].to_list())
-        known_parameterset: set[str] = {str(p) for p in Parameter}
-        if not pd_parameterset.issubset(known_parameterset):
-            unknown_params: list[str] = list(
-                pd_parameterset.difference(known_parameterset),
-            )
+        input_parameter_set: set[str] = set(pd_indexes["variable"].to_list())
+        known_parameter_set: set[str] = {str(p) for p in Parameter}
+        if not input_parameter_set.issubset(known_parameter_set):
             return Failure(ValueError(
                 f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
-                f"as the 'variable' dimension contains unknown parameters: {unknown_params}. ",
+                "as the 'variable' dimension contains unknown parameters: ",
+                f"'{list(input_parameter_set.difference(known_parameter_set))}'. "
                 "Ensure the parameter names match the names of the standard parameter set "
                 "defined by the `entities.Parameter` Enum.",
             ))

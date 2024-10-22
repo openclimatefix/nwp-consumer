@@ -59,22 +59,32 @@ class ConsumerService(ports.ConsumeUseCase):
             case Success(store):
 
                 # Create a generator to fetch and process raw data
-                da_result_generator = Parallel(
+                fetch_result_generator = Parallel(
                     n_jobs=self._mr.metadata().max_connections - 1,
                     prefer="threads",
                     return_as="generator_unordered",
                 )(self._mr.fetch_init_data(it=it))
 
                 # Regionally write the results of the generator as they are ready
-                for da_result in da_result_generator:
-                    write_result = da_result.bind(store.write_to_region)
-                    # Fail hard if any of the writes failed
-                    # * TODO: Consider just how hard we want to fail in this instance
-                    if isinstance(write_result, Failure):
-                        monitor.join() # TODO: Make this a context manager instead
-                        return Failure(write_result.failure())
+                for fetch_result in fetch_result_generator:
+                    if isinstance(fetch_result, Failure):
+                        monitor.join()
+                        return Failure(OSError(
+                            f"Error fetching data for init time '{it:%Y-%m-%d %H:%M}' ",
+                            f"and model {self._mr.metadata().name}: {fetch_result.failure()}",
+                        ))
+                    for da in fetch_result.unwrap():
+                        write_result = store.write_to_region(da)
+                        # Fail hard if any of the writes failed
+                        # * TODO: Consider just how hard we want to fail in this instance
+                        if isinstance(write_result, Failure):
+                            monitor.join() # TODO: Make this a context manager instead
+                            return Failure(OSError(
+                                f"Error writing data for init time '{it:%Y-%m-%d %H:%M}' ",
+                                f"and model {self._mr.metadata().name}: {write_result.failure()}",
+                            ))
 
-                del da_result_generator
+                del fetch_result_generator
 
                 # Postprocess the dataset as required
                 postprocess_result = store.postprocess(self._mr.metadata().postprocess_options)
