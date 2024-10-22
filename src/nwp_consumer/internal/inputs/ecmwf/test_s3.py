@@ -73,12 +73,12 @@ class TestS3Client(unittest.TestCase):
 
     def test_listFilesForInitTime(self) -> None:
         files = [
-            "A1D01010000010100001",
-            "A1D01010000010101001",
-            "A1D01010000010102011",
-            "A1D01010000010103001",
-            "A1D01011200010112001",  # Different init time
-            "A1D02191200010112001",  # Leap year on 2024-02-29
+            "A2D01010000010100001",
+            "A2D01010000010101001",
+            "A2D01010000010102011",
+            "A2D01010000010103001",
+            "A2D01011200010112001",  # Different init time
+            "A2D02191200010112001",  # Leap year on 2024-02-29
         ]
         for file in files:
             # Create files in the mock bucket
@@ -97,12 +97,12 @@ class TestS3Client(unittest.TestCase):
         # Create a file in the mock bucket
         self.testS3.put_object(
             Bucket=BUCKET,
-            Key=(RAW / "A1D01010000010100001").as_posix(),
+            Key=(RAW / "A2D01010000010100001").as_posix(),
             Body=b"test",
         )
 
         # Test the downloadRawFile method
-        out = self.client.downloadToCache(fi=ECMWFLiveFileInfo(fname="A1D01010000010100001"))
+        out = self.client.downloadToCache(fi=ECMWFLiveFileInfo(fname="A2D01010000010100001"))
         self.assertEqual(out.read_bytes(), b"test")
 
         out.unlink()
