@@ -78,23 +78,10 @@ class S3Client(internal.FetcherInterface):
         """Overrides the corresponding method in the parent class."""
         allFiles: list[str] = self.__fs.ls((self.bucket / self.bucketPath).as_posix())
         # List items are of the form "bucket/folder/filename, so extract just the filename
-
-        fileprefix: str
-        match self.area:
-            case "uk":
-                fileprefix = "A1D"
-            case "nw-india":
-                fileprefix = "A1D"
-            case "india":
-                fileprefix = "A2D"
-            case _:
-                log.warn(event="Unknown area", area=self.area)
-                return []
-
         initTimeFiles: list[internal.FileInfoModel] = [
             ECMWFLiveFileInfo(fname=pathlib.Path(file).name)
             for file in allFiles
-            if it.strftime(f"{fileprefix}%m%d%H") in file
+            if it.strftime("A2D%m%d%H") in file
         ]
         return initTimeFiles
 
@@ -133,8 +120,9 @@ class S3Client(internal.FetcherInterface):
         """Overrides the corresponding method in the parent class."""
         all_dss: list[xr.Dataset] = cfgrib.open_datasets(p.as_posix())
         area_dss: list[xr.Dataset] = _filterDatasetsByArea(all_dss, self.area)
+        del all_dss
         if len(area_dss) == 0:
-            log.error(
+            log.warn(
                 event="No datasets found for area",
                 area=self.area,
                 file=p,
@@ -143,7 +131,7 @@ class S3Client(internal.FetcherInterface):
             return xr.Dataset()
         
         ds: xr.Dataset = xr.merge(area_dss, combine_attrs="drop_conflicts")
-        del area_dss, all_dss
+        del area_dss
 
         ds = ds.drop_vars(
             names=[v for v in ds.coords if v not in COORDINATE_ALLOW_LIST],
