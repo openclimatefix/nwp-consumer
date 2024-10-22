@@ -86,7 +86,7 @@ class S3Client(internal.FetcherInterface):
             case "nw-india":
                 fileprefix = "A1D"
             case "india":
-                fileprefix = "T1D"
+                fileprefix = "A2D"
             case _:
                 log.warn(event="Unknown area", area=self.area)
                 return []
