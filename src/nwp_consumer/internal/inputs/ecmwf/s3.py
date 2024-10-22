@@ -120,7 +120,6 @@ class S3Client(internal.FetcherInterface):
         """Overrides the corresponding method in the parent class."""
         all_dss: list[xr.Dataset] = cfgrib.open_datasets(p.as_posix())
         area_dss: list[xr.Dataset] = _filterDatasetsByArea(all_dss, self.area)
-        del all_dss
         if len(area_dss) == 0:
             log.warn(
                 event="No datasets found for area",
@@ -131,7 +130,7 @@ class S3Client(internal.FetcherInterface):
             return xr.Dataset()
         
         ds: xr.Dataset = xr.merge(area_dss, combine_attrs="drop_conflicts")
-        del area_dss
+        del area_dss, all_dss
 
         ds = ds.drop_vars(
             names=[v for v in ds.coords if v not in COORDINATE_ALLOW_LIST],
