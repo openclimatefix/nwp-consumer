@@ -140,6 +140,8 @@ class S3Client(internal.FetcherInterface):
                 file=p,
                 file_datasets=len(all_dss),
             )
+            return xr.Dataset()
+        
         ds: xr.Dataset = xr.merge(area_dss, combine_attrs="drop_conflicts")
         del area_dss, all_dss
 
