@@ -71,5 +71,6 @@ class TestCedaMetOfficeGlobalModelRepository(unittest.TestCase):
                         msg=f"Error: {subset_result}",
                     )
 
+
 if __name__ == "__main__":
     unittest.main()
