@@ -76,7 +76,7 @@ jobs:
       # Run unittests
       # * Produce JUnit XML report
       - name: Run unit tests
-        run: uv run xmlrunner discover -s src/nwp_consumer -p "test_*.py" --output-file ut-report.xml
+        run: uv run python -m xmlrunner discover -s src/nwp_consumer -p "test_*.py" --output-file ut-report.xml
 
       # Create test summary to be visualised on the job summary screen on GitHub
       # * Runs even if previous steps fail
