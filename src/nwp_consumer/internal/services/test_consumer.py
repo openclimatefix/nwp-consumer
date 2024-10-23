@@ -63,7 +63,7 @@ class DummyModelRepository(ports.ModelRepository):
         def gen_dataset(step: int, variable: str) -> ResultE[list[xr.DataArray]]:
             """Define a generator that provides one variable at one step."""
             da = xr.DataArray(
-                name=self.repository().name,
+                name=self.model().name,
                 dims=["init_time", "step", "variable", "latitude", "longitude"],
                 data=np.random.rand(1, 1, 1, 721, 1440),
                 coords=self.model().expected_coordinates.to_pandas() | {
@@ -111,7 +111,7 @@ class TestParallelConsumer(unittest.TestCase):
 
         result = test_consumer.consume(it=dt.datetime(2021, 1, 1, tzinfo=dt.UTC))
 
-        self.assertTrue(is_successful(result), msg=f"Error: {result}")
+        self.assertTrue(is_successful(result), msg=result)
 
         da: xr.DataArray = xr.open_dataarray(result.unwrap(), engine="zarr")
 

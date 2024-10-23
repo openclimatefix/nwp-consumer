@@ -41,7 +41,11 @@ class ConsumerService(ports.ConsumeUseCase):
 
         if it is None:
             it = self.mr.repository().determine_latest_it_from(dt.datetime.now(tz=dt.UTC))
-        log.info(f"Consuming data from {self.mr.repository().name} for {it:%Y-%m-%d %H:%M}")
+        log.info(
+            f"Consuming data from repository '{self.mr.repository().name}' "
+            f"for the '{self.mr.model().name}' model "
+            f"spanning init time '{it:%Y-%m-%d %H:%M}'",
+        )
 
         # Create a store for the init time
         init_store_result: ResultE[entities.TensorStore] = \

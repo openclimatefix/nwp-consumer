@@ -167,7 +167,7 @@ class TensorStore:
                 f"{dt.datetime.now(tz=dt.UTC).strftime('%Y-%m-%d %H:%M')}",
             )),
             "variables": json.dumps({
-                p.name: {
+                p.value: {
                     "description": p.metadata().description,
                     "units": p.metadata().units,
                 } for p in coords.variable
@@ -213,7 +213,7 @@ class TensorStore:
                     # Write the dataset to a skeleton zarr file
                     # * 'compute=False' enables only saving metadata
                     # * 'mode="w"' overwrites any existing store
-                    da.to_zarr(
+                    _ = da.to_zarr(
                         store=store_path,
                         compute=False,
                         mode="w",
