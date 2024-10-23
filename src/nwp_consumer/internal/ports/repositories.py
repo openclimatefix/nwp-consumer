@@ -1,13 +1,11 @@
 """Repository interfaces for NWP data sources and stores.
 
 These interfaces define the signatures that *driven* actors must conform to
-in order to interact with the core. These interfaces include providers of
-NWP data (`ModelRepository`) and stores for processed data (`ZarrRepository`).
-
+in order to interact with the core.
 Also sometimes referred to as *secondary ports*.
 
-All NWP providers use some kind of model_repositories to generate their data. This model_repositories
-can be physically based, such as ERA5, or a machine learning model_repositories, such as
+All NWP providers use some kind of model to generate their data. This repository
+can be physics-based, such as ERA5, or a machine learning model_repositories, such as
 Google's GraphCast. The `ModelRepository` interface is used to abstract the
 differences between these models, allowing the core to interact with them
 in a uniform way.
@@ -17,6 +15,7 @@ import abc
 import datetime as dt
 import pathlib
 from collections.abc import Callable, Iterator
+
 import xarray as xr
 from returns.result import ResultE
 
@@ -40,6 +39,13 @@ class ModelRepository(abc.ABC):
         - the *fileset*: Raw store data for an init time
         - the *store*: The Zarr store containing the processed data
     """
+
+    @classmethod
+    @abc.abstractmethod
+    def authenticate(cls) -> ResultE["ModelRepository"]:
+        """Create a new authenticated instance of the class."""
+        pass
+
 
     @abc.abstractmethod
     def fetch_init_data(self, it: dt.datetime) \
@@ -74,7 +80,7 @@ class ModelRepository(abc.ABC):
         ...
         ...     def _download_and_convert(self, file: str) -> ResultE[list[xr.DataArray]]:
         ...         '''Download and convert a raw file to an xarray dataset.'''
-        ...         return Result.from_value([xr.open_dataset(file).to_dataarray()])
+        ...         return Success([xr.open_dataset(file).to_dataarray()])
 
         .. important:: No downloading or processing should be done in this method*. All of that
           should be handled in the function that is yielded by the generator -
@@ -104,13 +110,22 @@ class ModelRepository(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def metadata() -> entities.ModelRepositoryMetadata:
+    def repository() -> entities.ModelRepositoryMetadata:
         """Metadata about the model repository.
 
         See Also:
             - `entities.ModelRepositoryMetadata`.
         """
         pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def model() -> entities.ModelMetadata:
+        """Metadata about the model.
+
+        See Also:
+            - `entities.ModelMetadata`.
+        """
 
 
 class ZarrRepository(abc.ABC):

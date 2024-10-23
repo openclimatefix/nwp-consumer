@@ -110,6 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     container: quay.io/condaforge/miniforge3:latest
     needs: build-venv
+    if: github.event.name == '
 
     steps:
       - name: Checkout repository

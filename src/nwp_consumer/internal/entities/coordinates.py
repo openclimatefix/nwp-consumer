@@ -42,7 +42,7 @@ import numpy as np
 import pandas as pd
 import pytz
 import xarray as xr
-from returns.result import Failure, Result, ResultE, Success
+from returns.result import Failure, ResultE, Success
 
 from .parameters import Parameter
 
@@ -157,7 +157,7 @@ class NWPDimensionCoordinateMap:
             ))
 
         # Convert the pandas Index objects to lists of the appropriate types
-        return Result.from_value(
+        return Success(
             cls(
                 # NOTE: The timezone information is stripped from the datetime objects
                 # as numpy cannot handle timezone-aware datetime objects. As such, it
@@ -289,7 +289,7 @@ class NWPDimensionCoordinateMap:
         """
         # Ensure the inner and outer maps have the same rank and dimension labels
         if inner.dims != self.dims:
-            return Result.from_failure(
+            return Failure(
                 KeyError(
                     "Cannot find slices in non-matching coordinate mappings: "
                     "both objects must have identical dimensions (rank and labels)."
@@ -303,7 +303,7 @@ class NWPDimensionCoordinateMap:
             inner_dim_coords = getattr(inner, inner_dim_label)
             outer_dim_coords = getattr(self, inner_dim_label)
             if len(inner_dim_coords) > len(outer_dim_coords):
-                return Result.from_failure(
+                return Failure(
                     ValueError(
                         f"Coordinate values for dimension '{inner_dim_label}' in the inner map "
                         "exceed the number of coordinate values in the outer map. "
@@ -314,7 +314,7 @@ class NWPDimensionCoordinateMap:
             if not set(inner_dim_coords).issubset(set(outer_dim_coords)):
                 diff_coords = list(set(inner_dim_coords).difference(set(outer_dim_coords)))
                 first_diff_index: int = inner_dim_coords.index(diff_coords[0])
-                return Result.from_failure(
+                return Failure(
                     ValueError(
                         f"Coordinate values for dimension '{inner_dim_label}' not all present "
                         "within outer dimension map. The inner map must be entirely contained "
@@ -338,7 +338,7 @@ class NWPDimensionCoordinateMap:
                 # TODO: of which might loop around the edges of the grid. In this case, it would
                 # TODO: be useful to determine if the run is non-contiguous only in that it wraps
                 # TODO: around that boundary, and in that case, split it and write it in two goes.
-                return Result.from_failure(
+                return Failure(
                     ValueError(
                         f"Coordinate values for dimension '{inner_dim_label}' do not correspond "
                         f"with a contiguous index set in the outer dimension map. "
@@ -349,7 +349,7 @@ class NWPDimensionCoordinateMap:
 
             slices[inner_dim_label] = slice(outer_dim_indices[0], outer_dim_indices[-1] + 1)
 
-        return Result.from_value(slices)
+        return Success(slices)
 
     def default_chunking(self) -> dict[str, int]:
         """The expected chunk sizes for each dimension.

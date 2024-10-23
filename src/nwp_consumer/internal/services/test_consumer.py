@@ -8,7 +8,7 @@ import numpy as np
 import xarray as xr
 from joblib import delayed
 from returns.pipeline import is_successful
-from returns.result import Result, ResultE
+from returns.result import ResultE, Success
 
 from nwp_consumer.internal import entities, ports
 from nwp_consumer.internal.services.consumer_service import ConsumerService
@@ -16,12 +16,16 @@ from nwp_consumer.internal.services.consumer_service import ConsumerService
 
 class DummyModelRepository(ports.ModelRepository):
 
+    @classmethod
+    @override
+    def authenticate(cls) -> ResultE["DummyModelRepository"]:
+        return Success(cls())
+
     @staticmethod
     @override
-    def metadata() -> entities.ModelRepositoryMetadata:
-        """See parent class."""
+    def repository() -> entities.ModelRepositoryMetadata:
         return entities.ModelRepositoryMetadata(
-            name="dummy",
+            name="ACME-Test-Models",
             is_archive=False,
             is_order_based=False,
             running_hours=[0, 6, 12, 18],
@@ -30,6 +34,14 @@ class DummyModelRepository(ports.ModelRepository):
             required_env=[],
             optional_env={},
             postprocess_options=entities.PostProcessOptions(),
+        )
+
+    @staticmethod
+    @override
+    def model() -> entities.ModelMetadata:
+        return entities.ModelMetadata(
+            name="simple-random",
+            resolution="17km",
             expected_coordinates=entities.NWPDimensionCoordinateMap(
                 init_time=[dt.datetime(2021, 1, 1, 0, 0, tzinfo=dt.UTC)],
                 step=list(range(0, 48, 1)),
@@ -43,28 +55,28 @@ class DummyModelRepository(ports.ModelRepository):
             ),
         )
 
+
     @override
     def fetch_init_data(self, it: dt.datetime) \
             -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
-        """See parent class."""
 
         def gen_dataset(step: int, variable: str) -> ResultE[list[xr.DataArray]]:
             """Define a generator that provides one variable at one step."""
             da = xr.DataArray(
-                name=self.metadata().name,
+                name=self.repository().name,
                 dims=["init_time", "step", "variable", "latitude", "longitude"],
                 data=np.random.rand(1, 1, 1, 721, 1440),
-                coords=self.metadata().expected_coordinates.to_pandas() | {
+                coords=self.model().expected_coordinates.to_pandas() | {
                     "init_time": [np.datetime64(it.replace(tzinfo=None), "ns")],
                     "step": [step],
                     "variable": [variable],
                 },
             )
-            return Result.from_value([da])
+            return Success([da])
 
 
-        for s in self.metadata().expected_coordinates.step:
-            for v in self.metadata().expected_coordinates.variable:
+        for s in self.model().expected_coordinates.step:
+            for v in self.model().expected_coordinates.variable:
                 yield delayed(gen_dataset)(s, v.value)
 
 
@@ -76,8 +88,7 @@ class DummyNotificationRepository(ports.NotificationRepository):
             message: entities.StoreAppendedNotification | entities.StoreCreatedNotification,
     ) -> ResultE[str]:
         """See parent class."""
-        print(message)
-        return Result.from_value(str(message))
+        return Success(str(message))
 
 
 class DummyZarrRepository(ports.ZarrRepository):
@@ -85,7 +96,7 @@ class DummyZarrRepository(ports.ZarrRepository):
     @override
     def save(self, src: pathlib.Path, dst: pathlib.Path) -> ResultE[str]:
         """See parent class."""
-        return Result.from_value(str(dst))
+        return Success(str(dst))
 
 
 class TestParallelConsumer(unittest.TestCase):
@@ -94,9 +105,8 @@ class TestParallelConsumer(unittest.TestCase):
         """Test the consume method of the ParallelConsumer class."""
 
         test_consumer = ConsumerService(
-            model_repository=DummyModelRepository(),
-            notification_repository=DummyNotificationRepository(),
-            zarr_repository=DummyZarrRepository(),
+            model_repository=DummyModelRepository,
+            notification_repository=DummyNotificationRepository,
         )
 
         result = test_consumer.consume(it=dt.datetime(2021, 1, 1, tzinfo=dt.UTC))

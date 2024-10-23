@@ -15,7 +15,7 @@ A domain entity may have associated methods that define its behaviour, but it
 should not contain any logic that is specific to a particular implementation.
 """
 
-from .repometadata import ModelRepositoryMetadata, ModelFileMetadata
+from .repometadata import ModelRepositoryMetadata, ModelMetadata
 from .tensorstore import ParameterScanResult, TensorStore
 from .postprocess import PostProcessOptions, CodecOptions
 from .notification import PerformanceMetadata, StoreCreatedNotification, StoreAppendedNotification
@@ -25,7 +25,7 @@ from .performance import PerformanceMonitor
 
 __all__ = [
     "ModelRepositoryMetadata",
-    "ModelFileMetadata",
+    "ModelMetadata",
     "ParameterScanResult",
     "TensorStore",
     "PostProcessOptions",

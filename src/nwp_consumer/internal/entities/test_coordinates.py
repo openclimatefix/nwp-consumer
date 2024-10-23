@@ -91,7 +91,7 @@ class TestCoordinates(unittest.TestCase):
                     init_time=outer.init_time[:1],
                     step=[15],
                     variable=outer.variable,
-                    latitude=[*outer.latitude, 64.0],
+                    latitude=[12, 13, 14, 15],
                     longitude=outer.longitude,
                     ),
                 expected_slices={},
@@ -126,7 +126,7 @@ class TestCoordinates(unittest.TestCase):
         class TestCase:
             name: str
             coords: NWPDimensionCoordinateMap
-            expected_indexes: dict[str, pd.Index] | None
+            expected_indexes: dict[str, pd.Index] # type: ignore
 
         tests = [
             TestCase(
@@ -174,7 +174,7 @@ class TestCoordinates(unittest.TestCase):
         @dataclasses.dataclass
         class TestCase:
             name: str
-            data: dict[str, pd.Index]
+            data: dict[str, pd.Index]  # type: ignore
             expected_coordinates: NWPDimensionCoordinateMap | None
             should_error: bool
 

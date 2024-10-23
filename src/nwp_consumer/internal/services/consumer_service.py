@@ -7,7 +7,7 @@ import pathlib
 from typing import override
 
 from joblib import Parallel
-from returns.result import Failure, Result, ResultE, Success
+from returns.result import Failure, ResultE, Success
 
 from nwp_consumer.internal import entities, ports
 
@@ -22,35 +22,33 @@ class ConsumerService(ports.ConsumeUseCase):
     and writing it to a Zarr store.
     """
 
-    _mr: ports.ModelRepository
-    _zr: ports.ZarrRepository
-    _nr: ports.NotificationRepository
+    mr: type[ports.ModelRepository]
+    nr: type[ports.NotificationRepository]
 
     def __init__(
         self,
         # TODO: 2024-10-21 - Work out how to pass none instantiated class values through DI
-        model_repository: ports.ModelRepository,
-        zarr_repository: ports.ZarrRepository,
-        notification_repository: ports.NotificationRepository,
+        model_repository: type[ports.ModelRepository],
+        notification_repository: type[ports.NotificationRepository],
     ) -> None:
         """Create a new instance."""
-        self._mr = model_repository
-        self._zr = zarr_repository
-        self._nr = notification_repository
+        self.mr = model_repository
+        self.nr = notification_repository
 
     @override
     def consume(self, it: dt.datetime | None = None) -> ResultE[pathlib.Path]:
         monitor = entities.PerformanceMonitor()
 
         if it is None:
-            it = self._mr.metadata().determine_latest_it_from(dt.datetime.now(tz=dt.UTC))
-        log.info(f"Consuming data from {self._mr.metadata().name} for {it:%Y-%m-%d %H:%M}")
+            it = self.mr.repository().determine_latest_it_from(dt.datetime.now(tz=dt.UTC))
+        log.info(f"Consuming data from {self.mr.repository().name} for {it:%Y-%m-%d %H:%M}")
 
         # Create a store for the init time
-        init_store_result: ResultE[entities.TensorStore] = entities.TensorStore.initialize_empty_store(
-            name=self._mr.metadata().name,
-            coords=dataclasses.replace(self._mr.metadata().expected_coordinates, init_time=[it]),
-        )
+        init_store_result: ResultE[entities.TensorStore] = \
+            entities.TensorStore.initialize_empty_store(
+                name=self.mr.model().name,
+                coords=dataclasses.replace(self.mr.model().expected_coordinates, init_time=[it]),
+            )
 
         match init_store_result:
             case Failure(e):
@@ -59,11 +57,21 @@ class ConsumerService(ports.ConsumeUseCase):
             case Success(store):
 
                 # Create a generator to fetch and process raw data
+                amr_result = self.mr.authenticate()
+                if isinstance(amr_result, Failure):
+                    monitor.join()
+                    return Failure(OSError(
+                        "Unable to authenticate with model repository "
+                        f"'{self.mr.repository().name}': "
+                        f"{amr_result.failure()}",
+                    ))
+                amr = amr_result.unwrap()
+
                 fetch_result_generator = Parallel(
-                    n_jobs=self._mr.metadata().max_connections - 1,
+                    n_jobs=self.mr.repository().max_connections - 1,
                     prefer="threads",
                     return_as="generator_unordered",
-                )(self._mr.fetch_init_data(it=it))
+                )(amr.fetch_init_data(it=it))
 
                 # Regionally write the results of the generator as they are ready
                 for fetch_result in fetch_result_generator:
@@ -71,7 +79,7 @@ class ConsumerService(ports.ConsumeUseCase):
                         monitor.join()
                         return Failure(OSError(
                             f"Error fetching data for init time '{it:%Y-%m-%d %H:%M}' ",
-                            f"and model {self._mr.metadata().name}: {fetch_result.failure()}",
+                            f"and model {self.mr.repository().name}: {fetch_result.failure()}",
                         ))
                     for da in fetch_result.unwrap():
                         write_result = store.write_to_region(da)
@@ -81,20 +89,20 @@ class ConsumerService(ports.ConsumeUseCase):
                             monitor.join() # TODO: Make this a context manager instead
                             return Failure(OSError(
                                 f"Error writing data for init time '{it:%Y-%m-%d %H:%M}' ",
-                                f"and model {self._mr.metadata().name}: {write_result.failure()}",
+                                f"and model {self.mr.repository().name}: {write_result.failure()}",
                             ))
 
                 del fetch_result_generator
 
                 # Postprocess the dataset as required
-                postprocess_result = store.postprocess(self._mr.metadata().postprocess_options)
+                postprocess_result = store.postprocess(self.mr.repository().postprocess_options)
                 if isinstance(postprocess_result, Failure):
                     monitor.join() # TODO: Make this a context manager instead
                     return Failure(postprocess_result.failure())
 
                 monitor.join()
-                notify_result = self._nr.notify(
-                    entities.StoreCreatedNotification(
+                notify_result = self.nr().notify(
+                    message=entities.StoreCreatedNotification(
                         filename=store.path.name,
                         size_mb=store.size_mb,
                         performance=entities.PerformanceMetadata(
@@ -104,8 +112,10 @@ class ConsumerService(ports.ConsumeUseCase):
                     ),
                 )
                 if isinstance(notify_result, Failure):
-                    log.error("Failed to notify of store creation")
-                    return notify_result
+                    return Failure(OSError(
+                        "Failed to notify of store creation: "
+                        f"{notify_result.failure()}",
+                    ))
 
                 return Success(store.path)
 

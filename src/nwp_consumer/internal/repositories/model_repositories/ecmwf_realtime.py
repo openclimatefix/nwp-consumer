@@ -1,21 +1,21 @@
 """Model repository implementation for ECMWF live data from S3.
 
 When getting live or realtime data from ECMWF, grib files are sent by
-your data provider to a location of choice, in this case an S3 bucket.
+a data provider to a location of choice, in this case an S3 bucket.
 """
 
 import datetime as dt
 import logging
 import os
 import pathlib
-from collections.abc import Callable, Collection, Iterator
+from collections.abc import Callable, Iterator
 from typing import override
 
 import cfgrib
 import s3fs
 import xarray as xr
 from joblib import delayed
-from returns.result import Failure, Result, ResultE, Success
+from returns.result import Failure, ResultE, Success
 
 from nwp_consumer.internal import entities, ports
 
@@ -36,9 +36,9 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
 
     @staticmethod
     @override
-    def metadata() -> entities.ModelRepositoryMetadata:
+    def repository() -> entities.ModelRepositoryMetadata:
         return entities.ModelRepositoryMetadata(
-            name="ecmwf_realtime_operational_uk_11km",
+            name="ECMWF-Realtime-S3",
             is_archive=False,
             is_order_based=True,
             running_hours=[0, 12],
@@ -50,7 +50,19 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
                 "ECMWF_REALTIME_S3_BUCKET",
                 "ECMWF_REALTIME_S3_REGION",
             ],
-            optional_env={},
+            optional_env={
+                "ECMWF_REALTIME_DISSEMINATION_FILE_PREFIX": "A2",
+                "ECMWF_REALTIME_S3_BUCKET_PREFIX": "ecmwf",
+            },
+            postprocess_options=entities.PostProcessOptions(),
+        )
+
+    @staticmethod
+    @override
+    def model() -> entities.ModelMetadata:
+        return entities.ModelMetadata(
+            name="HRES-IFS",
+            resolution="0.1 degrees",
             expected_coordinates=entities.NWPDimensionCoordinateMap(
                 init_time=[],
                 step=list(range(0, 84, 1)),
@@ -71,10 +83,9 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
                     entities.Parameter.SNOW_DEPTH_GL,
                     entities.Parameter.VISIBILITY_SL,
                 ],
-                latitude=[float(f"{lat/10:.2f}") for lat in range(900, -900 - 1, -1)],
-                longitude=[float(f"{lon/10:.2f}") for lon in range(-1800, 1800 + 1, 1)],
+                latitude=[float(f"{lat / 10:.2f}") for lat in range(900, -900 - 1, -1)],
+                longitude=[float(f"{lon / 10:.2f}") for lon in range(-1800, 1800 + 1, 1)],
             ),
-            postprocess_options=entities.PostProcessOptions(),
         )
 
     @override
@@ -107,12 +118,8 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
             yield delayed(self._download_and_convert)(url=url)
 
     @classmethod
+    @override
     def authenticate(cls) -> ResultE["ECMWFRealTimeS3ModelRepository"]:
-        """Authenticate with the S3 bucket.
-
-        Returns:
-            The authenticated S3 filesystem object.
-        """
         try:
             bucket: str = os.environ["ECMWF_REALTIME_S3_BUCKET"]
             _fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
@@ -132,9 +139,13 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
         return Success(cls(bucket=bucket, fs=_fs))
 
 
-    def _download_and_convert(self, url: str) -> ResultE[Collection[xr.DataArray]]:
-        # TODO
-        pass
+    def _download_and_convert(self, url: str) -> ResultE[list[xr.DataArray]]:
+        """Download and convert a file to xarray DataArrays.
+
+        Args:
+            url: The URL of the file to download.
+        """
+        return self._download(url=url).bind(self._convert)
 
     def _download(self, url: str) -> ResultE[pathlib.Path]:
         """Download an ECMWF realtime file from S3.
@@ -150,7 +161,10 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
 
         local_path: pathlib.Path = (
             pathlib.Path(
-                os.getenv("RAWDIR", f"~/.local/cache/nwp/{self.metadata().name}/raw"),
+                os.getenv(
+                    "RAWDIR",
+                    f"~/.local/cache/nwp/{self.repository().name}/{self.model().name}/raw",
+                ),
             ) / url.split("/")[-1]
         )
 
@@ -174,7 +188,7 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
                     f"Failed to download file from S3 at '{url}'. Encountered error: {e}",
                 ))
 
-        return Result.from_value(local_path)
+        return Success(local_path)
 
     @staticmethod
     def _convert(path: pathlib.Path) -> ResultE[list[xr.DataArray]]:
@@ -186,10 +200,68 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
         try:
             dss: list[xr.Dataset] = cfgrib.open_datasets(path.as_posix())
         except Exception as e:
-            return Result.from_failure(OSError(f"Error opening '{path}' as xarray Dataset: {e}"))
-        # TODO: Rename the variables to match the expected names
+            return Failure(OSError(
+                f"Error opening '{path}' as list of xarray Datasets: {e}",
+            ))
+        if len(dss) == 0:
+            return Failure(ValueError(f"No datasets found in '{path}'"))
+
+        processed_das: list[xr.DataArray] = []
+        for i, ds in enumerate(dss):
+            try:
+                da = xr.DataArray(
+                    ds.drop_vars(
+                        names=[
+                            v for v in ds.coords
+                            if v not in ["time", "step", "latitude", "longitude"]
+                        ],
+                        errors="ignore",
+
+                    )
+                    .rename({"time": "init_time"})
+                    .expand_dims("init_time")
+                    .expand_dims("step")
+                    .pipe(ECMWFRealTimeS3ModelRepository._rename_vars)
+                    .to_dataarray(name=ECMWFRealTimeS3ModelRepository.repository().name)
+                    .transpose("init_time", "step", "latitude", "longitude")
+                    .sortby("step"),
+                )
+            except Exception as e:
+                return Failure(ValueError(
+                    f"Error processing dataset {i} from '{path}' to DataArray: {e}",
+                ))
+            processed_das.append(da)
+            del ds[i]
+        return Success(processed_das)
+
         pass
 
+    @staticmethod
+    def _rename_vars(ds: xr.Dataset) -> xr.Dataset:
+        """Rename variables to match the expected names."""
+        rename_map: dict[str, str] = {
+            "dsrp": entities.Parameter.DIRECT_SHORTWAVE_RADIATION_FLUX_GL.value,
+            "uvb": entities.Parameter.DOWNWARD_ULTRAVIOLET_RADIATION_FLUX_GL,
+            "sd": entities.Parameter.SNOW_DEPTH_GL.value,
+            "tcc": entities.Parameter.CLOUD_COVER_TOTAL.value,
+            "clt": entities.Parameter.CLOUD_COVER_TOTAL.value,
+            "u10": entities.Parameter.WIND_U_COMPONENT_10m.value,
+            "v10": entities.Parameter.WIND_V_COMPONENT_10m.value,
+            "t2m": entities.Parameter.TEMPERATURE_SL.value,
+            "ssrd": entities.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL.value,
+            "strd": entities.Parameter.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL.value,
+            "lcc": entities.Parameter.CLOUD_COVER_LOW.value,
+            "mcc": entities.Parameter.CLOUD_COVER_MEDIUM.value,
+            "hcc": entities.Parameter.CLOUD_COVER_HIGH.value,
+            "vis": entities.Parameter.VISIBILITY_SL.value,
+            "u200": entities.Parameter.WIND_U_COMPONENT_200m.value,
+            "v200": entities.Parameter.WIND_V_COMPONENT_200m.value,
+            "u100": entities.Parameter.WIND_U_COMPONENT_100m.value,
+            "v100": entities.Parameter.WIND_V_COMPONENT_100m.value,
+            "tprate": entities.Parameter.TOTAL_PRECIPITATION_RATE_GL.value,
+        }
 
-
-
+        for old, new in rename_map.items():
+            if old in ds.data_vars:
+                ds = ds.rename({old: new})
+        return ds

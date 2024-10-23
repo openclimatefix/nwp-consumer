@@ -1,6 +1,6 @@
 """Dagster pipes notification repository implementation.
 
-`Dagster Pipes <https://docs.dagster.io/_apidocs/pipes#dagster-pipes>`_ 
+`Dagster Pipes <https://docs.dagster.io/_apidocs/pipes#dagster-pipes>`_
 enables integration with Dagster for reporting asset materialization
 and logging. This module enables dagster instances running this code to recieve
 notifications.
@@ -13,7 +13,7 @@ import logging
 from typing import override
 
 from dagster_pipes import PipesContext, open_dagster_pipes
-from returns.result import Result, ResultE
+from returns.result import ResultE, Success
 
 from nwp_consumer.internal import entities, ports
 
@@ -41,5 +41,5 @@ class DagsterPipesNotificationRepository(ports.NotificationRepository):
                     },
                 },
             )
-        return Result.from_value("Notification sent to dagster successfully.")
+        return Success("Notification sent to dagster successfully.")
 
