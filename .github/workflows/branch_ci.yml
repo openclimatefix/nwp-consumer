@@ -42,8 +42,8 @@ jobs:
         with:
           python-version-file: "pyproject.toml"
 
-      - name: Install package
-        run: uv sync --all-extras
+      - name: Install editable package and required dependencies
+        run: uv sync --extra=lint
 
       - name: Lint package
         run: uv run ruff check --output-format=github .
@@ -70,8 +70,8 @@ jobs:
         with:
           python-version-file: "pyproject.toml"
 
-      - name: Install package
-        run: uv sync --all-extras
+      - name: Install editable package and required dependencies
+        run: uv sync --extras=test
 
       # Run unittests
       # * Produce JUnit XML report
@@ -106,6 +106,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version-file: "pyproject.toml"
+
+      - name: Install editable package and required dependencies
+        run: uv sync --extras=docs
 
       - name: Build documentation
         run: uv run pydoctor
