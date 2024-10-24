@@ -29,7 +29,7 @@ RUN --mount=type=cache,target=/root/.cache \
     cp /usr/local/lib/libpython3.12.so.1.0 /venv/lib/ && \
     rm -r /venv/lib/python3.12/site-packages/**/tests && \
     rm -r /venv/lib/python3.12/site-packages/**/_*cache* && \
-    rm /venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-0f683016.so
+    rm /venv/lib/python3.12/site-packages/**/libscipy_*.so || true
 
 #     cp --remove-destination /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1 /lib/ && \
 # Copy the virtualenv into a distroless image
