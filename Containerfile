@@ -1,44 +1,52 @@
-# Build a virtualenv using miniconda
-# * Install required compilation tools for wheels via apt
-# * Install required non-python binaries via conda
-FROM quay.io/condaforge/miniforge3:latest AS build-venv
-RUN apt -qq update && apt -qq install -y build-essential
-RUN conda create -p /venv python=3.12
-RUN /venv/bin/pip install --upgrade -q pip wheel setuptools
+# Build a virtualenv using uv
+FROM python:3.12-slim-bookworm AS build-venv
 
-# Install packages into the virtualenv as a separate step
-# * Only re-execute this step when the requirements files change
-# * Don't install eccodes binary as conda did it
-# * Doing it with conda allows the removal of bufr definitions
-FROM build-venv AS build-reqs
-WORKDIR /app
-COPY pyproject.toml pyproject.toml
-RUN conda install -p /venv -q -y eccodes zarr
-RUN /venv/bin/pip install -q . \
-    --no-cache-dir --no-binary=nwp-consumer --no-binary=eccodes
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Build binary for the package
-# * The package is versioned via setuptools_git_versioning
-#   hence the .git directory is required
-# * The README.md is required for the long description
-# * Remove unnecessary files to reduce the image size
-#   Didn't use the bundled eccodes binary, so can remove bufr
-FROM build-reqs AS build-app
-COPY src src
-COPY .git .git
-COPY README.md README.md
-RUN /venv/bin/pip install . --no-binary=eccodes
-RUN rm -r /venv/share/eccodes/definitions/bufr
-RUN rm -r /venv/lib/python3.12/site-packages/pandas/tests
-RUN rm -r /venv/lib/python3.12/site-packages/numpy/tests
-RUN rm -r /venv/lib/python3.12/site-packages/pip
+ENV UV_LINK_MODE=copy \
+    UV_COMPILE_BYTECODE=1 \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_PYTHON=python3.12 \
+    UV_PROJECT_ENVIRONMENT=/venv
+COPY pyproject.toml /_lock/
+
+# Synchronize DEPENDENCIES without the application itself.
+# This layer is cached until uv.lock or pyproject.toml change.
+# Also copy the symlinked python and shared libraries into the virtualenv
+RUN --mount=type=cache,target=/root/.cache \
+    cd /_lock && \
+    mkdir src && \
+    uv sync --no-dev --no-install-project
+
+# Then install the application itself
+# * Copy over the required shared libraries into the venv
+# * Delete the test and cache folders from installed packages
+COPY . /src
+RUN --mount=type=cache,target=/root/.cache \
+    uv pip install --no-deps --python=$UV_PROJECT_ENVIRONMENT /src && \
+    cp -r /usr/local/lib/python3.12 /venv/lib/ && \
+    cp --remove-destination /usr/local/bin/python3.12 /venv/bin/python && \
+    cp --remove-destination /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1 /lib/ && \
+    cp /usr/local/lib/libpython3.12.so.1.0 /venv/lib/ && \
+    rm -r /venv/lib/python3.12/site-packages/**/tests && \
+    rm -r /venv/lib/python3.12/site-packages/**/_*cache* && \
+    rm /venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-0f683016.so
+RUN du -ah /venv/lib/python3.12/site-packages --max-depth=2 | sort -h | tail -n 30
 
 # Copy the virtualenv into a distroless image
 # * These are small images that only contain the runtime dependencies
 FROM gcr.io/distroless/python3-debian11
-ENV RAWDIR=/work/raw
-ENV ZARRDIR=/work/data
-ENV ECCODES_DEFINITION_PATH=/venv/share/eccodes/definitions
 WORKDIR /app
-COPY --from=build-app /venv /venv
+COPY --from=build-venv /venv /venv
+COPY --from=build-venv /usr/lib /usr/lib
+COPY --from=build-venv /lib /lib
+
+ENV PATH=/venv/bin:$PATH \
+    RAWDIR=/work/raw \
+    ZARRDIR=/work/data \
+    ECCODES_DEFINITION_PATH=/venv/share/eccodes/definitions \
+    PYTHONHOME=/venv
+
 ENTRYPOINT ["/venv/bin/nwp-consumer-cli"]
+VOLUME /work
+STOPSIGNAL SIGINT
