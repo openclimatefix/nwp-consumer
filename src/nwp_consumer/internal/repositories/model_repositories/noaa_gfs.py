@@ -1,0 +1,302 @@
+"""Repository implementation for NOAA GFS data stored in S3.
+
+This module contains the implementation of the model repository for the
+NOAA GFS data stored in an S3 bucket.
+"""
+
+import datetime as dt
+import logging
+import os
+import pathlib
+import re
+from collections.abc import Callable, Iterator
+from typing import override
+
+import cfgrib
+import s3fs
+import xarray as xr
+from joblib import delayed
+from returns.result import Failure, ResultE, Success
+
+from nwp_consumer.internal import entities, ports
+
+log = logging.getLogger("nwp-consumer")
+
+
+class NOAAS3ModelRepository(ports.ModelRepository):
+    """Model repository implementation for GFS data stored in S3."""
+
+    @staticmethod
+    @override
+    def repository() -> entities.ModelRepositoryMetadata:
+        return entities.ModelRepositoryMetadata(
+            name="NOAA-GFS-S3",
+            is_archive=False,
+            is_order_based=False,
+            running_hours=[0, 6, 12, 18],
+            delay_minutes=(60 * 24 * 7),  # 1 week
+            max_connections=100,
+            required_env=[],
+            optional_env={},
+            postprocess_options=entities.PostProcessOptions(),
+        )
+
+    @staticmethod
+    @override
+    def model() -> entities.ModelMetadata:
+        return entities.ModelMetadata(
+            name="NCEP-GFS",
+            resolution="1 degree",
+            expected_coordinates=entities.NWPDimensionCoordinateMap(
+                init_time=[],
+                step=list(range(0, 49, 3)),
+                variable=sorted(
+                    [
+                        entities.Parameter.TEMPERATURE_SL,
+                        entities.Parameter.CLOUD_COVER_TOTAL,
+                        entities.Parameter.CLOUD_COVER_HIGH,
+                        entities.Parameter.CLOUD_COVER_MEDIUM,
+                        entities.Parameter.CLOUD_COVER_LOW,
+                        entities.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
+                        entities.Parameter.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL,
+                        entities.Parameter.TOTAL_PRECIPITATION_RATE_GL,
+                        entities.Parameter.SNOW_DEPTH_GL,
+                        entities.Parameter.RELATIVE_HUMIDITY_SL,
+                        entities.Parameter.VISIBILITY_SL,
+                        entities.Parameter.WIND_U_COMPONENT_10m,
+                        entities.Parameter.WIND_V_COMPONENT_10m,
+                        entities.Parameter.WIND_U_COMPONENT_100m,
+                        entities.Parameter.WIND_V_COMPONENT_100m,
+                    ],
+                ),
+                latitude=[float(lat) for lat in range(90, -90 - 1, -1)],
+                longitude=[float(lon) for lon in range(-180, 180 + 1, 1)],
+            ),
+        )
+
+    @override
+    def fetch_init_data(
+        self, it: dt.datetime,
+    ) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
+        # List relevant files in the s3 bucket
+        bucket_path: str = f"noaa-gfs-bdp-pds/gfs.{it:%Y%m%d}/{it:%H}/atmos"
+        try:
+            fs = s3fs.S3FileSystem(anon=True)
+            urls: list[str] = [
+                f"s3://{f}"
+                for f in fs.ls(bucket_path)
+                if self._wanted_file(
+                    filename=f.split("/")[-1],
+                    it=it,
+                    max_step=max(self.model().expected_coordinates.step),
+                )
+            ]
+        except Exception as e:
+            yield delayed(Failure)(
+                ValueError(
+                    f"Failed to list file in bucket path '{bucket_path}'. "
+                    "Ensure the path exists and the bucket does not require auth. "
+                    f"Encountered error: '{e}'",
+                ),
+            )
+            return
+
+        if len(urls) == 0:
+            yield delayed(Failure)(
+                ValueError(
+                    f"No files found for init time '{it:%Y-%m-%d %H:%M}'. "
+                    "in bucket path '{bucket_path}'. Ensure files exists at the given path "
+                    "with the expected filename pattern. ",
+                ),
+            )
+
+        for url in urls:
+            yield delayed(self._download_and_convert)(url=url)
+
+    @classmethod
+    @override
+    def authenticate(cls) -> ResultE["NOAAS3ModelRepository"]:
+        return Success(cls())
+
+    def _download_and_convert(self, url: str) -> ResultE[list[xr.DataArray]]:
+        """Download and convert a file from S3.
+
+        Args:
+            url: The URL to the S3 object.
+        """
+        return self._download(url).bind(self._convert)
+
+    def _download(self, url: str) -> ResultE[pathlib.Path]:
+        """Download an ECMWF realtime file from S3.
+
+        Args:
+            url: The URL to the S3 object.
+        """
+        local_path: pathlib.Path = (
+            pathlib.Path(
+                os.getenv(
+                    "RAWDIR",
+                    f"~/.local/cache/nwp/{self.repository().name}/{self.model().name}/raw",
+                ),
+            ) / url.split("/")[-1]
+        ).with_suffix(".grib").expanduser()
+
+        # Only download the file if not already present
+        if not local_path.exists():
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            log.debug("Requesting file from S3 at: '%s'", url)
+
+            fs = s3fs.S3FileSystem(anon=True)
+            try:
+                if not fs.exists(url):
+                    raise FileNotFoundError(f"File not found at '{url}'")
+
+                with local_path.open("wb") as lf, fs.open(url, "rb") as rf:
+                    for chunk in iter(lambda: rf.read(12 * 1024), b""):
+                        lf.write(chunk)
+                        lf.flush()
+
+            except Exception as e:
+                return Failure(OSError(
+                    f"Failed to download file from S3 at '{url}'. Encountered error: {e}",
+                ))
+
+            if local_path.stat().st_size != fs.info(url)["size"]:
+                return Failure(ValueError(
+                    f"Failed to download file from S3 at '{url}'. "
+                    "File size mismatch. File may be corrupted.",
+                ))
+
+            # Also download the associated index file
+            # * This isn't critical, but speeds up reading the file in when converting
+            # TODO: Re-incorporate this when https://github.com/ecmwf/cfgrib/issues/350
+            # TODO: is resolved. Currently downloaded index files are ignored due to
+            # TODO: path differences once downloaded.
+            index_url: str = url + ".idx"
+            index_path: pathlib.Path = local_path.with_suffix(".grib.idx")
+            try:
+                with index_path.open("wb") as lf, fs.open(index_url, "rb") as rf:
+                    for chunk in iter(lambda: rf.read(12 * 1024), b""):
+                        lf.write(chunk)
+                        lf.flush()
+            except Exception as e:
+                log.warning(
+                    f"Failed to download index file from S3 at '{url}'. "
+                    "This will require a manual indexing when converting the file. "
+                    f"Encountered error: {e}",
+                )
+
+        return Success(local_path)
+
+    def _convert(self, path: pathlib.Path) -> ResultE[list[xr.DataArray]]:
+        """Convert a GFS file to an xarray DataArray collection.
+
+        Args:
+            path: The path to the local grib file.
+        """
+        try:
+            # Use some options when opening the datasets:
+            # * 'squeeze' reduces length-1- dimensions to scalar coordinates,
+            #   thus single-level variables should not have any extra dimensions
+            # * 'filter_by_keys' reduces the number of variables loaded to only those
+            #   in the expected list
+            dss: list[xr.Dataset] = cfgrib.open_datasets(
+                path.as_posix(),
+                backend_kwargs={
+                    "squeeze": True,
+                    "filter_by_keys": {
+                        "shortName": [
+                            x for v in self.model().expected_coordinates.variable
+                            for x in v.metadata().alternate_shortnames
+                        ],
+                    },
+                },
+            )
+        except Exception as e:
+            return Failure(ValueError(
+                f"Error opening '{path}' as list of xarray Datasets: {e}",
+            ))
+
+        if len(dss) == 0:
+            return Failure(ValueError(
+                f"No datasets found in '{path}'. File may be corrupted. "
+                "A redownload of the file may be required.",
+            ))
+
+        processed_das: list[xr.DataArray] = []
+        for i, ds in enumerate(dss):
+            try:
+                ds = NOAAS3ModelRepository._rename_or_drop_vars(
+                    ds=ds,
+                    allowed_parameters=self.model().expected_coordinates.variable,
+                )
+                # Ignore datasets with no variables of interest
+                if len(ds.data_vars) == 0:
+                    continue
+                # Ignore datasets with multi-level variables
+                # * This would not work without the "squeeze" option in the open_datasets call,
+                #   which reduces single-length dimensions to scalar coordinates
+                if any(x not in ["latitude", "longitude" ,"time"] for x in ds.dims):
+                    continue
+                da: xr.DataArray = (
+                    ds
+                    .rename(name_dict={"time": "init_time"})
+                    .expand_dims(dim="init_time")
+                    .expand_dims(dim="step")
+                    .to_dataarray(name=NOAAS3ModelRepository.model().name)
+                )
+                da = (
+                    da.drop_vars(
+                        names=[
+                            c for c in da.coords
+                            if c not in ["init_time", "step", "variable", "latitude", "longitude"]
+                        ],
+                        errors="raise",
+                    )
+                    .transpose("init_time", "step", "variable", "latitude", "longitude")
+                    .assign_coords(coords={"longitude": (da.coords["longitude"] + 180) % 360 - 180})
+                    .sortby(variables=["step", "variable", "longitude"])
+                    .sortby(variables="latitude", ascending=False)
+                )
+            except Exception as e:
+                return Failure(ValueError(
+                    f"Error processing dataset {i} from '{path}' to DataArray: {e}",
+                ))
+            processed_das.append(da)
+
+        return Success(processed_das)
+
+    @staticmethod
+    def _wanted_file(filename: str, it: dt.datetime, max_step: int) -> bool:
+        """Determine if a file is wanted based on the init time and max step.
+
+        See module docstring for file naming convention.
+        """
+        pattern: str = r"^gfs\.t(\d{2})z\.pgrb2\.1p00\.f(\d{3})$"
+        match: re.Match[str] | None = re.search(pattern=pattern, string=filename)
+        if match is None:
+            return False
+        if int(match.group(1)) != it.hour:
+            return False
+        return not int(match.group(2)) > max_step
+
+    @staticmethod
+    def _rename_or_drop_vars(ds: xr.Dataset, allowed_parameters: list[entities.Parameter]) \
+            -> xr.Dataset:
+        """Rename variables to match the expected names, dropping invalid ones.
+
+        Args:
+            ds: The xarray dataset to rename.
+            allowed_parameters: The list of parameters allowed in the resultant dataset.
+        """
+        for var in ds.data_vars:
+            param_result = entities.Parameter.try_from_alternate(str(var))
+            match param_result:
+                case Success(p):
+                    if p in allowed_parameters:
+                        ds = ds.rename_vars({var: p.value})
+                        continue
+            log.debug("Dropping invalid parameter '%s' from dataset", var)
+            ds = ds.drop_vars(str(var))
+        return ds
+

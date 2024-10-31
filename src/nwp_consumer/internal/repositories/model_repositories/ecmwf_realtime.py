@@ -65,7 +65,7 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
             name="ECMWF-Realtime-S3",
             is_archive=False,
             is_order_based=True,
-            running_hours=[0, 12],
+            running_hours=[0, 6, 12, 18],
             delay_minutes=(60 * 6), # 6 hours
             max_connections=100,
             required_env=[
@@ -118,7 +118,6 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
     @override
     def fetch_init_data(self, it: dt.datetime) \
             -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
-
         # List relevant files in the S3 bucket
         try:
             urls: list[str] = [
@@ -145,6 +144,10 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
                 "named with the expected pattern, e.g. 'A2S10250000102603001.",
             ))
 
+        log.debug(
+            f"Found {len(urls)} files for init time '{it.strftime('%Y-%m-%d %H:%M')}' "
+            f"in bucket path '{self.bucket}/ecmwf'.",
+        )
         for url in urls:
             yield delayed(self._download_and_convert)(url=url)
 
@@ -167,6 +170,7 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
                 f"Credentials may be wrong or undefined. Encountered error: {e}",
             ))
 
+        log.debug(f"Successfully authenticated with S3 instance '{bucket}'")
         return Success(cls(bucket=bucket, fs=_fs))
 
 
@@ -194,9 +198,9 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
         ).with_suffix(".grib").expanduser()
 
         # Only download the file if not already present
-        if not local_path.exists():
+        if not local_path.exists() or local_path.stat().st_size == 0:
             local_path.parent.mkdir(parents=True, exist_ok=True)
-            log.info("Requesting file from S3 at: '%s'", url)
+            log.debug("Requesting file from S3 at: '%s'", url)
 
             try:
                 if not self._fs.exists(url):
@@ -234,13 +238,19 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
                 f"Error opening '{path}' as list of xarray Datasets: {e}",
             ))
         if len(dss) == 0:
-            return Failure(ValueError(f"No datasets found in '{path}'"))
+            return Failure(ValueError(
+                f"No datasets found in '{path}'. File may be corrupted. "
+                "A redownload of the file may be required.",
+            ))
 
         processed_das: list[xr.DataArray] = []
         for i, ds in enumerate(dss):
             try:
                 da: xr.DataArray = (
-                    ds.pipe(ECMWFRealTimeS3ModelRepository._rename_vars)
+                    ECMWFRealTimeS3ModelRepository._rename_or_drop_vars(
+                        ds=ds,
+                        allowed_parameters=ECMWFRealTimeS3ModelRepository.model().expected_coordinates.variable,
+                    )
                     .rename(name_dict={"time": "init_time"})
                     .expand_dims(dim="init_time")
                     .expand_dims(dim="step")
@@ -275,42 +285,12 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
         return Success(processed_das)
 
     @staticmethod
-    def _rename_vars(ds: xr.Dataset) -> xr.Dataset:
-        """Rename variables to match the expected names."""
-        rename_map: dict[str, str] = {
-            "dsrp": entities.Parameter.DIRECT_SHORTWAVE_RADIATION_FLUX_GL.value,
-            "uvb": entities.Parameter.DOWNWARD_ULTRAVIOLET_RADIATION_FLUX_GL.value,
-            "sd": entities.Parameter.SNOW_DEPTH_GL.value,
-            "tcc": entities.Parameter.CLOUD_COVER_TOTAL.value,
-            "clt": entities.Parameter.CLOUD_COVER_TOTAL.value,
-            "u10": entities.Parameter.WIND_U_COMPONENT_10m.value,
-            "v10": entities.Parameter.WIND_V_COMPONENT_10m.value,
-            "t2m": entities.Parameter.TEMPERATURE_SL.value,
-            "ssrd": entities.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL.value,
-            "strd": entities.Parameter.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL.value,
-            "lcc": entities.Parameter.CLOUD_COVER_LOW.value,
-            "mcc": entities.Parameter.CLOUD_COVER_MEDIUM.value,
-            "hcc": entities.Parameter.CLOUD_COVER_HIGH.value,
-            "vis": entities.Parameter.VISIBILITY_SL.value,
-            "u200": entities.Parameter.WIND_U_COMPONENT_200m.value,
-            "v200": entities.Parameter.WIND_V_COMPONENT_200m.value,
-            "u100": entities.Parameter.WIND_U_COMPONENT_100m.value,
-            "v100": entities.Parameter.WIND_V_COMPONENT_100m.value,
-            "tprate": entities.Parameter.TOTAL_PRECIPITATION_RATE_GL.value,
-        }
-
-        for old, new in rename_map.items():
-            if old in ds.data_vars:
-                ds = ds.rename({old: new})
-        return ds
-
-    @staticmethod
     def _wanted_file(filename: str, it: dt.datetime, max_step: int) -> bool:
         """Determine if the file is wanted based on the init time.
 
         See module docstring for the file naming convention.
         Returns True if the filename describes data corresponding to the input
-        initialisation time and model metadata.
+        initialization time and model metadata.
 
         Args:
             filename: The name of the file.
@@ -329,3 +309,25 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
             "%Y%m%d%H%M%z",
         )
         return tt < it + dt.timedelta(hours=max_step)
+
+
+    @staticmethod
+    def _rename_or_drop_vars(ds: xr.Dataset, allowed_parameters: list[entities.Parameter]) \
+            -> xr.Dataset:
+        """Rename variables to match the expected names, dropping invalid ones.
+
+        Args:
+            ds: The xarray dataset to rename.
+            allowed_parameters: The list of parameters allowed in the resultant dataset.
+        """
+        for var in ds.data_vars:
+            param_result = entities.Parameter.try_from_alternate(str(var))
+            match param_result:
+                case Success(p):
+                    if p in allowed_parameters:
+                        ds = ds.rename_vars({var: p.value})
+                        continue
+            log.warning("Dropping invalid parameter '%s' from dataset", var)
+            ds = ds.drop_vars(str(var))
+        return ds
+

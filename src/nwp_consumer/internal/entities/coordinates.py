@@ -37,7 +37,10 @@ a key part of parallel writing.
 
 import dataclasses
 import datetime as dt
+import json
+from importlib.metadata import PackageNotFoundError, version
 
+import dask.array
 import numpy as np
 import pandas as pd
 import pytz
@@ -45,6 +48,11 @@ import xarray as xr
 from returns.result import Failure, ResultE, Success
 
 from .parameters import Parameter
+
+try:
+    __version__ = version("nwp-consumer")
+except PackageNotFoundError:
+    __version__ = "v?"
 
 
 @dataclasses.dataclass(slots=True)
@@ -69,7 +77,7 @@ class NWPDimensionCoordinateMap:
     """The forecast step times.
 
     This corresponds to the horizon of the values, which is the time
-    difference between the forecast initialisation time and the target
+    difference between the forecast initialization time and the target
     time at which the forecast data is valid.
     """
     variable: list[Parameter]
@@ -207,7 +215,7 @@ class NWPDimensionCoordinateMap:
         This is useful for interoperability with xarray, which prefers to define
         DataArray coordinates using a dict pandas Index objects.
 
-        For the most part, the conversion consists of a straighforward cast
+        For the most part, the conversion consists of a straightforward cast
         to a pandas Index object. However, there are some caveats involving
         the time-centric dimensions:
 
@@ -367,11 +375,57 @@ class NWPDimensionCoordinateMap:
         that wants to cover the entire dimension should have a size equal to the
         dimension length.
 
-        It defaults to a single chunk per init time and step, and a single chunk
-        for each entire other dimension.
+        It defaults to a single chunk per init time and step, and 8 chunks
+        for each entire other dimension. These are purposefully small, to ensure
+        that when perfomring parallel writes, chunk boundaries are not crossed.
         """
         out_dict: dict[str, int] = {
             "init_time": 1,
             "step": 1,
-        } | {dim: len(getattr(self, dim)) for dim in self.dims if dim not in ["init_time", "step"]}
+        } | {
+            dim: len(getattr(self, dim)) // 8 if len(getattr(self, dim)) > 8 else 1
+            for dim in self.dims
+            if dim not in ["init_time", "step"]
+        }
+
         return out_dict
+
+
+    def as_zeroed_dataarray(self, name: str) -> xr.DataArray:
+        """Express the coordinates as an xarray DataArray.
+
+        Data is populated with zeros and a default chunking scheme is applied.
+
+        Args:
+            name: The name of the DataArray.
+
+        See Also:
+        - https://docs.xarray.dev/en/stable/user-guide/io.html#distributed-writes
+        """
+        # Create a dask array of zeros with the shape of the dataset
+        # * The values of this are ignored, only the shape and chunks are used
+        dummy_values = dask.array.zeros(  # type: ignore
+            shape=list(self.shapemap.values()),
+            chunks=tuple([self.default_chunking()[k] for k in self.shapemap]),
+        )
+        attrs: dict[str, str] = {
+            "produced_by": "".join((
+                f"nwp-consumer {__version__} at ",
+                f"{dt.datetime.now(tz=dt.UTC).strftime('%Y-%m-%d %H:%M')}",
+            )),
+            "variables": json.dumps({
+                p.value: {
+                    "description": p.metadata().description,
+                    "units": p.metadata().units,
+                } for p in self.variable
+            }),
+        }
+        # Create a DataArray object with the given coordinates and dummy values
+        da: xr.DataArray = xr.DataArray(
+            name=name,
+            data=dummy_values,
+            coords=self.to_pandas(),
+            attrs=attrs,
+        )
+        return da
+

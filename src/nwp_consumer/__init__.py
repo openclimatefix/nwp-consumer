@@ -23,6 +23,8 @@ The following environment variables can be used to configure the application:
 +-------------------------------+-------------------------------------+---------------------------------------------+
 | MODEL_REPOSITORY              | The model repository to use.        | ceda-metoffice-global                       |
 +-------------------------------+-------------------------------------+---------------------------------------------+
+| CONCURRENCY                   | Whether to use concurrency.         | True                                        |
++-------------------------------+-------------------------------------+---------------------------------------------+
 
 
 Development Documentation
@@ -149,6 +151,7 @@ for logger in [
     "gribapi",
     "aiobotocore",
     "s3fs",
+    "fsspec",
     "asyncio",
     "botocore",
     "cfgrib",

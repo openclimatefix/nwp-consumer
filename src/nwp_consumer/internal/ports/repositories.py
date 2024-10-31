@@ -87,9 +87,9 @@ class ModelRepository(abc.ABC):
           ``_download_and_convert`` in the example above.
           This is to allow for parallelization of the download and processing.
 
-        .. note:: It is however, worth considering the most efficient way to download and process the data.
-          The above assumes that the data comes in many files, but there is a possibility of the
-          case where the source provides one large file with many underlying datasets within.
+        .. note:: It is however, worth considering the most efficient way to download and process
+          the data. The above assumes that the data comes in many files, but there is a possibility
+          of the case where the source provides one large file with many underlying datasets within.
           In this case, it may be more efficient to download the large file in the
           `fetch_init_data` method and then process the datasets within via the yielded functions.
 

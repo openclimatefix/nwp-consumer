@@ -99,7 +99,7 @@ jobs:
           python-version-file: "pyproject.toml"
 
       - name: Install editable package and required dependencies
-        run: uv sync
+        run: uv sync --no-dev
 
       # Building the wheel dynamically assigns the version according to git
       # * The setuptools_git_versioning package reads the git tags and assigns the version

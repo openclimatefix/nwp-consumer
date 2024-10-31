@@ -8,11 +8,11 @@ from returns.pointfree import bind
 
 from nwp_consumer.internal import entities
 
-from .metoffice_global import CedaMetOfficeGlobalModelRepository
+from .metoffice_global import CEDAFTPModelRepository
 
 
-class TestCedaMetOfficeGlobalModelRepository(unittest.TestCase):
-    """Test the business methods of the CedaMetOfficeGlobalModelRepository class."""
+class TestCEDAFTPModelRepository(unittest.TestCase):
+    """Test the business methods of the CEDAFTPModelRepository class."""
 
     @unittest.skipIf(
         condition="CI" in os.environ,
@@ -21,7 +21,7 @@ class TestCedaMetOfficeGlobalModelRepository(unittest.TestCase):
     def test__download_and_convert(self) -> None:
         """Test the _download_and_convert method."""
 
-        auth_result = CedaMetOfficeGlobalModelRepository.authenticate()
+        auth_result = CEDAFTPModelRepository.authenticate()
         self.assertTrue(is_successful(auth_result), msg=f"Error: {auth_result.failure}")
         c = auth_result.unwrap()
 

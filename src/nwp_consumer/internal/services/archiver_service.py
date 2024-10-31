@@ -2,10 +2,11 @@
 
 import dataclasses
 import logging
+import os
 import pathlib
 from typing import TYPE_CHECKING, override
 
-from joblib import Parallel
+from joblib import Parallel, cpu_count
 from returns.result import Failure, ResultE, Success
 
 from nwp_consumer.internal import entities, ports
@@ -45,12 +46,12 @@ class ArchiverService(ports.ArchiveUseCase):
         # Create a store for the archive
         init_store_result: ResultE[entities.TensorStore] = \
             entities.TensorStore.initialize_empty_store(
-                name=self.mr.repository().name,
+                model=self.mr.model().name,
+                repository=self.mr.repository().name,
                 coords=dataclasses.replace(
                     self.mr.model().expected_coordinates,
                     init_time=init_times,
                 ),
-                overwrite_existing=False,
             )
 
         match init_store_result:
@@ -85,8 +86,12 @@ class ArchiverService(ports.ArchiveUseCase):
                     amr = amr_result.unwrap()
 
                     # Create a generator to fetch and process raw data
+                    n_jobs: int = max(cpu_count() - 1, self.mr.repository().max_connections)
+                    if os.getenv("CONCURRENCY", "True").capitalize() == "False":
+                        n_jobs = 1
+                    log.debug(f"Downloading using {n_jobs} concurrent thread(s)")
                     da_result_generator = Parallel(
-                        n_jobs=self.mr.repository().max_connections - 1,
+                        n_jobs=n_jobs,
                         prefer="threads",
                         return_as="generator_unordered",
                     )(amr.fetch_init_data(it=it))
@@ -115,8 +120,8 @@ class ArchiverService(ports.ArchiveUseCase):
                 monitor.join()
                 notify_result = self.nr().notify(
                     message=entities.StoreCreatedNotification(
-                        filename=store.path.name,
-                        size_mb=store.size_mb,
+                        filename=pathlib.Path(store.path).name,
+                        size_mb=store.size_kb // 1024,
                         performance=entities.PerformanceMetadata(
                             duration_seconds=monitor.get_runtime(),
                             memory_mb=max(monitor.memory_buffer) / 1e6,
@@ -135,3 +140,4 @@ class ArchiverService(ports.ArchiveUseCase):
                 return Failure(
                     TypeError(f"Unexpected result type: {type(init_store_result)}"),
                 )
+

@@ -24,8 +24,9 @@ This module contains implementations for the following driven actors:
 """
 
 from .model_repositories import (
-    CedaMetOfficeGlobalModelRepository,
+    CEDAFTPModelRepository,
     ECMWFRealTimeS3ModelRepository,
+    NOAAS3ModelRepository,
 )
 from .notification_repositories import (
     StdoutNotificationRepository,
@@ -33,8 +34,9 @@ from .notification_repositories import (
 )
 
 __all__ = [
-    "CedaMetOfficeGlobalModelRepository",
+    "CEDAFTPModelRepository",
     "ECMWFRealTimeS3ModelRepository",
+    "NOAAS3ModelRepository",
     "StdoutNotificationRepository",
     "DagsterPipesNotificationRepository",
 ]

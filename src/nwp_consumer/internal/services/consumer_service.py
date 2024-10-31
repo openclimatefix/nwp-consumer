@@ -3,10 +3,11 @@
 import dataclasses
 import datetime as dt
 import logging
+import os
 import pathlib
 from typing import override
 
-from joblib import Parallel
+from joblib import Parallel, cpu_count
 from returns.result import Failure, ResultE, Success
 
 from nwp_consumer.internal import entities, ports
@@ -50,7 +51,8 @@ class ConsumerService(ports.ConsumeUseCase):
         # Create a store for the init time
         init_store_result: ResultE[entities.TensorStore] = \
             entities.TensorStore.initialize_empty_store(
-                name=self.mr.model().name,
+                model=self.mr.model().name,
+                repository=self.mr.repository().name,
                 coords=dataclasses.replace(self.mr.model().expected_coordinates, init_time=[it]),
             )
 
@@ -71,8 +73,13 @@ class ConsumerService(ports.ConsumeUseCase):
                     ))
                 amr = amr_result.unwrap()
 
+                n_jobs: int = max(cpu_count() - 1, self.mr.repository().max_connections)
+                if os.getenv("CONCURRENCY", "True").capitalize() == "False":
+                    n_jobs = 1
+                log.debug(f"Downloading using {n_jobs} concurrent thread(s)")
                 fetch_result_generator = Parallel(
-                    n_jobs=1, # TODO - fix segfault when using multiple threads
+                    # TODO - fix segfault when using multiple threads
+                    n_jobs=n_jobs,
                     prefer="threads",
                     return_as="generator_unordered",
                 )(amr.fetch_init_data(it=it))
@@ -117,8 +124,8 @@ class ConsumerService(ports.ConsumeUseCase):
                 monitor.join()
                 notify_result = self.nr().notify(
                     message=entities.StoreCreatedNotification(
-                        filename=store.path.name,
-                        size_mb=store.size_mb,
+                        filename=pathlib.Path(store.path).name,
+                        size_mb=store.size_kb // 1024,
                         performance=entities.PerformanceMetadata(
                             duration_seconds=monitor.get_runtime(),
                             memory_mb=max(monitor.memory_buffer) / 1e6,

@@ -11,7 +11,7 @@ and the spec sheet from the Met Office is detailed in
 `this PDF <https://www.metoffice.gov.uk/binaries/content/assets/metofficegovuk/pdf/data/global-atmospheric-model-17-km-resolution.pdf>`_.
 
 For further details on the repository, see the
-`CedaMetOfficeGlobalModelRepository.repository` implementation.
+`CEDAFTPModelRepository.repository` implementation.
 
 Data discrepancies and corrections
 ==================================
@@ -94,7 +94,7 @@ from nwp_consumer.internal import entities, ports
 log = logging.getLogger("nwp-consumer")
 
 
-class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
+class CEDAFTPModelRepository(ports.ModelRepository):
     """Repository implementation for the MetOffice global model data."""
 
     url_base: str = "ftp.ceda.ac.uk/badc/ukmo-nwp/data/global-grib"
@@ -119,9 +119,7 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
             max_connections=20,
             required_env=["CEDA_FTP_USER", "CEDA_FTP_PASS"],
             optional_env={},
-            postprocess_options=entities.PostProcessOptions(
-                standardize_coordinates=True,
-            ),
+            postprocess_options=entities.PostProcessOptions(),
         )
 
     @staticmethod
@@ -204,7 +202,7 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
 
     @classmethod
     @override
-    def authenticate(cls) -> ResultE["CedaMetOfficeGlobalModelRepository"]:
+    def authenticate(cls) -> ResultE["CEDAFTPModelRepository"]:
         """Authenticate with the CEDA FTP server.
 
         Returns:
@@ -285,7 +283,11 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
             )
         try:
             da: xr.DataArray = (
-                ds.sel(step=[np.timedelta64(i, "h") for i in range(0, 48, 1)])
+                CEDAFTPModelRepository._rename_or_drop_vars(
+                    ds=ds,
+                    allowed_parameters=CEDAFTPModelRepository.model().expected_coordinates.variable,
+                )
+                .sel(step=[np.timedelta64(i, "h") for i in range(0, 48, 1)])
                 .expand_dims(dim={"init_time": [ds["time"].values]})
                 .drop_vars(
                     names=[
@@ -294,8 +296,7 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
                         if v not in ["init_time", "step", "latitude", "longitude"]
                     ],
                 )
-                .pipe(CedaMetOfficeGlobalModelRepository._rename_vars)
-                .to_dataarray(name=CedaMetOfficeGlobalModelRepository.model().name)
+                .to_dataarray(name=CEDAFTPModelRepository.model().name)
                 .transpose("init_time", "step", "variable", "latitude", "longitude")
                 # Remove the last value of the longitude dimension as it overlaps with the next file
                 # Reverse the latitude dimension to be in descending order
@@ -311,47 +312,22 @@ class CedaMetOfficeGlobalModelRepository(ports.ModelRepository):
 
 
     @staticmethod
-    def _rename_vars(ds: xr.Dataset) -> xr.Dataset:
-        """Rename variables to match the expected names.
-
-        To find the names as they exist in the raw files, the following
-        function was used:
-
-        >>> import xarray as xr
-        >>> import urllib.request
-        >>> import datetime as dt
-        >>>
-        >>> def download_single_file(parameter: str) -> xr.Dataset:
-        >>>     it = dt.datetime(2021, 1, 1, 0, tzinfo=dt.UTC)
-        >>>     base_url = "ftp://<user>:<pass>@ftp.ceda.ac.uk/badc/ukmo-nwp/data/global-grib"
-        >>>     url = f"{base_url}/{it:%Y/%m/%d}/" + \
-        >>>           f"{it:%Y%m%d%H}_WSGlobal17km_{parameter}_AreaA_000144.grib"
-        >>>     response = urllib.request.urlopen(url)
-        >>>     with open("/tmp/mo-global/test.grib", "wb") as f:
-        >>>         for chunk in iter(lambda: response.read(16 * 1024), b""):
-        >>>             f.write(chunk)
-        >>>             f.flush()
-        >>>
-        >>>     ds = xr.open_dataset("/tmp/mo-global/test.grib", engine="cfgrib")
-        >>>     return ds
+    def _rename_or_drop_vars(ds: xr.Dataset, allowed_parameters: list[entities.Parameter]) \
+            -> xr.Dataset:
+        """Rename variables to match the expected names, dropping invalid ones.
 
         Args:
             ds: The xarray dataset to rename.
+            allowed_parameters: The list of parameters allowed in the resultant dataset.
         """
-        rename_map: dict[str, str] = {
-            "t": entities.Parameter.TEMPERATURE_SL.value,
-            "r": entities.Parameter.RELATIVE_HUMIDITY_SL.value,
-            "sf": entities.Parameter.SNOW_DEPTH_GL.value,
-            "prate": entities.Parameter.TOTAL_PRECIPITATION_RATE_GL.value,
-            "swavr": entities.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL.value,
-            "u": entities.Parameter.WIND_U_COMPONENT_10m.value,
-            "v": entities.Parameter.WIND_V_COMPONENT_10m.value,
-            "vis": entities.Parameter.VISIBILITY_SL.value,
-            "hcc": entities.Parameter.CLOUD_COVER_HIGH.value,
-            "lcc": entities.Parameter.CLOUD_COVER_LOW.value,
-            "mcc": entities.Parameter.CLOUD_COVER_MEDIUM.value,
-        }
-        for old, new in rename_map.items():
-            if old in ds.data_vars:
-                ds = ds.rename_vars({old: new})
+        for var in ds.data_vars:
+            param_result = entities.Parameter.try_from_alternate(str(var))
+            match param_result:
+                case Success(p):
+                    if p in allowed_parameters:
+                        ds = ds.rename_vars({var: p.value})
+                        continue
+            log.warning("Dropping invalid parameter '%s' from dataset", var)
+            ds = ds.drop_vars(str(var))
         return ds
+

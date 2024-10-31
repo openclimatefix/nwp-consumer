@@ -18,44 +18,39 @@ authors = [
 classifiers = ["Programming Language :: Python :: 3"]
 dependencies = [
     "dask == 2024.8.1",
-    "eccodes == 2.38.1",
+    "eccodes == 2.38.3",
     "ecmwf-api-client == 1.6.3",
-    "cfgrib == 0.9.14.0",
+    "cfgrib == 0.9.14.1",
     "dagster-pipes == 1.8.5",
     "joblib == 1.4.2",
     "numpy == 2.1.0",
     "ocf-blosc2 == 0.0.11",
     "psutil == 6.0.0",
-    "requests == 2.32.3",
     "returns == 0.23.0",
     "s3fs == 2024.9.0",
     "xarray == 2024.9.0",
-    "zarr == 2.18.2"
+    "zarr == 2.18.3"
 ]
 
-[project.optional-dependencies]
-test = [
+[dependency-groups]
+dev = [
+    # Testing
+    "botocore == 1.33.7",  # Required for moto, prevents installing the whole of boto3
     "flask == 3.0.0",
     "flask-cors == 4.0.0",
     "moto[s3,server] == 4.2.11",
     "unittest-xml-reporting == 3.2.0",
     "hypothesis == 6.115.3",
-]
-lint = [
+    # Linting
     "returns[compatible-mypy]",
     "ruff == 0.6.9",
     "pandas-stubs",
     "types-psutil",
     "types-pytz",
     "types-pyyaml",
-]
-docs = [
+    # Docs
     "pydoctor >= 24.3.0",
-]
-dev = [
-    "nwp-consumer[test,lint,docs]",
-]
-lsp = [
+    # IDE support
     "python-lsp-server",
     "pylsp-mypy",
     "python-lsp-ruff",
@@ -102,6 +97,8 @@ plugins = [
 # If they are ever made, remove from here!
 module = [
     "cfgrib",
+    "botocore.session",
+    "botocore.client",
     "joblib",
     "ocf_blosc2",
     "s3fs",

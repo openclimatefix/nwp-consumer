@@ -23,6 +23,8 @@ See Also:
 import dataclasses
 from enum import StrEnum, auto
 
+from returns.result import Failure, ResultE, Success
+
 
 @dataclasses.dataclass(slots=True)
 class ParameterLimits:
@@ -77,6 +79,9 @@ class ParameterData:
     Used in sanity and validity checking the database values.
     """
 
+    alternate_shortnames: list[str] = dataclasses.field(default_factory=list)
+    """Alternate names for the parameter found in the wild."""
+
     def __str__(self) -> str:
         """String representation of the parameter."""
         return self.name
@@ -121,6 +126,7 @@ class Parameter(StrEnum):
                     description="Temperature at screen level",
                     units="C",
                     limits=ParameterLimits(upper=60, lower=-90),
+                    alternate_shortnames=["t", "t2m"],
                 )
             case self.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL.name:
                 return ParameterData(
@@ -130,6 +136,7 @@ class Parameter(StrEnum):
                                 "incident on the surface expected over the next hour.",
                     units="W/m^2",
                     limits=ParameterLimits(upper=1500, lower=0),
+                    alternate_shortnames=["swavr", "ssrd", "dswrf"],
                 )
             case self.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL.name:
                 return ParameterData(
@@ -139,6 +146,7 @@ class Parameter(StrEnum):
                                 "incident on the surface expected over the next hour.",
                     units="W/m^2",
                     limits=ParameterLimits(upper=500, lower=0),
+                    alternate_shortnames=["strd", "dlwrf"],
                 )
             case self.RELATIVE_HUMIDITY_SL.name:
                 return ParameterData(
@@ -148,6 +156,7 @@ class Parameter(StrEnum):
                                 "to the equilibrium vapour pressure of water",
                     units="%",
                     limits=ParameterLimits(upper=100, lower=0),
+                    alternate_shortnames=["r"],
                 )
             case self.VISIBILITY_SL.name:
                 return ParameterData(
@@ -157,6 +166,7 @@ class Parameter(StrEnum):
                                 "horizontally in daylight conditions.",
                     units="m",
                     limits=ParameterLimits(upper=4500, lower=0),
+                    alternate_shortnames=["vis"],
                 )
             case self.WIND_U_COMPONENT_10m.name:
                 return ParameterData(
@@ -166,6 +176,7 @@ class Parameter(StrEnum):
                                 "the wind in the eastward direction.",
                     units="m/s",
                     limits=ParameterLimits(upper=100, lower=-100),
+                    alternate_shortnames=["u10"],
                 )
             case self.WIND_V_COMPONENT_10m.name:
                 return ParameterData(
@@ -176,6 +187,7 @@ class Parameter(StrEnum):
                     units="m/s",
                     # Non-tornadic winds are usually < 100m/s
                     limits=ParameterLimits(upper=100, lower=-100),
+                    alternate_shortnames=["v10"],
                 )
             case self.WIND_U_COMPONENT_100m.name:
                 return ParameterData(
@@ -185,6 +197,7 @@ class Parameter(StrEnum):
                                 "the wind in the eastward direction.",
                     units="m/s",
                     limits=ParameterLimits(upper=100, lower=-100),
+                    alternate_shortnames=["u100"],
                 )
             case self.WIND_V_COMPONENT_100m.name:
                 return ParameterData(
@@ -194,6 +207,7 @@ class Parameter(StrEnum):
                                 "the wind in the northward direction.",
                     units="m/s",
                     limits=ParameterLimits(upper=100, lower=-100),
+                    alternate_shortnames=["v100"],
                 )
             case self.WIND_U_COMPONENT_200m.name:
                 return ParameterData(
@@ -203,6 +217,7 @@ class Parameter(StrEnum):
                                 "the wind in the eastward direction.",
                     units="m/s",
                     limits=ParameterLimits(upper=150, lower=-150),
+                    alternate_shortnames=["u200"],
                 )
             case self.WIND_V_COMPONENT_200m.name:
                 return ParameterData(
@@ -212,6 +227,7 @@ class Parameter(StrEnum):
                                 "the wind in the northward direction.",
                     units="m/s",
                     limits=ParameterLimits(upper=150, lower=-150),
+                    alternate_shortnames=["v200"],
                 )
             case self.SNOW_DEPTH_GL.name:
                 return ParameterData(
@@ -219,6 +235,7 @@ class Parameter(StrEnum):
                     description="Depth of snow on the ground.",
                     units="m",
                     limits=ParameterLimits(upper=12, lower=0),
+                    alternate_shortnames=["sd", "sdwe"],
                 )
             case self.CLOUD_COVER_HIGH.name:
                 return ParameterData(
@@ -229,6 +246,7 @@ class Parameter(StrEnum):
                                 "to the square's total area.",
                     units="UI",
                     limits=ParameterLimits(upper=1, lower=0),
+                    alternate_shortnames=["hcc"],
                 )
             case self.CLOUD_COVER_MEDIUM.name:
                 return ParameterData(
@@ -239,6 +257,7 @@ class Parameter(StrEnum):
                                 "to the square's total area.",
                     units="UI",
                     limits=ParameterLimits(upper=1, lower=0),
+                    alternate_shortnames=["mcc"],
                 )
             case self.CLOUD_COVER_LOW.name:
                 return ParameterData(
@@ -249,6 +268,7 @@ class Parameter(StrEnum):
                                 "to the square's total area.",
                     units="UI",
                     limits=ParameterLimits(upper=1, lower=0),
+                    alternate_shortnames=["lcc"],
                 )
             case self.CLOUD_COVER_TOTAL.name:
                 return ParameterData(
@@ -259,6 +279,7 @@ class Parameter(StrEnum):
                                 "to the square's total area.",
                     units="UI",
                     limits=ParameterLimits(upper=1, lower=0),
+                    alternate_shortnames=["tcc", "clt"],
                 )
             case self.TOTAL_PRECIPITATION_RATE_GL.name:
                 return ParameterData(
@@ -268,6 +289,7 @@ class Parameter(StrEnum):
                                 "including rain, snow, and hail.",
                     units="kg/m^2/s",
                     limits=ParameterLimits(upper=0.2, lower=0),
+                    alternate_shortnames=["prate", "tprate"],
                 )
             case self.DOWNWARD_ULTRAVIOLET_RADIATION_FLUX_GL.name:
                 return ParameterData(
@@ -278,6 +300,7 @@ class Parameter(StrEnum):
                                 "expected over the next hour.",
                     units="W/m^2",
                     limits=ParameterLimits(upper=1000, lower=0),
+                    alternate_shortnames=["uvb"],
                 )
             case self.DIRECT_SHORTWAVE_RADIATION_FLUX_GL.name:
                 return ParameterData(
@@ -289,7 +312,16 @@ class Parameter(StrEnum):
                                 "expected over the next hour.",
                     units="W/m^2",
                     limits=ParameterLimits(upper=1000, lower=0),
+                    alternate_shortnames=["dsrp"],
                 )
             case _:
                 # Shouldn't happen thanks to the test case in test_parameters.py
                 raise ValueError(f"Unknown parameter: {self}")
+
+    def try_from_alternate(name: str) -> ResultE["Parameter"]:
+        """Map an alternate name to a parameter."""
+        for p in Parameter:
+            if name in p.metadata().alternate_shortnames:
+                return Success(p)
+        return Failure(ValueError(f"Unknown shortname: {name}"))
+

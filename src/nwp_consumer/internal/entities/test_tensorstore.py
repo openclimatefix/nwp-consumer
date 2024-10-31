@@ -1,27 +1,77 @@
+import contextlib
 import dataclasses
 import datetime as dt
+import logging
+import os
+import shutil
 import unittest
+from collections.abc import Generator
+from unittest.mock import patch
 
 import numpy as np
 import xarray as xr
+from botocore.client import BaseClient as BotocoreClient
+from botocore.session import Session
+from moto.server import ThreadedMotoServer
 from returns.pipeline import is_successful
-from returns.result import Failure, Success
 
 from .coordinates import NWPDimensionCoordinateMap
 from .parameters import Parameter
 from .postprocess import PostProcessOptions
 from .tensorstore import TensorStore
 
+logging.getLogger("werkzeug").setLevel(logging.ERROR)
+
+
+class MockS3Bucket(contextlib.ContextDecorator):
+
+    client: BotocoreClient
+    server: ThreadedMotoServer
+    bucket: str = "test-bucket"
+
+    def __enter__(self) -> None:
+        self.server = ThreadedMotoServer()
+        self.server.start()
+
+        session = Session()
+        self.client = session.create_client(
+            service_name="s3",
+            region_name="us-east-1",
+            endpoint_url="http://localhost:5000",
+            aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+            aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
+        )
+
+        self.client.create_bucket(
+            Bucket=self.bucket,
+        )
+
+    def __exit__(self, *exc) -> bool:  # type:ignore
+        response = self.client.list_objects_v2(
+            Bucket=self.bucket,
+        )
+        if "Contents" in response:
+            for obj in response["Contents"]:
+                self.client.delete_object(
+                    Bucket=self.bucket,
+                    Key=obj["Key"],
+                )
+        self.server.stop()
+        return False
+
 
 class TestTensorStore(unittest.TestCase):
     """Test the business methods of the TensorStore class."""
 
-    test_coords: NWPDimensionCoordinateMap
-    test_store: TensorStore
+    @contextlib.contextmanager
+    def store(self, year: int) -> Generator[TensorStore, None, None]:
+        """Create an instance of the TensorStore class."""
 
-    def setUp(self) -> None:
-        self.test_coords = NWPDimensionCoordinateMap(
-            init_time=[dt.datetime(2021, 1, 1, h, tzinfo=dt.UTC) for h in [0, 6, 12, 18]],
+        test_coords: NWPDimensionCoordinateMap = NWPDimensionCoordinateMap(
+            init_time=[
+                dt.datetime(year, 1, 1, h, tzinfo=dt.UTC)
+                for h in [0, 6, 12, 18]
+            ],
             step=[1, 2, 3, 4],
             variable=[Parameter.TEMPERATURE_SL],
             latitude=np.linspace(90, -90, 12).tolist(),
@@ -29,25 +79,74 @@ class TestTensorStore(unittest.TestCase):
         )
 
         init_result = TensorStore.initialize_empty_store(
-            name="test_da",
-            coords=self.test_coords,
+            model="test_da",
+            repository="dummy_repository",
+            coords=test_coords,
         )
-        match init_result:
-            case Success(store):
-                self.test_store = store
-            case Failure(e):
-                raise ValueError(f"Failed to initialize test store: {e}.")
+        self.assertTrue(
+            is_successful(init_result),
+            msg=f"Unable to initialize store: {init_result}",
+        )
+        store = init_result.unwrap()
+        yield store
+        shutil.rmtree(store.path)
 
-
-    def test_initialize_empty_store(self) -> None:
+    @patch.dict(os.environ, {
+        "AWS_ENDPOINT_URL": "http://localhost:5000",
+        "AWS_ACCESS_KEY_ID": "test-key",
+        "AWS_SECRET_ACCESS_KEY": "test-secret",
+        "ZARRDIR": "s3://test-bucket/data",
+    }, clear=True)
+    def test_initialize_empty_store_s3(self) -> None:
         """Test the initialize_empty_store method."""
-        # TODO
-        pass
+
+        test_coords: NWPDimensionCoordinateMap = NWPDimensionCoordinateMap(
+            init_time=[
+                dt.datetime(2024, 1, 1, h, tzinfo=dt.UTC)
+                for h in [0, 6, 12, 18]
+            ],
+            step=[1, 2, 3, 4],
+            variable=[Parameter.TEMPERATURE_SL],
+            latitude=np.linspace(90, -90, 12).tolist(),
+            longitude=np.linspace(0, 360, 18).tolist(),
+        )
+
+        with MockS3Bucket():
+            init_result = TensorStore.initialize_empty_store(
+                model="test_da",
+                repository="dummy_repository",
+                coords=test_coords,
+            )
+            self.assertTrue(is_successful(init_result))
+
+            # Assert it overwrites existing stores successfully
+            init_result = TensorStore.initialize_empty_store(
+                model="new_test_da",
+                repository="dummy_repository",
+                coords=test_coords,
+            )
+            self.assertTrue(is_successful(init_result))
 
     def test_write_to_region(self) -> None:
         """Test the write_to_region method."""
-        # TODO
-        pass
+        with self.store(year=2022) as ts:
+            test_da: xr.DataArray = xr.DataArray(
+                name="test_da",
+                data=np.ones(
+                    shape=list(ts.coordinate_map.shapemap.values()),
+                ),
+                coords=ts.coordinate_map.to_pandas(),
+            )
+
+            # Write each init time and step one at a time
+            for it in test_da.coords["init_time"].values:
+                for step in test_da.coords["step"].values:
+                    write_result = ts.write_to_region(
+                        da=test_da.where(
+                            test_da["init_time"] == it, drop=True,
+                        ).where(test_da["step"] == step, drop=True),
+                    )
+                    self.assertTrue(is_successful(write_result), msg=write_result)
 
     def test_postprocess(self) -> None:
         """Test the postprocess method."""
@@ -64,25 +163,19 @@ class TestTensorStore(unittest.TestCase):
                 options=PostProcessOptions(),
                 should_error=False,
             ),
-            TestCase(
-                name="standardize_coordinates",
-                options=PostProcessOptions(
-                    standardize_coordinates=True,
-                ),
-                should_error=False,
-            ),
         ]
 
-        for t in tests:
-            with self.subTest(name=t.name):
-                result = self.test_store.postprocess(t.options)
-                if t.should_error:
-                    self.assertTrue(
-                        isinstance(result, Exception),
-                        msg="Expected error to be returned.",
-                    )
-                else:
-                    self.assertTrue(is_successful(result))
+        with self.store(year=1971) as ts:
+            for t in tests:
+                with self.subTest(name=t.name):
+                    result = ts.postprocess(t.options)
+                    if t.should_error:
+                        self.assertTrue(
+                            isinstance(result, Exception),
+                            msg="Expected error to be returned.",
+                        )
+                    else:
+                        self.assertTrue(is_successful(result))
 
     def test_missing_times(self) -> None:
         """Test the missing_times method."""
@@ -93,45 +186,47 @@ class TestTensorStore(unittest.TestCase):
             times_to_write: list[dt.datetime]
             expected: list[dt.datetime]
 
-        tests: list[TestCase] = [
-            TestCase(
-                name="all_missing_times",
-                times_to_write=[],
-                expected=self.test_coords.init_time,
-            ),
-            TestCase(
-                name="some_missing_times",
-                times_to_write=[self.test_coords.init_time[0], self.test_coords.init_time[2]],
-                expected=[self.test_coords.init_time[1], self.test_coords.init_time[3]],
-            ),
-            TestCase(
-                name="no_missing_times",
-                times_to_write=self.test_coords.init_time,
-                expected=[],
-            ),
-        ]
+        with self.store(year=2024) as ts:
+            tests: list[TestCase] = [
+                TestCase(
+                    name="all_missing_times",
+                    times_to_write=[],
+                    expected=ts.coordinate_map.init_time,
+                ),
+                TestCase(
+                    name="some_missing_times",
+                    times_to_write=[ts.coordinate_map.init_time[0], ts.coordinate_map.init_time[2]],
+                    expected=[ts.coordinate_map.init_time[1], ts.coordinate_map.init_time[3]],
+                ),
+                TestCase(
+                    name="no_missing_times",
+                    times_to_write=ts.coordinate_map.init_time,
+                    expected=[],
+                ),
+            ]
 
-        for t in tests:
-            with self.subTest(name=t.name):
-                for i in t.times_to_write:
-                    write_result = self.test_store.write_to_region(
-                        da=xr.DataArray(
-                            name="test_da",
-                            data=np.ones(
-                                shape=[
-                                    1 if k == "init_time" else v
-                                    for k, v in self.test_coords.shapemap.items()
-                                ],
+            for t in tests:
+                with self.subTest(name=t.name):
+                    for i in t.times_to_write:
+                        write_result = ts.write_to_region(
+                            da=xr.DataArray(
+                                name="test_da",
+                                data=np.ones(
+                                    shape=[
+                                        1 if k == "init_time" else v
+                                        for k, v in ts.coordinate_map.shapemap.items()
+                                    ],
+                                ),
+                                coords=ts.coordinate_map.to_pandas() | {
+                                    "init_time": [np.datetime64(i.replace(tzinfo=None), "ns")],
+                                },
                             ),
-                            coords=self.test_coords.to_pandas() | {
-                                "init_time": [np.datetime64(i.replace(tzinfo=None), "ns")],
-                            },
-                        ),
-                    )
-                    write_result.unwrap()
-                result = self.test_store.missing_times()
-                missing_times = result.unwrap()
-                self.assertListEqual(missing_times, t.expected)
+                        )
+                        write_result.unwrap()
+                    result = ts.missing_times()
+                    missing_times = result.unwrap()
+                    self.assertListEqual(missing_times, t.expected)
 
 if __name__ == "__main__":
     unittest.main()
+

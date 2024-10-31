@@ -89,7 +89,7 @@ class CLIHandler:
                         log.error(f"Failed to consume NWP data: {e}")
                         return 1
                     case Success(path):
-                        log.info(f"Successfully consumed NWP data to '{path.as_posix()}'")
+                        log.info(f"Successfully consumed NWP data to '{path}'")
                         return 0
 
             case "archive":
@@ -100,7 +100,7 @@ class CLIHandler:
                         log.error(f"Failed to archive NWP data: {e}")
                         return 1
                     case Success(path):
-                        log.info(f"Successfully archived NWP data to '{path.as_posix()}'")
+                        log.info(f"Successfully archived NWP data to '{path}'")
                         return 0
 
             case "info":

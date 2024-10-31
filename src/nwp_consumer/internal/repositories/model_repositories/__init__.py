@@ -1,8 +1,10 @@
-from .metoffice_global import CedaMetOfficeGlobalModelRepository
+from .metoffice_global import CEDAFTPModelRepository
 from .ecmwf_realtime import ECMWFRealTimeS3ModelRepository
+from .noaa_gfs import NOAAS3ModelRepository
 
 __all__ = [
-    "CedaMetOfficeGlobalModelRepository",
+    "CEDAFTPModelRepository",
     "ECMWFRealTimeS3ModelRepository",
+    "NOAAS3ModelRepository",
 ]
 

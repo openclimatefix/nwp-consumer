@@ -45,7 +45,7 @@ jobs:
           python-version-file: "pyproject.toml"
 
       - name: Install editable package and required dependencies
-        run: uv sync --extra=dev
+        run: uv sync
 
       - name: Lint package
         run: uv run ruff check --output-format=github .
@@ -76,7 +76,7 @@ jobs:
           python-version-file: "pyproject.toml"
 
       - name: Install editable package and required dependencies
-        run: uv sync --extra=dev
+        run: uv sync
 
       # Run unittests
       # * Produce JUnit XML report
@@ -113,7 +113,7 @@ jobs:
           python-version-file: "pyproject.toml"
 
       - name: Install editable package and required dependencies
-        run: uv sync --extra=dev
+        run: uv sync
 
       - name: Build documentation
         run: uv run pydoctor
@@ -174,3 +174,4 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+

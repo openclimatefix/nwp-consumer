@@ -18,12 +18,11 @@ def parse_env() -> Adaptors:
     """Parse from the environment."""
     model_repository_adaptor: type[ports.ModelRepository]
     match os.getenv("MODEL_REPOSITORY"):
-        case None:
-            log.error("MODEL_REPOSITORY is not set in environment.")
-            sys.exit(1)
+        case None | "gfs":
+            model_repository_adaptor = repositories.NOAAS3ModelRepository
         case "ceda":
-            model_repository_adaptor = repositories.CedaMetOfficeGlobalModelRepository
-        case "ecmwf-realtime-s3":
+            model_repository_adaptor = repositories.CEDAFTPModelRepository
+        case "ecmwf-realtime":
             model_repository_adaptor = repositories.ECMWFRealTimeS3ModelRepository
         case _ as model:
             log.error(f"Unknown model: {model}")
