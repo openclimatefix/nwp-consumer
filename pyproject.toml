@@ -50,6 +50,7 @@ dev = [
     "types-pyyaml",
     # Docs
     "pydoctor >= 24.3.0",
+    "pdoc >= 15.0.0",
     # IDE support
     "python-lsp-server",
     "pylsp-mypy",
@@ -158,6 +159,7 @@ project-base-dir = "src/nwp_consumer"
 docformat = "google"
 html-output = "docs"
 theme = "classic"
+warnings-as-errors = true
 privacy = [
     "HIDDEN:**.test_*",
 ]

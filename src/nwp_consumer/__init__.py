@@ -8,23 +8,27 @@ Configuration
 
 The following environment variables can be used to configure the application:
 
-+-------------------------------+-------------------------------------+---------------------------------------------+
-| Key                           | Description                         | Default                                     |
-+===============================+=====================================+=============================================+
-| LOGLEVEL                      | The logging level for the app.      | INFO                                        |
-+-------------------------------+-------------------------------------+---------------------------------------------+
-| RAWDIR                        | The working directory for the app.  | ~/.local/cache/nwp/<REPO>/<MODEL>/raw       |
-|                               | Can be a local path or an S3 URI.   |                                             |
-+-------------------------------+-------------------------------------+---------------------------------------------+
-| ZARRDIR                       | The output directory for the app.   | ~/.local/cache/nwp/<REPO>/<MODEL>/data      |
-|                               | Can be a local path or an S3 URI.   |                                             |
-+-------------------------------+-------------------------------------+---------------------------------------------+
-| NOTIFICATION_REPOSITORY       | The notification repository to use. | stdout                                      |
-+-------------------------------+-------------------------------------+---------------------------------------------+
-| MODEL_REPOSITORY              | The model repository to use.        | ceda-metoffice-global                       |
-+-------------------------------+-------------------------------------+---------------------------------------------+
-| CONCURRENCY                   | Whether to use concurrency.         | True                                        |
-+-------------------------------+-------------------------------------+---------------------------------------------+
+.. code-block:: none
+
+    | Key                       | Description                         | Default                                     |
+    |---------------------------|-------------------------------------|---------------------------------------------|
+    | LOGLEVEL                  | The logging level for the app.      | INFO                                        |
+    |---------------------------|-------------------------------------|---------------------------------------------|
+    | RAWDIR                    | The working directory for the app.  | ~/.local/cache/nwp/<REPO>/<MODEL>/raw       |
+    |                           | Can be a local path or an S3 URI.   |                                             |
+    |---------------------------|-------------------------------------|---------------------------------------------|
+    | ZARRDIR                   | The output directory for the app.   | ~/.local/cache/nwp/<REPO>/<MODEL>/data      |
+    |                           | Can be a local path or an S3 URI.   |                                             |
+    |---------------------------|-------------------------------------|---------------------------------------------|
+    | NOTIFICATION_REPOSITORY   | The notification repository to use. | stdout                                      |
+    |---------------------------|-------------------------------------|---------------------------------------------|
+    | MODEL_REPOSITORY          | The model repository to use.        | ceda-metoffice-global                       |
+    |---------------------------|-------------------------------------|---------------------------------------------|
+    | CONCURRENCY               | Whether to use concurrency.         | True                                        |
+    |---------------------------|-------------------------------------|---------------------------------------------|
+
+There is also specific configuration variables for some model repositories.
+Refer to their documentation for more information: `nwp_consumer.internal.repositories`.
 
 
 Development Documentation
@@ -54,15 +58,15 @@ Project structure
 -----------------
 
 The code is structured following principles from the `Hexagonal Architecture`_ pattern.
-In brief, this means a clear separation between the application's business logic
-- it's *core* - and the *actors* that are external to it.
+In brief, this means a clear separation between
+the application's business logic - it's *core* - and the *actors* that are external to it.
 
 The core of the services is split into three main components:
 
-- `internal.entities` - The domain classes that define the structure of the data
+- `nwp_consumer.internal.entities` - The domain classes that define the structure of the data
   that the services works with, and the business logic they contain.
-- `internal.ports` - The interfaces that define how the services interact with external actors.
-- `internal.services` - The business logic that defines how the service functions.
+- `nwp_consumer.internal.ports` - The interfaces that define how the services interact with external actors.
+- `nwp_consumer.internal.services` - The business logic that defines how the service functions.
 
 Alongside these core components are the actors, which adhere to the interfaces defined in the
 ports module. Actors come in two flavours, *driving* and *driven*.
@@ -72,9 +76,9 @@ or REST server.
 
 This application currently has the following defined actors:
 
-- `internal.repositories.model_repositories` (driven) - The sources of NWP data.
-- `internal.repositories.notification_repositories` (driven) - The sinks of notification data.
-- `internal.handlers.cli` (driving) - The command-line interface for the services.
+- `nwp_consumer.internal.repositories.model_repositories` (driven) - The sources of NWP data.
+- `nwp_consumer.internal.repositories.notification_repositories` (driven) - The sinks of notification data.
+- `nwp_consumer.internal.handlers.cli` (driving) - The command-line interface for the services.
 
 The actors are then responsible for implementing the abstract ports,
 and are *dependency-injected* in at runtime. This allows the services to be easily tested

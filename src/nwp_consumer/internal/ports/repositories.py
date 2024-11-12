@@ -112,21 +112,14 @@ class ModelRepository(abc.ABC):
     @staticmethod
     @abc.abstractmethod
     def repository() -> entities.ModelRepositoryMetadata:
-        """Metadata about the model repository.
-
-        See Also:
-            - `entities.ModelRepositoryMetadata`.
-        """
+        """Metadata about the model repository."""
         pass
 
     @staticmethod
     @abc.abstractmethod
     def model() -> entities.ModelMetadata:
-        """Metadata about the model.
-
-        See Also:
-            - `entities.ModelMetadata`.
-        """
+        """Metadata about the model."""
+        pass
 
 
 class ZarrRepository(abc.ABC):

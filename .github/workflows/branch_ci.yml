@@ -115,8 +115,14 @@ jobs:
       - name: Install editable package and required dependencies
         run: uv sync
 
+        # Pydoctor is ran to find any linking errors in the docs
       - name: Build documentation
-        run: uv run pydoctor
+        run: |
+          uv run pydoctor --html-output=tmpdocs -W -q
+          PDOC_ALLOW_EXEC=1 uv run pdoc -o docs \
+            --docformat=google \
+            --logo="https://cdn.prod.website-files.com/62d92550f6774db58d441cca/6324a2038936ecda71599a8b_OCF_Logo_black_trans.png" \
+            src/nwp_consumer
 
       - name: Upload documentation
         uses: actions/upload-artifact@v4
@@ -143,7 +149,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
@@ -165,7 +171,7 @@ jobs:
       # * Creates a multiplatform-aware image
       # * Pulls build cache from the registry
       - name: Build and push container image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: Containerfile
