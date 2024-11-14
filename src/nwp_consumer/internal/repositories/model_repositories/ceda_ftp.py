@@ -87,7 +87,7 @@ from typing import override
 import numpy as np
 import xarray as xr
 from joblib import delayed
-from returns.result import Failure, Result, ResultE, Success
+from returns.result import Failure, ResultE, Success
 
 from nwp_consumer.internal import entities, ports
 
@@ -161,11 +161,6 @@ class CEDAFTPModelRepository(ports.ModelRepository):
     @override
     def fetch_init_data(self, it: dt.datetime) \
             -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
-        # Ensure class is authenticated
-        authenticate_result = self.authenticate()
-        if isinstance(authenticate_result, Failure):
-            yield delayed(Result.from_failure)(authenticate_result.failure())
-            return
 
         parameter_stubs: list[str] = [
             "Total_Downward_Surface_SW_Flux",
@@ -208,9 +203,11 @@ class CEDAFTPModelRepository(ports.ModelRepository):
         Returns:
             A Result containing the instantiated class if successful, or an error if not.
         """
-        if all(k not in os.environ for k in cls.repository().required_env):
-            return Failure(ValueError(
-                f"Missing required environment variables: {cls.repository().required_env}",
+        missing_envs = cls.repository().missing_required_envs()
+        if len(missing_envs) > 0:
+            return Failure(OSError(
+                f"Cannot authenticate with CEDA FTP service due to "
+                f"missing required environment variables: {', '.join(missing_envs)}",
             ))
         username: str = urllib.parse.quote(os.environ["CEDA_FTP_USER"])
         password: str = urllib.parse.quote(os.environ["CEDA_FTP_PASS"])
@@ -252,9 +249,7 @@ class CEDAFTPModelRepository(ports.ModelRepository):
                         f.write(chunk)
                         f.flush()
                 log.debug(
-                    "Downloaded %s to %s (%s bytes)",
-                    url,
-                    local_path,
+                    f"Downloaded '{url}' to '{local_path}' (%s bytes)",
                     local_path.stat().st_size,
                 )
             except Exception as e:
@@ -268,7 +263,7 @@ class CEDAFTPModelRepository(ports.ModelRepository):
 
     @staticmethod
     def _convert(path: pathlib.Path) -> ResultE[list[xr.DataArray]]:
-        """Convert a file to an xarray dataset.
+        """Convert a local grib file to xarray DataArrays.
 
         Args:
             path: The path to the file to convert.
@@ -283,7 +278,7 @@ class CEDAFTPModelRepository(ports.ModelRepository):
             )
         try:
             da: xr.DataArray = (
-                CEDAFTPModelRepository._rename_or_drop_vars(
+                entities.Parameter.rename_else_drop_ds_vars(
                     ds=ds,
                     allowed_parameters=CEDAFTPModelRepository.model().expected_coordinates.variable,
                 )
@@ -309,25 +304,3 @@ class CEDAFTPModelRepository(ports.ModelRepository):
                 ),
             )
         return Success([da])
-
-
-    @staticmethod
-    def _rename_or_drop_vars(ds: xr.Dataset, allowed_parameters: list[entities.Parameter]) \
-            -> xr.Dataset:
-        """Rename variables to match the expected names, dropping invalid ones.
-
-        Args:
-            ds: The xarray dataset to rename.
-            allowed_parameters: The list of parameters allowed in the resultant dataset.
-        """
-        for var in ds.data_vars:
-            param_result = entities.Parameter.try_from_alternate(str(var))
-            match param_result:
-                case Success(p):
-                    if p in allowed_parameters:
-                        ds = ds.rename_vars({var: p.value})
-                        continue
-            log.warning("Dropping invalid parameter '%s' from dataset", var)
-            ds = ds.drop_vars(str(var))
-        return ds
-

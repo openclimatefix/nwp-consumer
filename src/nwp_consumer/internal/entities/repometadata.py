@@ -15,6 +15,7 @@ where NWP data produced by the model resides.
 
 import dataclasses
 import datetime as dt
+import os
 
 import pandas as pd
 
@@ -143,6 +144,14 @@ class ModelRepositoryMetadata:
             for hour in self.running_hours:
                 its.append(dt.datetime(year, month, day, hour, tzinfo=dt.UTC))
         return its
+
+    def missing_required_envs(self) -> list[str]:
+        """Get a list of unset required environment variables.
+
+        Returns:
+            A list of missing environment variables.
+        """
+        return [var for var in self.required_env if var not in os.environ]
 
     def __str__(self) -> str:
         """Return a pretty-printed string representation of the metadata."""

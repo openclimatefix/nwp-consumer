@@ -2,6 +2,16 @@
 
 This module contains the implementation of the model repository for the
 NOAA GFS data stored in an S3 bucket.
+
+Repository Information
+======================
+
+TODO: provide links etc
+
+Documented Structure
+--------------------
+
+TODO: document filestructure
 """
 
 import datetime as dt
@@ -188,7 +198,8 @@ class NOAAS3ModelRepository(ports.ModelRepository):
 
         return Success(local_path)
 
-    def _convert(self, path: pathlib.Path) -> ResultE[list[xr.DataArray]]:
+    @staticmethod
+    def _convert(path: pathlib.Path) -> ResultE[list[xr.DataArray]]:
         """Convert a GFS file to an xarray DataArray collection.
 
         Args:
@@ -206,7 +217,7 @@ class NOAAS3ModelRepository(ports.ModelRepository):
                     "squeeze": True,
                     "filter_by_keys": {
                         "shortName": [
-                            x for v in self.model().expected_coordinates.variable
+                            x for v in NOAAS3ModelRepository.model().expected_coordinates.variable
                             for x in v.metadata().alternate_shortnames
                         ],
                     },
@@ -226,9 +237,9 @@ class NOAAS3ModelRepository(ports.ModelRepository):
         processed_das: list[xr.DataArray] = []
         for i, ds in enumerate(dss):
             try:
-                ds = NOAAS3ModelRepository._rename_or_drop_vars(
+                ds = entities.Parameter.rename_else_drop_ds_vars(
                     ds=ds,
-                    allowed_parameters=self.model().expected_coordinates.variable,
+                    allowed_parameters=NOAAS3ModelRepository.model().expected_coordinates.variable,
                 )
                 # Ignore datasets with no variables of interest
                 if len(ds.data_vars) == 0:
@@ -280,23 +291,4 @@ class NOAAS3ModelRepository(ports.ModelRepository):
             return False
         return not int(match.group(2)) > max_step
 
-    @staticmethod
-    def _rename_or_drop_vars(ds: xr.Dataset, allowed_parameters: list[entities.Parameter]) \
-            -> xr.Dataset:
-        """Rename variables to match the expected names, dropping invalid ones.
-
-        Args:
-            ds: The xarray dataset to rename.
-            allowed_parameters: The list of parameters allowed in the resultant dataset.
-        """
-        for var in ds.data_vars:
-            param_result = entities.Parameter.try_from_alternate(str(var))
-            match param_result:
-                case Success(p):
-                    if p in allowed_parameters:
-                        ds = ds.rename_vars({var: p.value})
-                        continue
-            log.debug("Dropping invalid parameter '%s' from dataset", var)
-            ds = ds.drop_vars(str(var))
-        return ds
 

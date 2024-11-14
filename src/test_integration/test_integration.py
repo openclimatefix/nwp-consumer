@@ -11,12 +11,12 @@ class TestIntegration(unittest.TestCase):
     def test_ceda_metoffice_global_model(self) -> None:
         c = handlers.CLIHandler(
             consumer_usecase=services.ConsumerService(
-                model_repository=repositories.CEDAFTPModelRepository,
-                notification_repository=repositories.StdoutNotificationRepository,
+                model_repository=repositories.model_repositories.CEDAFTPModelRepository,
+                notification_repository=repositories.notification_repositories.StdoutNotificationRepository,
             ),
             archiver_usecase=services.ArchiverService(
-                model_repository=repositories.CEDAFTPModelRepository,
-                notification_repository=repositories.StdoutNotificationRepository,
+                model_repository=repositories.model_repositories.CEDAFTPModelRepository,
+                notification_repository=repositories.notification_repositories.StdoutNotificationRepository,
             ),
         )
         result = c._consumer_usecase.consume(it=dt.datetime(2021, 1, 1, tzinfo=dt.UTC))

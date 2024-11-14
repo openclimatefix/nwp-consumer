@@ -18,9 +18,9 @@ from nwp_consumer.internal import entities
 class ConsumeUseCase(abc.ABC):
     """Interface for the consumer use case.
 
-    Defines the business-critical methods for the following use case:
+    Defines the business-critical methods for the following use cases:
 
-    'A user should be able to consume NWP data for a given initialization time.'
+    - 'A user should be able to consume NWP data for a given initialization time.'
     """
 
 
@@ -55,9 +55,9 @@ class ConsumeUseCase(abc.ABC):
 class ArchiveUseCase(abc.ABC):
     """Interface for the archive use case.
 
-    Defines the following business-critical methods:
+    Defines the business-critical methods for the following use cases:
 
-    'A user should be able to archive NWP data for a given time period.'
+    - 'A user should be able to archive NWP data for a given time period.'
     """
 
     @abc.abstractmethod
@@ -73,15 +73,25 @@ class ArchiveUseCase(abc.ABC):
         """
         pass
 
-class InformUseCase(abc.ABC):
+class InfoUseCase(abc.ABC):
     """Interface for the notification use case.
 
-    Defines the following business-critical methods:
+    Defines the business-critical methods for the following use cases:
 
-    'A user should be able to retrieve information about the service.'
+    - 'A user should be able to retrieve information about the service.'
     """
 
     @abc.abstractmethod
-    def model_info(self) -> str:
+    def available_models(self) -> list[str]:
+        """Get a list of available models."""
+        pass
+
+    @abc.abstractmethod
+    def model_repository_info(self) -> str:
         """Get information about the model repository."""
+        pass
+
+    @abc.abstractmethod
+    def model_info(self) -> str:
+        """Get information about the model."""
         pass

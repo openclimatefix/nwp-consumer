@@ -1,5 +1,8 @@
 """Model repository implementation for ECMWF live data from S3.
 
+Repository Information
+======================
+
 Documented Structure
 --------------------
 
@@ -143,9 +146,10 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
                 f"in bucket path '{self.bucket}/ecmwf'. Ensure files exist at the given path "
                 "named with the expected pattern, e.g. 'A2S10250000102603001.",
             ))
+            return
 
         log.debug(
-            f"Found {len(urls)} files for init time '{it.strftime('%Y-%m-%d %H:%M')}' "
+            f"Found {len(urls)} file(s) for init time '{it.strftime('%Y-%m-%d %H:%M')}' "
             f"in bucket path '{self.bucket}/ecmwf'.",
         )
         for url in urls:
@@ -154,6 +158,12 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
     @classmethod
     @override
     def authenticate(cls) -> ResultE["ECMWFRealTimeS3ModelRepository"]:
+        missing_envs = cls.repository().missing_required_envs()
+        if len(missing_envs) > 0:
+            return Failure(OSError(
+                f"Cannot authenticate with ECMWF Realtime S3 service due to "
+                f"missing required environment variables: {', '.join(missing_envs)}",
+            ))
         try:
             bucket: str = os.environ["ECMWF_REALTIME_S3_BUCKET"]
             _fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
@@ -247,7 +257,7 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
         for i, ds in enumerate(dss):
             try:
                 da: xr.DataArray = (
-                    ECMWFRealTimeS3ModelRepository._rename_or_drop_vars(
+                    entities.Parameter.rename_else_drop_ds_vars(
                         ds=ds,
                         allowed_parameters=ECMWFRealTimeS3ModelRepository.model().expected_coordinates.variable,
                     )
@@ -309,25 +319,3 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
             "%Y%m%d%H%M%z",
         )
         return tt < it + dt.timedelta(hours=max_step)
-
-
-    @staticmethod
-    def _rename_or_drop_vars(ds: xr.Dataset, allowed_parameters: list[entities.Parameter]) \
-            -> xr.Dataset:
-        """Rename variables to match the expected names, dropping invalid ones.
-
-        Args:
-            ds: The xarray dataset to rename.
-            allowed_parameters: The list of parameters allowed in the resultant dataset.
-        """
-        for var in ds.data_vars:
-            param_result = entities.Parameter.try_from_alternate(str(var))
-            match param_result:
-                case Success(p):
-                    if p in allowed_parameters:
-                        ds = ds.rename_vars({var: p.value})
-                        continue
-            log.warning("Dropping invalid parameter '%s' from dataset", var)
-            ds = ds.drop_vars(str(var))
-        return ds
-

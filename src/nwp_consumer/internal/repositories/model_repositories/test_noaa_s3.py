@@ -8,7 +8,7 @@ import s3fs
 from returns.pipeline import is_successful
 
 from ...entities import NWPDimensionCoordinateMap
-from .noaa_gfs import NOAAS3ModelRepository
+from .noaa_s3 import NOAAS3ModelRepository
 
 if TYPE_CHECKING:
     import xarray as xr

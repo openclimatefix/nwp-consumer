@@ -21,9 +21,13 @@ See Also:
 """
 
 import dataclasses
+import logging
 from enum import StrEnum, auto
 
+import xarray as xr
 from returns.result import Failure, ResultE, Success
+
+log = logging.getLogger("nwp-consumer")
 
 
 @dataclasses.dataclass(slots=True)
@@ -136,7 +140,7 @@ class Parameter(StrEnum):
                                 "incident on the surface expected over the next hour.",
                     units="W/m^2",
                     limits=ParameterLimits(upper=1500, lower=0),
-                    alternate_shortnames=["swavr", "ssrd", "dswrf"],
+                    alternate_shortnames=["swavr", "ssrd", "dswrf", "sdswrf"],
                 )
             case self.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL.name:
                 return ParameterData(
@@ -146,7 +150,7 @@ class Parameter(StrEnum):
                                 "incident on the surface expected over the next hour.",
                     units="W/m^2",
                     limits=ParameterLimits(upper=500, lower=0),
-                    alternate_shortnames=["strd", "dlwrf"],
+                    alternate_shortnames=["strd", "dlwrf", "sdlwrf"],
                 )
             case self.RELATIVE_HUMIDITY_SL.name:
                 return ParameterData(
@@ -156,7 +160,7 @@ class Parameter(StrEnum):
                                 "to the equilibrium vapour pressure of water",
                     units="%",
                     limits=ParameterLimits(upper=100, lower=0),
-                    alternate_shortnames=["r"],
+                    alternate_shortnames=["r", "r2"],
                 )
             case self.VISIBILITY_SL.name:
                 return ParameterData(
@@ -324,4 +328,29 @@ class Parameter(StrEnum):
             if name in p.metadata().alternate_shortnames:
                 return Success(p)
         return Failure(ValueError(f"Unknown shortname: {name}"))
+
+    @staticmethod
+    def rename_else_drop_ds_vars(
+        ds: xr.Dataset, allowed_parameters: list["Parameter"],
+    ) -> xr.Dataset:
+        """Rename variables to match expected names, dropping invalid ones.
+
+        Returns a dataset with all variables in it renamed to a known `entities.Parameter`
+        name, if a matching parameter exists, and it is an allowed parameter. Otherwise,
+        the variable is dropped from the dataset.
+
+        Args:
+            ds: The xarray dataset to rename.
+            allowed_parameters: The list of parameters allowed in the resultant dataset.
+        """
+        for var in ds.data_vars:
+            param_result = Parameter.try_from_alternate(str(var))
+            match param_result:
+                case Success(p):
+                    if p in allowed_parameters:
+                        ds = ds.rename_vars({var: p.value})
+                        continue
+            log.debug("Dropping invalid parameter '%s' from dataset", var)
+            ds = ds.drop_vars(str(var))
+        return ds
 

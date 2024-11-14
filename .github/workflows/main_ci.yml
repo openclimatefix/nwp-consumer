@@ -17,6 +17,8 @@ concurrency:
 jobs:
 
   # Define an autotagger job that creates tags on changes to master
+  # Use #major #minor in merge commit messages to bump version beyond patch
+  # See https://github.com/RueLaLa/auto-tagger?tab=readme-ov-file#usage
   tag:
     runs-on: ubuntu-latest
     if: |
@@ -34,3 +36,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_PR_NUMBER: ${{ github.event.number }}
+

@@ -53,6 +53,7 @@ docs/
 # Environments
 .venv
 uv.lock
+.env
 
 # mypy
 .mypy_cache/

@@ -8,7 +8,7 @@ from returns.pointfree import bind
 
 from nwp_consumer.internal import entities
 
-from .metoffice_global import CEDAFTPModelRepository
+from .ceda_ftp import CEDAFTPModelRepository
 
 
 class TestCEDAFTPModelRepository(unittest.TestCase):
@@ -22,7 +22,7 @@ class TestCEDAFTPModelRepository(unittest.TestCase):
         """Test the _download_and_convert method."""
 
         auth_result = CEDAFTPModelRepository.authenticate()
-        self.assertTrue(is_successful(auth_result), msg=f"Error: {auth_result.failure}")
+        self.assertTrue(is_successful(auth_result), msg=f"Error: {auth_result}")
         c = auth_result.unwrap()
 
         test_it: dt.datetime = dt.datetime(2021, 1, 1, 0, tzinfo=dt.UTC)

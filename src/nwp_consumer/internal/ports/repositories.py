@@ -13,6 +13,7 @@ in a uniform way.
 
 import abc
 import datetime as dt
+import logging
 import pathlib
 from collections.abc import Callable, Iterator
 
@@ -21,13 +22,15 @@ from returns.result import ResultE
 
 from nwp_consumer.internal import entities
 
+log = logging.getLogger("nwp-consumer")
+
 
 class ModelRepository(abc.ABC):
     """Interface for a repository that produces raw NWP data.
 
     Since different producers of NWP data have different data storage
     implementations, a ModelRepository needs to define its own download
-    and processing  methods.
+    and processing methods.
 
     A source may provide one or more files for a given init time.
     To keep memory usage at a minimum, when converting raw data to zarr,

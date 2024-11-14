@@ -18,12 +18,19 @@ def parse_env() -> Adaptors:
     """Parse from the environment."""
     model_repository_adaptor: type[ports.ModelRepository]
     match os.getenv("MODEL_REPOSITORY"):
+        # Default to NOAA S3 as it is freely accessible
         case None | "gfs":
-            model_repository_adaptor = repositories.NOAAS3ModelRepository
+            model_repository_adaptor = \
+                repositories.model_repositories.NOAAS3ModelRepository
         case "ceda":
-            model_repository_adaptor = repositories.CEDAFTPModelRepository
+            model_repository_adaptor = \
+                repositories.model_repositories.CEDAFTPModelRepository
         case "ecmwf-realtime":
-            model_repository_adaptor = repositories.ECMWFRealTimeS3ModelRepository
+            model_repository_adaptor = \
+                repositories.model_repositories.ECMWFRealTimeS3ModelRepository
+        case "metoffice-datahub":
+            model_repository_adaptor = \
+                repositories.model_repositories.MetOfficeDatahubModelRepository
         case _ as model:
             log.error(f"Unknown model: {model}")
             sys.exit(1)
@@ -31,9 +38,11 @@ def parse_env() -> Adaptors:
     notification_repository_adaptor: type[ports.NotificationRepository]
     match os.getenv("NOTIFICATION_REPOSITORY", "stdout"):
         case "stdout":
-            notification_repository_adaptor = repositories.StdoutNotificationRepository
+            notification_repository_adaptor = \
+                repositories.notification_repositories.StdoutNotificationRepository
         case "dagster-pipes":
-            notification_repository_adaptor = repositories.DagsterPipesNotificationRepository
+            notification_repository_adaptor = \
+                repositories.notification_repositories.DagsterPipesNotificationRepository
         case _ as notification:
             log.error(f"Unknown notification repository: {notification}")
             sys.exit(1)
@@ -46,6 +55,7 @@ def parse_env() -> Adaptors:
 
 def run_cli() -> None:
     """Entrypoint for the CLI handler."""
+    # TODO: InfoUseCase
     adaptors = parse_env()
     c = handlers.CLIHandler(
         consumer_usecase=services.ConsumerService(

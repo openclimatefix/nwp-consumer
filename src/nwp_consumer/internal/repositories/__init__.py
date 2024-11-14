@@ -14,31 +14,25 @@ Examples of driven or secondary actors include:
 - a message queue
 - a filesystem
 
+Since they are stores of data, they are referred to in this package
+(and often in hexagonal architecture documentation) as *repositories*.
+
 This module
 -----------
 
 This module contains implementations for the following driven actors:
 
 - Notification Repository - Somewhere to send notifications to
-- Model Repository - Source of NWP data
+- Model Repository - A source of NWP data
 
 Both inherit from the repository ports specified in the core via `nwp_consumer.internal.ports`.
 """
-
-from .model_repositories import (
-    CEDAFTPModelRepository,
-    ECMWFRealTimeS3ModelRepository,
-    NOAAS3ModelRepository,
-)
-from .notification_repositories import (
-    StdoutNotificationRepository,
-    DagsterPipesNotificationRepository,
+from . import (
+    model_repositories,
+    notification_repositories,
 )
 
 __all__ = [
-    "CEDAFTPModelRepository",
-    "ECMWFRealTimeS3ModelRepository",
-    "NOAAS3ModelRepository",
-    "StdoutNotificationRepository",
-    "DagsterPipesNotificationRepository",
+    "model_repositories",
+    "notification_repositories",
 ]
