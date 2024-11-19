@@ -5,6 +5,8 @@ enabling subselection across any dimension of data, provided it is
 chunked appropriately.
 
 This module provides a class for storing metadata about a Zarr store.
+
+TODO: 2024-11-20 This module wants refactoring into smaller testable components.
 """
 
 import abc
@@ -13,6 +15,8 @@ import datetime as dt
 import logging
 import os
 import pathlib
+import shutil
+from collections.abc import MutableMapping
 from typing import Any
 
 import pandas as pd
@@ -79,7 +83,8 @@ class TensorStore(abc.ABC):
         This method writes a blank dataarray to disk based on the input coordinates,
         which define the dimension labels and tick values of the output dataset object.
 
-        .. note: If a store already exists at the expected path, it will be overwritten!
+        .. note: If a store already exists at the expected path,
+           it is checked for consistency with the input coordinates and used if valid.
 
         The dataarray is 'blank' because it is written via::
 
@@ -126,47 +131,27 @@ class TensorStore(abc.ABC):
                 ),
             )
 
-
         zarrdir = os.getenv("ZARRDIR", f"~/.local/cache/nwp/{repository}/{model}/data")
         store: zarr.storage.Store
         path: str
+        filename: str = TensorStore.gen_store_filename(coords=coords)
         try:
-            path = pathlib.Path(
-                "/".join((zarrdir, TensorStore.gen_store_filename(coords=coords))),
-            ).expanduser().as_posix()
-            store = zarr.storage.DirectoryStore(path)
             if zarrdir.startswith("s3"):
-                import s3fs
-                log.debug("Attempting AWS connection using credential discovery")
-                try:
-                    fs = s3fs.S3FileSystem(
-                        anon=False,
-                        client_kwargs={
-                            "region_name": os.getenv("AWS_REGION", "eu-west-1"),
-                            "endpoint_url": os.getenv("AWS_ENDPOINT_URL", None),
-                        },
-                    )
-                    path = zarrdir + "/" + TensorStore.gen_store_filename(coords=coords)
-                    fs.mkdirs(path=path, exist_ok=True)
-                    store = s3fs.mapping.S3Map(path, fs, check=False, create=True)
-                except Exception as e:
-                    return Failure(OSError(
-                        f"Unable to create file mapping for path '{path}'. "
-                        "Ensure ZARRDIR environment variable is specified correctly, "
-                        "and AWS credentials are discoverable by botocore. "
-                        f"Error context: {e}",
-                    ))
+                store_result = cls._create_zarrstore_s3(zarrdir, filename)
+                store, path = store_result.unwrap()  # Can do this as exceptions are caught
+            else:
+                path = pathlib.Path("/".join((zarrdir, filename))).expanduser().as_posix()
+                store = zarr.storage.DirectoryStore(path)
         except Exception as e:
             return Failure(OSError(
-                f"Unable to create Zarr Store at dir '{zarrdir}'. "
+                f"Unable to create Directory Store at dir '{zarrdir}'. "
                 "Ensure ZARRDIR environment variable is specified correctly. "
                 f"Error context: {e}",
             ))
 
         # Write the coordinates to a skeleton Zarr store
         # * 'compute=False' enables only saving metadata
-        # * 'mode="w"' overwrites any existing store
-        log.info("initializing zarr store at '%s'", path)
+        # * 'mode="w-"' fails if it finds an existing store
         da: xr.DataArray = coords.as_zeroed_dataarray(name=model)
         encoding = {
             model: {"write_empty_chunks": False},
@@ -177,12 +162,31 @@ class TensorStore(abc.ABC):
             _ = da.to_zarr(
                 store=store,
                 compute=False,
-                mode="w",
+                mode="w-",
                 consolidated=True,
                 encoding=encoding,
             )
+            log.info("Created blank zarr store at '%s'", path)
             # Ensure the store is readable
             store_da = xr.open_dataarray(store, engine="zarr")
+        except zarr.errors.ContainsGroupError:
+            store_da = xr.open_dataarray(store, engine="zarr")
+            if store_da.name != da.name:  # TODO: Also check for equality of coordinates
+                return Failure(OSError(
+                    f"Existing store at '{path}' is for a different model. "
+                    "Delete the existing store or move it to a new location, "
+                    "or choose a new location for the new store via ZARRDIR.",
+                ))
+            log.info(f"Using existing store at '{path}'")
+            return Success(
+                cls(
+                    name=model,
+                    path=path,
+                    coordinate_map=coords,
+                    size_kb=store_da.nbytes // 1024,
+                    encoding=encoding,
+                ),
+            )
         except Exception as e:
             return Failure(
                 OSError(
@@ -320,6 +324,36 @@ class TensorStore(abc.ABC):
 
         return Success(True)
 
+    def delete_store(self) -> ResultE[None]:
+        """Delete the store."""
+        if self.path.startswith("s3://"):
+            import s3fs
+            try:
+                fs = s3fs.S3FileSystem(
+                    anon=False,
+                    client_kwargs={
+                        "region_name": os.getenv("AWS_REGION", "eu-west-1"),
+                        "endpoint_url": os.getenv("AWS_ENDPOINT_URL", None),
+                    },
+                )
+                fs.rm(self.path, recursive=True)
+            except Exception as e:
+                return Failure(OSError(
+                    f"Unable to delete S3 store at path '{self.path}'."
+                    "Ensure AWS credentials are correct and discoverable by botocore. "
+                    f"Error context: {e}",
+                ))
+        else:
+            try:
+                shutil.rmtree(self.path)
+            except Exception as e:
+                return Failure(OSError(
+                    f"Unable to delete store at path '{self.path}'. "
+                    f"Error context: {e}",
+                ))
+        log.info("Deleted zarr store at '%s'", self.path)
+        return Success(None)
+
     def scan_parameter_values(self, p: Parameter) -> ResultE[ParameterScanResult]:
         """Scan the values of a parameter in the store.
 
@@ -409,6 +443,47 @@ class TensorStore(abc.ABC):
             }).isnull().all().values:
                 missing_times.append(pd.Timestamp(it).to_pydatetime().replace(tzinfo=dt.UTC))
         return Success(missing_times)
+
+    @staticmethod
+    def _create_zarrstore_s3(s3_folder: str, filename: str) \
+            -> ResultE[tuple[MutableMapping, str]]:  # type: ignore
+        """Create a mutable mapping to an S3 store.
+
+        Authentication with S3 is done via botocore's credential discovery.
+
+        Returns:
+            A tuple containing the store mapping and the path to the store,
+            in a result object indicating success or failure.
+
+        See Also:
+          - https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html#configuring-credentials
+        """
+        import s3fs
+        if not s3_folder.startswith("s3://"):
+            return Failure(ValueError(
+                "S3 folder path must start with 's3://'. "
+                f"Got: {s3_folder}",
+            ))
+        log.debug("Attempting AWS connection using credential discovery")
+        try:
+            fs = s3fs.S3FileSystem(
+                anon=False,
+                client_kwargs={
+                    "region_name": os.getenv("AWS_REGION", "eu-west-1"),
+                    "endpoint_url": os.getenv("AWS_ENDPOINT_URL", None),
+                },
+            )
+            path = s3_folder + "/" + filename
+            fs.mkdirs(path=path, exist_ok=True)
+            store = s3fs.mapping.S3Map(path, fs, check=False, create=True)
+        except Exception as e:
+            return Failure(OSError(
+                f"Unable to create file mapping for path '{path}'. "
+                "Ensure ZARRDIR environment variable is specified correctly, "
+                "and AWS credentials are discoverable by botocore. "
+                f"Error context: {e}",
+            ))
+        return Success((store, path))
 
     @staticmethod
     def gen_store_filename(coords: NWPDimensionCoordinateMap) -> str:

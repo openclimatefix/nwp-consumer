@@ -8,7 +8,6 @@ Also sometimes referred to as *primary ports*.
 
 import abc
 import datetime as dt
-import pathlib
 
 from returns.result import ResultE
 
@@ -25,7 +24,7 @@ class ConsumeUseCase(abc.ABC):
 
 
     @abc.abstractmethod
-    def consume(self, it: dt.datetime | None = None) -> ResultE[pathlib.Path]:
+    def consume(self, it: dt.datetime | None = None) -> ResultE[str]:
         """Consume NWP data to Zarr format for desired init time.
 
         Where possible the implementation should be as memory-efficient as possible.
@@ -61,7 +60,7 @@ class ArchiveUseCase(abc.ABC):
     """
 
     @abc.abstractmethod
-    def archive(self, year: int, month: int) -> ResultE[pathlib.Path]:
+    def archive(self, year: int, month: int) -> ResultE[str]:
         """Archive NWP data to Zarr format for the given month.
 
         Args:

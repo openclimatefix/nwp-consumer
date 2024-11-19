@@ -137,7 +137,8 @@ class Parameter(StrEnum):
                     name=str(self),
                     description="Downward shortwave radiation flux at ground level. "
                                 "Defined as the mean amount of solar radiation "
-                                "incident on the surface expected over the next hour.",
+                                "incident on the surface expected over the next hour."
+                                "This is made up of both direct and diffuse radiation.",
                     units="W/m^2",
                     limits=ParameterLimits(upper=1500, lower=0),
                     alternate_shortnames=["swavr", "ssrd", "dswrf", "sdswrf"],

@@ -145,12 +145,15 @@ class MetOfficeDatahubModelRepository(ports.ModelRepository):
             headers=self._headers,
             method="GET",
         )
+        log.debug(
+            f"Calling MetOffice Datahub at '{req.get_full_url()}'",
+        )
 
         # Request the list of files
         try:
             response: http.client.HTTPResponse = urllib.request.urlopen(req, timeout=30)  # noqa: S310
         except Exception as e:
-            yield delayed(Failure(
+            yield delayed(Failure)(OSError(
                 "Unable to list files from MetOffice DataHub for order "
                 f"{self.order_id} at '{self.request_url}'. "
                 f"Ensure API key and Order ID are correct. Error context: {e}",
@@ -161,7 +164,7 @@ class MetOfficeDatahubModelRepository(ports.ModelRepository):
                 response.read().decode(response.info().get_param("charset") or "utf-8"),  # type: ignore
             )
         except Exception as e:
-            yield delayed(Failure(
+            yield delayed(Failure)(ValueError(
                 "Unable to decode JSON response from MetOffice DataHub. "
                 "Check the response from the '/latest' endpoint looks as expected. "
                 f"Error context: {e}",

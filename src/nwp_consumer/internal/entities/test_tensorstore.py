@@ -3,7 +3,6 @@ import dataclasses
 import datetime as dt
 import logging
 import os
-import shutil
 import unittest
 from collections.abc import Generator
 from unittest.mock import patch
@@ -14,6 +13,7 @@ from botocore.client import BaseClient as BotocoreClient
 from botocore.session import Session
 from moto.server import ThreadedMotoServer
 from returns.pipeline import is_successful
+from returns.result import Success
 
 from .coordinates import NWPDimensionCoordinateMap
 from .parameters import Parameter
@@ -83,13 +83,10 @@ class TestTensorStore(unittest.TestCase):
             repository="dummy_repository",
             coords=test_coords,
         )
-        self.assertTrue(
-            is_successful(init_result),
-            msg=f"Unable to initialize store: {init_result}",
-        )
+        self.assertIsInstance(init_result, Success, msg=init_result)
         store = init_result.unwrap()
         yield store
-        shutil.rmtree(store.path)
+        store.delete_store()
 
     @patch.dict(os.environ, {
         "AWS_ENDPOINT_URL": "http://localhost:5000",
@@ -97,35 +94,12 @@ class TestTensorStore(unittest.TestCase):
         "AWS_SECRET_ACCESS_KEY": "test-secret",
         "ZARRDIR": "s3://test-bucket/data",
     }, clear=True)
-    def test_initialize_empty_store_s3(self) -> None:
+    def test_initialize_and_delete_s3(self) -> None:
         """Test the initialize_empty_store method."""
 
-        test_coords: NWPDimensionCoordinateMap = NWPDimensionCoordinateMap(
-            init_time=[
-                dt.datetime(2024, 1, 1, h, tzinfo=dt.UTC)
-                for h in [0, 6, 12, 18]
-            ],
-            step=[1, 2, 3, 4],
-            variable=[Parameter.TEMPERATURE_SL],
-            latitude=np.linspace(90, -90, 12).tolist(),
-            longitude=np.linspace(0, 360, 18).tolist(),
-        )
-
-        with MockS3Bucket():
-            init_result = TensorStore.initialize_empty_store(
-                model="test_da",
-                repository="dummy_repository",
-                coords=test_coords,
-            )
-            self.assertTrue(is_successful(init_result))
-
-            # Assert it overwrites existing stores successfully
-            init_result = TensorStore.initialize_empty_store(
-                model="new_test_da",
-                repository="dummy_repository",
-                coords=test_coords,
-            )
-            self.assertTrue(is_successful(init_result))
+        with MockS3Bucket(), self.store(year=2022) as ts:
+            delete_result = ts.delete_store()
+            self.assertIsInstance(delete_result, Success, msg=delete_result)
 
     def test_write_to_region(self) -> None:
         """Test the write_to_region method."""
@@ -146,7 +120,7 @@ class TestTensorStore(unittest.TestCase):
                             test_da["init_time"] == it, drop=True,
                         ).where(test_da["step"] == step, drop=True),
                     )
-                    self.assertTrue(is_successful(write_result), msg=write_result)
+                    self.assertIsInstance(write_result, Success, msg=write_result)
 
     def test_postprocess(self) -> None:
         """Test the postprocess method."""
