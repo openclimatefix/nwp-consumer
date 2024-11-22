@@ -31,8 +31,11 @@ def parse_env() -> Adaptors:
         case "metoffice-datahub":
             model_repository_adaptor = \
                 repositories.model_repositories.MetOfficeDatahubModelRepository
-        case _ as model:
-            log.error(f"Unknown model: {model}")
+        case _ as mr:
+            log.error(
+                f"Unknown model repository '{mr}'. Expected one of "
+                f"['gfs', 'ceda', 'ecmwf-realtime', 'metoffice-datahub']",
+            )
             sys.exit(1)
 
     notification_repository_adaptor: type[ports.NotificationRepository]

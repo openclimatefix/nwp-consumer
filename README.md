@@ -42,26 +42,64 @@ $ docker pull ghcr.io/openclimatefix/nwp-consumer
 
 ## Example usage
 
-**To create an archive of GFS data:**
+**To download the latest available day of GFS data:***
 
-TODO
+```bash
+$ nwp-consumer consume
+```
+
+**To create an archive of a month of GFS data:**
+
+> [!Note]
+> This will download several gigabytes of data to your home partition.
+> Make sure you have plenty of free space (and time!)
+
+```bash
+$ nwp-consumer archive --year 2024 --month 1
+```
 
 ## Documentation
 
-TODO: link to built documentation
-
-Documentation is generated via [pydoctor](https://pydoctor.readthedocs.io/en/latest/).
+Documentation is generated via [pdoc](https://pdoc.dev/docs/pdoc.html).
 To build the documentation, run the following command in the repository root:
 
 ```bash
-$ python -m pydoctor
+$ PDOC_ALLOW_EXEC=1 python -m pdoc -o docs --docformat=google src/nwp_consumer
 ```
+
+> [!Note]
+> The `PDOC_ALLOW_EXEC=1` environment variable is required due to a facet
+> of the `ocf_blosc2` library, which imports itself automatically and hence
+> necessitates execution to be enabled.
 
 ## FAQ
 
 ### How do I authenticate with model repositories that require accounts?
 
+Authentication, and model repository selection, is handled via environment variables. 
+Choose a repository via the `MODEL_REPOSITORY` environment variable. Required environment
+variables can be found in the repository's metadata function. Missing variables will be
+warned about at runtime.
 
+### How do I use an S3 bucket for created stores?
+
+The `ZARRDIR` environment variable can be set to an S3 url
+(ex: `s3://some-bucket-name/some-prefix`). Valid credentials for accessing the bucket
+must be discoverable in the environment as per
+[Botocore's documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html)
+
+### How do I change what variables are pulled?
+
+With difficulty! This package pulls data specifically tailored to Open Climate Fix's needs,
+and as such, the data it pulls (and the schema that data is surfaced with)
+is a fixed part of the package. A large part of the value proposition of this consumer is
+that the data it produces is consistent and comparable between different sources, so pull
+requests to the effect of adding or changing this for a specific model are unlikely to be
+approved.
+
+However, desired changes can be made via cloning the repo and making the relevant
+parameter modifications to the model's expected coordinates in it's metadata for the desired model
+repository. 
 
 ## Development
  
@@ -77,7 +115,8 @@ $ python -m ruff check .
 ```
 
 Be sure to do this periodically while developing to catch any errors early
-and prevent headaches with the CI pipeline.
+and prevent headaches with the CI pipeline. It may seem like a hassle at first,
+but it prevents accidental creation of a whole suite of bugs.
 
 ### Running the test suite
 
