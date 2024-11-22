@@ -1,5 +1,5 @@
 import datetime as dt
-import pathlib
+import shutil
 import unittest
 from collections.abc import Callable, Iterator
 from typing import override
@@ -87,16 +87,7 @@ class DummyNotificationRepository(ports.NotificationRepository):
             self,
             message: entities.StoreAppendedNotification | entities.StoreCreatedNotification,
     ) -> ResultE[str]:
-        """See parent class."""
         return Success(str(message))
-
-
-class DummyZarrRepository(ports.ZarrRepository):
-
-    @override
-    def save(self, src: pathlib.Path, dst: pathlib.Path) -> ResultE[str]:
-        """See parent class."""
-        return Success(str(dst))
 
 
 class TestParallelConsumer(unittest.TestCase):
@@ -120,7 +111,10 @@ class TestParallelConsumer(unittest.TestCase):
             ["init_time", "step", "variable", "latitude", "longitude"],
         )
 
+        path = result.unwrap()
+        shutil.rmtree(path)
 
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -6,6 +6,7 @@ https://joblib.readthedocs.io/en/stable/auto_examples/parallel_generator.html#me
 
 import time
 from threading import Thread
+from types import TracebackType
 
 import psutil
 
@@ -20,25 +21,42 @@ class PerformanceMonitor(Thread):
 
     thread: Thread
     memory_buffer: list[int]
-    stop: bool
+    cpu_buffer: list[float]
     start_time: float
     end_time: float
+    stop: bool = True
 
-    def __init__(self) -> None:
-        """Create a new instance."""
+    def __enter__(self) -> None:
+        """Start the monitor."""
         super().__init__()
         self.stop = False
         self.memory_buffer: list[int] = []
+        self.cpu_buffer: list[float] = []
         self.start_time = time.time()
         self.start()
 
-    def get_memory(self) -> int:
-        """Get memory of a process and its children."""
+    def __exit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc_val: BaseException | None,
+            exc_tb: TracebackType | None,
+        ) -> None:
+        """Stop the performance monitor, saving the results."""
+        self.stop = True
+        self.end_time = time.time()
+        super().join(timeout=30)
+
+    def get_usage(self) -> tuple[int, float]:
+        """Get usage of a process and its children."""
         p = psutil.Process()
+        # CPU usage of process and its children
+        cpu: float = p.cpu_percent()
+        # Memory usage does not reflect child processes
+        # * Manually add the memory usage of child processes
         memory: int = p.memory_info().rss
         for c in p.children():
             memory += c.memory_info().rss
-        return memory
+        return memory, cpu
 
     def get_runtime(self) -> int:
         """Get the runtime of the thread in seconds."""
@@ -46,17 +64,21 @@ class PerformanceMonitor(Thread):
 
     def run(self) -> None:
         """Run the thread."""
-        memory_start = self.get_memory()
+        memory_start, cpu_start = self.get_usage()
         while not self.stop:
-            self.memory_buffer.append(self.get_memory() - memory_start)
+            new_memory, new_cpu = self.get_usage()
+            # Memory is just a total, so get the delta
+            self.memory_buffer.append(new_memory - memory_start)
+            # CPU is calculated by psutil against the base CPU,
+            # so no need to get a delta
+            self.cpu_buffer.append(new_cpu)
             time.sleep(0.2)
 
-    def join(self, timeout: int | None = None) -> None:  # type: ignore
-        """Stop the thread."""
-        self.stop = True
-        self.end_time = time.time()
-        super().join(timeout=timeout)
+    def max_memory_mb(self) -> float:
+        """Get the maximum memory usage during the thread's runtime."""
+        return max(self.memory_buffer) / 1e6
 
-    def __enter__(self) -> "PerformanceMonitor":
-        """Enter a context."""
-        return self
+    def max_cpu_percent(self) -> float:
+        """Get the maximum CPU usage during the thread's runtime."""
+        return max(self.cpu_buffer)
+

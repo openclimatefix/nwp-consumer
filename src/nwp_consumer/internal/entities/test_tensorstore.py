@@ -5,6 +5,7 @@ import logging
 import os
 import unittest
 from collections.abc import Generator
+from types import TracebackType
 from unittest.mock import patch
 
 import numpy as np
@@ -23,13 +24,14 @@ from .tensorstore import TensorStore
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
 
-class MockS3Bucket(contextlib.ContextDecorator):
+class MockS3Bucket:
 
     client: BotocoreClient
     server: ThreadedMotoServer
     bucket: str = "test-bucket"
 
     def __enter__(self) -> None:
+        """Create a mock S3 server and bucket."""
         self.server = ThreadedMotoServer()
         self.server.start()
 
@@ -46,10 +48,16 @@ class MockS3Bucket(contextlib.ContextDecorator):
             Bucket=self.bucket,
         )
 
-    def __exit__(self, *exc) -> bool:  # type:ignore
+    def __exit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc_val: BaseException | None,
+            exc_tb: TracebackType | None,
+        ) -> None:
         response = self.client.list_objects_v2(
             Bucket=self.bucket,
         )
+        """Delete all objects in the bucket and stop the server."""
         if "Contents" in response:
             for obj in response["Contents"]:
                 self.client.delete_object(
@@ -57,7 +65,6 @@ class MockS3Bucket(contextlib.ContextDecorator):
                     Key=obj["Key"],
                 )
         self.server.stop()
-        return False
 
 
 class TestTensorStore(unittest.TestCase):
