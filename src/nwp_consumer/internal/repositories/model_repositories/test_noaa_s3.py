@@ -129,7 +129,11 @@ class TestECMWFRealTimeS3ModelRepository(unittest.TestCase):
                 should_error=False,
             ),
             TestCase(
-                filename="test_HRES_GFS_r.grib",
+                filename="test_HRES-GFS_r.grib",
+                should_error=False,
+            ),
+            TestCase(
+                filename="test_UM-Global_t2m.grib",
                 should_error=True,
             ),
         ]
