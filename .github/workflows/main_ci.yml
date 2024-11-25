@@ -18,22 +18,33 @@ jobs:
 
   # Define an autotagger job that creates tags on changes to master
   # Use #major #minor in merge commit messages to bump version beyond patch
-  # See https://github.com/RueLaLa/auto-tagger?tab=readme-ov-file#usage
-  tag:
+  bump-tag:
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'pull_request' && 
       github.event.action == 'closed' && 
       github.event.pull_request.merged == true
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Bump version and push tag
-        uses: RueLaLa/auto-tagger@master
+        uses: anothrNick/github-tag-action@v1
+        id: tag
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_PR_NUMBER: ${{ github.event.number }}
+          WITH_V: true
+          DEFAULT_BUMP: patch
+          DRY_RUN: true
+
+      - name: Print tags
+        env:
+          OLD_TAG: ${{ steps.tag.outputs.tag }}
+          NEW_TAG: ${{ steps.tag.outputs.new_tag }}
+        run: echo "$OLD_TAG -> $NEW_TAG"
 
