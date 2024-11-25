@@ -1,0 +1,39 @@
+# Workflow that runs on closed PRs to the default branch
+
+name: Default Branch PR Merged CI (Python)
+
+on:
+  pull_request:
+    types: ["closed"]
+    branches: ["main"]
+
+# Specify concurrency such that only one workflow can run at a time
+# * Different workflow files are not affected
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+
+jobs:
+
+  # Define an autotagger job that creates tags on changes to master
+  # Use #major #minor in merge commit messages to bump version beyond patch
+  # See https://github.com/RueLaLa/auto-tagger?tab=readme-ov-file#usage
+  tag:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request' && 
+      github.event.action == 'closed' && 
+      github.event.pull_request.merged == true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Bump version and push tag
+        uses: RueLaLa/auto-tagger@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_PR_NUMBER: ${{ github.event.number }}
+

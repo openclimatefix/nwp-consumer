@@ -1,280 +1,130 @@
-<h2 align="center">
-NWP CONSUMER
-<br>
-<br>
-Microservice for consuming NWP data.
-</h2>
+# NWP Consumer
 
-<div align="center">
+**Download and convert weather data for use in ML pipelines**
 
-<a href="https://github.com/openclimatefix/nwp-consumer/graphs/contributors" alt="Contributors">
-    <img src="https://img.shields.io/github/contributors/openclimatefix/nwp-consumer?style=for-the-badge&color=FFFFFF" /></a>
-<a href="https://github.com/openclimatefix/nwp-consumer/actions/workflows/ci.yml" alt="Workflows">
-    <img alt="GitHub Workflow Status (with branch)" src="https://img.shields.io/github/actions/workflow/status/openclimatefix/nwp-consumer/ci.yml?branch=main&style=for-the-badge&color=FFD053"></a>
-<a href="https://github.com/openclimatefix/nwp-consumer/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc" alt="Issues">
-    <img src="https://img.shields.io/github/issues/openclimatefix/nwp-consumer?style=for-the-badge&color=FFAC5F"></a>
-<a href="https://github.com/openclimatefix/nwp-consumer/tags" alt="Tags">
-    <img alt="GitHub tag (latest SemVer pre-release)" src="https://img.shields.io/github/v/tag/openclimatefix/nwp-consumer?include_prereleases&sort=semver&style=for-the-badge&color=7BCDF3"></a>
-<a href="https://pypi.org/project/nwp-consumer" alt="PyPI">
-    <img alt="PyPI version" src="https://img.shields.io/pypi/v/nwp-consumer?&style=for-the-badge&color=086788"></a>
-</div>
+[![tags badge](https://img.shields.io/github/v/tag/openclimatefix/nwp-consumer?include_prereleases&sort=semver&color=7BCDF3)](https://github.com/openclimatefix/nwp-consumer/tags)
+[![pypi badge](https://img.shields.io/pypi/v/nwp-consumer?&color=086788)](https://pypi.org/project/nwp-consumer)
+[![documentation badge](https://img.shields.io/badge/docs-latest-333333)](https://openclimatefix.github.io/nwp-consumer/)
+[![contributors badge](https://img.shields.io/github/contributors/openclimatefix/nwp-consumer?color=FFFFFF)](https://github.com/openclimatefix/nwp-consumer/graphs/contributors)
+[![workflows badge](https://img.shields.io/github/actions/workflow/status/openclimatefix/nwp-consumer/branch_ci.yml?branch=main&color=FFD053)](https://github.com/openclimatefix/nwp-consumer/actions/workflows/ci.yml)
+[![ease of contribution: easy](https://img.shields.io/badge/ease%20of%20contribution:%20easy-32bd50)](https://github.com/openclimatefix/ocf-meta-repo?tab=readme-ov-file#overview-of-ocfs-nowcasting-repositories)
 
-<br>
+Some renewables, such as solar and wind, generate power according to the weather conditions.
+Any forecasting therefore requires predictions of how these conditions will change.
+Many meteorological organisations provide Numerical Weather Prediction (NWP) data,
+which can then used for model training and inference. 
 
-A microservice for multi-source consumption of NWP data, storing it in a common format. Built with inspiration 
-from the [Hexagonal Architecture](https://alistair.cockburn.us/hexagonal-architecture) pattern, the nwp-consumer is 
-currently packaged with adapters for pulling and converting `.grib` data from: 
+This data is often very large and can come in various formats.
+Furthermore, these formats are not necessarily suitable for training,
+so may require preprocessing and conversion. 
 
-- [MetOffice Atmospheric API](https://gridded-data-ui.cda.api.metoffice.gov.uk)
-- [CEDA Atmospheric Archive](https://catalogue.ceda.ac.uk)
-- [ECMWF MARS API](https://apps.ecmwf.int/mars-catalogue)
-- [DWD's ICON Model from the Opendata API](https://opendata.dwd.de)
-- [CMC's GDPS Model from the Opendata API](https://dd.weather.gc.ca/)
-- [NOAA's GFS Model from AWS Open Data](https://noaa-gfs-bdp-pds.s3.amazonaws.com)
-- [NOAA's GFS Model from NCAR's Archive](https://rda.ucar.edu/datasets/ds084.1/)
+This package aims to streamline the collection and processing of this NWP data.
 
-Similarly, the service can write to multiple sinks:
+> [!Note]
+> This is *not* built to replace tools such as [Herbie](https://github.com/blaylockbk/Herbie). 
+> It is built to produce data specific to the needs of Open Climate Fix's models,
+> so things like the output format and the variable selection are hard-coded.
+> If you need a more configurable cli-driven tool, consider using herbie instead.
 
-- Local filesystem
-- [AWS S3](https://aws.amazon.com/s3/)
-- [HuggingFace Datasets](https://huggingface.co/docs/datasets/index)
+## Installation
 
-Its modular nature enables straightforward extension to alternate future sources.
+Install from PyPi using pip:
 
-## Running the service
-
-The service uses environment variables to configure sources and sinks in accordance with
-the [Twelve-Factor App methodology](https://12factor.net/config).
-The program will inform you of missing env vars when using an adaptor, but you can also check the 
-[config](src/nwp_consumer/internal/config/config.py) for the given module, or use the `env` command.
-
-### Using Docker
-
-This service is designed to be run as a Docker container. The `Containerfile` is the Dockerfile for the service.
-It is recommended to run it this way due to the dependency on external non-python binaries, which at the moment
-cannot be easily distributed in a PyPi package. To run, pull the latest version from `ghcr.io` via:
-
-```shell
-$ docker run \
-  -v /path/to/datadir:/data \
-  -e ENV_VAR=<value> \
-  ghcr.io/openclimatefix/nwp-consumer:latest <command...>  
+```bash
+$ pip install nwp-consumer
 ```
 
-### Using the Python Package
+Or use the container image:
 
-Ensure the [external dependencies](#external-dependencies) are installed. Then, do one of the following:
-
-Either
-
-- Install from [PyPI](https://pypi.org/project/nwp-consumer) with
-    ```shell
-    $ pip install nwp-consumer
-    ```
-
-*or*
-
-- Clone the repository and install the package via
-    ```shell
-    $ git clone git@github.com:openclimatefix/nwp-consumer.git
-    $ cd nwp-consumer
-    $ pip install .
-    ```
-
-Then run the service via
-
-```shell
-$ ENV_VAR=<value> nwp-consumer <command...> 
+```bash
+$ docker pull ghcr.io/openclimatefix/nwp-consumer
 ```
 
-### CLI
+## Example usage
 
-Whether running via Docker or the Python package, available commands can be found with the command `help` or the 
-`--help` flag. For example:
+**To download the latest available day of GFS data:***
 
-```shell
-$ nwp-consumer --help
-# or
-$ docker run ghcr.io/openclimatefix/nwp-consumer:latest --help
+```bash
+$ nwp-consumer consume
 ```
 
-## Ubiquitous Language
+**To create an archive of a month of GFS data:**
 
-The following terms are used throughout the codebase and documentation. They are defined here to avoid ambiguity.
+> [!Note]
+> This will download several gigabytes of data to your home partition.
+> Make sure you have plenty of free space (and time!)
 
-- ***InitTime*** - The time at which a forecast is initialised. For example, a forecast initialised at 12:00 on 1st 
-January.
-
-- ***TargetTime*** - The time at which a predicted value is valid. For example, a forecast with InitTime 12:00 on 1st 
-January predicts that the temperature at TargetTime 12:00 on 2nd January at position x will be 10 degrees.
-
-
-## Repository structure
-
-Produced using [exa](https://github.com/ogham/exa):
-```shell
-$ exa --tree --git-ignore -F -I "*init*|test*.*"
+```bash
+$ nwp-consumer archive --year 2024 --month 1
 ```
 
-```yml
-./
-├── Containerfile # The Dockerfile for the service
-├── pyproject.toml # The build configuration for the service
-├── README.md
-└── src/
-   ├── nwp_consumer/ # The main library package
-   │  ├── cmd/
-   │  │  └── main.py # The entrypoint to the service
-   │  └── internal/ # Packages internal to the service. Like the 'lib' folder
-   │     ├── config/ 
-   │     │  └── config.py # Contains the configuration specification for running the service
-   │     ├── inputs/ # Holds subpackages for each incoming data source
-   │     │  ├── ceda/
-   │     │  │  ├── _models.py
-   │     │  │  ├── client.py # Contains the client and functions to map CEDA data to the service model
-   │     │  │  └── README.md # Info about the CEDA data source
-   │     │  └── metoffice/
-   │     │     ├── _models.py
-   │     │     ├── client.py # # Contains the client and functions to map MetOffice data to the service model
-   │     │     └── README.md # Info about the MetOffice data source
-   │     ├── models.py # Describes the internal data models for the service
-   │     ├── outputs/ # Holds subpackages for each data sink
-   │     │  ├── localfs/
-   │     │  │  └── client.py # Contains the client for storing data on the local filesystem
-   │     │  └── s3/
-   │     │     └── client.py # Contains the client for storing data on S3
-   │     └── service/ # Contains the business logic and use-cases of the application
-   │        └── service.py # Defines the service class for the application, whose methods are the use-cases
-   └── test_integration/
+## Documentation
+
+Documentation is generated via [pdoc](https://pdoc.dev/docs/pdoc.html).
+To build the documentation, run the following command in the repository root:
+
+```bash
+$ PDOC_ALLOW_EXEC=1 python -m pdoc -o docs --docformat=google src/nwp_consumer
 ```
 
-`nwp-consumer` is structured following principles from the hexagonal architecture pattern. In brief, this means a clear 
-separation between the application's business logic - it's **Core** - and the **Actors** that are external to it. In 
-this package, the core of the service is in `internal/service/` and the actors are in `internal/inputs/` and 
-`internal/outputs/`. The service logic has no knowledge of the external actors, instead defining interfaces that the 
-actors must implement. These are found in `internal/models.py`. The actors are then responsible for implementing these 
-interfaces, and are *dependency-injected* in at runtime. This allows the service to be easily tested and extended. See
-[further reading](#further-reading) for more information.
+> [!Note]
+> The `PDOC_ALLOW_EXEC=1` environment variable is required due to a facet
+> of the `ocf_blosc2` library, which imports itself automatically and hence
+> necessitates execution to be enabled.
 
-## Local development
+## FAQ
 
-Clone the repository, and create and activate a new python virtualenv for it. `cd` to the repository root.
+### How do I authenticate with model repositories that require accounts?
 
-Install the [External](#external-dependencies) and [Python](#python-requirements) dependencies as shown in the sections
-below.
+Authentication, and model repository selection, is handled via environment variables. 
+Choose a repository via the `MODEL_REPOSITORY` environment variable. Required environment
+variables can be found in the repository's metadata function. Missing variables will be
+warned about at runtime.
 
-### Taskfile
+### How do I use an S3 bucket for created stores?
 
-This repository bundles often used commands into a [taskfile](./taskfile.yml) for convenience. To use these commands, ensure
-[go-task](https://taskfile.dev/) is installed, easily done via [homebrew](https://taskfile.dev/installation).
+The `ZARRDIR` environment variable can be set to an S3 url
+(ex: `s3://some-bucket-name/some-prefix`). Valid credentials for accessing the bucket
+must be discoverable in the environment as per
+[Botocore's documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html)
 
-You can then see the available tasks using
+### How do I change what variables are pulled?
 
-```shell
-$ task -l
+With difficulty! This package pulls data specifically tailored to Open Climate Fix's needs,
+and as such, the data it pulls (and the schema that data is surfaced with)
+is a fixed part of the package. A large part of the value proposition of this consumer is
+that the data it produces is consistent and comparable between different sources, so pull
+requests to the effect of adding or changing this for a specific model are unlikely to be
+approved.
+
+However, desired changes can be made via cloning the repo and making the relevant
+parameter modifications to the model's expected coordinates in it's metadata for the desired model
+repository. 
+
+## Development
+ 
+This project uses [MyPy](https://mypy.readthedocs.io/en/stable/) for static type checking
+and [Ruff](https://docs.astral.sh/ruff/) for linting.
+Installing the development dependencies makes them available in your virtual environment.
+
+Use them via:
+
+```bash
+$ python -m mypy .
+$ python -m ruff check .
 ```
 
-### External dependencies
+Be sure to do this periodically while developing to catch any errors early
+and prevent headaches with the CI pipeline. It may seem like a hassle at first,
+but it prevents accidental creation of a whole suite of bugs.
 
-The `cfgrib` python library depends on the ECMWF *cfgrib* binary, which is a wrapper around the ECMWF *ecCodes* library.
-One of these must be installed on the system and accessible as a shared library.
+### Running the test suite
 
-On a MacOS with HomeBrew use
+Run the unittests with:
 
-```shell
-$ brew install eccodes
-```
-
-Or if you manage binary packages with *Conda* use
-
-```shell
-$ conda install -c conda-forge cfgrib
-```
-
-As an alternative you may install the official source distribution
-by following the instructions at
-https://confluence.ecmwf.int/display/ECC/ecCodes+installation
-
-You may run a simple selfcheck command to ensure that your system is set up correctly:
-
-```shell
-$ python -m <eccodes OR cfgrib> selfcheck
-Found: ecCodes v2.27.0.
-Your system is ready.
-```
-
-### Python requirements
-
-Install the required python dependencies and make it editable with
-
-```shell
-$ pip install -e . 
-```
-
-or use the taskfile
-
-```shell
-$ task install
-```
-
-This looks for requirements specified in the `pyproject.toml` file.
-
-Note that these are the bare dependencies for running the application. If you want to run tests,
-you need the development dependencies as well, which can be installed via
-
-```shell
-$ pip install -e ".[dev]"
-```
-
-or
-
-```shell
-$ task install-dev
-```
-
-<details>
-    <summary>Where is the requirements.txt file?</summary>
-
-There is no `requirements.txt` file. Instead, the project uses setuptool's pyproject.toml integration to specify 
-dependencies. This is a new feature of setuptools and pip, and is the 
-[recommended way](https://packaging.python.org/en/latest/tutorials/packaging-projects/) to specify dependencies.
-See [the setuptools guide](https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html) and
-[the PEP621 specification](https://packaging.python.org/en/latest/specifications/declaring-project-metadata)
-for more information, as well as [Further Reading](#further-reading).
-</details>
-
-### Running tests
-
-Ensure you have installed the [Python requirements](#python-requirements) and the 
-[External dependencies](#external-dependencies).
-
-Run the unit tests with
-
-```shell
+```bash
 $ python -m unittest discover -s src/nwp_consumer -p "test_*.py"
 ```
-
-or 
-
-```shell
-$ task test-unit
-```
-
-and the integration tests with
-
-```shell
-$ python -m unittest discover -s test_integration -p "test_*.py"
-```
-
-or
-
-```shell
-$ task test-integration
-```
-
-See [further reading](#further-reading) for more information on the `src` directory structure.
-
----
 
 ## Further reading
 
@@ -301,7 +151,24 @@ src and flat layouts.
 
 ## Contributing and community
 
-- See the [OCF Organisation Repo](https://github.com/openclimatefix) for details on contributing.
-- Find out more about OCF in the [Meta Repo](https://github.com/openclimatefix/ocf-meta-repo).
-- Follow OCF on [Twitter](https://twitter.com/OpenClimateFix).
-- Check out the OCF blog at https://openclimatefix.org/blog for updates.
+[![issues badge](https://img.shields.io/github/issues/openclimatefix/ocf-template?color=FFAC5F)](https://github.com/openclimatefix/ocf-template/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc)
+
+- PR's are welcome! See the [Organisation Profile](https://github.com/openclimatefix) for details on contributing
+- Find out about our other projects in the [OCF Meta Repo](https://github.com/openclimatefix/ocf-meta-repo)
+- Check out the [OCF blog](https://openclimatefix.org/blog) for updates
+- Follow OCF on [LinkedIn](https://uk.linkedin.com/company/open-climate-fix)
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+---
+
+*Part of the [Open Climate Fix](https://github.com/orgs/openclimatefix/people) community.*
+
+[![OCF Logo](https://cdn.prod.website-files.com/62d92550f6774db58d441cca/6324a2038936ecda71599a8b_OCF_Logo_black_trans.png)](https://openclimatefix.org)

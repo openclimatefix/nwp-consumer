@@ -1,37 +1,18 @@
-"""The internal package contains code not intended for external import."""
+"""Internal workings of the services.
 
-__all__ = [
-    "OCFParameter",
-    "FetcherInterface",
-    "StorageInterface",
-    "FileInfoModel",
-    "CACHE_DIR",
-    "CACHE_DIR_RAW",
-    "CACHE_DIR_ZARR",
-    "IT_FULLPATH_ZARR",
-    "IT_FOLDER_STRUCTURE_RAW",
-    "IT_FOLDER_GLOBSTR_RAW",
-    "IT_FOLDER_STRUCTURE_ZARR",
-    "IT_FOLDER_GLOBSTR_ZARR",
-    "rawCachePath",
-    "zarrCachePath",
-]
+Why have an internal package?
+-----------------------------
 
-from .cache import (
-    CACHE_DIR,
-    CACHE_DIR_RAW,
-    CACHE_DIR_ZARR,
-    IT_FOLDER_GLOBSTR_RAW,
-    IT_FOLDER_GLOBSTR_ZARR,
-    IT_FOLDER_STRUCTURE_RAW,
-    IT_FOLDER_STRUCTURE_ZARR,
-    IT_FULLPATH_ZARR,
-    rawCachePath,
-    zarrCachePath,
-)
-from .models import (
-    FetcherInterface,
-    FileInfoModel,
-    OCFParameter,
-    StorageInterface,
-)
+This package is meant to be run as a services, either via a binary or a container image.
+However, the code can still be used as a library, and a user could import the modules
+from this package and use them in their own code.
+
+The "internal" package signifies that the modules within are not meant to be used,
+or are not guaranteed to be stable, for external users. This helps to discourage casual
+dependence in other services. Any functionality looking to be re-used should either
+become a shared library or simply be copied from the source code.
+"""
+
+from . import entities, handlers, ports, repositories, services
+
+__all__ = ["entities", "ports", "handlers", "repositories", "services"]
