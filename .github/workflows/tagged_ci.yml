@@ -4,7 +4,6 @@ name: Default Branch SemVer Tagged CI (Python)
 
 on:
   push:
-    branches: ['main']
     tags: ['v[0-9]+.[0-9]+.[0-9]+']
     paths-ignore: ['README.md']
 
@@ -113,7 +112,61 @@ jobs:
           path: dist/*.whl
 
       - name: Publish wheel
-        uses: pypa/gh-action-pypi-publish@v1.10
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
+
+  # Define a job that builds the documentation
+  # * Surfaces the documentation as an artifact
+  build-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Install editable package and required dependencies
+        run: uv sync
+
+        # Pydoctor is ran to find any linking errors in the docs
+      - name: Build documentation
+        run: |
+          uv run pydoctor --html-output=tmpdocs -W -q
+          PDOC_ALLOW_EXEC=1 uv run pdoc -o docs \
+            --docformat=google \
+            --logo="https://cdn.prod.website-files.com/62d92550f6774db58d441cca/6324a2038936ecda71599a8b_OCF_Logo_black_trans.png" \
+            src/nwp_consumer
+
+      - name: Upload documentation artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
+
+  # Job to deploy the documentation to GitHub pages
+  deploy-docs:
+    needs: build-docs
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
