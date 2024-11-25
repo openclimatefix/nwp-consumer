@@ -51,15 +51,15 @@ class TestECMWFRealTimeS3ModelRepository(unittest.TestCase):
             with self.subTest(url=url):
                 result = c._download_and_convert(url)
 
-                self.assertTrue(is_successful(result), msg=f"Error: {result}")
+                self.assertIsInstance(result, Success, msg=f"{result!s}")
 
                 da: xr.DataArray = result.unwrap()[0]
                 determine_region_result = NWPDimensionCoordinateMap.from_xarray(da).bind(
                     test_coordinates.determine_region,
                 )
-                self.assertTrue(
-                    is_successful(determine_region_result),
-                    msg=f"Error: {determine_region_result}",
+                self.assertIsInstance(
+                    determine_region_result, Success,
+                    msg=f"{determine_region_result!s}",
                 )
 
     def test__wanted_file(self) -> None:
