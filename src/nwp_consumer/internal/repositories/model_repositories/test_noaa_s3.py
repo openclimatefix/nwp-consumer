@@ -1,11 +1,12 @@
 import dataclasses
 import datetime as dt
 import os
+import pathlib
 import unittest
 from typing import TYPE_CHECKING
 
 import s3fs
-from returns.pipeline import is_successful
+from returns.result import Failure, ResultE, Success
 
 from ...entities import NWPDimensionCoordinateMap
 from .noaa_s3 import NOAAS3ModelRepository
@@ -108,4 +109,52 @@ class TestECMWFRealTimeS3ModelRepository(unittest.TestCase):
                     max_step=max(NOAAS3ModelRepository.model().expected_coordinates.step),
                 )
                 self.assertEqual(result, t.expected)
+
+
+    def test__convert(self) -> None:
+        """Test the _convert method."""
+
+        @dataclasses.dataclass
+        class TestCase:
+            filename: str
+            should_error: bool
+
+        tests: list[TestCase] = [
+            TestCase(
+                filename="test_HRES-GFS_10u.grib",
+                should_error=False,
+            ),
+            TestCase(
+                filename="test_HRES-GFS_lcc.grib",
+                should_error=False,
+            ),
+            TestCase(
+                filename="test_HRES_GFS_r.grib",
+                should_error=True,
+            ),
+        ]
+
+        expected_coords = dataclasses.replace(
+            NOAAS3ModelRepository.model().expected_coordinates,
+            init_time=[dt.datetime(2021, 5, 9, 6, tzinfo=dt.UTC)],
+        )
+
+        for t in tests:
+            with self.subTest(name=t.filename):
+                # Attempt to convert the file
+                result = NOAAS3ModelRepository._convert(
+                    path=pathlib.Path(__file__).parent.absolute() / t.filename,
+                )
+                region_result: ResultE[dict[str, slice]] = result.do(
+                    region
+                    for das in result
+                    for da in das
+                    for region in NWPDimensionCoordinateMap.from_xarray(da).bind(
+                        expected_coords.determine_region,
+                    )
+                )
+                if t.should_error:
+                    self.assertIsInstance(region_result, Failure, msg=f"{region_result}")
+                else:
+                    self.assertIsInstance(region_result, Success, msg=f"{region_result}")
 

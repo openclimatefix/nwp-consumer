@@ -5,7 +5,7 @@ import pathlib
 import unittest
 from typing import TYPE_CHECKING
 
-from returns.result import Success, Failure, ResultE
+from returns.result import Failure, ResultE, Success
 
 from ...entities import NWPDimensionCoordinateMap
 from .ecmwf_realtime import ECMWFRealTimeS3ModelRepository

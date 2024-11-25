@@ -45,7 +45,7 @@ class NOAAS3ModelRepository(ports.ModelRepository):
             is_order_based=False,
             running_hours=[0, 6, 12, 18],
             delay_minutes=(60 * 24 * 7),  # 1 week
-            max_connections=100,
+            max_connections=20,
             required_env=[],
             optional_env={},
             postprocess_options=entities.PostProcessOptions(),
@@ -173,8 +173,9 @@ class NOAAS3ModelRepository(ports.ModelRepository):
 
             if local_path.stat().st_size != fs.info(url)["size"]:
                 return Failure(ValueError(
-                    f"Failed to download file from S3 at '{url}'. "
-                    "File size mismatch. File may be corrupted.",
+                    f"File size mismatch from file at '{url}': "
+                    f"{local_path.stat().st_size} != {fs.info(url)['size']} (remote). "
+                    "File may be corrupted.",
                 ))
 
             # Also download the associated index file
@@ -182,19 +183,19 @@ class NOAAS3ModelRepository(ports.ModelRepository):
             # TODO: Re-incorporate this when https://github.com/ecmwf/cfgrib/issues/350
             # TODO: is resolved. Currently downloaded index files are ignored due to
             # TODO: path differences once downloaded.
-            index_url: str = url + ".idx"
-            index_path: pathlib.Path = local_path.with_suffix(".grib.idx")
-            try:
-                with index_path.open("wb") as lf, fs.open(index_url, "rb") as rf:
-                    for chunk in iter(lambda: rf.read(12 * 1024), b""):
-                        lf.write(chunk)
-                        lf.flush()
-            except Exception as e:
-                log.warning(
-                    f"Failed to download index file from S3 at '{url}'. "
-                    "This will require a manual indexing when converting the file. "
-                    f"Encountered error: {e}",
-                )
+            # index_url: str = url + ".idx"
+            # index_path: pathlib.Path = local_path.with_suffix(".grib.idx")
+            # try:
+            #     with index_path.open("wb") as lf, fs.open(index_url, "rb") as rf:
+            #         for chunk in iter(lambda: rf.read(12 * 1024), b""):
+            #             lf.write(chunk)
+            #             lf.flush()
+            # except Exception as e:
+            #     log.warning(
+            #         f"Failed to download index file from S3 at '{url}'. "
+            #         "This will require a manual indexing when converting the file. "
+            #         f"Encountered error: {e}",
+            #     )
 
         return Success(local_path)
 
@@ -273,7 +274,15 @@ class NOAAS3ModelRepository(ports.ModelRepository):
                 return Failure(ValueError(
                     f"Error processing dataset {i} from '{path}' to DataArray: {e}",
                 ))
-            processed_das.append(da)
+            # Put each variable into its own DataArray:
+            # * Each raw file does not contain a full set of parameters
+            # * and so may not produce a contiguous subset of the expected coordinates.
+            processed_das.extend(
+                [
+                    da.where(cond=da["variable"] == v, drop=True)
+                    for v in da["variable"].values
+                ],
+            )
 
         return Success(processed_das)
 
