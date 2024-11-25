@@ -5,7 +5,7 @@ import pathlib
 import unittest
 from typing import TYPE_CHECKING
 
-from returns.result import Success
+from returns.result import Success, Failure, ResultE
 
 from ...entities import NWPDimensionCoordinateMap
 from .ecmwf_realtime import ECMWFRealTimeS3ModelRepository
@@ -113,12 +113,27 @@ class TestECMWFRealTimeS3ModelRepository(unittest.TestCase):
         @dataclasses.dataclass
         class TestCase:
             filename: str
+            should_error: bool
 
         tests: list[TestCase] = [
             TestCase(
                 filename="test_HRES-IFS_ssrd.grib",
+                should_error=False,
+            ),
+            TestCase(
+                filename="test_HRES-IFS_10u.grib",
+                should_error=False,
+            ),
+            TestCase(
+                filename="test_UM-Global_t2m.grib",
+                should_error=True,
             ),
         ]
+
+        expected_coords = dataclasses.replace(
+            ECMWFRealTimeS3ModelRepository.model().expected_coordinates,
+            init_time=[dt.datetime(2024, 11, 4, 0, tzinfo=dt.UTC)],
+        )
 
         for t in tests:
             with self.subTest(name=t.filename):
@@ -126,21 +141,16 @@ class TestECMWFRealTimeS3ModelRepository(unittest.TestCase):
                 result = ECMWFRealTimeS3ModelRepository._convert(
                     path=pathlib.Path(__file__).parent.absolute() / t.filename,
                 )
-                self.assertIsInstance(result, Success, msg=f"{result!s}")
-                das: list[xr.DataArray] = result.unwrap()
-                for da in das:
-                    # Try to convert the resulting dataarray coordinates
-                    # to an NWPDimensionCoordinateMap object
-                    conversion_result = NWPDimensionCoordinateMap.from_xarray(da)
-                    self.assertIsInstance(conversion_result, Success, msg=f"{conversion_result}")
-                    # Ensure the converted coordinates are a valid region
-                    # of the expected coordinates
-                    converted_map: NWPDimensionCoordinateMap = conversion_result.unwrap()
-                    coords = dataclasses.replace(
-                        ECMWFRealTimeS3ModelRepository.model().expected_coordinates,
-                        init_time=converted_map.init_time,
+                region_result: ResultE[dict[str, slice]] = result.do(
+                    region
+                    for das in result
+                    for da in das
+                    for region in NWPDimensionCoordinateMap.from_xarray(da).bind(
+                        expected_coords.determine_region,
                     )
-
-                    region_result = coords.determine_region(converted_map)
+                )
+                if t.should_error:
+                    self.assertIsInstance(region_result, Failure, msg=f"{region_result}")
+                else:
                     self.assertIsInstance(region_result, Success, msg=f"{region_result}")
 
