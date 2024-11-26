@@ -283,6 +283,13 @@ class NOAAS3ModelRepository(ports.ModelRepository):
                 ],
             )
 
+        if len(processed_das) == 0:
+            return Failure(ValueError(
+                f"The file at '{path}' does not contain any variables of interest. "
+                "Ensure the conversion pipeline is not accidentally dropping wanted variables, ",
+                "and that the file contains variables of interest.",
+            ))
+
         return Success(processed_das)
 
     @staticmethod

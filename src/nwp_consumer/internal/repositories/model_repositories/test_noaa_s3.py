@@ -133,6 +133,10 @@ class TestNOAAS3ModelRepository(unittest.TestCase):
                 should_error=False,
             ),
             TestCase(
+                filename="test_HRES-GFS_aptmp.grib",
+                should_error=True,
+            ),
+            TestCase(
                 filename="test_UM-Global_t2m.grib",
                 should_error=True,
             ),
