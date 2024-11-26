@@ -17,8 +17,8 @@ if TYPE_CHECKING:
     from nwp_consumer.internal import entities
 
 
-class TestECMWFRealTimeS3ModelRepository(unittest.TestCase):
-    """Test the business methods of the ECMWFRealTimeS3ModelRepository class."""
+class TestNOAAS3ModelRepository(unittest.TestCase):
+    """Test the business methods of the NOAAS3ModelRepository class."""
 
     @unittest.skipIf(
         condition="CI" in os.environ,

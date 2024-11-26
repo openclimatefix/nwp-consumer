@@ -45,7 +45,7 @@ class NOAAS3ModelRepository(ports.ModelRepository):
             is_order_based=False,
             running_hours=[0, 6, 12, 18],
             delay_minutes=(60 * 24 * 7),  # 1 week
-            max_connections=20,
+            max_connections=1,
             required_env=[],
             optional_env={},
             postprocess_options=entities.PostProcessOptions(),
@@ -210,17 +210,14 @@ class NOAAS3ModelRepository(ports.ModelRepository):
             # Use some options when opening the datasets:
             # * 'squeeze' reduces length-1- dimensions to scalar coordinates,
             #   thus single-level variables should not have any extra dimensions
-            # * 'filter_by_keys' reduces the number of variables loaded to only those
-            #   in the expected list
+            # * 'ignore_keeys' reduces the number of variables loaded to only those
+            #   with level types of interest
             dss: list[xr.Dataset] = cfgrib.open_datasets(
                 path.as_posix(),
                 backend_kwargs={
                     "squeeze": True,
-                    "filter_by_keys": {
-                        "shortName": [
-                            x for v in NOAAS3ModelRepository.model().expected_coordinates.variable
-                            for x in v.metadata().alternate_shortnames
-                        ],
+                    "ignore_keys": {
+                        "levelType": ["isobaricInhPa", "depthBelowLandLayer", "meanSea"],
                     },
                 },
             )
@@ -252,6 +249,9 @@ class NOAAS3ModelRepository(ports.ModelRepository):
                     continue
                 da: xr.DataArray = (
                     ds
+                    .drop_vars(names=[
+                        c for c in ds.coords if c not in ["time", "step", "latitude", "longitude"]
+                    ])
                     .rename(name_dict={"time": "init_time"})
                     .expand_dims(dim="init_time")
                     .expand_dims(dim="step")
@@ -263,7 +263,6 @@ class NOAAS3ModelRepository(ports.ModelRepository):
                             c for c in da.coords
                             if c not in ["init_time", "step", "variable", "latitude", "longitude"]
                         ],
-                        errors="raise",
                     )
                     .transpose("init_time", "step", "variable", "latitude", "longitude")
                     .assign_coords(coords={"longitude": (da.coords["longitude"] + 180) % 360 - 180})
