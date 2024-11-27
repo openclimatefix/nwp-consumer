@@ -181,7 +181,7 @@ class Parameter(StrEnum):
                                 "the wind in the eastward direction.",
                     units="m/s",
                     limits=ParameterLimits(upper=100, lower=-100),
-                    alternate_shortnames=["u10"],
+                    alternate_shortnames=["u10", "u"],
                 )
             case self.WIND_V_COMPONENT_10m.name:
                 return ParameterData(
@@ -192,7 +192,7 @@ class Parameter(StrEnum):
                     units="m/s",
                     # Non-tornadic winds are usually < 100m/s
                     limits=ParameterLimits(upper=100, lower=-100),
-                    alternate_shortnames=["v10"],
+                    alternate_shortnames=["v10", "v"],
                 )
             case self.WIND_U_COMPONENT_100m.name:
                 return ParameterData(

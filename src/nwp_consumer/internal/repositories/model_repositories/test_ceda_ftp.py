@@ -1,13 +1,16 @@
 import dataclasses
 import datetime as dt
 import os
+import pathlib
 import unittest
 
-from returns.pipeline import flow, is_successful
+from returns.pipeline import flow
 from returns.pointfree import bind
+from returns.result import Failure, ResultE, Success
 
 from nwp_consumer.internal import entities
 
+from ...entities import NWPDimensionCoordinateMap
 from .ceda_ftp import CEDAFTPModelRepository
 
 
@@ -22,7 +25,7 @@ class TestCEDAFTPModelRepository(unittest.TestCase):
         """Test the _download_and_convert method."""
 
         auth_result = CEDAFTPModelRepository.authenticate()
-        self.assertTrue(is_successful(auth_result), msg=f"Error: {auth_result}")
+        self.assertIsInstance(auth_result, Success, msg=f"{auth_result!s}")
         c = auth_result.unwrap()
 
         test_it: dt.datetime = dt.datetime(2021, 1, 1, 0, tzinfo=dt.UTC)
@@ -56,7 +59,7 @@ class TestCEDAFTPModelRepository(unittest.TestCase):
             with (self.subTest(area=test.area)):
                 result = c._download_and_convert(test.url)
 
-                self.assertTrue(is_successful(result), msg=f"Error: {result}")
+                self.assertIsInstance(result, Success, msg=f"{result!s}")
 
                 for da in result.unwrap():
                     # Check resultant arrays are a subset of the expected coordinates
@@ -66,11 +69,54 @@ class TestCEDAFTPModelRepository(unittest.TestCase):
                         bind(test_coordinates.determine_region),
                     )
 
-                    self.assertTrue(
-                        is_successful(subset_result),
-                        msg=f"Error: {subset_result}",
-                    )
+                    self.assertIsInstance(subset_result, Success, msg=f"{subset_result!s}")
 
+    def test__convert(self) -> None:
+        """Test the _convert method."""
+
+        @dataclasses.dataclass
+        class TestCase:
+            filename: str
+            should_error: bool
+
+        tests: list[TestCase] = [
+            TestCase(
+                filename="test_UM-Global_10u-AreaC.grib",
+                should_error=False,
+            ),
+            TestCase(
+                filename="test_UM-Global_ssrd_AreaE.grib",
+                should_error=False,
+            ),
+            TestCase(
+                filename="test_HRES-IFS_10u.grib",
+                should_error=True,
+            ),
+        ]
+
+        expected_coords = dataclasses.replace(
+            CEDAFTPModelRepository.model().expected_coordinates,
+            init_time=[dt.datetime(2024, 11, 5, 0, tzinfo=dt.UTC)],
+        )
+
+        for t in tests:
+            with self.subTest(name=t.filename):
+                # Attempt to convert the file
+                result = CEDAFTPModelRepository._convert(
+                    path=pathlib.Path(__file__).parent.absolute() / t.filename,
+                )
+                region_result: ResultE[dict[str, slice]] = result.do(
+                    region
+                    for das in result
+                    for da in das
+                    for region in NWPDimensionCoordinateMap.from_xarray(da).bind(
+                        expected_coords.determine_region,
+                    )
+                )
+                if t.should_error:
+                    self.assertIsInstance(region_result, Failure, msg=f"{region_result}")
+                else:
+                    self.assertIsInstance(region_result, Success, msg=f"{region_result}")
 
 if __name__ == "__main__":
     unittest.main()
