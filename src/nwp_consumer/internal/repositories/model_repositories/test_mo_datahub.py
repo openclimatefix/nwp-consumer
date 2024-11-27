@@ -6,7 +6,7 @@ import unittest
 
 from returns.result import Failure, ResultE, Success
 
-from ...entities import NWPDimensionCoordinateMap
+from ...entities import NWPDimensionCoordinateMap, Parameter
 from .mo_datahub import MetOfficeDatahubModelRepository
 
 
@@ -39,40 +39,49 @@ class TestMetOfficeDatahubModelRepository(unittest.TestCase):
         @dataclasses.dataclass
         class TestCase:
             filename: str
+            expected_coords: NWPDimensionCoordinateMap
             should_error: bool
 
         tests: list[TestCase] = [
             TestCase(
-                filename="test_UM-Global_10u.grib",
+                filename="test_MODatahub_UM-Global_t2m_20241120T00_S00.grib",
+                expected_coords=dataclasses.replace(
+                    MetOfficeDatahubModelRepository.model().expected_coordinates,
+                    init_time=[dt.datetime(2024, 11, 20, 0, tzinfo=dt.UTC)],
+                    variable=[Parameter.TEMPERATURE_SL],
+                    step=[0],
+                ),
                 should_error=False,
             ),
             TestCase(
-                filename="test_UM-Global_t2m.grib",
+                filename="test_MODatahub_UM-Global_u10_20241120T00_S17.grib",
+                expected_coords=dataclasses.replace(
+                    MetOfficeDatahubModelRepository.model().expected_coordinates,
+                    init_time=[dt.datetime(2024, 11, 20, 0, tzinfo=dt.UTC)],
+                    variable=[Parameter.WIND_U_COMPONENT_10m],
+                    step=[17],
+                ),
                 should_error=False,
             ),
             TestCase(
                 filename="test_HRES-IFS_10u.grib",
+                expected_coords=MetOfficeDatahubModelRepository.model().expected_coordinates,
                 should_error=True,
             ),
         ]
-
-        expected_coords = dataclasses.replace(
-            MetOfficeDatahubModelRepository.model().expected_coordinates,
-            init_time=[dt.datetime(2024, 11, 20, 0, tzinfo=dt.UTC)],
-        )
 
         for t in tests:
             with self.subTest(name=t.filename):
                 # Attempt to convert the file
                 result = MetOfficeDatahubModelRepository._convert(
-                    path=pathlib.Path(__file__).parent.absolute() / t.filename,
+                    path=pathlib.Path(__file__).parent.absolute() / "test_gribs" / t.filename,
                 )
                 region_result: ResultE[dict[str, slice]] = result.do(
                     region
                     for das in result
                     for da in das
                     for region in NWPDimensionCoordinateMap.from_xarray(da).bind(
-                        expected_coords.determine_region,
+                        t.expected_coords.determine_region,
                     )
                 )
                 if t.should_error:

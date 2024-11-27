@@ -45,7 +45,7 @@ class NOAAS3ModelRepository(ports.ModelRepository):
             is_order_based=False,
             running_hours=[0, 6, 12, 18],
             delay_minutes=(60 * 24 * 7),  # 1 week
-            max_connections=1,
+            max_connections=100,
             required_env=[],
             optional_env={},
             postprocess_options=entities.PostProcessOptions(),
