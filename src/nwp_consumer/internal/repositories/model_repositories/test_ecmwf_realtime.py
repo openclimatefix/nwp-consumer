@@ -1,12 +1,13 @@
 import dataclasses
 import datetime as dt
 import os
+import pathlib
 import unittest
 from typing import TYPE_CHECKING
 
-from returns.pipeline import is_successful
+from returns.result import Failure, ResultE, Success
 
-from ...entities import NWPDimensionCoordinateMap
+from ...entities import NWPDimensionCoordinateMap, Parameter
 from .ecmwf_realtime import ECMWFRealTimeS3ModelRepository
 
 if TYPE_CHECKING:
@@ -26,7 +27,7 @@ class TestECMWFRealTimeS3ModelRepository(unittest.TestCase):
         """Test the _download_and_convert method."""
 
         auth_result = ECMWFRealTimeS3ModelRepository.authenticate()
-        self.assertTrue(is_successful(auth_result), msg=f"Error: {auth_result.failure}")
+        self.assertIsInstance(auth_result, Success, msg=f"{auth_result!s}")
         c: ECMWFRealTimeS3ModelRepository = auth_result.unwrap()
 
         test_it: dt.datetime = dt.datetime(2024, 10, 25, 0, tzinfo=dt.UTC)
@@ -49,15 +50,14 @@ class TestECMWFRealTimeS3ModelRepository(unittest.TestCase):
             with (self.subTest(url=url)):
                 result = c._download_and_convert(url)
 
-                self.assertTrue(is_successful(result), msg=f"Error: {result}")
+                self.assertIsInstance(result, Success, msg=f"{result!s}")
 
                 da: xr.DataArray = result.unwrap()[0]
                 determine_region_result = NWPDimensionCoordinateMap.from_xarray(da).bind(
                     test_coordinates.determine_region,
                 )
-                self.assertTrue(
-                    is_successful(determine_region_result),
-                    msg=f"Error: {determine_region_result}",
+                self.assertIsInstance(
+                    determine_region_result, Success, msg=f"{determine_region_result!s}",
                 )
 
     def test__wanted_file(self) -> None:
@@ -106,3 +106,59 @@ class TestECMWFRealTimeS3ModelRepository(unittest.TestCase):
                     it=test_it,
                     max_step=max(ECMWFRealTimeS3ModelRepository.model().expected_coordinates.step))
                 self.assertEqual(result, t.expected)
+
+    def test__convert(self) -> None:
+        """Test the _convert method."""
+
+        @dataclasses.dataclass
+        class TestCase:
+            filename: str
+            expected_coords: NWPDimensionCoordinateMap
+            should_error: bool
+
+        tests: list[TestCase] = [
+            TestCase(
+                filename="test_ECMWFRealtime_HRES-IFS_ssrd_20241104T00_S60.grib",
+                expected_coords=dataclasses.replace(
+                    ECMWFRealTimeS3ModelRepository.model().expected_coordinates,
+                    init_time=[dt.datetime(2024, 11, 4, 0, tzinfo=dt.UTC)],
+                    variable=[Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL],
+                    step=[60],
+                ),
+                should_error=False,
+            ),
+            TestCase(
+                filename="test_ECMWFRealtime_HRES-IFS_10u_20241104T00_S60.grib",
+                expected_coords=dataclasses.replace(
+                    ECMWFRealTimeS3ModelRepository.model().expected_coordinates,
+                    init_time=[dt.datetime(2024, 11, 4, 0, tzinfo=dt.UTC)],
+                    variable=[Parameter.WIND_U_COMPONENT_10m],
+                    step=[60],
+                ),
+                should_error=False,
+            ),
+            TestCase(
+                filename="test_NOAAS3_HRES-GFS_10u_20210509T06_S00.grib",
+                expected_coords=ECMWFRealTimeS3ModelRepository.model().expected_coordinates,
+                should_error=True,
+            ),
+        ]
+
+        for t in tests:
+            with self.subTest(name=t.filename):
+                # Attempt to convert the file
+                result = ECMWFRealTimeS3ModelRepository._convert(
+                    path=pathlib.Path(__file__).parent.absolute() / "test_gribs" / t.filename,
+                )
+                region_result: ResultE[dict[str, slice]] = result.do(
+                    region
+                    for das in result
+                    for da in das
+                    for region in NWPDimensionCoordinateMap.from_xarray(da).bind(
+                        t.expected_coords.determine_region,
+                    )
+                )
+                if t.should_error:
+                    self.assertIsInstance(region_result, Failure, msg=f"{region_result}")
+                else:
+                    self.assertIsInstance(region_result, Success, msg=f"{region_result}")

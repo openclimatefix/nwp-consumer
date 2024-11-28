@@ -277,21 +277,35 @@ class CEDAFTPModelRepository(ports.ModelRepository):
                 ),
             )
         try:
+            ds = entities.Parameter.rename_else_drop_ds_vars(
+                ds=ds,
+                allowed_parameters=CEDAFTPModelRepository.model().expected_coordinates.variable,
+            )
+            # Ignore datasets with no variables of interest
+            if len(ds.data_vars) == 0:
+                return Failure(OSError(
+                    f"No relevant variables found in '{path}'. "
+                    "Ensure file contains the expected variables, "
+                    "and that desired variables are not being dropped.",
+                ))
             da: xr.DataArray = (
-                entities.Parameter.rename_else_drop_ds_vars(
-                    ds=ds,
-                    allowed_parameters=CEDAFTPModelRepository.model().expected_coordinates.variable,
-                )
-                .sel(step=[np.timedelta64(i, "h") for i in range(0, 48, 1)])
-                .expand_dims(dim={"init_time": [ds["time"].values]})
-                .drop_vars(
-                    names=[
-                        v
-                        for v in ds.coords.variables
-                        if v not in ["init_time", "step", "latitude", "longitude"]
-                    ],
-                )
+                ds.sel(
+                    step=slice(
+                        np.timedelta64(0, "h"),
+                        np.timedelta64(
+                            CEDAFTPModelRepository.model().expected_coordinates.step[-1],
+                            "h",
+                        ),
+                ))
+                .drop_vars(names=[
+                    c for c in ds.coords if c not in ["time", "step", "latitude", "longitude"]
+                ])
+                .rename(name_dict={"time": "init_time"})
+                .expand_dims(dim="init_time")
                 .to_dataarray(name=CEDAFTPModelRepository.model().name)
+            )
+            da = (
+                da
                 .transpose("init_time", "step", "variable", "latitude", "longitude")
                 # Remove the last value of the longitude dimension as it overlaps with the next file
                 # Reverse the latitude dimension to be in descending order

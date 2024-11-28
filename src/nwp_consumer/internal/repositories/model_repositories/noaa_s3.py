@@ -173,8 +173,9 @@ class NOAAS3ModelRepository(ports.ModelRepository):
 
             if local_path.stat().st_size != fs.info(url)["size"]:
                 return Failure(ValueError(
-                    f"Failed to download file from S3 at '{url}'. "
-                    "File size mismatch. File may be corrupted.",
+                    f"File size mismatch from file at '{url}': "
+                    f"{local_path.stat().st_size} != {fs.info(url)['size']} (remote). "
+                    "File may be corrupted.",
                 ))
 
             # Also download the associated index file
@@ -182,19 +183,19 @@ class NOAAS3ModelRepository(ports.ModelRepository):
             # TODO: Re-incorporate this when https://github.com/ecmwf/cfgrib/issues/350
             # TODO: is resolved. Currently downloaded index files are ignored due to
             # TODO: path differences once downloaded.
-            index_url: str = url + ".idx"
-            index_path: pathlib.Path = local_path.with_suffix(".grib.idx")
-            try:
-                with index_path.open("wb") as lf, fs.open(index_url, "rb") as rf:
-                    for chunk in iter(lambda: rf.read(12 * 1024), b""):
-                        lf.write(chunk)
-                        lf.flush()
-            except Exception as e:
-                log.warning(
-                    f"Failed to download index file from S3 at '{url}'. "
-                    "This will require a manual indexing when converting the file. "
-                    f"Encountered error: {e}",
-                )
+            # index_url: str = url + ".idx"
+            # index_path: pathlib.Path = local_path.with_suffix(".grib.idx")
+            # try:
+            #     with index_path.open("wb") as lf, fs.open(index_url, "rb") as rf:
+            #         for chunk in iter(lambda: rf.read(12 * 1024), b""):
+            #             lf.write(chunk)
+            #             lf.flush()
+            # except Exception as e:
+            #     log.warning(
+            #         f"Failed to download index file from S3 at '{url}'. "
+            #         "This will require a manual indexing when converting the file. "
+            #         f"Encountered error: {e}",
+            #     )
 
         return Success(local_path)
 
@@ -209,17 +210,14 @@ class NOAAS3ModelRepository(ports.ModelRepository):
             # Use some options when opening the datasets:
             # * 'squeeze' reduces length-1- dimensions to scalar coordinates,
             #   thus single-level variables should not have any extra dimensions
-            # * 'filter_by_keys' reduces the number of variables loaded to only those
-            #   in the expected list
+            # * 'ignore_keeys' reduces the number of variables loaded to only those
+            #   with level types of interest
             dss: list[xr.Dataset] = cfgrib.open_datasets(
                 path.as_posix(),
                 backend_kwargs={
                     "squeeze": True,
-                    "filter_by_keys": {
-                        "shortName": [
-                            x for v in NOAAS3ModelRepository.model().expected_coordinates.variable
-                            for x in v.metadata().alternate_shortnames
-                        ],
+                    "ignore_keys": {
+                        "levelType": ["isobaricInhPa", "depthBelowLandLayer", "meanSea"],
                     },
                 },
             )
@@ -251,6 +249,9 @@ class NOAAS3ModelRepository(ports.ModelRepository):
                     continue
                 da: xr.DataArray = (
                     ds
+                    .drop_vars(names=[
+                        c for c in ds.coords if c not in ["time", "step", "latitude", "longitude"]
+                    ])
                     .rename(name_dict={"time": "init_time"})
                     .expand_dims(dim="init_time")
                     .expand_dims(dim="step")
@@ -262,7 +263,6 @@ class NOAAS3ModelRepository(ports.ModelRepository):
                             c for c in da.coords
                             if c not in ["init_time", "step", "variable", "latitude", "longitude"]
                         ],
-                        errors="raise",
                     )
                     .transpose("init_time", "step", "variable", "latitude", "longitude")
                     .assign_coords(coords={"longitude": (da.coords["longitude"] + 180) % 360 - 180})
@@ -273,7 +273,22 @@ class NOAAS3ModelRepository(ports.ModelRepository):
                 return Failure(ValueError(
                     f"Error processing dataset {i} from '{path}' to DataArray: {e}",
                 ))
-            processed_das.append(da)
+            # Put each variable into its own DataArray:
+            # * Each raw file does not contain a full set of parameters
+            # * and so may not produce a contiguous subset of the expected coordinates.
+            processed_das.extend(
+                [
+                    da.where(cond=da["variable"] == v, drop=True)
+                    for v in da["variable"].values
+                ],
+            )
+
+        if len(processed_das) == 0:
+            return Failure(ValueError(
+                f"The file at '{path}' does not contain any variables of interest. "
+                "Ensure the conversion pipeline is not accidentally dropping wanted variables, ",
+                "and that the file contains variables of interest.",
+            ))
 
         return Success(processed_das)
 

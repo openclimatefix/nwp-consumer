@@ -95,7 +95,7 @@ class ConsumerService(ports.ConsumeUseCase):
                 if isinstance(fetch_result, Failure):
                     log.error(
                         f"Error fetching data for init time '{it:%Y-%m-%d %H:%M}' "
-                        f"and model {self.mr.repository().name}: {fetch_result.failure()!s}",
+                        f"and model {self.mr.model().name}: {fetch_result.failure()!s}",
                     )
                     failed_etls += 1
                     continue
@@ -104,7 +104,7 @@ class ConsumerService(ports.ConsumeUseCase):
                     if isinstance(write_result, Failure):
                         log.error(
                             f"Error writing data for init time '{it:%Y-%m-%d %H:%M}' "
-                            f"and model {self.mr.repository().name}: "
+                            f"and model {self.mr.model().name}: "
                             f"{write_result.failure()!s}",
                         )
                         failed_etls += 1
