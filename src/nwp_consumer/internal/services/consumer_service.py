@@ -69,57 +69,38 @@ class ConsumerService(ports.ConsumeUseCase):
                 ))
             store = init_store_result.unwrap()
 
-            amr_result = self.mr.authenticate()
-            if isinstance(amr_result, Failure):
-                store.delete_store()
-                return Failure(OSError(
-                    "Unable to authenticate with model repository "
-                    f"'{self.mr.repository().name}': "
-                    f"{amr_result.failure()}",
-                ))
-            amr = amr_result.unwrap()
 
-            # Create a generator to fetch and process raw data
             n_jobs: int = max(cpu_count() - 1, self.mr.repository().max_connections)
             if os.getenv("CONCURRENCY", "True").capitalize() == "False":
                 n_jobs = 1
             log.debug(f"Downloading using {n_jobs} concurrent thread(s)")
-            fetch_result_generator = Parallel(
+
+            with Parallel(
                 n_jobs=n_jobs,
                 prefer="threads",
+                verbose=10,
                 return_as="generator_unordered",
-            )(amr.fetch_init_data(it=it))
+            ) as parallel:
+                amr_result = self.mr.authenticate()
+                write_result: ResultE[int] = amr_result.do(
+                    write_result
+                    for amr in amr_result
+                    for fetch_result_generator in parallel(amr.fetch_init_data(it=it))
+                    for fetch_result in fetch_result_generator
+                    for das in fetch_result
+                    for da in das
+                    for write_result in store.write_to_region(da)
+                )
 
-            # Regionally write the results of the generator as they are ready
-            failed_etls: int = 0
-            for fetch_result in fetch_result_generator:
-                if isinstance(fetch_result, Failure):
-                    log.error(
-                        f"Error fetching data for init time '{it:%Y-%m-%d %H:%M}' "
-                        f"and model {self.mr.model().name}: {fetch_result.failure()!s}",
-                    )
-                    failed_etls += 1
-                    continue
-                for da in fetch_result.unwrap():
-                    write_result = store.write_to_region(da)
-                    if isinstance(write_result, Failure):
-                        log.error(
-                            f"Error writing data for init time '{it:%Y-%m-%d %H:%M}' "
-                            f"and model {self.mr.model().name}: "
-                            f"{write_result.failure()!s}",
-                        )
-                        failed_etls += 1
-
-            del fetch_result_generator
-            # Fail hard if any of the writes failed
-            # * TODO: Consider just how hard we want to fail in this instance
-            if failed_etls > 0:
-                store.delete_store()
-                return Failure(OSError(
-                    f"Failed to write {failed_etls} regions "
-                    f"for init time '{it:%Y-%m-%d %H:%M}'. "
-                    "See error logs for details.",
-                ))
+                # Fail hard if any of the writes failed
+                # * TODO: Consider just how hard we want to fail in this instance
+                if isinstance(write_result, Failure):
+                    store.delete_store()
+                    return Failure(OSError(
+                        f"Failed to write all regions "
+                        f"for init time '{it:%Y-%m-%d %H:%M}'. "
+                        f"Error context: {write_result!s}",
+                    ))
 
             # Postprocess the dataset as required
             # postprocess_result = store.postprocess(self.mr.repository().postprocess_options)
@@ -129,7 +110,7 @@ class ConsumerService(ports.ConsumeUseCase):
         notify_result = self.nr().notify(
             message=entities.StoreCreatedNotification(
                 filename=pathlib.Path(store.path).name,
-                size_mb=store.size_kb // 1024,  # TODO: 2024-11-19 check this is right
+                size_mb=store.size_kb // 1024,
                 performance=entities.PerformanceMetadata(
                     duration_seconds=monitor.get_runtime(),
                     memory_mb=monitor.max_memory_mb(),
@@ -147,3 +128,4 @@ class ConsumerService(ports.ConsumeUseCase):
     @override
     def postprocess(self, options: entities.PostProcessOptions) -> ResultE[str]:
         return Failure(NotImplementedError("Postprocessing not yet implemented"))
+
