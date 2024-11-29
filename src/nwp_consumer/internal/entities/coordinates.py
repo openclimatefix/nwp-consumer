@@ -82,16 +82,32 @@ class NWPDimensionCoordinateMap:
     """
     variable: list[Parameter]
     """The variables in the forecast data."""
+    ensemble_stat: list[str] | None = None
+    """The relevant ensemble statistics of the forecast data."""
     latitude: list[float] | None = None
     """The latitude coordinates of the forecast grid in degrees.
 
-    TODO: Should go +ve to -ve, e.g. for global, should be 90 to -90.
+    Will be truncated to 4 decimal places, and ordered as 90 -> -90.
     """
     longitude: list[float] | None = None
     """The longitude coordinates of the forecast grid in degrees.
 
-    TODO: Should go -ve to +ve, e.g. for global, should be -180 to 180.
+    Will be truncated to 4 decimal places, and ordered as -180 -> 180.
     """
+
+    def __post_init__(self) -> None:
+        """Rigidly set input value ordering and precision."""
+        self.variable = sorted(self.variable)
+        # Make latitude descending, longitude acsending, and both rounded to 4 d.p.
+        # NOTE: For latitude and longitude values, we round to 4 decimal places
+        # to avoid floating point precision issues when comparing values.
+        # It is important to note that this places a limit on the precision
+        # of the latitude and longitude values that can be stored in the map.
+        # 4 decimal places corresponds to a precision of ~11m at the equator.
+        if self.latitude is not None:
+            self.latitude = sorted([float(f"{lat:.4f}") for lat in self.latitude], reverse=True)
+        if self.longitude is not None:
+            self.longitude = sorted([float(f"{lon:.4f}") for lon in self.longitude])
 
     @property
     def dims(self) -> list[str]:
@@ -169,7 +185,22 @@ class NWPDimensionCoordinateMap:
                 f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
                 f"as unknown index/dimension keys were encountered: {unknown_keys}.",
             ))
-        # TODO: Ensure correct ordering of lat/long?
+        if "latitude" in pd_indexes \
+            and pd_indexes["latitude"].values[0] < pd_indexes["latitude"].values[-1]:
+            return Failure(ValueError(
+                "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
+                "as the latitude values are not in descending order. "
+                "Latitude coordinates should run from 90 -> -90. "
+                "Modify the coordinate in the source data to be in descending order.",
+            ))
+        if "longitude" in pd_indexes \
+            and pd_indexes["longitude"].values[0] > pd_indexes["longitude"].values[-1]:
+            return Failure(ValueError(
+                "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
+                "as the longitude values are not in ascending order. "
+                "Longitude coordinates should run from -180 -> 180. "
+                "Modify the coordinate in the source data to be in ascending order.",
+            ))
 
         # Convert the pandas Index objects to lists of the appropriate types
         return Success(
@@ -189,17 +220,12 @@ class NWPDimensionCoordinateMap:
                     Parameter(pdp)
                     for pdp in pd_indexes["variable"].to_list()
                 ],
-                # NOTE: For latitude and longitude values, we round to 4 decimal places
-                # to avoid floating point precision issues when comparing values.
-                # It is important to note that this places a limit on the precision
-                # of the latitude and longitude values that can be stored in the map.
-                # 4 decimal places corresponds to a precision of ~11m at the equator.
-                latitude=[float(f"{lat:.4f}") for lat in pd_indexes["latitude"].to_list()]
-                if "latitude" in pd_indexes
-                else None,
-                longitude=[float(f"{lon:.4f}") for lon in pd_indexes["longitude"].to_list()]
-                if "longitude" in pd_indexes
-                else None,
+                ensemble_statistic=pd_indexes["ensemble_statistic"].to_list() \
+                    if "ensemble_statistic" in pd_indexes else None,
+                latitude=pd_indexes["latitude"].to_list() \
+                    if "latitude" in pd_indexes else None,
+                longitude=pd_indexes["longitude"].to_list() \
+                    if "longitude" in pd_indexes else None,
             ),
         )
 
