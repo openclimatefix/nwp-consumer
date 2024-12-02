@@ -50,6 +50,7 @@ class ConsumerService(ports.ConsumeUseCase):
                 f"for the '{self.mr.model().name}' model "
                 f"spanning init time '{it:%Y-%m-%d %H:%M}'",
             )
+            it = it.replace(tzinfo=dt.UTC)
 
             # Create a store for the init time
             init_store_result: ResultE[entities.TensorStore] = \

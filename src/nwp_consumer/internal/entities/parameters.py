@@ -8,6 +8,9 @@ quantities that are forecasted by the model.
 Variables are forecasted at different levels in the atmosphere. A common
 level of interest is called "screen level (sl)". This corresponds to 1.5-2m
 above the Earth's surface, which is the height of many measuring stations.
+Other levels include units of distance in metres from the ground,
+including a 0m level which is the ground itself (gl). Also, the mean sea
+level (msl) is used as a reference point for pressure.
 
 Variables also have units, which are the physical quantities that the
 variable is measured in. For example, temperature is measured in degrees
@@ -83,8 +86,16 @@ class ParameterData:
     Used in sanity and validity checking the database values.
     """
 
+    grib2_code: str
+    """The GRIB2 code for the parameter.
+
+    See Also:
+        - https://codes.ecmwf.int/grib/param-db/?filter=All
+    """
+
     alternate_shortnames: list[str] = dataclasses.field(default_factory=list)
     """Alternate names for the parameter found in the wild."""
+
 
     def __str__(self) -> str:
         """String representation of the parameter."""
@@ -120,18 +131,24 @@ class Parameter(StrEnum):
     TOTAL_PRECIPITATION_RATE_GL = auto()
     DOWNWARD_ULTRAVIOLET_RADIATION_FLUX_GL = auto()
     DIRECT_SHORTWAVE_RADIATION_FLUX_GL = auto()
+    WIND_SPEED_10m = auto()
+    WIND_SPEED_100m = auto()
+    PRESSURE_MSL = auto()
 
     def metadata(self) -> ParameterData:
         """Get the metadata for the parameter."""
         match self.name:
+
             case self.TEMPERATURE_SL.name:
                 return ParameterData(
                     name=str(self),
                     description="Temperature at screen level",
                     units="C",
                     limits=ParameterLimits(upper=60, lower=-90),
-                    alternate_shortnames=["t", "t2m"],
+                    alternate_shortnames=["t", "t2m", "tas"],
+                    grib2_code="167",
                 )
+
             case self.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL.name:
                 return ParameterData(
                     name=str(self),
@@ -142,7 +159,9 @@ class Parameter(StrEnum):
                     units="W/m^2",
                     limits=ParameterLimits(upper=1500, lower=0),
                     alternate_shortnames=["swavr", "ssrd", "dswrf", "sdswrf"],
+                    grib2_code="169",
                 )
+
             case self.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL.name:
                 return ParameterData(
                     name=str(self),
@@ -152,7 +171,9 @@ class Parameter(StrEnum):
                     units="W/m^2",
                     limits=ParameterLimits(upper=500, lower=0),
                     alternate_shortnames=["strd", "dlwrf", "sdlwrf"],
+                    grib2_code="175",
                 )
+
             case self.RELATIVE_HUMIDITY_SL.name:
                 return ParameterData(
                     name=str(self),
@@ -162,7 +183,9 @@ class Parameter(StrEnum):
                     units="%",
                     limits=ParameterLimits(upper=100, lower=0),
                     alternate_shortnames=["r", "r2"],
+                    grib2_code="157",
                 )
+
             case self.VISIBILITY_SL.name:
                 return ParameterData(
                     name=str(self),
@@ -172,7 +195,9 @@ class Parameter(StrEnum):
                     units="m",
                     limits=ParameterLimits(upper=4500, lower=0),
                     alternate_shortnames=["vis"],
+                    grib2_code="20",
                 )
+
             case self.WIND_U_COMPONENT_10m.name:
                 return ParameterData(
                     name=str(self),
@@ -181,8 +206,10 @@ class Parameter(StrEnum):
                                 "the wind in the eastward direction.",
                     units="m/s",
                     limits=ParameterLimits(upper=100, lower=-100),
-                    alternate_shortnames=["u10", "u"],
+                    alternate_shortnames=["u10", "u", "uas"],
+                    grib2_code="165",
                 )
+
             case self.WIND_V_COMPONENT_10m.name:
                 return ParameterData(
                     name=str(self),
@@ -192,8 +219,10 @@ class Parameter(StrEnum):
                     units="m/s",
                     # Non-tornadic winds are usually < 100m/s
                     limits=ParameterLimits(upper=100, lower=-100),
-                    alternate_shortnames=["v10", "v"],
+                    alternate_shortnames=["v10", "v", "vas"],
+                    grib2_code="166",
                 )
+
             case self.WIND_U_COMPONENT_100m.name:
                 return ParameterData(
                     name=str(self),
@@ -203,7 +232,9 @@ class Parameter(StrEnum):
                     units="m/s",
                     limits=ParameterLimits(upper=100, lower=-100),
                     alternate_shortnames=["u100"],
+                    grib2_code="246",
                 )
+
             case self.WIND_V_COMPONENT_100m.name:
                 return ParameterData(
                     name=str(self),
@@ -213,7 +244,9 @@ class Parameter(StrEnum):
                     units="m/s",
                     limits=ParameterLimits(upper=100, lower=-100),
                     alternate_shortnames=["v100"],
+                    grib2_code="247",
                 )
+
             case self.WIND_U_COMPONENT_200m.name:
                 return ParameterData(
                     name=str(self),
@@ -223,7 +256,9 @@ class Parameter(StrEnum):
                     units="m/s",
                     limits=ParameterLimits(upper=150, lower=-150),
                     alternate_shortnames=["u200"],
+                    grib2_code="239",
                 )
+
             case self.WIND_V_COMPONENT_200m.name:
                 return ParameterData(
                     name=str(self),
@@ -233,7 +268,9 @@ class Parameter(StrEnum):
                     units="m/s",
                     limits=ParameterLimits(upper=150, lower=-150),
                     alternate_shortnames=["v200"],
+                    grib2_code="240",
                 )
+
             case self.SNOW_DEPTH_GL.name:
                 return ParameterData(
                     name=str(self),
@@ -241,7 +278,9 @@ class Parameter(StrEnum):
                     units="m",
                     limits=ParameterLimits(upper=12, lower=0),
                     alternate_shortnames=["sd", "sdwe"],
+                    grib2_code="141",
                 )
+
             case self.CLOUD_COVER_HIGH.name:
                 return ParameterData(
                     name=str(self),
@@ -252,7 +291,9 @@ class Parameter(StrEnum):
                     units="UI",
                     limits=ParameterLimits(upper=1, lower=0),
                     alternate_shortnames=["hcc"],
+                    grib2_code="188",
                 )
+
             case self.CLOUD_COVER_MEDIUM.name:
                 return ParameterData(
                     name=str(self),
@@ -263,7 +304,9 @@ class Parameter(StrEnum):
                     units="UI",
                     limits=ParameterLimits(upper=1, lower=0),
                     alternate_shortnames=["mcc"],
+                    grib2_code="187",
                 )
+
             case self.CLOUD_COVER_LOW.name:
                 return ParameterData(
                     name=str(self),
@@ -274,7 +317,9 @@ class Parameter(StrEnum):
                     units="UI",
                     limits=ParameterLimits(upper=1, lower=0),
                     alternate_shortnames=["lcc"],
+                    grib2_code="186",
                 )
+
             case self.CLOUD_COVER_TOTAL.name:
                 return ParameterData(
                     name=str(self),
@@ -285,7 +330,9 @@ class Parameter(StrEnum):
                     units="UI",
                     limits=ParameterLimits(upper=1, lower=0),
                     alternate_shortnames=["tcc", "clt"],
+                    grib2_code="164",
                 )
+
             case self.TOTAL_PRECIPITATION_RATE_GL.name:
                 return ParameterData(
                     name=str(self),
@@ -295,7 +342,9 @@ class Parameter(StrEnum):
                     units="kg/m^2/s",
                     limits=ParameterLimits(upper=0.2, lower=0),
                     alternate_shortnames=["prate", "tprate"],
+                    grib2_code="260048",
                 )
+
             case self.DOWNWARD_ULTRAVIOLET_RADIATION_FLUX_GL.name:
                 return ParameterData(
                     name=str(self),
@@ -306,7 +355,9 @@ class Parameter(StrEnum):
                     units="W/m^2",
                     limits=ParameterLimits(upper=1000, lower=0),
                     alternate_shortnames=["uvb"],
+                    grib2_code="57",
                 )
+
             case self.DIRECT_SHORTWAVE_RADIATION_FLUX_GL.name:
                 return ParameterData(
                     name=str(self),
@@ -318,6 +369,43 @@ class Parameter(StrEnum):
                     units="W/m^2",
                     limits=ParameterLimits(upper=1000, lower=0),
                     alternate_shortnames=["dsrp"],
+                    grib2_code="47",
+                )
+
+            case self.WIND_SPEED_10m.name:
+                return ParameterData(
+                    name=str(self),
+                    description="Wind speed at 10m above ground level. "
+                                "Defined as the magnitude of the wind vector.",
+                    units="m/s",
+                    limits=ParameterLimits(upper=150, lower=0),
+                    alternate_shortnames=["10si", "si10"],
+                    grib2_code="207",
+                )
+
+            case self.WIND_SPEED_100m.name:
+                return ParameterData(
+                    name=str(self),
+                    description="Wind speed at 100m above ground level. "
+                                "Defined as the magnitude of the wind vector.",
+                    units="m/s",
+                    limits=ParameterLimits(upper=200, lower=0),
+                    alternate_shortnames=["100si", "si100"],
+                    grib2_code="249",
+                )
+
+            case self.PRESSURE_MSL.name:
+                return ParameterData(
+                    name=str(self),
+                    description="Mean sea level pressure. "
+                                "Defined as the force per unit area of the atmosphere "
+                                "adjusted to the height of mean sea level. This corresponds "
+                                "to the weight of a column of air vertically above a point "
+                                "on the Earth's surface. 100 Pa = 1 hPa = 1 mbar.",
+                    units="Pa",
+                    limits=ParameterLimits(upper=105000, lower=95000),
+                    alternate_shortnames=["mslp", "msl"],
+                    grib2_code="151",
                 )
             case _:
                 # Shouldn't happen thanks to the test case in test_parameters.py

@@ -135,8 +135,8 @@ class TestCoordinates(unittest.TestCase):
                     init_time=[dt.datetime(2021, 1, 1, i, tzinfo=dt.UTC) for i in range(0, 9, 3)],
                     step=list(range(12)),
                     variable=[
-                        Parameter.TEMPERATURE_SL,
                         Parameter.CLOUD_COVER_HIGH,
+                        Parameter.TEMPERATURE_SL,
                         Parameter.TOTAL_PRECIPITATION_RATE_GL,
                     ],
                     latitude=[60.0, 61.0, 62.0],
@@ -150,11 +150,11 @@ class TestCoordinates(unittest.TestCase):
                     ]),
                     "step": pd.Index([hour * 60 * 60 * 1000000000 for hour in range(12)]),
                     "variable": pd.Index([
-                        Parameter.TEMPERATURE_SL.value,
                         Parameter.CLOUD_COVER_HIGH.value,
+                        Parameter.TEMPERATURE_SL.value,
                         Parameter.TOTAL_PRECIPITATION_RATE_GL.value,
                     ]),
-                    "latitude": pd.Index([60.0, 61.0, 62.0]),
+                    "latitude": pd.Index([62.0, 61.0, 60.0]),
                     "longitude": pd.Index([10.0, 11.0, 12.0]),
                 },
             ),

@@ -31,10 +31,13 @@ def parse_env() -> Adaptors:
         case "metoffice-datahub":
             model_repository_adaptor = \
                 repositories.model_repositories.MetOfficeDatahubModelRepository
+        case "ecmwf-mars":
+            model_repository_adaptor = \
+                    repositories.model_repositories.ECMWFMARSModelRepository
         case _ as mr:
             log.error(
                 f"Unknown model repository '{mr}'. Expected one of "
-                f"['gfs', 'ceda', 'ecmwf-realtime', 'metoffice-datahub']",
+                f"['gfs', 'ceda', 'ecmwf-realtime', 'metoffice-datahub', 'ecmwf-mars']",
             )
             sys.exit(1)
 

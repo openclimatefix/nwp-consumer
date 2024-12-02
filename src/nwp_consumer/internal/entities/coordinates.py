@@ -98,7 +98,7 @@ class NWPDimensionCoordinateMap:
     def __post_init__(self) -> None:
         """Rigidly set input value ordering and precision."""
         self.variable = sorted(self.variable)
-        # Make latitude descending, longitude acsending, and both rounded to 4 d.p.
+        # Make latitude descending, longitude acsending, and both rounded to 4 d.p.
         # NOTE: For latitude and longitude values, we round to 4 decimal places
         # to avoid floating point precision issues when comparing values.
         # It is important to note that this places a limit on the precision
@@ -220,8 +220,8 @@ class NWPDimensionCoordinateMap:
                     Parameter(pdp)
                     for pdp in pd_indexes["variable"].to_list()
                 ],
-                ensemble_statistic=pd_indexes["ensemble_statistic"].to_list() \
-                    if "ensemble_statistic" in pd_indexes else None,
+                ensemble_stat=pd_indexes["ensemble_stat"].to_list() \
+                    if "ensemble_stat" in pd_indexes else None,
                 latitude=pd_indexes["latitude"].to_list() \
                     if "latitude" in pd_indexes else None,
                 longitude=pd_indexes["longitude"].to_list() \
@@ -334,7 +334,7 @@ class NWPDimensionCoordinateMap:
                 KeyError(
                     "Cannot find slices in non-matching coordinate mappings: "
                     "both objects must have identical dimensions (rank and labels)."
-                    f"Got: {inner.dims} and {self.dims}.",
+                    f"Got: {inner.dims} (inner) and {self.dims} (outer).",
                 ),
             )
 
