@@ -246,7 +246,6 @@ class TestCoordinates(unittest.TestCase):
                         msg=f"{t.name}: Expected error to be returned.",
                     )
                 else:
-                    print(result)
                     self.assertEqual(result, Success(t.expected_coordinates))
 
 
