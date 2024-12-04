@@ -185,7 +185,7 @@ class TestCoordinates(unittest.TestCase):
                     "init_time": pd.to_datetime(["2021-01-01T00:00:00Z", "2021-01-01T03:00:00Z"]),
                     "step": pd.to_timedelta(["0 days", "3 days"]),
                     "variable": pd.Index(["temperature_sl", "cloud_cover_high"]),
-                    "latitude": pd.Index([60.0, 61.0]),
+                    "latitude": pd.Index([61.0, 60.0]),
                     "longitude": pd.Index([10.0, 11.0]),
                 },
                 expected_coordinates=NWPDimensionCoordinateMap(
@@ -204,7 +204,7 @@ class TestCoordinates(unittest.TestCase):
                 data={
                     "init_time": pd.to_datetime(["2021-01-01T00:00:00Z", "2021-01-01T03:00:00Z"]),
                     "step": pd.to_timedelta(["0 days", "3 days"]),
-                    "latitude": pd.Index([60.0, 61.0]),
+                    "latitude": pd.Index([61.0, 60.0]),
                     "longitude": pd.Index([10.0, 11.0]),
                 },
                 expected_coordinates=None,
@@ -216,7 +216,7 @@ class TestCoordinates(unittest.TestCase):
                     "init_time": pd.to_datetime(["2021-01-01T00:00:00Z", "2021-01-01T03:00:00Z"]),
                     "step": pd.to_timedelta(["0 hours", "1 hours", "2 hours", "3 hours"]),
                     "variable": pd.Index(["temperature_sl", "not_a_variable"]),
-                    "latitude": pd.Index([60.0, 61.0]),
+                    "latitude": pd.Index([61.0, 60.0]),
                     "longitude": pd.Index([10.0, 11.0], dtype="int64"),
                 },
                 expected_coordinates=None,
@@ -228,7 +228,7 @@ class TestCoordinates(unittest.TestCase):
                     "init_time": pd.to_datetime(["2021-01-01T00:00:00Z", "2021-01-01T03:00:00Z"]),
                     "step": pd.to_timedelta(["0 days", "3 days"]),
                     "variable": pd.Index(["temperature_sl", "cloud_cover_high"]),
-                    "latitude": pd.Index([60.0, 61.0]),
+                    "latitude": pd.Index([61.0, 60.0]),
                     "longitude": pd.Index([10.0, 11.0]),
                     "unknown": pd.Index(["unknown"]),
                 },
@@ -246,6 +246,7 @@ class TestCoordinates(unittest.TestCase):
                         msg=f"{t.name}: Expected error to be returned.",
                     )
                 else:
+                    print(result)
                     self.assertEqual(result, Success(t.expected_coordinates))
 
 
