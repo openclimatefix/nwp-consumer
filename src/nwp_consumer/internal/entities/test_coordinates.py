@@ -139,7 +139,7 @@ class TestCoordinates(unittest.TestCase):
                         Parameter.TEMPERATURE_SL,
                         Parameter.TOTAL_PRECIPITATION_RATE_GL,
                     ],
-                    latitude=[60.0, 61.0, 62.0],
+                    latitude=[6.0, 61.0, 62.0],
                     longitude=[10.0, 11.0, 12.0],
                 ),
                 expected_indexes={
