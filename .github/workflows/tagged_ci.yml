@@ -107,7 +107,7 @@ jobs:
       # * The version is then used in the wheel filename and made available in the package
       # * setuptools_git_versioning is configured in pyproject.toml
       - name: Build wheel
-        run: uv pip wheel . --no-deps --wheel-dir dist
+        run: uv build --wheel .
 
       - name: Upload wheel
         uses: actions/upload-artifact@v4
