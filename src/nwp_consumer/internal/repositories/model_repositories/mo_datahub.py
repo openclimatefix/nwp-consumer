@@ -139,7 +139,6 @@ class MetOfficeDatahubModelRepository(ports.ModelRepository):
     def fetch_init_data(
         self, it: dt.datetime,
     ) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
-        """Fetch raw data files for an init time as xarray datasets."""
         req: urllib.request.Request = urllib.request.Request(  # noqa: S310
             url=self.request_url + f"?detail=MINIMAL&runfilter={it:%Y%m%d%H}",
             headers=self._headers,

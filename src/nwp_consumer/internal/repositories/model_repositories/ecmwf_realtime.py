@@ -93,7 +93,7 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
             expected_coordinates=entities.NWPDimensionCoordinateMap(
                 init_time=[],
                 step=list(range(0, 85, 1)),
-                variable=sorted([
+                variable=[
                     entities.Parameter.WIND_U_COMPONENT_10m,
                     entities.Parameter.WIND_V_COMPONENT_10m,
                     entities.Parameter.WIND_U_COMPONENT_100m,
@@ -112,7 +112,7 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
                     entities.Parameter.VISIBILITY_SL,
                     entities.Parameter.DIRECT_SHORTWAVE_RADIATION_FLUX_GL,
                     entities.Parameter.DOWNWARD_ULTRAVIOLET_RADIATION_FLUX_GL,
-                ]),
+                ],
                 latitude=[float(f"{lat / 10:.2f}") for lat in range(900, -900 - 1, -1)],
                 longitude=[float(f"{lon / 10:.2f}") for lon in range(-1800, 1800 + 1, 1)],
             ),

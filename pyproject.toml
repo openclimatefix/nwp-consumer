@@ -97,6 +97,7 @@ plugins = [
 # Ignore missing imports for libraries that don't have them.
 # If they are ever made, remove from here!
 module = [
+    "ecmwfapi",
     "cfgrib",
     "botocore.session",
     "botocore.client",
