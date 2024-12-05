@@ -6,10 +6,6 @@ on:
   push:
     tags: ['v[0-9]+.[0-9]+.[0-9]+']
     paths-ignore: ['README.md']
-  workflow_run:
-    workflows: ["Default Branch PR Merged CI (Python)"]
-    types:
-      - completed
 
 # Specify concurrency such that only one workflow can run at a time
 # * Different workflow files are not affected
