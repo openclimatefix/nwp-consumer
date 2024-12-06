@@ -118,7 +118,12 @@ class ArchiverService(ports.ArchiveUseCase):
                 "failed_times": ", ".join([t.strftime("Day %d %H:%M") for t in failed_times]),
             })
 
-            if len(failed_times) == 
+            if len(failed_times) == len(missing_times_result.unwrap()):
+                store.delete_store()
+                return Failure(OSError(
+                    "Failed to write any regions for all init times. "
+                    "Check error logs for details.",
+                ))
 
             # Postprocess the dataset as required
             # postprocess_result = store.postprocess(self._mr.metadata().postprocess_options)
