@@ -12,7 +12,7 @@ See Also:
 import logging
 from typing import override
 
-from dagster_pipes import PipesContext, open_dagster_pipes
+from dagster_pipes import open_dagster_pipes
 from returns.result import ResultE, Success
 
 from nwp_consumer.internal import entities, ports
@@ -28,9 +28,8 @@ class DagsterPipesNotificationRepository(ports.NotificationRepository):
         self,
         message: entities.StoreCreatedNotification | entities.StoreAppendedNotification,
     ) -> ResultE[str]:
-        with open_dagster_pipes():
-            context = PipesContext.get()
-            context.report_asset_materialization(
+        with open_dagster_pipes() as pipesctx:
+            pipesctx.report_asset_materialization(
                 metadata={
                     "filename": {"raw_value": message.filename, "type": "text"},
                     "size_mb": {"raw_value": message.size_mb, "type": "float"},
