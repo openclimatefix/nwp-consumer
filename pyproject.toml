@@ -21,7 +21,7 @@ dependencies = [
     "eccodes == 2.38.3",
     "ecmwf-api-client == 1.6.3",
     "cfgrib == 0.9.14.1",
-    "dagster-pipes == 1.8.5",
+    "dagster-pipes == 1.9.3",
     "joblib == 1.4.2",
     "numpy == 2.1.0",
     "ocf-blosc2 == 0.0.11",
