@@ -8,6 +8,8 @@ import pathlib
 from typing import override
 
 from joblib import Parallel, cpu_count
+from returns.methods import partition
+from returns.pipeline import flow
 from returns.result import Failure, ResultE, Success
 
 from nwp_consumer.internal import entities, ports
@@ -69,6 +71,23 @@ class ConsumerService(ports.ConsumeUseCase):
                 ))
             store = init_store_result.unwrap()
 
+            def accumulate_fetched_data(generator):
+                results: list[ResultE[str]] = []
+                for value in generator:
+                    # Note that we can only use list comprehension in here because the type
+                    # yielded by the generator is a list of dataarrays.
+                    # It would be more memory efficient to use a generator here, but
+                    # open_datasets returns a list.
+                    write_results = value.do(
+                        [store.write_to_region(da) for da in das]
+                        for das in value
+                    )
+                    results.extend(
+                        write_results
+                        if isinstance(write_results, list)
+                        else [write_results],
+                    )
+                return results
 
             n_jobs: int = max(cpu_count() - 1, self.mr.repository().max_connections)
             if os.getenv("CONCURRENCY", "True").capitalize() == "False":
@@ -81,15 +100,22 @@ class ConsumerService(ports.ConsumeUseCase):
                 verbose=10,
                 return_as="generator_unordered",
             ) as parallel:
+
                 amr_result = self.mr.authenticate()
-                write_result: ResultE[int] = amr_result.do(
-                    write_result
-                    for amr in amr_result
-                    for fetch_result_generator in parallel(amr.fetch_init_data(it=it))
-                    for fetch_result in fetch_result_generator
-                    for das in fetch_result
-                    for da in das
-                    for write_result in store.write_to_region(da)
+                if isinstance(amr_result, Failure):
+                    store.delete_store()
+                    return Failure(OSError(
+                        "Unable to authenticate with model repository "
+                        f"'{self.mr.repository().name}': "
+                        f"{amr_result.failure()}",
+                    ))
+                amr = amr_result.unwrap()
+
+                out = flow(
+                    parallel(amr.fetch_init_data(it=it)),
+                    accumulate_fetched_data,
+                    partition,
+                    lambda sf: Success(sf[0]) if len(sf[1]) == 0 else Failure(sf[1]),
                 )
 
                 # Fail hard if any of the writes failed
@@ -128,4 +154,5 @@ class ConsumerService(ports.ConsumeUseCase):
     @override
     def postprocess(self, options: entities.PostProcessOptions) -> ResultE[str]:
         return Failure(NotImplementedError("Postprocessing not yet implemented"))
+
 

@@ -8,12 +8,11 @@ in the `repositories` module.
 """
 
 from .services import ConsumeUseCase, ArchiveUseCase
-from .repositories import ModelRepository, ZarrRepository, NotificationRepository
+from .repositories import ModelRepository, NotificationRepository
 
 __all__ = [
     "ConsumeUseCase",
     "ArchiveUseCase",
     "ModelRepository",
-    "ZarrRepository",
     "NotificationRepository",
 ]

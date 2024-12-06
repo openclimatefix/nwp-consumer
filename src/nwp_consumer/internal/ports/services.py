@@ -12,6 +12,8 @@ import datetime as dt
 from returns.result import ResultE
 
 from nwp_consumer.internal import entities
+from .repositories import ModelRepository, NotificationRepository
+from returns.methods import partition
 
 
 class ConsumeUseCase(abc.ABC):

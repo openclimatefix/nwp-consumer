@@ -23,7 +23,7 @@ class PerformanceMonitor(Thread):
     memory_buffer: list[int]
     cpu_buffer: list[float]
     start_time: float
-    end_time: float
+    end_time: float | None
     stop: bool = True
 
     def __enter__(self) -> None:
@@ -60,6 +60,8 @@ class PerformanceMonitor(Thread):
 
     def get_runtime(self) -> int:
         """Get the runtime of the thread in seconds."""
+        if self.end_time is None:
+            return int(time.time() - self.start_time)
         return int(self.end_time - self.start_time)
 
     def run(self) -> None:

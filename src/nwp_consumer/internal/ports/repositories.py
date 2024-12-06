@@ -124,16 +124,6 @@ class ModelRepository(abc.ABC):
         """Metadata about the model."""
         pass
 
-
-class ZarrRepository(abc.ABC):
-    """Interface for a repository that stores Zarr NWP data."""
-
-    @abc.abstractmethod
-    def save(self, src: pathlib.Path, dst: pathlib.Path) -> ResultE[str]:
-        """Save NWP store data in the repository."""
-        pass
-
-
 class NotificationRepository(abc.ABC):
     """Interface for a repository that sends notifications.
 
