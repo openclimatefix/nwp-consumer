@@ -72,11 +72,10 @@ class ConsumerService(ports.ConsumeUseCase):
         """
         results: list[ResultE[int]] = []
         for value in generator:
-            result: ResultE[int] | list[ResultE[int]] = value.do(
-                [store.write_to_region(da) for da in das]
-                for das in value
-            )
-            results.extend(result if isinstance(result, list) else [result])
+            if isinstance(value, Failure):
+                results.extend([value])
+            else:
+                results.extend([store.write_to_region(da=da) for da in value.unwrap()])
         successes, failures = partition(results)
         # TODO: Define the failure threshold for number of write attempts properly
         log.info(f"Processed {len(successes)} DataArrays successfully with {len(failures)} errors.")
@@ -87,7 +86,8 @@ class ConsumerService(ports.ConsumeUseCase):
                 else:
                     break
             return Failure(OSError(
-                f"Error threshold exceeded: {len(failures)} errors (>0) occurred during processing.",
+                "Error threshold exceeded: "
+                f"{len(failures)} errors (>0) occurred during processing.",
             ))
         else:
             return Success(sum(successes))
@@ -132,13 +132,16 @@ class ConsumerService(ports.ConsumeUseCase):
             period: The period for which to gather init time data.
         """
         its: list[dt.datetime] = []
-        match type(period):
-            case dt.datetime:
-                its = [period]
-            case dt.date:
-                its = repository_metadata.month_its(year=period.year, month=period.month)
-            case _:
+        match period:
+            case _ if period is None:
                 its = [repository_metadata.determine_latest_it_from(dt.datetime.now(tz=dt.UTC))]
+            case single_it if isinstance(period, dt.datetime):
+                its = [single_it] # type: ignore
+            case multiple_its if isinstance(period, dt.date):
+                its = repository_metadata.month_its(
+                    year=multiple_its.year,
+                    month=multiple_its.month,
+                )
 
         # Create a store for the data with the relevant init time coordinates
         return entities.TensorStore.initialize_empty_store(
@@ -233,5 +236,5 @@ class ConsumerService(ports.ConsumeUseCase):
             notification_adaptor: type[ports.NotificationRepository],
         ) -> str:
         """Get information about the service."""
-        pass
+        raise NotImplementedError("Not yet implemented")
 

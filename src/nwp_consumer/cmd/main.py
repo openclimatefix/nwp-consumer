@@ -5,7 +5,7 @@ import os
 import sys
 from typing import NamedTuple
 
-from nwp_consumer.internal import handlers, ports, repositories, services
+from nwp_consumer.internal import handlers, ports, repositories
 
 log = logging.getLogger("nwp-consumer")
 

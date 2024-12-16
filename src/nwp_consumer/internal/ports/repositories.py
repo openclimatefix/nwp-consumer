@@ -14,7 +14,6 @@ in a uniform way.
 import abc
 import datetime as dt
 import logging
-import pathlib
 from collections.abc import Callable, Iterator
 
 import xarray as xr
