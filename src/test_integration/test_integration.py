@@ -1,12 +1,14 @@
 import datetime as dt
 import unittest
+from typing import TYPE_CHECKING
 
 import xarray as xr
 from returns.pipeline import is_successful
-from returns.result import ResultE
 
 from nwp_consumer.internal import repositories, services
 
+if TYPE_CHECKING:
+    from returns.result import ResultE
 
 class TestIntegration(unittest.TestCase):
     def test_ceda_metoffice_global_model(self) -> None:
