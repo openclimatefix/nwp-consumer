@@ -140,12 +140,10 @@ class NOAAS3ModelRepository(ports.ModelRepository):
     def _download(self, url: str, it: dt.datetime) -> ResultE[pathlib.Path]:
         """Download a grib file from NOAA S3.
 
-        The URLs have the following format:
+        The URLs have the following format::
 
-        ```
-        https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.20230911/06/atmos/gfs.t06z.pgrb2.1p00.f087
-        <------------------bucket---------------><---inittime--->      <-------filename----step>
-        ```
+          https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.20230911/06/atmos/gfs.t06z.pgrb2.1p00.f087
+          <------------------bucket---------------><---inittime--->      <-------filename----step>
 
         Args:
             url: The URL to the S3 object.
