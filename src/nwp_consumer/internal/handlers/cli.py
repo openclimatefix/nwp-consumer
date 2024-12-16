@@ -4,7 +4,7 @@ import argparse
 import datetime as dt
 import logging
 
-from returns.result import Failure
+from returns.result import Failure, ResultE
 
 from nwp_consumer.internal import ports, services
 
@@ -84,11 +84,11 @@ class CLIHandler:
         args = self.parser.parse_args()
         match args.command:
             case "consume":
-                service_result = services.Service.from_adaptors(
+                service_result = services.ConsumerService.from_adaptors(
                     model_adaptor=self.model_adaptor,
                     notification_adaptor=self.notification_adaptor,
                 )
-                result = service_result.do(
+                result: ResultE[str] = service_result.do(
                     consume_result
                     for service in service_result
                     for consume_result in service.consume(period=args.init_time)
@@ -98,7 +98,7 @@ class CLIHandler:
                     return 1
 
             case "archive":
-                service_result = services.Service.from_adaptors(
+                service_result = services.ConsumerService.from_adaptors(
                     model_adaptor=self.model_adaptor,
                     notification_adaptor=self.notification_adaptor,
                 )
