@@ -5,7 +5,7 @@ import os
 import sys
 from typing import NamedTuple
 
-from nwp_consumer.internal import handlers, ports, repositories, services
+from nwp_consumer.internal import handlers, ports, repositories
 
 log = logging.getLogger("nwp-consumer")
 
@@ -61,17 +61,10 @@ def parse_env() -> Adaptors:
 
 def run_cli() -> None:
     """Entrypoint for the CLI handler."""
-    # TODO: InfoUseCase
     adaptors = parse_env()
     c = handlers.CLIHandler(
-        consumer_usecase=services.ConsumerService(
-            model_repository=adaptors.model_repository,
-            notification_repository=adaptors.notification_repository,
-        ),
-        archiver_usecase=services.ArchiverService(
-            model_repository=adaptors.model_repository,
-            notification_repository=adaptors.notification_repository,
-        ),
+        model_adaptor=adaptors.model_repository,
+        notification_adaptor=adaptors.notification_repository,
     )
     returncode: int = c.run()
     sys.exit(returncode)

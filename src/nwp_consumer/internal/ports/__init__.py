@@ -7,13 +7,11 @@ any actors (driving and driven) must obey in order to interact with the core.
 in the `repositories` module.
 """
 
-from .services import ConsumeUseCase, ArchiveUseCase
-from .repositories import ModelRepository, ZarrRepository, NotificationRepository
+from .services import ConsumeUseCase
+from .repositories import ModelRepository, NotificationRepository
 
 __all__ = [
     "ConsumeUseCase",
-    "ArchiveUseCase",
     "ModelRepository",
-    "ZarrRepository",
     "NotificationRepository",
 ]

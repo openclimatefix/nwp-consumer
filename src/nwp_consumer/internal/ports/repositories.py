@@ -14,7 +14,6 @@ in a uniform way.
 import abc
 import datetime as dt
 import logging
-import pathlib
 from collections.abc import Callable, Iterator
 
 import xarray as xr
@@ -123,16 +122,6 @@ class ModelRepository(abc.ABC):
     def model() -> entities.ModelMetadata:
         """Metadata about the model."""
         pass
-
-
-class ZarrRepository(abc.ABC):
-    """Interface for a repository that stores Zarr NWP data."""
-
-    @abc.abstractmethod
-    def save(self, src: pathlib.Path, dst: pathlib.Path) -> ResultE[str]:
-        """Save NWP store data in the repository."""
-        pass
-
 
 class NotificationRepository(abc.ABC):
     """Interface for a repository that sends notifications.

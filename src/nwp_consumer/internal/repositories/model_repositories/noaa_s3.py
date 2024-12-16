@@ -121,26 +121,33 @@ class NOAAS3ModelRepository(ports.ModelRepository):
             )
 
         for url in urls:
-            yield delayed(self._download_and_convert)(url=url)
+            yield delayed(self._download_and_convert)(url=url, it=it)
 
     @classmethod
     @override
     def authenticate(cls) -> ResultE["NOAAS3ModelRepository"]:
         return Success(cls())
 
-    def _download_and_convert(self, url: str) -> ResultE[list[xr.DataArray]]:
+    def _download_and_convert(self, url: str, it: dt.datetime) -> ResultE[list[xr.DataArray]]:
         """Download and convert a file from S3.
 
         Args:
             url: The URL to the S3 object.
+            it: The init time of the object in question, used in the saved path
         """
-        return self._download(url).bind(self._convert)
+        return self._download(url=url, it=it).bind(self._convert)
 
-    def _download(self, url: str) -> ResultE[pathlib.Path]:
-        """Download an ECMWF realtime file from S3.
+    def _download(self, url: str, it: dt.datetime) -> ResultE[pathlib.Path]:
+        """Download a grib file from NOAA S3.
+
+        The URLs have the following format::
+
+          https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.20230911/06/atmos/gfs.t06z.pgrb2.1p00.f087
+          <------------------bucket---------------><---inittime--->      <-------filename----step>
 
         Args:
             url: The URL to the S3 object.
+            it: The init time of the object in question, used in the saved path
         """
         local_path: pathlib.Path = (
             pathlib.Path(
@@ -148,54 +155,58 @@ class NOAAS3ModelRepository(ports.ModelRepository):
                     "RAWDIR",
                     f"~/.local/cache/nwp/{self.repository().name}/{self.model().name}/raw",
                 ),
-            ) / url.split("/")[-1]
-        ).with_suffix(".grib").expanduser()
+            ) / it.strftime("%Y/%m/%d/%H") / (url.split("/")[-1] + ".grib")
+        ).expanduser()
 
         # Only download the file if not already present
-        if not local_path.exists():
-            local_path.parent.mkdir(parents=True, exist_ok=True)
-            log.debug("Requesting file from S3 at: '%s'", url)
+        if local_path.exists():
+            return Success(local_path)
 
-            fs = s3fs.S3FileSystem(anon=True)
-            try:
-                if not fs.exists(url):
-                    raise FileNotFoundError(f"File not found at '{url}'")
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        log.debug("Requesting file from S3 at: '%s'", url)
 
-                with local_path.open("wb") as lf, fs.open(url, "rb") as rf:
-                    for chunk in iter(lambda: rf.read(12 * 1024), b""):
-                        lf.write(chunk)
-                        lf.flush()
+        fs = s3fs.S3FileSystem(anon=True)
+        try:
+            if not fs.exists(url):
+                raise FileNotFoundError(f"File not found at '{url}'")
 
-            except Exception as e:
-                return Failure(OSError(
-                    f"Failed to download file from S3 at '{url}'. Encountered error: {e}",
-                ))
+            with local_path.open("wb") as lf, fs.open(url, "rb") as rf:
+                for chunk in iter(lambda: rf.read(12 * 1024), b""):
+                    lf.write(chunk)
+                    lf.flush()
 
-            if local_path.stat().st_size != fs.info(url)["size"]:
-                return Failure(ValueError(
-                    f"File size mismatch from file at '{url}': "
-                    f"{local_path.stat().st_size} != {fs.info(url)['size']} (remote). "
-                    "File may be corrupted.",
-                ))
+        except Exception as e:
+            return Failure(OSError(
+                f"Failed to download file from S3 at '{url}'. Encountered error: {e}",
+            ))
 
-            # Also download the associated index file
-            # * This isn't critical, but speeds up reading the file in when converting
-            # TODO: Re-incorporate this when https://github.com/ecmwf/cfgrib/issues/350
-            # TODO: is resolved. Currently downloaded index files are ignored due to
-            # TODO: path differences once downloaded.
-            # index_url: str = url + ".idx"
-            # index_path: pathlib.Path = local_path.with_suffix(".grib.idx")
-            # try:
-            #     with index_path.open("wb") as lf, fs.open(index_url, "rb") as rf:
-            #         for chunk in iter(lambda: rf.read(12 * 1024), b""):
-            #             lf.write(chunk)
-            #             lf.flush()
-            # except Exception as e:
-            #     log.warning(
-            #         f"Failed to download index file from S3 at '{url}'. "
-            #         "This will require a manual indexing when converting the file. "
-            #         f"Encountered error: {e}",
-            #     )
+        # For some reason, the GFS files are about 2MB larger when downloaded
+        # then their losted size in AWS. I'd be interested to know why!
+        if local_path.stat().st_size < fs.info(url)["size"]:
+            return Failure(ValueError(
+                f"File size mismatch from file at '{url}': "
+                f"{local_path.stat().st_size} != {fs.info(url)['size']} (remote). "
+                "File may be corrupted.",
+            ))
+
+        # Also download the associated index file
+        # * This isn't critical, but speeds up reading the file in when converting
+        # TODO: Re-incorporate this when https://github.com/ecmwf/cfgrib/issues/350
+        # TODO: is resolved. Currently downloaded index files are ignored due to
+        # TODO: path differences once downloaded.
+        # index_url: str = url + ".idx"
+        # index_path: pathlib.Path = local_path.with_suffix(".grib.idx")
+        # try:
+        #     with index_path.open("wb") as lf, fs.open(index_url, "rb") as rf:
+        #         for chunk in iter(lambda: rf.read(12 * 1024), b""):
+        #             lf.write(chunk)
+        #             lf.flush()
+        # except Exception as e:
+        #     log.warning(
+        #         f"Failed to download index file from S3 at '{url}'. "
+        #         "This will require a manual indexing when converting the file. "
+        #         f"Encountered error: {e}",
+        #     )
 
         return Success(local_path)
 
@@ -219,6 +230,8 @@ class NOAAS3ModelRepository(ports.ModelRepository):
                     "ignore_keys": {
                         "levelType": ["isobaricInhPa", "depthBelowLandLayer", "meanSea"],
                     },
+                    "errors": "raise",
+                    "indexpath": "",  # TODO: Change when above TODO is resolved
                 },
             )
         except Exception as e:

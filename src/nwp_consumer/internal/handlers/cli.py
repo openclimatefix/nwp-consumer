@@ -4,9 +4,9 @@ import argparse
 import datetime as dt
 import logging
 
-from returns.result import Failure, Success
+from returns.result import Failure, ResultE
 
-from nwp_consumer.internal import ports
+from nwp_consumer.internal import ports, services
 
 log = logging.getLogger("nwp-consumer")
 
@@ -14,15 +14,17 @@ log = logging.getLogger("nwp-consumer")
 class CLIHandler:
     """CLI driving actor."""
 
+    model_adaptor: type[ports.ModelRepository]
+    notification_adaptor: type[ports.NotificationRepository]
+
     def __init__(
             self,
-            consumer_usecase: ports.ConsumeUseCase,
-            archiver_usecase: ports.ArchiveUseCase,
-    ) -> None:
+            model_adaptor: type[ports.ModelRepository],
+            notification_adaptor: type[ports.NotificationRepository],
+        ) -> None:
         """Create a new instance."""
-        self._consumer_usecase = consumer_usecase
-        self._archiver_usecase = archiver_usecase
-
+        self.model_adaptor = model_adaptor
+        self.notification_adaptor = notification_adaptor
 
     @property
     def parser(self) -> argparse.ArgumentParser:
@@ -82,30 +84,35 @@ class CLIHandler:
         args = self.parser.parse_args()
         match args.command:
             case "consume":
-                result = self._consumer_usecase.consume(it=args.init_time)
-
-                match result:
-                    case Failure(e):
-                        log.error(f"Failed to consume NWP data: {e}")
-                        return 1
-                    case Success(path):
-                        log.info(f"Successfully consumed NWP data to '{path}'")
-                        return 0
+                service_result = services.ConsumerService.from_adaptors(
+                    model_adaptor=self.model_adaptor,
+                    notification_adaptor=self.notification_adaptor,
+                )
+                result: ResultE[str] = service_result.do(
+                    consume_result
+                    for service in service_result
+                    for consume_result in service.consume(period=args.init_time)
+                )
+                if isinstance(result, Failure):
+                    log.error(f"Failed to consume NWP data: {result!s}")
+                    return 1
 
             case "archive":
-                result = self._archiver_usecase.archive(year=args.year, month=args.month)
-
-                match result:
-                    case Failure(e):
-                        log.error(f"Failed to archive NWP data: {e}")
-                        return 1
-                    case Success(path):
-                        log.info(f"Successfully archived NWP data to '{path}'")
-                        return 0
+                service_result = services.ConsumerService.from_adaptors(
+                    model_adaptor=self.model_adaptor,
+                    notification_adaptor=self.notification_adaptor,
+                )
+                result = service_result.do(
+                    consume_result
+                    for service in service_result
+                    for consume_result in service.consume(period=args.init_time)
+                )
+                if isinstance(result, Failure):
+                    log.error(f"Failed to archive NWP data: {result!s}")
+                    return 1
 
             case "info":
                 log.error("Info command is coming soon! :)")
-                return 0
 
             case _:
                 log.error(f"Unknown command: {args.command}")

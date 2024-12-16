@@ -3,15 +3,13 @@
 These interfaces define the signatures that *driving* actors must conform to
 in order to interact with the core.
 
-Also sometimes referred to as *primary ports*.
+Sometimes referred to as *primary ports*.
 """
 
 import abc
 import datetime as dt
 
 from returns.result import ResultE
-
-from nwp_consumer.internal import entities
 
 
 class ConsumeUseCase(abc.ABC):
@@ -24,16 +22,15 @@ class ConsumeUseCase(abc.ABC):
 
 
     @abc.abstractmethod
-    def consume(self, it: dt.datetime | None = None) -> ResultE[str]:
-        """Consume NWP data to Zarr format for desired init time.
+    def consume(self, period: dt.datetime | dt.date | None = None) -> ResultE[str]:
+        """Consume NWP data to Zarr format for desired time period.
 
         Where possible the implementation should be as memory-efficient as possible.
         The designs of the repository methods also enable parallel processing within
         the implementation.
 
         Args:
-            it: The initialization time for which to consume data.
-                If None, the latest available forecast should be consumed.
+            period: The period for which to gather init time data.
 
         Returns:
             The path to the produced Zarr store.
@@ -46,51 +43,13 @@ class ConsumeUseCase(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def postprocess(self, options: entities.PostProcessOptions) -> ResultE[str]:
-        """Postprocess the produced Zarr according to given options."""
-        pass
-
-
-class ArchiveUseCase(abc.ABC):
-    """Interface for the archive use case.
-
-    Defines the business-critical methods for the following use cases:
-
-    - 'A user should be able to archive NWP data for a given time period.'
-    """
-
-    @abc.abstractmethod
-    def archive(self, year: int, month: int) -> ResultE[str]:
-        """Archive NWP data to Zarr format for the given month.
+    def archive(self, period: dt.date) -> ResultE[str]:
+        """Archive NWP data to Zarr format for desired time period.
 
         Args:
-            year: The year for which to archive data.
-            month: The month for which to archive data.
+            period: The period for which to gather init time data.
 
         Returns:
             The path to the produced Zarr store.
         """
-        pass
-
-class InfoUseCase(abc.ABC):
-    """Interface for the notification use case.
-
-    Defines the business-critical methods for the following use cases:
-
-    - 'A user should be able to retrieve information about the service.'
-    """
-
-    @abc.abstractmethod
-    def available_models(self) -> list[str]:
-        """Get a list of available models."""
-        pass
-
-    @abc.abstractmethod
-    def model_repository_info(self) -> str:
-        """Get information about the model repository."""
-        pass
-
-    @abc.abstractmethod
-    def model_info(self) -> str:
-        """Get information about the model."""
         pass

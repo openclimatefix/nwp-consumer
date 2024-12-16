@@ -49,7 +49,7 @@ class TestNOAAS3ModelRepository(unittest.TestCase):
 
         for url in urls:
             with self.subTest(url=url):
-                result = c._download_and_convert(url)
+                result = c._download_and_convert(url=url, it=test_it)
 
                 self.assertIsInstance(result, Success, msg=f"{result!s}")
 

@@ -1,26 +1,26 @@
+import datetime as dt
 import shutil
 import unittest
 
 import xarray as xr
 from returns.pipeline import is_successful
 
-from nwp_consumer.internal.services.archiver_service import ArchiverService
+from nwp_consumer.internal.services.consumer_service import ConsumerService
 
 from ._dummy_adaptors import DummyModelRepository, DummyNotificationRepository
 
 
 class TestParallelConsumer(unittest.TestCase):
 
-    @unittest.skip("Takes an age to run, need to figure out a better way.")
-    def test_archive(self) -> None:
+    def test_consume(self) -> None:
         """Test the consume method of the ParallelConsumer class."""
 
-        test_consumer = ArchiverService(
-            model_repository=DummyModelRepository,
-            notification_repository=DummyNotificationRepository,
-        )
+        test_consumer = ConsumerService.from_adaptors(
+            model_adaptor=DummyModelRepository,
+            notification_adaptor=DummyNotificationRepository,
+        ).unwrap()
 
-        result = test_consumer.archive(year=2021, month=1)
+        result = test_consumer.consume(period=dt.datetime(2021, 1, 1, tzinfo=dt.UTC))
 
         self.assertTrue(is_successful(result), msg=result)
 
