@@ -1,3 +1,16 @@
+"""Domain classes for Models and their metadata.
+
+Sources of NWP data have attributes both pertaining to and apart from
+the data they deliver. This module defines classes for metadata that
+tracks relevant information about the model repository and the data
+it provides. This might be helpful in determining the quality of the
+data, defining pipelines for processing, or establishing the availability
+for a live service.
+
+In this instance, the `ModelMetadata` refers to information pertaining
+to the model used to generate the data itself.
+"""
+
 import dataclasses
 import logging
 

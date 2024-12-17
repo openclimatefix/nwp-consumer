@@ -7,10 +7,8 @@ it provides. This might be helpful in determining the quality of the
 data, defining pipelines for processing, or establishing the availability
 for a live service.
 
-In this instance, the `ModelMetadata` refers to information pertaining
-to the model used to generate the data itself, whilst the
-`ModelRepositoryMetadata` refers to information about the repository
-where NWP data produced by the model resides.
+In this instance, the `ModelRepositoryMetadata` refers to information
+about the repository where NWP data produced by the model resides.
 """
 
 import dataclasses
