@@ -120,43 +120,15 @@ class CEDAFTPModelRepository(ports.ModelRepository):
             required_env=["CEDA_FTP_USER", "CEDA_FTP_PASS"],
             optional_env={},
             postprocess_options=entities.PostProcessOptions(),
+            available_models={
+                "default": entities.Models.MO_UM_GLOBAL_17KM,
+            },
         )
 
     @staticmethod
     @override
     def model() -> entities.ModelMetadata:
-        return entities.ModelMetadata(
-            name="UM-Global",
-            resolution="17km",
-            expected_coordinates = entities.NWPDimensionCoordinateMap(
-                init_time=[],
-                step=list(range(0, 48, 1)),
-                variable=[
-                    entities.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
-                    entities.Parameter.CLOUD_COVER_TOTAL,
-                    entities.Parameter.CLOUD_COVER_HIGH,
-                    entities.Parameter.CLOUD_COVER_LOW,
-                    entities.Parameter.CLOUD_COVER_MEDIUM,
-                    entities.Parameter.RELATIVE_HUMIDITY_SL,
-                    entities.Parameter.SNOW_DEPTH_GL,
-                    entities.Parameter.TEMPERATURE_SL,
-                    entities.Parameter.WIND_U_COMPONENT_10m,
-                    entities.Parameter.WIND_V_COMPONENT_10m,
-                    entities.Parameter.VISIBILITY_SL,
-                ],
-                latitude=[
-                    float(f"{lat:.4f}") for lat in np.arange(89.856, -89.856 - 0.156, -0.156)
-                ],
-                longitude=[
-                    float(f"{lon:.4f}") for lon in np.concatenate([
-                        np.arange(-45, 45, 0.234),
-                        np.arange(45, 135, 0.234),
-                        np.arange(135, 225, 0.234),
-                        np.arange(225, 315, 0.234),
-                    ])
-                ],
-            ),
-        )
+        return CEDAFTPModelRepository.repository().available_models["default"]
 
     @override
     def fetch_init_data(self, it: dt.datetime) \
@@ -306,7 +278,7 @@ class CEDAFTPModelRepository(ports.ModelRepository):
             )
             da = (
                 da
-                .transpose("init_time", "step", "variable", "latitude", "longitude")
+                .transpose(*CEDAFTPModelRepository.model().expected_coordinates.dims)
                 # Remove the last value of the longitude dimension as it overlaps with the next file
                 # Reverse the latitude dimension to be in descending order
                 .isel(longitude=slice(None, -1), latitude=slice(None, None, -1))

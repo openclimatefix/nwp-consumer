@@ -16,7 +16,7 @@ should not contain any logic that is specific to a particular implementation.
 """
 
 from .repometadata import ModelRepositoryMetadata
-from .modelmetadata import ModelMetadata
+from .modelmetadata import ModelMetadata, Models
 from .tensorstore import ParameterScanResult, TensorStore
 from .postprocess import PostProcessOptions, CodecOptions
 from .notification import PerformanceMetadata, StoreCreatedNotification, StoreAppendedNotification
@@ -27,6 +27,7 @@ from .performance import PerformanceMonitor
 __all__ = [
     "ModelRepositoryMetadata",
     "ModelMetadata",
+    "Models",
     "ParameterScanResult",
     "TensorStore",
     "PostProcessOptions",

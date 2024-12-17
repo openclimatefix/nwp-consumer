@@ -19,6 +19,7 @@ import os
 
 import pandas as pd
 
+from .modelmetadata import ModelMetadata
 from .postprocess import PostProcessOptions
 
 
@@ -70,6 +71,9 @@ class ModelRepositoryMetadata:
     postprocess_options: PostProcessOptions
     """Options for post-processing the data."""
 
+    available_models: dict[str, ModelMetadata]
+    """A dictionary of available models and their metadata."""
+
     def determine_latest_it_from(self, t: dt.datetime) -> dt.datetime:
         """Determine the latest available initialization time from a given time.
 
@@ -117,3 +121,4 @@ class ModelRepositoryMetadata:
             "\n".join(f"\t\t{var}={val}" for var, val in self.optional_env.items()),
         ))
         return pretty
+

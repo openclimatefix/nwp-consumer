@@ -14,7 +14,6 @@ import inspect
 import logging
 import os
 import pathlib
-import re
 from collections.abc import Callable, Iterator
 from typing import override
 
@@ -188,19 +187,10 @@ class ECMWFMARSModelRepository(ports.ModelRepository):
     """Model repository implementation for archive data from ECMWF's MARS."""
 
     server: ECMWFService
-    nwse: str = "62/-12/48/3" # Default to UK
 
     def __init__(self, server: ECMWFService) -> None:
         """Create a new instance of the class."""
         self.server = server
-        nwse: str = os.getenv("ECMWF_MARS_AREA", default=self.nwse)
-        if not re.match(r"^-?\d+/-?\d+/-?\d+/-?\d+$", nwse):
-            log.warn(
-                f"Ignoring invalid area: '{nwse}' - defaulting to UK. "
-                "Ensure ECMWF_MARS_AREA is a string of the form 'N/W/S/E'.",
-            )
-            nwse = self.nwse
-        self.nwse = nwse
 
     @staticmethod
     @override
@@ -217,32 +207,30 @@ class ECMWFMARSModelRepository(ports.ModelRepository):
                 "ECMWF_API_EMAIL",
                 "ECMWF_API_URL",
             ],
-            optional_env={
-                "ECMWF_MARS_AREA": "62/-12/48/3",
-            },
+            optional_env={},
             postprocess_options=entities.PostProcessOptions(),
+            available_models={
+                "default": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk"),
+                "hres-ifs-uk": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk"),
+                "hres-ifs-india": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("india"),
+                "ens-stat-india": entities.Models.ECMWF_ENS_STAT_0P1DEGREE.with_region("india"),
+                "ens-stat-uk": entities.Models.ECMWF_ENS_STAT_0P1DEGREE.with_region("uk"),
+            },
         )
 
     @staticmethod
     @override
     def model() -> entities.ModelMetadata:
-        return entities.ModelMetadata(
-            name="ENS",
-            resolution="0.1 degrees",
-            expected_coordinates=entities.NWPDimensionCoordinateMap(
-                init_time=[],
-                step=list(range(0, 85, 3)),
-                variable=[
-                    entities.Parameter.PRESSURE_MSL,
-                    entities.Parameter.WIND_SPEED_10m,
-                    entities.Parameter.WIND_SPEED_100m,
-                    entities.Parameter.TEMPERATURE_SL,
-                ],
-                ensemble_stat=["mean", "std", "P10", "P25", "P75", "P90"],
-                latitude=[v/10 for v in range(900, -900, -1)],
-                longitude=[v/10 for v in range(-1800, 1800, 1)],
-            ),
-        )
+        requested_model: str = os.getenv("MODEL", default="default")
+        if requested_model not in ECMWFMARSModelRepository.repository().available_models:
+            log.warn(
+                f"Unknown model '{requested_model}' requested, falling back to default ",
+                "ECMWF-MARS repository only supports "
+                f"'{list(ECMWFMARSModelRepository.repository().available_models.keys())}'. "
+                "Ensure MODEL environment variable is set to a valid model name.",
+            )
+            requested_model = "default"
+        return ECMWFMARSModelRepository.repository().available_models[requested_model]
 
     @classmethod
     @override
@@ -267,7 +255,7 @@ class ECMWFMARSModelRepository(ports.ModelRepository):
             params=self.model().expected_coordinates.variable,
             init_time=it,
             steps=self.model().expected_coordinates.step,
-            nwse=self.nwse,
+            nwse=",".join([str(ord) for ord in self.model().expected_coordinates.nwse()]),
         )
 
         for req in [base_req.as_ensemble_mean_request(), base_req.as_ensemble_std_request()]:
@@ -332,11 +320,12 @@ class ECMWFMARSModelRepository(ports.ModelRepository):
             )
             del dss
 
-            # Add in missing coordinates for mean/std data
-            if "enfo-es" in path.name:
-                ds = ds.expand_dims(dim={"ensemble_stat": ["std"]})
-            elif "enfo-em" in path.name:
-                ds = ds.expand_dims(dim={"ensemble_stat": ["mean"]})
+            if "ens" in ECMWFMARSModelRepository.model().name:
+                # Add in missing coordinates for mean/std data
+                if "enfo-es" in path.name:
+                    ds = ds.expand_dims(dim={"ensemble_stat": ["std"]})
+                elif "enfo-em" in path.name:
+                    ds = ds.expand_dims(dim={"ensemble_stat": ["mean"]})
             da: xr.DataArray = (
                 ds
                 .pipe(
@@ -351,20 +340,11 @@ class ECMWFMARSModelRepository(ports.ModelRepository):
                 da.drop_vars(
                     names=[
                         c for c in ds.coords
-                        if c not in [
-                            "init_time",
-                            "step",
-                            "ensemble_stat",
-                            "variable",
-                            "latitude",
-                            "longitude",
-                        ]
+                        if c not in ECMWFMARSModelRepository.model().expected_coordinates.dims
                     ],
                     errors="ignore",
                 )
-                .transpose(
-                    "init_time", "step", "variable", "ensemble_stat", "latitude", "longitude",
-                )
+                .transpose(*ECMWFMARSModelRepository.model().expected_coordinates.dims)
                 .sortby(variables=["step", "variable", "longitude"])
                 .sortby(variables="latitude", ascending=False)
             )
@@ -375,5 +355,4 @@ class ECMWFMARSModelRepository(ports.ModelRepository):
             ))
 
         return Success([da])
-
 

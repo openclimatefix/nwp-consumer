@@ -49,40 +49,16 @@ class NOAAS3ModelRepository(ports.ModelRepository):
             required_env=[],
             optional_env={},
             postprocess_options=entities.PostProcessOptions(),
+            available_models={
+                "default": entities.Models.NCEP_GFS_1DEGREE,
+                "gfs-1deg": entities.Models.NCEP_GFS_1DEGREE,
+            },
         )
 
     @staticmethod
     @override
     def model() -> entities.ModelMetadata:
-        return entities.ModelMetadata(
-            name="NCEP-GFS",
-            resolution="1 degree",
-            expected_coordinates=entities.NWPDimensionCoordinateMap(
-                init_time=[],
-                step=list(range(0, 49, 3)),
-                variable=sorted(
-                    [
-                        entities.Parameter.TEMPERATURE_SL,
-                        entities.Parameter.CLOUD_COVER_TOTAL,
-                        entities.Parameter.CLOUD_COVER_HIGH,
-                        entities.Parameter.CLOUD_COVER_MEDIUM,
-                        entities.Parameter.CLOUD_COVER_LOW,
-                        entities.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
-                        entities.Parameter.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL,
-                        entities.Parameter.TOTAL_PRECIPITATION_RATE_GL,
-                        entities.Parameter.SNOW_DEPTH_GL,
-                        entities.Parameter.RELATIVE_HUMIDITY_SL,
-                        entities.Parameter.VISIBILITY_SL,
-                        entities.Parameter.WIND_U_COMPONENT_10m,
-                        entities.Parameter.WIND_V_COMPONENT_10m,
-                        entities.Parameter.WIND_U_COMPONENT_100m,
-                        entities.Parameter.WIND_V_COMPONENT_100m,
-                    ],
-                ),
-                latitude=[float(lat) for lat in range(90, -90 - 1, -1)],
-                longitude=[float(lon) for lon in range(-180, 180 + 1, 1)],
-            ),
-        )
+        return NOAAS3ModelRepository.repository().available_models["default"]
 
     @override
     def fetch_init_data(
@@ -274,10 +250,10 @@ class NOAAS3ModelRepository(ports.ModelRepository):
                     da.drop_vars(
                         names=[
                             c for c in da.coords
-                            if c not in ["init_time", "step", "variable", "latitude", "longitude"]
+                            if c not in NOAAS3ModelRepository.model().expected_coordinates.dims
                         ],
                     )
-                    .transpose("init_time", "step", "variable", "latitude", "longitude")
+                    .transpose(*NOAAS3ModelRepository.model().expected_coordinates.dims)
                     .assign_coords(coords={"longitude": (da.coords["longitude"] + 180) % 360 - 180})
                     .sortby(variables=["step", "variable", "longitude"])
                     .sortby(variables="latitude", ascending=False)

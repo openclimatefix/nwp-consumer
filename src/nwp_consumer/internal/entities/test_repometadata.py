@@ -19,6 +19,7 @@ class TestModelRepositoryMetadata(unittest.TestCase):
         optional_env={"TEST": "test"},
         max_connections=1,
         postprocess_options=PostProcessOptions(),
+        available_models={},
     )
 
     def test_determine_latest_it_from(self) -> None:

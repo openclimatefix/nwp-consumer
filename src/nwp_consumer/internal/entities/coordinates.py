@@ -508,3 +508,13 @@ class NWPDimensionCoordinateMap:
             longitude=[self.longitude[i] for i in lon_indices],
         ))
 
+    def nwse(self) -> tuple[float, float, float, float]:
+        """Return the north, west, south, and east bounds of the map.
+
+        Returns:
+            A tuple of the north, west, south, and east bounds of the map.
+        """
+        if self.latitude is not None and self.longitude is not None:
+            return self.latitude[0], self.longitude[0], self.latitude[-1], self.longitude[-1]
+        return 90.0, -180.0, -90.0, 180.0 # TODO: Cross this bridge when we come to it
+

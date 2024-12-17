@@ -30,6 +30,7 @@ class DummyModelRepository(ports.ModelRepository):
             required_env=[],
             optional_env={},
             postprocess_options=entities.PostProcessOptions(),
+            available_models={},
         )
 
     @staticmethod

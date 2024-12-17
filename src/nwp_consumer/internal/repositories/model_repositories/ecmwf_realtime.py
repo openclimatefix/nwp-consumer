@@ -82,41 +82,27 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
                 "ECMWF_REALTIME_S3_BUCKET_PREFIX": "ecmwf",
             },
             postprocess_options=entities.PostProcessOptions(),
+            available_models={
+                "default": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk"),
+                "hres-ifs-uk": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk"),
+                "hres-ifs-india": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("india"),
+            },
         )
 
     @staticmethod
     @override
     def model() -> entities.ModelMetadata:
-        return entities.ModelMetadata(
-            name="HRES-IFS",
-            resolution="0.1 degrees",
-            expected_coordinates=entities.NWPDimensionCoordinateMap(
-                init_time=[],
-                step=list(range(0, 85, 1)),
-                variable=[
-                    entities.Parameter.WIND_U_COMPONENT_10m,
-                    entities.Parameter.WIND_V_COMPONENT_10m,
-                    entities.Parameter.WIND_U_COMPONENT_100m,
-                    entities.Parameter.WIND_V_COMPONENT_100m,
-                    entities.Parameter.WIND_U_COMPONENT_200m,
-                    entities.Parameter.WIND_V_COMPONENT_200m,
-                    entities.Parameter.TEMPERATURE_SL,
-                    entities.Parameter.TOTAL_PRECIPITATION_RATE_GL,
-                    entities.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
-                    entities.Parameter.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL,
-                    entities.Parameter.CLOUD_COVER_HIGH,
-                    entities.Parameter.CLOUD_COVER_MEDIUM,
-                    entities.Parameter.CLOUD_COVER_LOW,
-                    entities.Parameter.CLOUD_COVER_TOTAL,
-                    entities.Parameter.SNOW_DEPTH_GL,
-                    entities.Parameter.VISIBILITY_SL,
-                    entities.Parameter.DIRECT_SHORTWAVE_RADIATION_FLUX_GL,
-                    entities.Parameter.DOWNWARD_ULTRAVIOLET_RADIATION_FLUX_GL,
-                ],
-                latitude=[float(f"{lat / 10:.2f}") for lat in range(900, -900 - 1, -1)],
-                longitude=[float(f"{lon / 10:.2f}") for lon in range(-1800, 1800 + 1, 1)],
-            ),
-        )
+        requested_model: str = os.getenv("MODEL", default="default")
+        if requested_model not in ECMWFRealTimeS3ModelRepository.repository().available_models:
+            log.warn(
+                f"Unknown model '{requested_model}' requested, falling back to default ",
+                "ECMWF Realtime S3 repository only supports "
+                f"'{list(ECMWFRealTimeS3ModelRepository.repository().available_models.keys())}'. "
+                "Ensure MODEL environment variable is set to a valid model name.",
+            )
+            requested_model = "default"
+        return ECMWFRealTimeS3ModelRepository.repository().available_models[requested_model]
+
 
     @override
     def fetch_init_data(self, it: dt.datetime) \
@@ -255,42 +241,56 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
 
         processed_das: list[xr.DataArray] = []
         for i, ds in enumerate(dss):
-            try:
-                da: xr.DataArray = (
-                    entities.Parameter.rename_else_drop_ds_vars(
-                        ds=ds,
-                        allowed_parameters=ECMWFRealTimeS3ModelRepository.model().expected_coordinates.variable,
+            if (
+                max(ds.coords["longitude"].values) == \
+                        max(ECMWFRealTimeS3ModelRepository.model().expected_coordinates.longitude) # type: ignore
+                and max(ds.coords["latitude"].values) == \
+                        max(ECMWFRealTimeS3ModelRepository.model().expected_coordinates.latitude) # type: ignore
+            ):
+                try:
+                    da: xr.DataArray = (
+                        entities.Parameter.rename_else_drop_ds_vars(
+                            ds=ds,
+                            allowed_parameters=\
+                                ECMWFRealTimeS3ModelRepository.model().expected_coordinates.variable,
+                        )
+                        .rename(name_dict={"time": "init_time"})
+                        .expand_dims(dim="init_time")
+                        .expand_dims(dim="step")
+                        .to_dataarray(name=ECMWFRealTimeS3ModelRepository.model().name)
                     )
-                    .rename(name_dict={"time": "init_time"})
-                    .expand_dims(dim="init_time")
-                    .expand_dims(dim="step")
-                    .to_dataarray(name=ECMWFRealTimeS3ModelRepository.model().name)
-                )
-                da = (
-                    da.drop_vars(
-                        names=[
-                            c for c in ds.coords
-                            if c not in ["init_time", "step", "variable", "latitude", "longitude"]
-                        ],
-                        errors="ignore",
+                    da = (
+                        da.drop_vars(
+                            names=[
+                                c for c in ds.coords
+                                if c not in
+                                ECMWFRealTimeS3ModelRepository.model().expected_coordinates.dims
+                            ],
+                            errors="ignore",
+                        )
+                        .transpose(*ECMWFRealTimeS3ModelRepository.model().expected_coordinates.dims)
+                        .sortby(variables=["step", "variable", "longitude"])
+                        .sortby(variables="latitude", ascending=False)
                     )
-                    .transpose("init_time", "step", "variable", "latitude", "longitude")
-                    .sortby(variables=["step", "variable", "longitude"])
-                    .sortby(variables="latitude", ascending=False)
+                except Exception as e:
+                    return Failure(ValueError(
+                        f"Error processing dataset {i} from '{path}' to DataArray: {e}",
+                    ))
+                # Put each variable into its own DataArray:
+                # * Each raw file does not contain a full set of parameters
+                # * and so may not produce a contiguous subset of the expected coordinates.
+                processed_das.extend(
+                    [
+                        da.where(cond=da["variable"] == v, drop=True)
+                        for v in da["variable"].values
+                    ],
                 )
-            except Exception as e:
-                return Failure(ValueError(
-                    f"Error processing dataset {i} from '{path}' to DataArray: {e}",
-                ))
-            # Put each variable into its own DataArray:
-            # * Each raw file does not contain a full set of parameters
-            # * and so may not produce a contiguous subset of the expected coordinates.
-            processed_das.extend(
-                [
-                    da.where(cond=da["variable"] == v, drop=True)
-                    for v in da["variable"].values
-                ],
-            )
+
+        if len(processed_das) == 0:
+            return Failure(ValueError(
+                f"No DataArrays found in '{path}' after processing. "
+                "Ensure the file contains the expected parameters.",
+            ))
 
         return Success(processed_das)
 
