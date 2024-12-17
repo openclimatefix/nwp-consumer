@@ -3,8 +3,8 @@ import datetime as dt
 import os
 import pathlib
 import unittest
-from unittest.mock import patch
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 from returns.result import Failure, ResultE, Success
 

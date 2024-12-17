@@ -247,9 +247,11 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             # ECMWF Realtime provides all regions in one set of datasets,
             # so distinguish via their coordinates
             is_relevant_dataset_predicate: bool = (
-                    (expected_lons is not None and expected_lats is not None) and
-                    (expected_lons[0] <= max(ds.coords["longitude"].values) <= expected_lons[-1]) and
-                    (expected_lats[-1] <= max(ds.coords["latitude"].values) <= expected_lats[0])
+                (expected_lons is not None and expected_lats is not None)
+                and
+                (expected_lons[0] <= max(ds.coords["longitude"].values) <= expected_lons[-1])
+                and
+                (expected_lats[-1] <= max(ds.coords["latitude"].values) <= expected_lats[0])
             )
             if not is_relevant_dataset_predicate:
                 continue

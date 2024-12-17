@@ -11,8 +11,6 @@ import datetime as dt
 
 from returns.result import ResultE
 
-from nwp_consumer.internal import entities
-
 
 class ConsumeUseCase(abc.ABC):
     """Interface for the consumer use case.
