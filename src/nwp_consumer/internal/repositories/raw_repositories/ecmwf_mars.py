@@ -320,7 +320,7 @@ class ECMWFMARSRawRepository(ports.RawRepository):
             )
             del dss
 
-            if "ens" in ECMWFMARSRawRepository.model().name:
+            if "ens" in ECMWFMARSRawRepository.model().name.lower():
                 # Add in missing coordinates for mean/std data
                 if "enfo-es" in path.name:
                     ds = ds.expand_dims(dim={"ensemble_stat": ["std"]})

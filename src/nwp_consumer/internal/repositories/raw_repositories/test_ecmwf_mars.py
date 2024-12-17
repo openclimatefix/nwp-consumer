@@ -1,7 +1,9 @@
 import dataclasses
 import datetime as dt
+import os
 import pathlib
 import unittest
+from unittest.mock import patch
 
 from returns.result import Failure, ResultE, Success
 
@@ -12,6 +14,7 @@ from .ecmwf_mars import ECMWFMARSRawRepository
 class TestECMWFMARSEModelREpository(unittest.TestCase):
     """Test the business methods of the ECMWFRealTimeS3RawRepository class."""
 
+    @patch.dict(os.environ, {"MODEL": "ens-stat-uk"}, clear=True)
     def test__convert(self) -> None:
         """Test the _convert method."""
 
@@ -50,7 +53,6 @@ class TestECMWFMARSEModelREpository(unittest.TestCase):
 
         for t in tests:
             with self.subTest(name=t.filename):
-                # Attempt to convert the file
                 result = ECMWFMARSRawRepository._convert(
                     path=pathlib.Path(__file__).parent.absolute() / "test_gribs" / t.filename,
                 )
@@ -66,3 +68,4 @@ class TestECMWFMARSEModelREpository(unittest.TestCase):
                     self.assertIsInstance(region_result, Failure, msg=f"{region_result}")
                 else:
                     self.assertIsInstance(region_result, Success, msg=f"{region_result}")
+
