@@ -19,57 +19,7 @@ import os
 
 import pandas as pd
 
-from .coordinates import NWPDimensionCoordinateMap
 from .postprocess import PostProcessOptions
-
-
-@dataclasses.dataclass(slots=True)
-class ModelMetadata:
-    """Metadata for an NWP model."""
-
-    name: str
-    """The name of the model.
-
-    Used to name the tensor in the zarr store.
-    """
-
-    resolution: str
-    """The resolution of the model with units."""
-
-    expected_coordinates: NWPDimensionCoordinateMap
-    """The expected dimension coordinate mapping.
-
-    This is a dictionary mapping dimension labels to their coordinate values,
-    for a single init time dataset, e.g.
-
-    >>> {
-    >>>     "init_time": [dt.datetime(2021, 1, 1, 0, 0), ...],
-    >>>     "step": [1, 2, ...],
-    >>>     "latitude": [90, 89.75, 89.5, ...],
-    >>>     "longitude": [180, 179, ...],
-    >>> }
-
-    To work this out, it can be useful to use the 'grib_ls' tool from eccodes:
-
-    >>> grib_ls -n geography -wcount=13 raw_file.grib
-
-    Which prints grid data from the grib file.
-    """
-
-    def __str__(self) -> str:
-        """Return a pretty-printed string representation of the metadata."""
-        pretty: str = "".join((
-            "Model:",
-            "\n\t{self.name} ({self.resolution} resolution)",
-            "\tCoordinates:",
-            "\n".join(
-                f"\t\t{dim}: {vals}"
-                if len(vals) < 5
-                else f"\t\t{dim}: {vals[:3]} ... {vals[-3:]}"
-                for dim, vals in self.expected_coordinates.__dict__.items()
-            ),
-        ))
-        return pretty
 
 
 @dataclasses.dataclass(slots=True)
