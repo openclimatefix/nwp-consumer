@@ -39,7 +39,6 @@ import urllib.request
 from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING, ClassVar, override
 
-import numpy as np
 import xarray as xr
 from joblib import delayed
 from returns.result import Failure, ResultE, Success
@@ -52,7 +51,7 @@ if TYPE_CHECKING:
 log = logging.getLogger("nwp-consumer")
 
 
-class MetOfficeDatahubModelRepository(ports.ModelRepository):
+class MetOfficeDatahubRawRepository(ports.RawRepository):
     """Repository implementation for data from MetOffice's DataHub service."""
 
     base_url: ClassVar[str] = "https://data.hub.api.metoffice.gov.uk/atmospheric-models/1.0.0/orders"
@@ -73,8 +72,8 @@ class MetOfficeDatahubModelRepository(ports.ModelRepository):
 
     @staticmethod
     @override
-    def repository() -> entities.ModelRepositoryMetadata:
-        return entities.ModelRepositoryMetadata(
+    def repository() -> entities.RawRepositoryMetadata:
+        return entities.RawRepositoryMetadata(
             name="MetOffice-Weather-Datahub",
             is_archive=False,
             is_order_based=True,
@@ -84,46 +83,29 @@ class MetOfficeDatahubModelRepository(ports.ModelRepository):
             required_env=["METOFFICE_API_KEY", "METOFFICE_ORDER_ID"],
             optional_env={},
             postprocess_options=entities.PostProcessOptions(),
+            available_models={
+                "default": entities.Models.MO_UM_GLOBAL_10KM,
+                "um-global-10km": entities.Models.MO_UM_GLOBAL_10KM,
+            },
         )
 
     @staticmethod
     @override
     def model() -> entities.ModelMetadata:
-        return entities.ModelMetadata(
-            name="UM-Global",
-            resolution="10km",
-            expected_coordinates=entities.NWPDimensionCoordinateMap(
-                init_time=[],
-                step=list(range(0, 55)),
-                variable=sorted(
-                    [
-                        entities.Parameter.CLOUD_COVER_TOTAL,
-                        entities.Parameter.CLOUD_COVER_HIGH,
-                        entities.Parameter.CLOUD_COVER_MEDIUM,
-                        entities.Parameter.CLOUD_COVER_LOW,
-                        entities.Parameter.VISIBILITY_SL,
-                        entities.Parameter.RELATIVE_HUMIDITY_SL,
-                        entities.Parameter.SNOW_DEPTH_GL,
-                        entities.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
-                        entities.Parameter.TEMPERATURE_SL,
-                        entities.Parameter.WIND_U_COMPONENT_10m,
-                        entities.Parameter.WIND_V_COMPONENT_10m,
-                    ],
-                ),
-                latitude=[
-                    float(f"{lat:.4f}")
-                    for lat in np.arange(89.953125, -89.953125 - 0.09375, -0.09375)
-                ],
-                longitude=[
-                    float(f"{lon:.4f}")
-                    for lon in np.arange(-179.929687, 179.929688 + 0.140625, 0.140625)
-                ],
-            ),
-        )
+        requested_model: str = os.getenv("MODEL", default="default")
+        if requested_model not in MetOfficeDatahubRawRepository.repository().available_models:
+            log.warn(
+                f"Unknown model '{requested_model}' requested, falling back to default. ",
+                "MetOffice Datahub repository only supports "
+                f"'{list(MetOfficeDatahubRawRepository.repository().available_models.keys())}'. "
+                "Ensure MODEL environment variable is set to a valid model name.",
+            )
+            requested_model = "default"
+        return MetOfficeDatahubRawRepository.repository().available_models[requested_model]
 
     @classmethod
     @override
-    def authenticate(cls) -> ResultE["MetOfficeDatahubModelRepository"]:
+    def authenticate(cls) -> ResultE["MetOfficeDatahubRawRepository"]:
         """Authenticate with the MetOffice DataHub service."""
         missing_envs = cls.repository().missing_required_envs()
         if len(missing_envs) > 0:
@@ -301,22 +283,23 @@ class MetOfficeDatahubModelRepository(ports.ModelRepository):
             da: xr.DataArray = (
                 ds.pipe(
                     entities.Parameter.rename_else_drop_ds_vars,
-                    allowed_parameters=MetOfficeDatahubModelRepository.model().expected_coordinates.variable,
+                    allowed_parameters=MetOfficeDatahubRawRepository.model().expected_coordinates.variable,
                 )
                 .rename(name_dict={"time": "init_time"})
                 .expand_dims(dim="init_time")
                 .expand_dims(dim="step")
-                .to_dataarray(name=MetOfficeDatahubModelRepository.model().name)
+                .to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
             )
             da = (
                 da.drop_vars(
                     names=[
                         c for c in ds.coords
-                        if c not in ["init_time", "step", "variable", "latitude", "longitude"]
+                        if c not in
+                        MetOfficeDatahubRawRepository.model().expected_coordinates.dims
                     ],
                     errors="ignore",
                 )
-                .transpose("init_time", "step", "variable", "latitude", "longitude")
+                .transpose(*MetOfficeDatahubRawRepository.model().expected_coordinates.dims)
                 .sortby(variables=["step", "variable", "longitude"])
                 .sortby(variables="latitude", ascending=False)
             )

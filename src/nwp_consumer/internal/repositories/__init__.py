@@ -28,11 +28,11 @@ This module contains implementations for the following driven actors:
 Both inherit from the repository ports specified in the core via `nwp_consumer.internal.ports`.
 """
 from . import (
-    model_repositories,
+    raw_repositories,
     notification_repositories,
 )
 
 __all__ = [
-    "model_repositories",
+    "raw_repositories",
     "notification_repositories",
 ]

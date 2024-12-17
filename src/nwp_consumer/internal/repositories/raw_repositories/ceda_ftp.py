@@ -11,7 +11,7 @@ and the spec sheet from the Met Office is detailed in
 `this PDF <https://www.metoffice.gov.uk/binaries/content/assets/metofficegovuk/pdf/data/global-atmospheric-model-17-km-resolution.pdf>`_.
 
 For further details on the repository, see the
-`CEDAFTPModelRepository.repository` implementation.
+`CEDAFTPRawRepository.repository` implementation.
 
 Data discrepancies and corrections
 ==================================
@@ -94,7 +94,7 @@ from nwp_consumer.internal import entities, ports
 log = logging.getLogger("nwp-consumer")
 
 
-class CEDAFTPModelRepository(ports.ModelRepository):
+class CEDAFTPRawRepository(ports.RawRepository):
     """Repository implementation for the MetOffice global model data."""
 
     url_base: str = "ftp.ceda.ac.uk/badc/ukmo-nwp/data/global-grib"
@@ -109,8 +109,8 @@ class CEDAFTPModelRepository(ports.ModelRepository):
 
     @staticmethod
     @override
-    def repository() -> entities.ModelRepositoryMetadata:
-        return entities.ModelRepositoryMetadata(
+    def repository() -> entities.RawRepositoryMetadata:
+        return entities.RawRepositoryMetadata(
             name="CEDA",
             is_archive=True,
             is_order_based=False,
@@ -120,43 +120,15 @@ class CEDAFTPModelRepository(ports.ModelRepository):
             required_env=["CEDA_FTP_USER", "CEDA_FTP_PASS"],
             optional_env={},
             postprocess_options=entities.PostProcessOptions(),
+            available_models={
+                "default": entities.Models.MO_UM_GLOBAL_17KM,
+            },
         )
 
     @staticmethod
     @override
     def model() -> entities.ModelMetadata:
-        return entities.ModelMetadata(
-            name="UM-Global",
-            resolution="17km",
-            expected_coordinates = entities.NWPDimensionCoordinateMap(
-                init_time=[],
-                step=list(range(0, 48, 1)),
-                variable=[
-                    entities.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
-                    entities.Parameter.CLOUD_COVER_TOTAL,
-                    entities.Parameter.CLOUD_COVER_HIGH,
-                    entities.Parameter.CLOUD_COVER_LOW,
-                    entities.Parameter.CLOUD_COVER_MEDIUM,
-                    entities.Parameter.RELATIVE_HUMIDITY_SL,
-                    entities.Parameter.SNOW_DEPTH_GL,
-                    entities.Parameter.TEMPERATURE_SL,
-                    entities.Parameter.WIND_U_COMPONENT_10m,
-                    entities.Parameter.WIND_V_COMPONENT_10m,
-                    entities.Parameter.VISIBILITY_SL,
-                ],
-                latitude=[
-                    float(f"{lat:.4f}") for lat in np.arange(89.856, -89.856 - 0.156, -0.156)
-                ],
-                longitude=[
-                    float(f"{lon:.4f}") for lon in np.concatenate([
-                        np.arange(-45, 45, 0.234),
-                        np.arange(45, 135, 0.234),
-                        np.arange(135, 225, 0.234),
-                        np.arange(225, 315, 0.234),
-                    ])
-                ],
-            ),
-        )
+        return CEDAFTPRawRepository.repository().available_models["default"]
 
     @override
     def fetch_init_data(self, it: dt.datetime) \
@@ -197,7 +169,7 @@ class CEDAFTPModelRepository(ports.ModelRepository):
 
     @classmethod
     @override
-    def authenticate(cls) -> ResultE["CEDAFTPModelRepository"]:
+    def authenticate(cls) -> ResultE["CEDAFTPRawRepository"]:
         """Authenticate with the CEDA FTP server.
 
         Returns:
@@ -279,7 +251,7 @@ class CEDAFTPModelRepository(ports.ModelRepository):
         try:
             ds = entities.Parameter.rename_else_drop_ds_vars(
                 ds=ds,
-                allowed_parameters=CEDAFTPModelRepository.model().expected_coordinates.variable,
+                allowed_parameters=CEDAFTPRawRepository.model().expected_coordinates.variable,
             )
             # Ignore datasets with no variables of interest
             if len(ds.data_vars) == 0:
@@ -293,7 +265,7 @@ class CEDAFTPModelRepository(ports.ModelRepository):
                     step=slice(
                         np.timedelta64(0, "h"),
                         np.timedelta64(
-                            CEDAFTPModelRepository.model().expected_coordinates.step[-1],
+                            CEDAFTPRawRepository.model().expected_coordinates.step[-1],
                             "h",
                         ),
                 ))
@@ -302,11 +274,11 @@ class CEDAFTPModelRepository(ports.ModelRepository):
                 ])
                 .rename(name_dict={"time": "init_time"})
                 .expand_dims(dim="init_time")
-                .to_dataarray(name=CEDAFTPModelRepository.model().name)
+                .to_dataarray(name=CEDAFTPRawRepository.model().name)
             )
             da = (
                 da
-                .transpose("init_time", "step", "variable", "latitude", "longitude")
+                .transpose(*CEDAFTPRawRepository.model().expected_coordinates.dims)
                 # Remove the last value of the longitude dimension as it overlaps with the next file
                 # Reverse the latitude dimension to be in descending order
                 .isel(longitude=slice(None, -1), latitude=slice(None, None, -1))

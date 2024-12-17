@@ -14,12 +14,12 @@ log = logging.getLogger("nwp-consumer")
 class CLIHandler:
     """CLI driving actor."""
 
-    model_adaptor: type[ports.ModelRepository]
+    model_adaptor: type[ports.RawRepository]
     notification_adaptor: type[ports.NotificationRepository]
 
     def __init__(
             self,
-            model_adaptor: type[ports.ModelRepository],
+            model_adaptor: type[ports.RawRepository],
             notification_adaptor: type[ports.NotificationRepository],
         ) -> None:
         """Create a new instance."""

@@ -22,7 +22,10 @@ class ConsumeUseCase(abc.ABC):
 
 
     @abc.abstractmethod
-    def consume(self, period: dt.datetime | dt.date | None = None) -> ResultE[str]:
+    def consume(
+            self,
+            period: dt.datetime | dt.date | None = None,
+        ) -> ResultE[str]:
         """Consume NWP data to Zarr format for desired time period.
 
         Where possible the implementation should be as memory-efficient as possible.
@@ -36,7 +39,7 @@ class ConsumeUseCase(abc.ABC):
             The path to the produced Zarr store.
 
         See Also:
-            - `repositories.ModelRepository.fetch_init_data`
+            - `repositories.RawRepository.fetch_init_data`
             - `tensorstore.TensorStore.write_to_region`
             - https://joblib.readthedocs.io/en/stable/auto_examples/parallel_generator.html
         """

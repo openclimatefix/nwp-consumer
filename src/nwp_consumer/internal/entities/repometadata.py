@@ -7,10 +7,8 @@ it provides. This might be helpful in determining the quality of the
 data, defining pipelines for processing, or establishing the availability
 for a live service.
 
-In this instance, the `ModelMetadata` refers to information pertaining
-to the model used to generate the data itself, whilst the
-`ModelRepositoryMetadata` refers to information about the repository
-where NWP data produced by the model resides.
+In this instance, the `RawRepositoryMetadata` refers to information
+about the repository where NWP data produced by the model resides.
 """
 
 import dataclasses
@@ -19,61 +17,12 @@ import os
 
 import pandas as pd
 
-from .coordinates import NWPDimensionCoordinateMap
+from .modelmetadata import ModelMetadata
 from .postprocess import PostProcessOptions
 
 
 @dataclasses.dataclass(slots=True)
-class ModelMetadata:
-    """Metadata for an NWP model."""
-
-    name: str
-    """The name of the model.
-
-    Used to name the tensor in the zarr store.
-    """
-
-    resolution: str
-    """The resolution of the model with units."""
-
-    expected_coordinates: NWPDimensionCoordinateMap
-    """The expected dimension coordinate mapping.
-
-    This is a dictionary mapping dimension labels to their coordinate values,
-    for a single init time dataset, e.g.
-
-    >>> {
-    >>>     "init_time": [dt.datetime(2021, 1, 1, 0, 0), ...],
-    >>>     "step": [1, 2, ...],
-    >>>     "latitude": [90, 89.75, 89.5, ...],
-    >>>     "longitude": [180, 179, ...],
-    >>> }
-
-    To work this out, it can be useful to use the 'grib_ls' tool from eccodes:
-
-    >>> grib_ls -n geography -wcount=13 raw_file.grib
-
-    Which prints grid data from the grib file.
-    """
-
-    def __str__(self) -> str:
-        """Return a pretty-printed string representation of the metadata."""
-        pretty: str = "".join((
-            "Model:",
-            "\n\t{self.name} ({self.resolution} resolution)",
-            "\tCoordinates:",
-            "\n".join(
-                f"\t\t{dim}: {vals}"
-                if len(vals) < 5
-                else f"\t\t{dim}: {vals[:3]} ... {vals[-3:]}"
-                for dim, vals in self.expected_coordinates.__dict__.items()
-            ),
-        ))
-        return pretty
-
-
-@dataclasses.dataclass(slots=True)
-class ModelRepositoryMetadata:
+class RawRepositoryMetadata:
     """Metadata for an NWP Model repository."""
 
     name: str
@@ -119,6 +68,9 @@ class ModelRepositoryMetadata:
 
     postprocess_options: PostProcessOptions
     """Options for post-processing the data."""
+
+    available_models: dict[str, ModelMetadata]
+    """A dictionary of available models and their metadata."""
 
     def determine_latest_it_from(self, t: dt.datetime) -> dt.datetime:
         """Determine the latest available initialization time from a given time.
@@ -167,3 +119,4 @@ class ModelRepositoryMetadata:
             "\n".join(f"\t\t{var}={val}" for var, val in self.optional_env.items()),
         ))
         return pretty
+

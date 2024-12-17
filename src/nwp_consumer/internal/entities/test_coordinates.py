@@ -248,6 +248,81 @@ class TestCoordinates(unittest.TestCase):
                 else:
                     self.assertEqual(result, Success(t.expected_coordinates))
 
+    def test_crop(self) -> None:
+        """Test the crop method of the NWPDimensionCoordinateMap class."""
+
+        @dataclasses.dataclass
+        class Crop:
+            n: float
+            w: float
+            s: float
+            e: float
+
+        @dataclasses.dataclass
+        class TestCase:
+            name: str
+            coords: NWPDimensionCoordinateMap
+            crop: Crop
+            expected_latitude: list[float]
+            expected_longitude: list[float]
+            should_error: bool
+
+        test_coords = NWPDimensionCoordinateMap(
+            init_time=[dt.datetime(2021, 1, 1, i, tzinfo=dt.UTC) for i in range(0, 9, 3)],
+            step=list(range(12)),
+            variable=[
+                Parameter.TEMPERATURE_SL,
+                Parameter.CLOUD_COVER_HIGH,
+                Parameter.TOTAL_PRECIPITATION_RATE_GL,
+            ],
+            latitude=[float(f"{lat / 10:.2f}") for lat in range(800, -800, -1)],
+            longitude=[float(f"{lon / 10:.2f}") for lon in range(150, -150, -1)],
+        )
+
+        test_cases = [
+            TestCase(
+                name="basic_crop",
+                coords=test_coords,
+                crop=Crop(n=60.5, w=10.0, s=60, e=10.5),
+                expected_latitude=[60.5, 60.4, 60.3, 60.2, 60.1, 60.0],
+                expected_longitude=[10.0, 10.1, 10.2, 10.3, 10.4, 10.5],
+                should_error=False,
+            ),
+            TestCase(
+                name="crop_with_invalid_values",
+                coords=test_coords,
+                crop=Crop(n=60.0, w=10.0, s=61.0, e=12.0),
+                expected_latitude=[60.0],
+                expected_longitude=[10.0, 11.0],
+                should_error=True,
+            ),
+            TestCase(
+                name="crop_with_larger_values",
+                coords=test_coords,
+                crop=Crop(n=90.0, w=180, s=-90, e=-180),
+                expected_latitude=test_coords.latitude if test_coords.latitude else [90.0],
+                expected_longitude=test_coords.longitude if test_coords.longitude else [180.0],
+                should_error=True,
+            ),
+        ]
+
+        for t in test_cases:
+            with self.subTest(name=t.name):
+                result = t.coords.crop(
+                    north=t.crop.n,
+                    west=t.crop.w,
+                    south=t.crop.s,
+                    east=t.crop.e,
+                )
+                if t.should_error:
+                    self.assertIsInstance(result, Failure)
+                else:
+                    self.assertIsInstance(result, Success)
+                    coords = result.unwrap()
+                    self.assertListEqual(coords.latitude, t.expected_latitude) # type: ignore
+                    self.assertListEqual(coords.longitude, t.expected_longitude) # type: ignore
+
 
 if __name__ == "__main__":
     unittest.main()
+

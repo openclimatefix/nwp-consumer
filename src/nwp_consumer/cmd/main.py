@@ -11,29 +11,29 @@ log = logging.getLogger("nwp-consumer")
 
 class Adaptors(NamedTuple):
     """Adaptors for the CLI."""
-    model_repository: type[ports.ModelRepository]
+    model_repository: type[ports.RawRepository]
     notification_repository: type[ports.NotificationRepository]
 
 def parse_env() -> Adaptors:
     """Parse from the environment."""
-    model_repository_adaptor: type[ports.ModelRepository]
+    model_repository_adaptor: type[ports.RawRepository]
     match os.getenv("MODEL_REPOSITORY"):
         # Default to NOAA S3 as it is freely accessible
         case None | "gfs":
             model_repository_adaptor = \
-                repositories.model_repositories.NOAAS3ModelRepository
+                repositories.raw_repositories.NOAAS3RawRepository
         case "ceda":
             model_repository_adaptor = \
-                repositories.model_repositories.CEDAFTPModelRepository
+                repositories.raw_repositories.CEDAFTPRawRepository
         case "ecmwf-realtime":
             model_repository_adaptor = \
-                repositories.model_repositories.ECMWFRealTimeS3ModelRepository
+                repositories.raw_repositories.ECMWFRealTimeS3RawRepository
         case "metoffice-datahub":
             model_repository_adaptor = \
-                repositories.model_repositories.MetOfficeDatahubModelRepository
+                repositories.raw_repositories.MetOfficeDatahubRawRepository
         case "ecmwf-mars":
             model_repository_adaptor = \
-                    repositories.model_repositories.ECMWFMARSModelRepository
+                    repositories.raw_repositories.ECMWFMARSRawRepository
         case _ as mr:
             log.error(
                 f"Unknown model repository '{mr}'. Expected one of "

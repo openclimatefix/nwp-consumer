@@ -98,7 +98,7 @@ class NWPDimensionCoordinateMap:
     def __post_init__(self) -> None:
         """Rigidly set input value ordering and precision."""
         self.variable = sorted(self.variable)
-        # Make latitude descending, longitude acsending, and both rounded to 4 d.p.
+        # Make latitude descending, longitude ascending, and both rounded to 4 d.p.
         # NOTE: For latitude and longitude values, we round to 4 decimal places
         # to avoid floating point precision issues when comparing values.
         # It is important to note that this places a limit on the precision
@@ -454,4 +454,67 @@ class NWPDimensionCoordinateMap:
             attrs=attrs,
         )
         return da
+
+    def crop(
+            self,
+            north: float,
+            west: float,
+            south: float,
+            east: float,
+        ) -> ResultE["NWPDimensionCoordinateMap"]:
+        """Return a new map cropped to the given region.
+
+        Args:
+            north: The northernmost latitude of the region in degrees.
+            west: The westernmost longitude of the region in degrees.
+            south: The southernmost latitude of the region in degrees.
+            east: The easternmost longitude of the region in degrees.
+
+        Returns:
+            A new NWPDimensionCoordinateMap object with the latitude and longitude
+            coordinates cropped to the given region.
+        """
+        # Ensure the region is valid
+        if self.latitude is None or self.longitude is None:
+            return Failure(ValueError(
+                "Cannot crop coordinates to a region as latitude and/or longitude "
+                "dimension coordinates are not present in the map. "
+                f"Dimensions: '{self.dims}'.",
+            ))
+
+        if not (-90 <= south < north <= 90 and -180 <= west < east <= 180):
+            return Failure(ValueError(
+                "Cannot crop coordinates to an invalid region. "
+                f"North ({north}) must be greater than South ({south}) "
+                " and both must sit between 90 and -90 degrees; "
+                f"East ({east}) greater than West ({west}) "
+                " and both must sit between 180 and -180 degrees.",
+            ))
+
+        # Determine the indices of the region in the latitude and longitude lists
+        lat_indices = [
+            i for i, lat in enumerate(self.latitude)
+            if south <= lat <= north
+        ]
+        lon_indices = [
+            i for i, lon in enumerate(self.longitude)
+            if west <= lon <= east
+        ]
+
+        # Create a new map with the cropped coordinates
+        return Success(dataclasses.replace(
+            self,
+            latitude=[self.latitude[i] for i in lat_indices],
+            longitude=[self.longitude[i] for i in lon_indices],
+        ))
+
+    def nwse(self) -> tuple[float, float, float, float]:
+        """Return the north, west, south, and east bounds of the map.
+
+        Returns:
+            A tuple of the north, west, south, and east bounds of the map.
+        """
+        if self.latitude is not None and self.longitude is not None:
+            return self.latitude[0], self.longitude[0], self.latitude[-1], self.longitude[-1]
+        return 90.0, -180.0, -90.0, 180.0 # TODO: Cross this bridge when we come to it
 

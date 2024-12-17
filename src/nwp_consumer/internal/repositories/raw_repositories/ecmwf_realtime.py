@@ -49,7 +49,7 @@ from nwp_consumer.internal import entities, ports
 log = logging.getLogger("nwp-consumer")
 
 
-class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
+class ECMWFRealTimeS3RawRepository(ports.RawRepository):
     """Model repository implementation for ECMWF live data from S3."""
 
     bucket: str
@@ -63,8 +63,8 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
 
     @staticmethod
     @override
-    def repository() -> entities.ModelRepositoryMetadata:
-        return entities.ModelRepositoryMetadata(
+    def repository() -> entities.RawRepositoryMetadata:
+        return entities.RawRepositoryMetadata(
             name="ECMWF-Realtime-S3",
             is_archive=False,
             is_order_based=True,
@@ -82,41 +82,27 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
                 "ECMWF_REALTIME_S3_BUCKET_PREFIX": "ecmwf",
             },
             postprocess_options=entities.PostProcessOptions(),
+            available_models={
+                "default": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk"),
+                "hres-ifs-uk": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk"),
+                "hres-ifs-india": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("india"),
+            },
         )
 
     @staticmethod
     @override
     def model() -> entities.ModelMetadata:
-        return entities.ModelMetadata(
-            name="HRES-IFS",
-            resolution="0.1 degrees",
-            expected_coordinates=entities.NWPDimensionCoordinateMap(
-                init_time=[],
-                step=list(range(0, 85, 1)),
-                variable=[
-                    entities.Parameter.WIND_U_COMPONENT_10m,
-                    entities.Parameter.WIND_V_COMPONENT_10m,
-                    entities.Parameter.WIND_U_COMPONENT_100m,
-                    entities.Parameter.WIND_V_COMPONENT_100m,
-                    entities.Parameter.WIND_U_COMPONENT_200m,
-                    entities.Parameter.WIND_V_COMPONENT_200m,
-                    entities.Parameter.TEMPERATURE_SL,
-                    entities.Parameter.TOTAL_PRECIPITATION_RATE_GL,
-                    entities.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
-                    entities.Parameter.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL,
-                    entities.Parameter.CLOUD_COVER_HIGH,
-                    entities.Parameter.CLOUD_COVER_MEDIUM,
-                    entities.Parameter.CLOUD_COVER_LOW,
-                    entities.Parameter.CLOUD_COVER_TOTAL,
-                    entities.Parameter.SNOW_DEPTH_GL,
-                    entities.Parameter.VISIBILITY_SL,
-                    entities.Parameter.DIRECT_SHORTWAVE_RADIATION_FLUX_GL,
-                    entities.Parameter.DOWNWARD_ULTRAVIOLET_RADIATION_FLUX_GL,
-                ],
-                latitude=[float(f"{lat / 10:.2f}") for lat in range(900, -900 - 1, -1)],
-                longitude=[float(f"{lon / 10:.2f}") for lon in range(-1800, 1800 + 1, 1)],
-            ),
-        )
+        requested_model: str = os.getenv("MODEL", default="default")
+        if requested_model not in ECMWFRealTimeS3RawRepository.repository().available_models:
+            log.warning(
+                f"Unknown model '{requested_model}' requested, falling back to default ",
+                "ECMWF Realtime S3 repository only supports "
+                f"'{list(ECMWFRealTimeS3RawRepository.repository().available_models.keys())}'. "
+                "Ensure MODEL environment variable is set to a valid model name.",
+            )
+            requested_model = "default"
+        return ECMWFRealTimeS3RawRepository.repository().available_models[requested_model]
+
 
     @override
     def fetch_init_data(self, it: dt.datetime) \
@@ -157,7 +143,7 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
 
     @classmethod
     @override
-    def authenticate(cls) -> ResultE["ECMWFRealTimeS3ModelRepository"]:
+    def authenticate(cls) -> ResultE["ECMWFRealTimeS3RawRepository"]:
         missing_envs = cls.repository().missing_required_envs()
         if len(missing_envs) > 0:
             return Failure(OSError(
@@ -254,27 +240,43 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
             ))
 
         processed_das: list[xr.DataArray] = []
+        expected_lons = ECMWFRealTimeS3RawRepository.model().expected_coordinates.longitude
+        expected_lats = ECMWFRealTimeS3RawRepository.model().expected_coordinates.latitude
+
         for i, ds in enumerate(dss):
+            # ECMWF Realtime provides all regions in one set of datasets,
+            # so distinguish via their coordinates
+            is_relevant_dataset_predicate: bool = (
+                (expected_lons is not None and expected_lats is not None)
+                and
+                (expected_lons[0] <= max(ds.coords["longitude"].values) <= expected_lons[-1])
+                and
+                (expected_lats[-1] <= max(ds.coords["latitude"].values) <= expected_lats[0])
+            )
+            if not is_relevant_dataset_predicate:
+                continue
             try:
                 da: xr.DataArray = (
                     entities.Parameter.rename_else_drop_ds_vars(
                         ds=ds,
-                        allowed_parameters=ECMWFRealTimeS3ModelRepository.model().expected_coordinates.variable,
+                        allowed_parameters=\
+                            ECMWFRealTimeS3RawRepository.model().expected_coordinates.variable,
                     )
                     .rename(name_dict={"time": "init_time"})
                     .expand_dims(dim="init_time")
                     .expand_dims(dim="step")
-                    .to_dataarray(name=ECMWFRealTimeS3ModelRepository.model().name)
+                    .to_dataarray(name=ECMWFRealTimeS3RawRepository.model().name)
                 )
                 da = (
                     da.drop_vars(
                         names=[
                             c for c in ds.coords
-                            if c not in ["init_time", "step", "variable", "latitude", "longitude"]
+                            if c not in
+                            ECMWFRealTimeS3RawRepository.model().expected_coordinates.dims
                         ],
                         errors="ignore",
                     )
-                    .transpose("init_time", "step", "variable", "latitude", "longitude")
+                    .transpose(*ECMWFRealTimeS3RawRepository.model().expected_coordinates.dims)
                     .sortby(variables=["step", "variable", "longitude"])
                     .sortby(variables="latitude", ascending=False)
                 )
@@ -291,6 +293,12 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
                     for v in da["variable"].values
                 ],
             )
+
+        if len(processed_das) == 0:
+            return Failure(ValueError(
+                f"No DataArrays found in '{path}' after processing. "
+                "Ensure the file contains the expected parameters.",
+            ))
 
         return Success(processed_das)
 

@@ -8,10 +8,10 @@ in the `repositories` module.
 """
 
 from .services import ConsumeUseCase
-from .repositories import ModelRepository, NotificationRepository
+from .repositories import RawRepository, NotificationRepository
 
 __all__ = [
     "ConsumeUseCase",
-    "ModelRepository",
+    "RawRepository",
     "NotificationRepository",
 ]

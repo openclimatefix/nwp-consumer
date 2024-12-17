@@ -76,7 +76,7 @@ or REST server.
 
 This application currently has the following defined actors:
 
-- `nwp_consumer.internal.repositories.model_repositories` (driven) - The sources of NWP data.
+- `nwp_consumer.internal.repositories.raw_repositories` (driven) - The sources of NWP data.
 - `nwp_consumer.internal.repositories.notification_repositories` (driven) - The sinks of notification data.
 - `nwp_consumer.internal.handlers.cli` (driving) - The command-line interface for the services.
 
@@ -90,7 +90,7 @@ Where do I go to...?
 --------------------
 
 - **...modify the business logic?** Check out the `internal.services` module.
-- **...add a new source of NWP data?** Implement a new repository in `internal.repositories.model_repositories`.
+- **...add a new source of NWP data?** Implement a new repository in `internal.repositories.raw_repositories`.
 - **...modify the command line interface?** Check out `internal.handlers.cli`.
 
 Further reading
