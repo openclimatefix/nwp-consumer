@@ -33,7 +33,6 @@ class ConsumeUseCase(abc.ABC):
         the implementation.
 
         Args:
-            model: The model to consume data from.
             period: The period for which to gather init time data.
 
         Returns:
