@@ -4,11 +4,11 @@ These interfaces define the signatures that *driven* actors must conform to
 in order to interact with the core.
 Also sometimes referred to as *secondary ports*.
 
-All NWP providers use some kind of model to generate their data. This repository
-can be physics-based, such as ERA5, or a machine learning model_repositories, such as
-Google's GraphCast. The `RawRepository` interface is used to abstract the
+All NWP providers use some kind of model to generate their data. This model
+can be physics-based, such as ERA5, or a machine learning model, such as
+Google's GraphCast. The `ModelMetadata` object is used to abstract the
 differences between these models, allowing the core to interact with them
-in a uniform way.
+in a uniform way, via the `RawRepository` interface.
 """
 
 import abc
@@ -72,7 +72,7 @@ class RawRepository(abc.ABC):
         >>> import xarray as xr
         >>> import datetime as dt
         >>>
-        >>> # Pseudocode for a model_repositories repository
+        >>> # Pseudocode for a raw repository
         >>> class MyRawRepository(RawRepository):
         ...     @override
         ...     def fetch_init_data(self, it: dt.datetime) \

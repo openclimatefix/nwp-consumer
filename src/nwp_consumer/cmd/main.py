@@ -21,19 +21,19 @@ def parse_env() -> Adaptors:
         # Default to NOAA S3 as it is freely accessible
         case None | "gfs":
             model_repository_adaptor = \
-                repositories.model_repositories.NOAAS3RawRepository
+                repositories.raw_repositories.NOAAS3RawRepository
         case "ceda":
             model_repository_adaptor = \
-                repositories.model_repositories.CEDAFTPRawRepository
+                repositories.raw_repositories.CEDAFTPRawRepository
         case "ecmwf-realtime":
             model_repository_adaptor = \
-                repositories.model_repositories.ECMWFRealTimeS3RawRepository
+                repositories.raw_repositories.ECMWFRealTimeS3RawRepository
         case "metoffice-datahub":
             model_repository_adaptor = \
-                repositories.model_repositories.MetOfficeDatahubRawRepository
+                repositories.raw_repositories.MetOfficeDatahubRawRepository
         case "ecmwf-mars":
             model_repository_adaptor = \
-                    repositories.model_repositories.ECMWFMARSRawRepository
+                    repositories.raw_repositories.ECMWFMARSRawRepository
         case _ as mr:
             log.error(
                 f"Unknown model repository '{mr}'. Expected one of "
