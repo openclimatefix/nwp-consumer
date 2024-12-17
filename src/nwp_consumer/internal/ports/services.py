@@ -11,6 +11,8 @@ import datetime as dt
 
 from returns.result import ResultE
 
+from nwp_consumer.internal import entities
+
 
 class ConsumeUseCase(abc.ABC):
     """Interface for the consumer use case.
@@ -22,7 +24,10 @@ class ConsumeUseCase(abc.ABC):
 
 
     @abc.abstractmethod
-    def consume(self, period: dt.datetime | dt.date | None = None) -> ResultE[str]:
+    def consume(
+            self,
+            period: dt.datetime | dt.date | None = None,
+        ) -> ResultE[str]:
         """Consume NWP data to Zarr format for desired time period.
 
         Where possible the implementation should be as memory-efficient as possible.
@@ -30,13 +35,14 @@ class ConsumeUseCase(abc.ABC):
         the implementation.
 
         Args:
+            model: The model to consume data from.
             period: The period for which to gather init time data.
 
         Returns:
             The path to the produced Zarr store.
 
         See Also:
-            - `repositories.ModelRepository.fetch_init_data`
+            - `repositories.RawRepository.fetch_init_data`
             - `tensorstore.TensorStore.write_to_region`
             - https://joblib.readthedocs.io/en/stable/auto_examples/parallel_generator.html
         """

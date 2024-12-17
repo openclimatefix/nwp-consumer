@@ -7,11 +7,11 @@ import unittest
 from returns.result import Failure, ResultE, Success
 
 from ...entities import NWPDimensionCoordinateMap, Parameter
-from .mo_datahub import MetOfficeDatahubModelRepository
+from .mo_datahub import MetOfficeDatahubRawRepository
 
 
-class TestMetOfficeDatahubModelRepository(unittest.TestCase):
-    """Test the business methods of the MetOfficeDatahubModelRepository class."""
+class TestMetOfficeDatahubRawRepository(unittest.TestCase):
+    """Test the business methods of the MetOfficeDatahubRawRepository class."""
 
     @unittest.skipIf(
         condition="CI" in os.environ,
@@ -20,7 +20,7 @@ class TestMetOfficeDatahubModelRepository(unittest.TestCase):
     def test__download(self) -> None:
         """Test the _download method."""
 
-        auth_result = MetOfficeDatahubModelRepository.authenticate()
+        auth_result = MetOfficeDatahubRawRepository.authenticate()
         self.assertIsInstance(auth_result, Success, msg=f"{auth_result!s}")
         c = auth_result.unwrap()
 
@@ -46,7 +46,7 @@ class TestMetOfficeDatahubModelRepository(unittest.TestCase):
             TestCase(
                 filename="test_MODatahub_UM-Global_t2m_20241120T00_S00.grib",
                 expected_coords=dataclasses.replace(
-                    MetOfficeDatahubModelRepository.model().expected_coordinates,
+                    MetOfficeDatahubRawRepository.model().expected_coordinates,
                     init_time=[dt.datetime(2024, 11, 20, 0, tzinfo=dt.UTC)],
                     variable=[Parameter.TEMPERATURE_SL],
                     step=[0],
@@ -56,7 +56,7 @@ class TestMetOfficeDatahubModelRepository(unittest.TestCase):
             TestCase(
                 filename="test_MODatahub_UM-Global_u10_20241120T00_S17.grib",
                 expected_coords=dataclasses.replace(
-                    MetOfficeDatahubModelRepository.model().expected_coordinates,
+                    MetOfficeDatahubRawRepository.model().expected_coordinates,
                     init_time=[dt.datetime(2024, 11, 20, 0, tzinfo=dt.UTC)],
                     variable=[Parameter.WIND_U_COMPONENT_10m],
                     step=[17],
@@ -65,7 +65,7 @@ class TestMetOfficeDatahubModelRepository(unittest.TestCase):
             ),
             TestCase(
                 filename="test_HRES-IFS_10u.grib",
-                expected_coords=MetOfficeDatahubModelRepository.model().expected_coordinates,
+                expected_coords=MetOfficeDatahubRawRepository.model().expected_coordinates,
                 should_error=True,
             ),
         ]
@@ -73,7 +73,7 @@ class TestMetOfficeDatahubModelRepository(unittest.TestCase):
         for t in tests:
             with self.subTest(name=t.filename):
                 # Attempt to convert the file
-                result = MetOfficeDatahubModelRepository._convert(
+                result = MetOfficeDatahubRawRepository._convert(
                     path=pathlib.Path(__file__).parent.absolute() / "test_gribs" / t.filename,
                 )
                 region_result: ResultE[dict[str, slice]] = result.do(

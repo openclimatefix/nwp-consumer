@@ -3,13 +3,13 @@ import datetime as dt
 import unittest
 
 from .postprocess import PostProcessOptions
-from .repometadata import ModelRepositoryMetadata
+from .repometadata import RawRepositoryMetadata
 
 
-class TestModelRepositoryMetadata(unittest.TestCase):
-    """Test the business methods of the ModelRepositoryMetadata class."""
+class TestRawRepositoryMetadata(unittest.TestCase):
+    """Test the business methods of the RawRepositoryMetadata class."""
 
-    metadata: ModelRepositoryMetadata = ModelRepositoryMetadata(
+    metadata: RawRepositoryMetadata = RawRepositoryMetadata(
         name="test",
         is_archive=False,
         is_order_based=False,

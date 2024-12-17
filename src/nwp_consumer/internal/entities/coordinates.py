@@ -98,7 +98,7 @@ class NWPDimensionCoordinateMap:
     def __post_init__(self) -> None:
         """Rigidly set input value ordering and precision."""
         self.variable = sorted(self.variable)
-        # Make latitude descending, longitude acsending, and both rounded to 4 d.p.
+        # Make latitude descending, longitude ascending, and both rounded to 4 d.p.
         # NOTE: For latitude and longitude values, we round to 4 decimal places
         # to avoid floating point precision issues when comparing values.
         # It is important to note that this places a limit on the precision

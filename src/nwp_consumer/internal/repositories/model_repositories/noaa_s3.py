@@ -33,13 +33,13 @@ from nwp_consumer.internal import entities, ports
 log = logging.getLogger("nwp-consumer")
 
 
-class NOAAS3ModelRepository(ports.ModelRepository):
+class NOAAS3RawRepository(ports.RawRepository):
     """Model repository implementation for GFS data stored in S3."""
 
     @staticmethod
     @override
-    def repository() -> entities.ModelRepositoryMetadata:
-        return entities.ModelRepositoryMetadata(
+    def repository() -> entities.RawRepositoryMetadata:
+        return entities.RawRepositoryMetadata(
             name="NOAA-GFS-S3",
             is_archive=False,
             is_order_based=False,
@@ -58,7 +58,7 @@ class NOAAS3ModelRepository(ports.ModelRepository):
     @staticmethod
     @override
     def model() -> entities.ModelMetadata:
-        return NOAAS3ModelRepository.repository().available_models["default"]
+        return NOAAS3RawRepository.repository().available_models["default"]
 
     @override
     def fetch_init_data(
@@ -101,7 +101,7 @@ class NOAAS3ModelRepository(ports.ModelRepository):
 
     @classmethod
     @override
-    def authenticate(cls) -> ResultE["NOAAS3ModelRepository"]:
+    def authenticate(cls) -> ResultE["NOAAS3RawRepository"]:
         return Success(cls())
 
     def _download_and_convert(self, url: str, it: dt.datetime) -> ResultE[list[xr.DataArray]]:
@@ -226,7 +226,7 @@ class NOAAS3ModelRepository(ports.ModelRepository):
             try:
                 ds = entities.Parameter.rename_else_drop_ds_vars(
                     ds=ds,
-                    allowed_parameters=NOAAS3ModelRepository.model().expected_coordinates.variable,
+                    allowed_parameters=NOAAS3RawRepository.model().expected_coordinates.variable,
                 )
                 # Ignore datasets with no variables of interest
                 if len(ds.data_vars) == 0:
@@ -244,16 +244,16 @@ class NOAAS3ModelRepository(ports.ModelRepository):
                     .rename(name_dict={"time": "init_time"})
                     .expand_dims(dim="init_time")
                     .expand_dims(dim="step")
-                    .to_dataarray(name=NOAAS3ModelRepository.model().name)
+                    .to_dataarray(name=NOAAS3RawRepository.model().name)
                 )
                 da = (
                     da.drop_vars(
                         names=[
                             c for c in da.coords
-                            if c not in NOAAS3ModelRepository.model().expected_coordinates.dims
+                            if c not in NOAAS3RawRepository.model().expected_coordinates.dims
                         ],
                     )
-                    .transpose(*NOAAS3ModelRepository.model().expected_coordinates.dims)
+                    .transpose(*NOAAS3RawRepository.model().expected_coordinates.dims)
                     .assign_coords(coords={"longitude": (da.coords["longitude"] + 180) % 360 - 180})
                     .sortby(variables=["step", "variable", "longitude"])
                     .sortby(variables="latitude", ascending=False)

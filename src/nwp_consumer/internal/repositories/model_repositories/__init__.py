@@ -3,17 +3,17 @@
 TODO: Add description
 """
 
-from .ceda_ftp import CEDAFTPModelRepository
-from .ecmwf_realtime import ECMWFRealTimeS3ModelRepository
-from .ecmwf_mars import ECMWFMARSModelRepository
-from .noaa_s3 import NOAAS3ModelRepository
-from .mo_datahub import MetOfficeDatahubModelRepository
+from .ceda_ftp import CEDAFTPRawRepository
+from .ecmwf_realtime import ECMWFRealTimeS3RawRepository
+from .ecmwf_mars import ECMWFMARSRawRepository
+from .noaa_s3 import NOAAS3RawRepository
+from .mo_datahub import MetOfficeDatahubRawRepository
 
 __all__ = [
-    "CEDAFTPModelRepository",
-    "ECMWFRealTimeS3ModelRepository",
-    "NOAAS3ModelRepository",
-    "MetOfficeDatahubModelRepository",
-    "ECMWFMARSModelRepository",
+    "CEDAFTPRawRepository",
+    "ECMWFRealTimeS3RawRepository",
+    "NOAAS3RawRepository",
+    "MetOfficeDatahubRawRepository",
+    "ECMWFMARSRawRepository",
 ]
 

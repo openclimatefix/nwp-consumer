@@ -3,12 +3,13 @@ import datetime as dt
 import os
 import pathlib
 import unittest
+from unittest.mock import patch
 from typing import TYPE_CHECKING
 
 from returns.result import Failure, ResultE, Success
 
 from ...entities import NWPDimensionCoordinateMap, Parameter
-from .ecmwf_realtime import ECMWFRealTimeS3ModelRepository
+from .ecmwf_realtime import ECMWFRealTimeS3RawRepository
 
 if TYPE_CHECKING:
     import xarray as xr
@@ -16,8 +17,8 @@ if TYPE_CHECKING:
     from nwp_consumer.internal import entities
 
 
-class TestECMWFRealTimeS3ModelRepository(unittest.TestCase):
-    """Test the business methods of the ECMWFRealTimeS3ModelRepository class."""
+class TestECMWFRealTimeS3RawRepository(unittest.TestCase):
+    """Test the business methods of the ECMWFRealTimeS3RawRepository class."""
 
     @unittest.skipIf(
         condition="CI" in os.environ,
@@ -26,9 +27,9 @@ class TestECMWFRealTimeS3ModelRepository(unittest.TestCase):
     def test__download_and_convert(self) -> None:
         """Test the _download_and_convert method."""
 
-        auth_result = ECMWFRealTimeS3ModelRepository.authenticate()
+        auth_result = ECMWFRealTimeS3RawRepository.authenticate()
         self.assertIsInstance(auth_result, Success, msg=f"{auth_result!s}")
-        c: ECMWFRealTimeS3ModelRepository = auth_result.unwrap()
+        c: ECMWFRealTimeS3RawRepository = auth_result.unwrap()
 
         test_it: dt.datetime = dt.datetime(2024, 10, 25, 0, tzinfo=dt.UTC)
         test_coordinates: entities.NWPDimensionCoordinateMap = dataclasses.replace(
@@ -101,10 +102,10 @@ class TestECMWFRealTimeS3ModelRepository(unittest.TestCase):
 
         for t in tests:
             with self.subTest(name=t.name):
-                result = ECMWFRealTimeS3ModelRepository._wanted_file(
+                result = ECMWFRealTimeS3RawRepository._wanted_file(
                     filename=t.filename,
                     it=test_it,
-                    max_step=max(ECMWFRealTimeS3ModelRepository.model().expected_coordinates.step))
+                    max_step=max(ECMWFRealTimeS3RawRepository.model().expected_coordinates.step))
                 self.assertEqual(result, t.expected)
 
     def test__convert(self) -> None:
@@ -120,7 +121,7 @@ class TestECMWFRealTimeS3ModelRepository(unittest.TestCase):
             TestCase(
                 filename="test_ECMWFRealtime_HRES-IFS_ssrd_20241104T00_S60.grib",
                 expected_coords=dataclasses.replace(
-                    ECMWFRealTimeS3ModelRepository.model().expected_coordinates,
+                    ECMWFRealTimeS3RawRepository.model().expected_coordinates,
                     init_time=[dt.datetime(2024, 11, 4, 0, tzinfo=dt.UTC)],
                     variable=[Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL],
                     step=[60],
@@ -130,7 +131,7 @@ class TestECMWFRealTimeS3ModelRepository(unittest.TestCase):
             TestCase(
                 filename="test_ECMWFRealtime_HRES-IFS_10u_20241104T00_S60.grib",
                 expected_coords=dataclasses.replace(
-                    ECMWFRealTimeS3ModelRepository.model().expected_coordinates,
+                    ECMWFRealTimeS3RawRepository.model().expected_coordinates,
                     init_time=[dt.datetime(2024, 11, 4, 0, tzinfo=dt.UTC)],
                     variable=[Parameter.WIND_U_COMPONENT_10m],
                     step=[60],
@@ -139,7 +140,7 @@ class TestECMWFRealTimeS3ModelRepository(unittest.TestCase):
             ),
             TestCase(
                 filename="test_NOAAS3_HRES-GFS_10u_20210509T06_S00.grib",
-                expected_coords=ECMWFRealTimeS3ModelRepository.model().expected_coordinates,
+                expected_coords=ECMWFRealTimeS3RawRepository.model().expected_coordinates,
                 should_error=True,
             ),
         ]
@@ -147,7 +148,7 @@ class TestECMWFRealTimeS3ModelRepository(unittest.TestCase):
         for t in tests:
             with self.subTest(name=t.filename):
                 # Attempt to convert the file
-                result = ECMWFRealTimeS3ModelRepository._convert(
+                result = ECMWFRealTimeS3RawRepository._convert(
                     path=pathlib.Path(__file__).parent.absolute() / "test_gribs" / t.filename,
                 )
                 region_result: ResultE[dict[str, slice]] = result.do(
@@ -162,3 +163,8 @@ class TestECMWFRealTimeS3ModelRepository(unittest.TestCase):
                     self.assertIsInstance(region_result, Failure, msg=f"{region_result}")
                 else:
                     self.assertIsInstance(region_result, Success, msg=f"{region_result}")
+
+
+    @patch.dict(os.environ, {"MODEL": "hres-ifs-india"}, clear=True)
+    def test_convert_india(self) -> None:
+        return self.test__convert()

@@ -51,7 +51,7 @@ if TYPE_CHECKING:
 log = logging.getLogger("nwp-consumer")
 
 
-class MetOfficeDatahubModelRepository(ports.ModelRepository):
+class MetOfficeDatahubRawRepository(ports.RawRepository):
     """Repository implementation for data from MetOffice's DataHub service."""
 
     base_url: ClassVar[str] = "https://data.hub.api.metoffice.gov.uk/atmospheric-models/1.0.0/orders"
@@ -72,8 +72,8 @@ class MetOfficeDatahubModelRepository(ports.ModelRepository):
 
     @staticmethod
     @override
-    def repository() -> entities.ModelRepositoryMetadata:
-        return entities.ModelRepositoryMetadata(
+    def repository() -> entities.RawRepositoryMetadata:
+        return entities.RawRepositoryMetadata(
             name="MetOffice-Weather-Datahub",
             is_archive=False,
             is_order_based=True,
@@ -93,19 +93,19 @@ class MetOfficeDatahubModelRepository(ports.ModelRepository):
     @override
     def model() -> entities.ModelMetadata:
         requested_model: str = os.getenv("MODEL", default="default")
-        if requested_model not in MetOfficeDatahubModelRepository.repository().available_models:
+        if requested_model not in MetOfficeDatahubRawRepository.repository().available_models:
             log.warn(
                 f"Unknown model '{requested_model}' requested, falling back to default. ",
                 "MetOffice Datahub repository only supports "
-                f"'{list(MetOfficeDatahubModelRepository.repository().available_models.keys())}'. "
+                f"'{list(MetOfficeDatahubRawRepository.repository().available_models.keys())}'. "
                 "Ensure MODEL environment variable is set to a valid model name.",
             )
             requested_model = "default"
-        return MetOfficeDatahubModelRepository.repository().available_models[requested_model]
+        return MetOfficeDatahubRawRepository.repository().available_models[requested_model]
 
     @classmethod
     @override
-    def authenticate(cls) -> ResultE["MetOfficeDatahubModelRepository"]:
+    def authenticate(cls) -> ResultE["MetOfficeDatahubRawRepository"]:
         """Authenticate with the MetOffice DataHub service."""
         missing_envs = cls.repository().missing_required_envs()
         if len(missing_envs) > 0:
@@ -283,23 +283,23 @@ class MetOfficeDatahubModelRepository(ports.ModelRepository):
             da: xr.DataArray = (
                 ds.pipe(
                     entities.Parameter.rename_else_drop_ds_vars,
-                    allowed_parameters=MetOfficeDatahubModelRepository.model().expected_coordinates.variable,
+                    allowed_parameters=MetOfficeDatahubRawRepository.model().expected_coordinates.variable,
                 )
                 .rename(name_dict={"time": "init_time"})
                 .expand_dims(dim="init_time")
                 .expand_dims(dim="step")
-                .to_dataarray(name=MetOfficeDatahubModelRepository.model().name)
+                .to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
             )
             da = (
                 da.drop_vars(
                     names=[
                         c for c in ds.coords
                         if c not in
-                        MetOfficeDatahubModelRepository.model().expected_coordinates.dims
+                        MetOfficeDatahubRawRepository.model().expected_coordinates.dims
                     ],
                     errors="ignore",
                 )
-                .transpose(*MetOfficeDatahubModelRepository.model().expected_coordinates.dims)
+                .transpose(*MetOfficeDatahubRawRepository.model().expected_coordinates.dims)
                 .sortby(variables=["step", "variable", "longitude"])
                 .sortby(variables="latitude", ascending=False)
             )

@@ -11,11 +11,11 @@ from returns.result import Failure, ResultE, Success
 from nwp_consumer.internal import entities
 
 from ...entities import NWPDimensionCoordinateMap
-from .ceda_ftp import CEDAFTPModelRepository
+from .ceda_ftp import CEDAFTPRawRepository
 
 
-class TestCEDAFTPModelRepository(unittest.TestCase):
-    """Test the business methods of the CEDAFTPModelRepository class."""
+class TestCEDAFTPRawRepository(unittest.TestCase):
+    """Test the business methods of the CEDAFTPRawRepository class."""
 
     @unittest.skipIf(
         condition="CI" in os.environ,
@@ -24,7 +24,7 @@ class TestCEDAFTPModelRepository(unittest.TestCase):
     def test__download_and_convert(self) -> None:
         """Test the _download_and_convert method."""
 
-        auth_result = CEDAFTPModelRepository.authenticate()
+        auth_result = CEDAFTPRawRepository.authenticate()
         self.assertIsInstance(auth_result, Success, msg=f"{auth_result!s}")
         c = auth_result.unwrap()
 
@@ -84,7 +84,7 @@ class TestCEDAFTPModelRepository(unittest.TestCase):
             TestCase(
                 filename="test_CEDAFTP_UM-Global_ssrd_20241105T00_S01-03.grib",
                 expected_coords = dataclasses.replace(
-                    CEDAFTPModelRepository.model().expected_coordinates,
+                    CEDAFTPRawRepository.model().expected_coordinates,
                     init_time=[dt.datetime(2024, 11, 5, 0, tzinfo=dt.UTC)],
                     step=[1, 2, 3],
                     variable=[entities.parameters.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL],
@@ -94,7 +94,7 @@ class TestCEDAFTPModelRepository(unittest.TestCase):
             TestCase(
                 filename="test_CEDAFTP_UM-Global_u_20241105T00_S01-03_AreaC.grib",
                 expected_coords = dataclasses.replace(
-                    CEDAFTPModelRepository.model().expected_coordinates,
+                    CEDAFTPRawRepository.model().expected_coordinates,
                     init_time=[dt.datetime(2024, 11, 5, 0, tzinfo=dt.UTC)],
                     step=[1, 2, 3],
                     variable=[entities.parameters.Parameter.WIND_U_COMPONENT_10m],
@@ -103,7 +103,7 @@ class TestCEDAFTPModelRepository(unittest.TestCase):
             ),
             TestCase(
                 filename="test_MODatahub_UM-Global_t2m_20241120T00_S00.grib",
-                expected_coords = CEDAFTPModelRepository.model().expected_coordinates,
+                expected_coords = CEDAFTPRawRepository.model().expected_coordinates,
                 should_error=True,
             ),
         ]
@@ -112,7 +112,7 @@ class TestCEDAFTPModelRepository(unittest.TestCase):
         for t in tests:
             with self.subTest(name=t.filename):
                 # Attempt to convert the file
-                result = CEDAFTPModelRepository._convert(
+                result = CEDAFTPRawRepository._convert(
                     path=pathlib.Path(__file__).parent.absolute() / "test_gribs" / t.filename,
                 )
                 region_result: ResultE[dict[str, slice]] = result.do(

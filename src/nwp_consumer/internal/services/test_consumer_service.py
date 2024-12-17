@@ -7,7 +7,7 @@ from returns.pipeline import is_successful
 
 from nwp_consumer.internal.services.consumer_service import ConsumerService
 
-from ._dummy_adaptors import DummyModelRepository, DummyNotificationRepository
+from ._dummy_adaptors import DummyRawRepository, DummyNotificationRepository
 
 
 class TestParallelConsumer(unittest.TestCase):
@@ -16,7 +16,7 @@ class TestParallelConsumer(unittest.TestCase):
         """Test the consume method of the ParallelConsumer class."""
 
         test_consumer = ConsumerService.from_adaptors(
-            model_adaptor=DummyModelRepository,
+            model_adaptor=DummyRawRepository,
             notification_adaptor=DummyNotificationRepository,
         ).unwrap()
 

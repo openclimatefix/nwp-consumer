@@ -183,7 +183,7 @@ class _MARSRequest:
         return Success(target)
 
 
-class ECMWFMARSModelRepository(ports.ModelRepository):
+class ECMWFMARSRawRepository(ports.RawRepository):
     """Model repository implementation for archive data from ECMWF's MARS."""
 
     server: ECMWFService
@@ -194,8 +194,8 @@ class ECMWFMARSModelRepository(ports.ModelRepository):
 
     @staticmethod
     @override
-    def repository() -> entities.ModelRepositoryMetadata:
-        return entities.ModelRepositoryMetadata(
+    def repository() -> entities.RawRepositoryMetadata:
+        return entities.RawRepositoryMetadata(
             name="ECMWF-MARS",
             is_archive=True,
             is_order_based=False,
@@ -222,19 +222,19 @@ class ECMWFMARSModelRepository(ports.ModelRepository):
     @override
     def model() -> entities.ModelMetadata:
         requested_model: str = os.getenv("MODEL", default="default")
-        if requested_model not in ECMWFMARSModelRepository.repository().available_models:
+        if requested_model not in ECMWFMARSRawRepository.repository().available_models:
             log.warn(
                 f"Unknown model '{requested_model}' requested, falling back to default ",
                 "ECMWF-MARS repository only supports "
-                f"'{list(ECMWFMARSModelRepository.repository().available_models.keys())}'. "
+                f"'{list(ECMWFMARSRawRepository.repository().available_models.keys())}'. "
                 "Ensure MODEL environment variable is set to a valid model name.",
             )
             requested_model = "default"
-        return ECMWFMARSModelRepository.repository().available_models[requested_model]
+        return ECMWFMARSRawRepository.repository().available_models[requested_model]
 
     @classmethod
     @override
-    def authenticate(cls) -> ResultE["ECMWFMARSModelRepository"]:
+    def authenticate(cls) -> ResultE["ECMWFMARSRawRepository"]:
         missing_envs = cls.repository().missing_required_envs()
         if len(missing_envs) > 0:
             return Failure(OSError(
@@ -320,7 +320,7 @@ class ECMWFMARSModelRepository(ports.ModelRepository):
             )
             del dss
 
-            if "ens" in ECMWFMARSModelRepository.model().name:
+            if "ens" in ECMWFMARSRawRepository.model().name:
                 # Add in missing coordinates for mean/std data
                 if "enfo-es" in path.name:
                     ds = ds.expand_dims(dim={"ensemble_stat": ["std"]})
@@ -330,21 +330,21 @@ class ECMWFMARSModelRepository(ports.ModelRepository):
                 ds
                 .pipe(
                     entities.Parameter.rename_else_drop_ds_vars,
-                    allowed_parameters=ECMWFMARSModelRepository.model().expected_coordinates.variable,
+                    allowed_parameters=ECMWFMARSRawRepository.model().expected_coordinates.variable,
                 )
                 .rename({"time": "init_time"})
                 .expand_dims("init_time")
-                .to_dataarray(name=ECMWFMARSModelRepository.model().name)
+                .to_dataarray(name=ECMWFMARSRawRepository.model().name)
             )
             da = (
                 da.drop_vars(
                     names=[
                         c for c in ds.coords
-                        if c not in ECMWFMARSModelRepository.model().expected_coordinates.dims
+                        if c not in ECMWFMARSRawRepository.model().expected_coordinates.dims
                     ],
                     errors="ignore",
                 )
-                .transpose(*ECMWFMARSModelRepository.model().expected_coordinates.dims)
+                .transpose(*ECMWFMARSRawRepository.model().expected_coordinates.dims)
                 .sortby(variables=["step", "variable", "longitude"])
                 .sortby(variables="latitude", ascending=False)
             )

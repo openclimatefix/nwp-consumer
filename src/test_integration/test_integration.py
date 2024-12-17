@@ -14,7 +14,7 @@ class TestIntegration(unittest.TestCase):
     def test_ceda_metoffice_global_model(self) -> None:
         test_it =dt.datetime(2021, 1, 1, tzinfo=dt.UTC)
         service_result = services.ConsumerService.from_adaptors(
-            model_adaptor=repositories.model_repositories.CEDAFTPModelRepository,
+            model_adaptor=repositories.model_repositories.CEDAFTPRawRepository,
             notification_adaptor=repositories.notification_repositories.StdoutNotificationRepository,
         )
         result: ResultE[str] = service_result.do(

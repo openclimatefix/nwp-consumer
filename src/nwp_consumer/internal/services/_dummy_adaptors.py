@@ -10,17 +10,17 @@ from returns.result import ResultE, Success
 from nwp_consumer.internal import entities, ports
 
 
-class DummyModelRepository(ports.ModelRepository):
+class DummyRawRepository(ports.RawRepository):
 
     @classmethod
     @override
-    def authenticate(cls) -> ResultE["DummyModelRepository"]:
+    def authenticate(cls) -> ResultE["DummyRawRepository"]:
         return Success(cls())
 
     @staticmethod
     @override
-    def repository() -> entities.ModelRepositoryMetadata:
-        return entities.ModelRepositoryMetadata(
+    def repository() -> entities.RawRepositoryMetadata:
+        return entities.RawRepositoryMetadata(
             name="ACME-Test-Models",
             is_archive=False,
             is_order_based=False,

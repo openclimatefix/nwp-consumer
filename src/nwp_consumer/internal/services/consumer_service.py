@@ -25,12 +25,12 @@ class ConsumerService(ports.ConsumeUseCase):
     Defines the business-critical methods and logic.
     """
 
-    mr: ports.ModelRepository
+    mr: ports.RawRepository
     nr: ports.NotificationRepository
 
     def __init__(
             self,
-            model_repository: ports.ModelRepository,
+            model_repository: ports.RawRepository,
             notification_repository: ports.NotificationRepository,
         ) -> None:
         """Create a new instance of the service."""
@@ -41,7 +41,7 @@ class ConsumerService(ports.ConsumeUseCase):
     @classmethod
     def from_adaptors(
             cls,
-            model_adaptor: type[ports.ModelRepository],
+            model_adaptor: type[ports.RawRepository],
             notification_adaptor: type[ports.NotificationRepository],
         ) -> ResultE["ConsumerService"]:
         """Create a new instance of the service from adaptors."""
@@ -120,7 +120,7 @@ class ConsumerService(ports.ConsumeUseCase):
 
     @staticmethod
     def _create_suitable_store(
-            repository_metadata: entities.ModelRepositoryMetadata,
+            repository_metadata: entities.RawRepositoryMetadata,
             model_metadata: entities.ModelMetadata,
             period: dt.datetime | dt.date | None = None,
         ) -> ResultE[entities.TensorStore]:
@@ -171,7 +171,7 @@ class ConsumerService(ports.ConsumeUseCase):
             The path to the produced Zarr store.
 
         See Also:
-            - `repositories.ModelRepository.fetch_init_data`
+            - `repositories.RawRepository.fetch_init_data`
             - `tensorstore.TensorStore.write_to_region`
             - https://joblib.readthedocs.io/en/stable/auto_examples/parallel_generator.html
         """
@@ -232,7 +232,7 @@ class ConsumerService(ports.ConsumeUseCase):
 
     @staticmethod
     def info(
-            model_adaptor: type[ports.ModelRepository],
+            model_adaptor: type[ports.RawRepository],
             notification_adaptor: type[ports.NotificationRepository],
         ) -> str:
         """Get information about the service."""

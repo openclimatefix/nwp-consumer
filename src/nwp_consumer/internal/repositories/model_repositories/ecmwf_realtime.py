@@ -49,7 +49,7 @@ from nwp_consumer.internal import entities, ports
 log = logging.getLogger("nwp-consumer")
 
 
-class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
+class ECMWFRealTimeS3RawRepository(ports.RawRepository):
     """Model repository implementation for ECMWF live data from S3."""
 
     bucket: str
@@ -63,8 +63,8 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
 
     @staticmethod
     @override
-    def repository() -> entities.ModelRepositoryMetadata:
-        return entities.ModelRepositoryMetadata(
+    def repository() -> entities.RawRepositoryMetadata:
+        return entities.RawRepositoryMetadata(
             name="ECMWF-Realtime-S3",
             is_archive=False,
             is_order_based=True,
@@ -93,15 +93,15 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
     @override
     def model() -> entities.ModelMetadata:
         requested_model: str = os.getenv("MODEL", default="default")
-        if requested_model not in ECMWFRealTimeS3ModelRepository.repository().available_models:
-            log.warn(
+        if requested_model not in ECMWFRealTimeS3RawRepository.repository().available_models:
+            log.warning(
                 f"Unknown model '{requested_model}' requested, falling back to default ",
                 "ECMWF Realtime S3 repository only supports "
-                f"'{list(ECMWFRealTimeS3ModelRepository.repository().available_models.keys())}'. "
+                f"'{list(ECMWFRealTimeS3RawRepository.repository().available_models.keys())}'. "
                 "Ensure MODEL environment variable is set to a valid model name.",
             )
             requested_model = "default"
-        return ECMWFRealTimeS3ModelRepository.repository().available_models[requested_model]
+        return ECMWFRealTimeS3RawRepository.repository().available_models[requested_model]
 
 
     @override
@@ -143,7 +143,7 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
 
     @classmethod
     @override
-    def authenticate(cls) -> ResultE["ECMWFRealTimeS3ModelRepository"]:
+    def authenticate(cls) -> ResultE["ECMWFRealTimeS3RawRepository"]:
         missing_envs = cls.repository().missing_required_envs()
         if len(missing_envs) > 0:
             return Failure(OSError(
@@ -240,51 +240,57 @@ class ECMWFRealTimeS3ModelRepository(ports.ModelRepository):
             ))
 
         processed_das: list[xr.DataArray] = []
+        expected_lons = ECMWFRealTimeS3RawRepository.model().expected_coordinates.longitude
+        expected_lats = ECMWFRealTimeS3RawRepository.model().expected_coordinates.latitude
+
         for i, ds in enumerate(dss):
-            if (
-                max(ds.coords["longitude"].values) == \
-                        max(ECMWFRealTimeS3ModelRepository.model().expected_coordinates.longitude) # type: ignore
-                and max(ds.coords["latitude"].values) == \
-                        max(ECMWFRealTimeS3ModelRepository.model().expected_coordinates.latitude) # type: ignore
-            ):
-                try:
-                    da: xr.DataArray = (
-                        entities.Parameter.rename_else_drop_ds_vars(
-                            ds=ds,
-                            allowed_parameters=\
-                                ECMWFRealTimeS3ModelRepository.model().expected_coordinates.variable,
-                        )
-                        .rename(name_dict={"time": "init_time"})
-                        .expand_dims(dim="init_time")
-                        .expand_dims(dim="step")
-                        .to_dataarray(name=ECMWFRealTimeS3ModelRepository.model().name)
+            # ECMWF Realtime provides all regions in one set of datasets,
+            # so distinguish via their coordinates
+            is_relevant_dataset_predicate: bool = (
+                    (expected_lons is not None and expected_lats is not None) and
+                    (expected_lons[0] <= max(ds.coords["longitude"].values) <= expected_lons[-1]) and
+                    (expected_lats[-1] <= max(ds.coords["latitude"].values) <= expected_lats[0])
+            )
+            if not is_relevant_dataset_predicate:
+                continue
+            try:
+                da: xr.DataArray = (
+                    entities.Parameter.rename_else_drop_ds_vars(
+                        ds=ds,
+                        allowed_parameters=\
+                            ECMWFRealTimeS3RawRepository.model().expected_coordinates.variable,
                     )
-                    da = (
-                        da.drop_vars(
-                            names=[
-                                c for c in ds.coords
-                                if c not in
-                                ECMWFRealTimeS3ModelRepository.model().expected_coordinates.dims
-                            ],
-                            errors="ignore",
-                        )
-                        .transpose(*ECMWFRealTimeS3ModelRepository.model().expected_coordinates.dims)
-                        .sortby(variables=["step", "variable", "longitude"])
-                        .sortby(variables="latitude", ascending=False)
-                    )
-                except Exception as e:
-                    return Failure(ValueError(
-                        f"Error processing dataset {i} from '{path}' to DataArray: {e}",
-                    ))
-                # Put each variable into its own DataArray:
-                # * Each raw file does not contain a full set of parameters
-                # * and so may not produce a contiguous subset of the expected coordinates.
-                processed_das.extend(
-                    [
-                        da.where(cond=da["variable"] == v, drop=True)
-                        for v in da["variable"].values
-                    ],
+                    .rename(name_dict={"time": "init_time"})
+                    .expand_dims(dim="init_time")
+                    .expand_dims(dim="step")
+                    .to_dataarray(name=ECMWFRealTimeS3RawRepository.model().name)
                 )
+                da = (
+                    da.drop_vars(
+                        names=[
+                            c for c in ds.coords
+                            if c not in
+                            ECMWFRealTimeS3RawRepository.model().expected_coordinates.dims
+                        ],
+                        errors="ignore",
+                    )
+                    .transpose(*ECMWFRealTimeS3RawRepository.model().expected_coordinates.dims)
+                    .sortby(variables=["step", "variable", "longitude"])
+                    .sortby(variables="latitude", ascending=False)
+                )
+            except Exception as e:
+                return Failure(ValueError(
+                    f"Error processing dataset {i} from '{path}' to DataArray: {e}",
+                ))
+            # Put each variable into its own DataArray:
+            # * Each raw file does not contain a full set of parameters
+            # * and so may not produce a contiguous subset of the expected coordinates.
+            processed_das.extend(
+                [
+                    da.where(cond=da["variable"] == v, drop=True)
+                    for v in da["variable"].values
+                ],
+            )
 
         if len(processed_das) == 0:
             return Failure(ValueError(

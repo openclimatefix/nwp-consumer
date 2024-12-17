@@ -7,7 +7,7 @@ it provides. This might be helpful in determining the quality of the
 data, defining pipelines for processing, or establishing the availability
 for a live service.
 
-In this instance, the `ModelRepositoryMetadata` refers to information
+In this instance, the `RawRepositoryMetadata` refers to information
 about the repository where NWP data produced by the model resides.
 """
 
@@ -22,7 +22,7 @@ from .postprocess import PostProcessOptions
 
 
 @dataclasses.dataclass(slots=True)
-class ModelRepositoryMetadata:
+class RawRepositoryMetadata:
     """Metadata for an NWP Model repository."""
 
     name: str

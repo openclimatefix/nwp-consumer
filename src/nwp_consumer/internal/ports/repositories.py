@@ -6,7 +6,7 @@ Also sometimes referred to as *secondary ports*.
 
 All NWP providers use some kind of model to generate their data. This repository
 can be physics-based, such as ERA5, or a machine learning model_repositories, such as
-Google's GraphCast. The `ModelRepository` interface is used to abstract the
+Google's GraphCast. The `RawRepository` interface is used to abstract the
 differences between these models, allowing the core to interact with them
 in a uniform way.
 """
@@ -24,11 +24,11 @@ from nwp_consumer.internal import entities
 log = logging.getLogger("nwp-consumer")
 
 
-class ModelRepository(abc.ABC):
+class RawRepository(abc.ABC):
     """Interface for a repository that produces raw NWP data.
 
     Since different producers of NWP data have different data storage
-    implementations, a ModelRepository needs to define its own download
+    implementations, a RawRepository needs to define its own download
     and processing methods.
 
     A source may provide one or more files for a given init time.
@@ -44,7 +44,7 @@ class ModelRepository(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def authenticate(cls) -> ResultE["ModelRepository"]:
+    def authenticate(cls) -> ResultE["RawRepository"]:
         """Create a new authenticated instance of the class."""
         pass
 
@@ -73,7 +73,7 @@ class ModelRepository(abc.ABC):
         >>> import datetime as dt
         >>>
         >>> # Pseudocode for a model_repositories repository
-        >>> class MyModelRepository(ModelRepository):
+        >>> class MyRawRepository(RawRepository):
         ...     @override
         ...     def fetch_init_data(self, it: dt.datetime) \
         ...             -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
@@ -113,7 +113,7 @@ class ModelRepository(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def repository() -> entities.ModelRepositoryMetadata:
+    def repository() -> entities.RawRepositoryMetadata:
         """Metadata about the model repository."""
         pass
 

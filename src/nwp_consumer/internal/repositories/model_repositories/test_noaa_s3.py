@@ -9,7 +9,7 @@ import s3fs
 from returns.result import Failure, ResultE, Success
 
 from ...entities import NWPDimensionCoordinateMap, Parameter
-from .noaa_s3 import NOAAS3ModelRepository
+from .noaa_s3 import NOAAS3RawRepository
 
 if TYPE_CHECKING:
     import xarray as xr
@@ -17,8 +17,8 @@ if TYPE_CHECKING:
     from nwp_consumer.internal import entities
 
 
-class TestNOAAS3ModelRepository(unittest.TestCase):
-    """Test the business methods of the NOAAS3ModelRepository class."""
+class TestNOAAS3RawRepository(unittest.TestCase):
+    """Test the business methods of the NOAAS3RawRepository class."""
 
     @unittest.skipIf(
         condition="CI" in os.environ,
@@ -27,7 +27,7 @@ class TestNOAAS3ModelRepository(unittest.TestCase):
     def test__download_and_convert(self) -> None:
         """Test the _download_and_convert method."""
 
-        c: NOAAS3ModelRepository = NOAAS3ModelRepository.authenticate().unwrap()
+        c: NOAAS3RawRepository = NOAAS3RawRepository.authenticate().unwrap()
 
         test_it: dt.datetime = dt.datetime(2024, 10, 24, 12, tzinfo=dt.UTC)
         test_coordinates: entities.NWPDimensionCoordinateMap = dataclasses.replace(
@@ -103,10 +103,10 @@ class TestNOAAS3ModelRepository(unittest.TestCase):
 
         for t in tests:
             with self.subTest(name=t.name):
-                result = NOAAS3ModelRepository._wanted_file(
+                result = NOAAS3RawRepository._wanted_file(
                     filename=t.filename,
                     it=test_it,
-                    max_step=max(NOAAS3ModelRepository.model().expected_coordinates.step),
+                    max_step=max(NOAAS3RawRepository.model().expected_coordinates.step),
                 )
                 self.assertEqual(result, t.expected)
 
@@ -124,7 +124,7 @@ class TestNOAAS3ModelRepository(unittest.TestCase):
             TestCase(
                 filename="test_NOAAS3_HRES-GFS_10u_20210509T06_S00.grib",
                 expected_coords=dataclasses.replace(
-                    NOAAS3ModelRepository.model().expected_coordinates,
+                    NOAAS3RawRepository.model().expected_coordinates,
                     init_time=[dt.datetime(2021, 5, 9, 6, tzinfo=dt.UTC)],
                     variable=[Parameter.WIND_U_COMPONENT_10m],
                     step=[0],
@@ -134,7 +134,7 @@ class TestNOAAS3ModelRepository(unittest.TestCase):
             TestCase(
                 filename="test_NOAAS3_HRES-GFS_lcc_20210509T06_S00.grib",
                 expected_coords=dataclasses.replace(
-                    NOAAS3ModelRepository.model().expected_coordinates,
+                    NOAAS3RawRepository.model().expected_coordinates,
                     init_time=[dt.datetime(2021, 5, 9, 6, tzinfo=dt.UTC)],
                     variable=[Parameter.CLOUD_COVER_LOW],
                     step=[0],
@@ -144,7 +144,7 @@ class TestNOAAS3ModelRepository(unittest.TestCase):
             TestCase(
                 filename="test_NOAAS3_HRES-GFS_r_20210509T06_S00.grib",
                 expected_coords=dataclasses.replace(
-                    NOAAS3ModelRepository.model().expected_coordinates,
+                    NOAAS3RawRepository.model().expected_coordinates,
                     init_time=[dt.datetime(2021, 5, 9, 6, tzinfo=dt.UTC)],
                     variable=[Parameter.RELATIVE_HUMIDITY_SL],
                     step=[0],
@@ -153,12 +153,12 @@ class TestNOAAS3ModelRepository(unittest.TestCase):
             ),
             TestCase(
                 filename="test_NOAAS3_HRES-GFS_aptmp_20210509T06_S00.grib",
-                expected_coords=NOAAS3ModelRepository.model().expected_coordinates,
+                expected_coords=NOAAS3RawRepository.model().expected_coordinates,
                 should_error=True,
             ),
             TestCase(
                 filename="test_MODatahub_UM-Global_t2m_20241120T00_S00.grib",
-                expected_coords=NOAAS3ModelRepository.model().expected_coordinates,
+                expected_coords=NOAAS3RawRepository.model().expected_coordinates,
                 should_error=True,
             ),
         ]
@@ -166,7 +166,7 @@ class TestNOAAS3ModelRepository(unittest.TestCase):
         for t in tests:
             with self.subTest(name=t.filename):
                 # Attempt to convert the file
-                result = NOAAS3ModelRepository._convert(
+                result = NOAAS3RawRepository._convert(
                     path=pathlib.Path(__file__).parent.absolute() / "test_gribs" / t.filename,
                 )
                 region_result: ResultE[dict[str, slice]] = result.do(
