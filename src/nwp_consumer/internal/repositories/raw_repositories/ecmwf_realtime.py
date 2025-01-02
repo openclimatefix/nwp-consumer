@@ -204,6 +204,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                     raise FileNotFoundError(f"File not found at '{url}'")
 
                 with local_path.open("wb") as lf, self._fs.open(url, "rb") as rf:
+                    log.info(f"Writing file from {url} to {local_path}")
                     for chunk in iter(lambda: rf.read(12 * 1024), b""):
                         lf.write(chunk)
                         lf.flush()
