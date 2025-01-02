@@ -284,7 +284,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                 )
 
                 # change lat and lon chunk size to 1
-                da = da.chunk({"latitude": 1, "longitude": 1})
+                da = da.chunk({"latitude": 17, "longitude": 18})
 
             except Exception as e:
                 return Failure(ValueError(
