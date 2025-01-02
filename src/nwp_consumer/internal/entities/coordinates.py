@@ -90,9 +90,7 @@ class NWPDimensionCoordinateMap:
     Will be truncated to 4 decimal places, and ordered as 90 -> -90.
     """
     longitude: list[float] | None = None
-    """The longitude coordinates of the forecast grid in degrees. """
-    large_chunk_divider_size: int = 8
-    """ For large dimensions, the amount of steps in each chunk
+    """The longitude coordinates of the forecast grid in degrees. 
 
     Will be truncated to 4 decimal places, and ordered as -180 -> 180.
     """
@@ -119,15 +117,7 @@ class NWPDimensionCoordinateMap:
         index value list.
         """
         return [f.name for f in dataclasses.fields(self) if
-                getattr(self, f.name) is not None and f.name != "large_chunk_divider_size"]
-
-    def set_large_chunk_divider_size(self, large_chunk_divider_size: int) \
-            -> "NWPDimensionCoordinateMap":
-        """Set the large chunk divider size for the map.
-
-        This is the number of steps in each chunk for large dimensions.
-        """
-        return dataclasses.replace(self, large_chunk_divider_size=large_chunk_divider_size)
+                getattr(self, f.name) is not None]
 
     @property
     def shapemap(self) -> dict[str, int]:
@@ -420,8 +410,7 @@ class NWPDimensionCoordinateMap:
             "init_time": 1,
             "step": 1,
         } | {
-            dim: len(getattr(self, dim)) // self.large_chunk_divider_size
-            if len(getattr(self, dim)) > self.large_chunk_divider_size else 1
+            dim: len(getattr(self, dim)) // 8 if len(getattr(self, dim)) > 8 else 1
             for dim in self.dims
             if dim not in ["init_time", "step"]
         }
