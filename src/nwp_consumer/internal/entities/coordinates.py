@@ -90,7 +90,7 @@ class NWPDimensionCoordinateMap:
     Will be truncated to 4 decimal places, and ordered as 90 -> -90.
     """
     longitude: list[float] | None = None
-    """The longitude coordinates of the forecast grid in degrees. 
+    """The longitude coordinates of the forecast grid in degrees.
 
     Will be truncated to 4 decimal places, and ordered as -180 -> 180.
     """
