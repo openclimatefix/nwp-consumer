@@ -275,7 +275,8 @@ class TensorStore(abc.ABC):
 
         # Perform the regional write
         try:
-            da.to_zarr(store=self.path, region=region, consolidated=True)
+            # TODO not use safe_chunks=False in general
+            da.to_zarr(store=self.path, region=region, consolidated=True, safe_chunks=False)
         except Exception as e:
             return Failure(
                 OSError(
