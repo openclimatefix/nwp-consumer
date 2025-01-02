@@ -110,7 +110,10 @@ class ConsumerService(ports.ConsumeUseCase):
         if os.getenv("CONCURRENCY", "True").capitalize() == "False":
             n_jobs = 1
         elif os.getenv("NUMBER_CONCURRENT_JOBS") is not None:
-            n_jobs = int(str(os.getenv("NUMBER_CONCURRENT_JOBS")))
+            number_of_current_jobs = os.getenv("NUMBER_CONCURRENT_JOBS")
+            assert number_of_current_jobs is not None
+            assert number_of_current_jobs.isnumeric()
+            n_jobs = int(number_of_current_jobs)
         log.debug(f"Using {n_jobs} concurrent thread(s)")
 
         return Parallel(  # type: ignore
