@@ -194,6 +194,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
         ).with_suffix(".grib").expanduser()
 
         # Only download the file if not already present
+        log.info("Checking for local file: '%s'", local_path)
         if not local_path.exists() or local_path.stat().st_size == 0:
             local_path.parent.mkdir(parents=True, exist_ok=True)
             log.debug("Requesting file from S3 at: '%s'", url)
