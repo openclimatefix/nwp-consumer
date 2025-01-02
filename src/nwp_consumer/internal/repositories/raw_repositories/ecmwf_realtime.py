@@ -83,8 +83,10 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             },
             postprocess_options=entities.PostProcessOptions(),
             available_models={
-                "default": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk"),
-                "hres-ifs-uk": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk"),
+                "default": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk")
+                .set_large_chunk_divider_size(1),
+                "hres-ifs-uk": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk")
+                .set_large_chunk_divider_size(1),
                 "hres-ifs-india": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("india"),
             },
         )
@@ -138,7 +140,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             f"Found {len(urls)} file(s) for init time '{it.strftime('%Y-%m-%d %H:%M')}' "
             f"in bucket path '{self.bucket}/ecmwf'.",
         )
-        for url in urls:
+        for url in urls[0:3]:
             yield delayed(self._download_and_convert)(url=url)
 
     @classmethod
@@ -284,7 +286,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                 )
 
                 # change lat and lon chunk size to 1
-                da = da.chunk({"latitude": 17, "longitude": 18})
+                da = da.chunk({"latitude": 1, "longitude": 1})
 
             except Exception as e:
                 return Failure(ValueError(

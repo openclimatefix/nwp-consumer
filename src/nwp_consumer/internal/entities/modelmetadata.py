@@ -93,6 +93,11 @@ class ModelMetadata:
                 log.warning(f"Unknown region '{region}', not cropping expected coordinates.")
                 return self
 
+    def set_large_chunk_divider_size(self, large_chunk_divider_size):
+        """ Set the large chunk divider"""
+        self.expected_coordinates.large_chunk_divider_size = large_chunk_divider_size
+        return self
+
 
 class Models:
     """Namespace containing known models."""
