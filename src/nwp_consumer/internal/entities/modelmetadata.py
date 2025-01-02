@@ -94,7 +94,7 @@ class ModelMetadata:
                 return self
 
     def set_large_chunk_divider_size(self, large_chunk_divider_size: int) -> "ModelMetadata":
-        """ Set the large chunk divider. """
+        """Set the large chunk divider."""
         self.expected_coordinates.large_chunk_divider_size = large_chunk_divider_size
         return self
 
