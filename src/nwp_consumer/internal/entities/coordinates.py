@@ -91,7 +91,7 @@ class NWPDimensionCoordinateMap:
     """
     longitude: list[float] | None = None
     """The longitude coordinates of the forecast grid in degrees. """
-    large_chunk_divider_size: int | None = 8
+    large_chunk_divider_size: int = 8
     """ For large dimensions, the amount of steps in each chunk
 
     Will be truncated to 4 decimal places, and ordered as -180 -> 180.
