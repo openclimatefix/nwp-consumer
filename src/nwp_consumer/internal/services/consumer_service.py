@@ -109,6 +109,8 @@ class ConsumerService(ports.ConsumeUseCase):
         n_jobs: int = max(cpu_count() - 1, max_connections)
         if os.getenv("CONCURRENCY", "True").capitalize() == "False":
             n_jobs = 1
+        elif os.getenv("NUMBER_CONCURRENT_JOBS") is not None:
+            n_jobs = int(os.getenv("NUMBER_CONCURRENT_JOBS"))
         log.debug(f"Using {n_jobs} concurrent thread(s)")
 
         return Parallel(  # type: ignore
