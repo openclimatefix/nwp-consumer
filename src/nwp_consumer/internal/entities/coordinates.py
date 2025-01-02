@@ -92,8 +92,7 @@ class NWPDimensionCoordinateMap:
     longitude: list[float] | None = None
     """The longitude coordinates of the forecast grid in degrees. """
     large_chunk_divider_size: int | None = 8
-    """ For large dimensions, the amount of steps in each chunk/ 
-    
+    """ For large dimensions, the amount of steps in each chunk
 
     Will be truncated to 4 decimal places, and ordered as -180 -> 180.
     """
@@ -122,7 +121,8 @@ class NWPDimensionCoordinateMap:
         return [f.name for f in dataclasses.fields(self) if
                 getattr(self, f.name) is not None and f.name != "large_chunk_divider_size"]
 
-    def set_large_chunk_divider_size(self, large_chunk_divider_size: int) -> "NWPDimensionCoordinateMap":
+    def set_large_chunk_divider_size(self, large_chunk_divider_size: int) \
+            -> "NWPDimensionCoordinateMap":
         """Set the large chunk divider size for the map.
 
         This is the number of steps in each chunk for large dimensions.
