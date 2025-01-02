@@ -117,7 +117,7 @@ class ConsumerService(ports.ConsumeUseCase):
         return Parallel(  # type: ignore
             n_jobs=n_jobs,
             prefer="processes", # TODO should not leave it as processes
-            verbose=1,
+            verbose=0,
             return_as="generator_unordered",
         )(delayed_generator)
 
