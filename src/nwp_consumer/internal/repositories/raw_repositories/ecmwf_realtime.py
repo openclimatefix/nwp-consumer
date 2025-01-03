@@ -83,8 +83,10 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             },
             postprocess_options=entities.PostProcessOptions(),
             available_models={
-                "default": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk"),
-                "hres-ifs-uk": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk"),
+                "default": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk")
+                .set_maximum_number_of_chunks_in_one_dim(2),
+                "hres-ifs-uk": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk")
+                .set_maximum_number_of_chunks_in_one_dim(2),
                 "hres-ifs-india": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("india"),
             },
         )
@@ -138,7 +140,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             f"Found {len(urls)} file(s) for init time '{it.strftime('%Y-%m-%d %H:%M')}' "
             f"in bucket path '{self.bucket}/ecmwf'.",
         )
-        for url in urls:
+        for url in urls[0:3]:
             yield delayed(self._download_and_convert)(url=url)
 
     @classmethod

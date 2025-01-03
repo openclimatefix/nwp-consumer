@@ -93,6 +93,12 @@ class ModelMetadata:
                 log.warning(f"Unknown region '{region}', not cropping expected coordinates.")
                 return self
 
+    def set_maximum_number_of_chunks_in_one_dim(self, maximum_number_of_chunks_in_one_dim:int):
+        """Set the maximum number of chunks in one dimension."""
+        self.expected_coordinates.maximum_number_of_chunks_in_one_dim \
+            = maximum_number_of_chunks_in_one_dim
+        return self
+
 
 class Models:
     """Namespace containing known models."""
