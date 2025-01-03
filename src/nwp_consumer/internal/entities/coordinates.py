@@ -410,7 +410,7 @@ class NWPDimensionCoordinateMap:
             "init_time": 1,
             "step": 1,
         } | {
-            dim: len(getattr(self, dim)) // 8 if len(getattr(self, dim)) > 8 else 1
+            dim: len(getattr(self, dim)) // 2 if len(getattr(self, dim)) > 2 else 1
             for dim in self.dims
             if dim not in ["init_time", "step"]
         }
