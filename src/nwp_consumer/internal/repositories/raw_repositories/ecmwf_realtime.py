@@ -285,9 +285,6 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                     .sortby(variables="latitude", ascending=False)
                 )
 
-                # change lat and lon chunk size to 1
-                # da = da.chunk({"latitude": 1, "longitude": 1})
-
             except Exception as e:
                 return Failure(ValueError(
                     f"Error processing dataset {i} from '{path}' to DataArray: {e}",
