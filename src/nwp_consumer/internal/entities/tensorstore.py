@@ -274,6 +274,7 @@ class TensorStore(abc.ABC):
             region = region_result.unwrap()
 
         # Perform the regional write
+        log.debug(f"Writing to region {region} of store {self.name}")
         try:
             # TODO not use safe_chunks=False in general
             da.to_zarr(store=self.path, region=region, consolidated=True, safe_chunks=False)
