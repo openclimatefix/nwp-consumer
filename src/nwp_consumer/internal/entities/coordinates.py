@@ -92,8 +92,8 @@ class NWPDimensionCoordinateMap:
     longitude: list[float] | None = None
     """The longitude coordinates of the forecast grid in degrees. """
     maximum_number_of_chunks_in_one_dim: int = 8
-    """ The maximum number of chunks in one dimension. 
-    When saving to S3 we might want this to be small, to reduce the number of files saved. 
+    """ The maximum number of chunks in one dimension.
+    When saving to S3 we might want this to be small, to reduce the number of files saved.
 
     Will be truncated to 4 decimal places, and ordered as -180 -> 180.
     """
@@ -120,7 +120,8 @@ class NWPDimensionCoordinateMap:
         index value list.
         """
         return [f.name for f in dataclasses.fields(self) if
-                getattr(self, f.name) is not None and f.name != "maximum_number_of_chunks_in_one_dim"]
+                getattr(self, f.name) is not None
+                and f.name != "maximum_number_of_chunks_in_one_dim"]
 
     @property
     def shapemap(self) -> dict[str, int]:

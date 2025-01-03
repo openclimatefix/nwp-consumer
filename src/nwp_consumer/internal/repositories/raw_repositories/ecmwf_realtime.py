@@ -140,7 +140,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             f"Found {len(urls)} file(s) for init time '{it.strftime('%Y-%m-%d %H:%M')}' "
             f"in bucket path '{self.bucket}/ecmwf'.",
         )
-        for url in urls[0:3]:
+        for url in urls:
             yield delayed(self._download_and_convert)(url=url)
 
     @classmethod
