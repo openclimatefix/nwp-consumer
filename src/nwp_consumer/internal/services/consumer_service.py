@@ -107,16 +107,18 @@ class ConsumerService(ports.ConsumeUseCase):
         """
         # TODO: Change this based on threads instead of CPU count
         n_jobs: int = max(cpu_count() - 1, max_connections)
-        if os.getenv("CONCURRENCY", "True").capitalize() == "False":
-            n_jobs = 1
-        elif os.getenv("NUMBER_CONCURRENT_JOBS") is not None:
-            n_jobs = int(str(os.getenv("NUMBER_CONCURRENT_JOBS")))
+        prefer = "threads"
 
-        log.debug(f"Using {n_jobs} concurrent thread(s)")
+        concurrency = os.getenv("CONCURRENCY", "True").capitalize() == "False"
+        if concurrency:
+            n_jobs = 1
+            prefer = "processes"
+
+        log.debug(f"Using {n_jobs} concurrent {prefer}")
 
         return Parallel(  # type: ignore
             n_jobs=n_jobs,
-            prefer="processes", # TODO should not leave it as processes
+            prefer=prefer,
             verbose=0,
             return_as="generator_unordered",
         )(delayed_generator)
