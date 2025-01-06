@@ -102,10 +102,11 @@ class CLIHandler:
                     model_adaptor=self.model_adaptor,
                     notification_adaptor=self.notification_adaptor,
                 )
+                period: dt.date = dt.date(args.year, args.month, 1)
                 result = service_result.do(
                     consume_result
                     for service in service_result
-                    for consume_result in service.consume(period=args.init_time)
+                    for consume_result in service.consume(period=period)
                 )
                 if isinstance(result, Failure):
                     log.error(f"Failed to archive NWP data: {result!s}")
