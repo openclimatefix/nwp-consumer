@@ -83,10 +83,8 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             },
             postprocess_options=entities.PostProcessOptions(),
             available_models={
-                "default": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk")
-                .set_maximum_number_of_chunks_in_one_dim(2),
-                "hres-ifs-uk": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk")
-                .set_maximum_number_of_chunks_in_one_dim(2),
+                "default": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk"),
+                "hres-ifs-uk": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk"),
                 "hres-ifs-india": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("india"),
             },
         )
@@ -196,8 +194,9 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
         ).with_suffix(".grib").expanduser()
 
         # Only download the file if not already present
-        log.info("Checking for local file: '%s'", local_path)
-        if not local_path.exists() or local_path.stat().st_size == 0:
+        if local_path.exists() and local_path.stat().st_size > 0:
+            log.debug("Skipping download for existing file at '%s'.", local_path.as_posix())
+        else:
             local_path.parent.mkdir(parents=True, exist_ok=True)
             log.debug("Requesting file from S3 at: '%s'", url)
 
@@ -205,8 +204,8 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                 if not self._fs.exists(url):
                     raise FileNotFoundError(f"File not found at '{url}'")
 
+                log.debug("Writing file from '%s' to '%s'", url, local_path.as_posix())
                 with local_path.open("wb") as lf, self._fs.open(url, "rb") as rf:
-                    log.info(f"Writing file from {url} to {local_path}")
                     for chunk in iter(lambda: rf.read(12 * 1024), b""):
                         lf.write(chunk)
                         lf.flush()

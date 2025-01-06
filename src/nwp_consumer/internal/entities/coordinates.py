@@ -38,6 +38,7 @@ a key part of parallel writing.
 import dataclasses
 import datetime as dt
 import json
+import logging
 from importlib.metadata import PackageNotFoundError, version
 
 import dask.array
@@ -53,6 +54,8 @@ try:
     __version__ = version("nwp-consumer")
 except PackageNotFoundError:
     __version__ = "v?"
+
+log = logging.getLogger("nwp-consumer")
 
 
 @dataclasses.dataclass(slots=True)
@@ -91,12 +94,6 @@ class NWPDimensionCoordinateMap:
     """
     longitude: list[float] | None = None
     """The longitude coordinates of the forecast grid in degrees. """
-    maximum_number_of_chunks_in_one_dim: int = 8
-    """ The maximum number of chunks in one dimension.
-    When saving to S3 we might want this to be small, to reduce the number of files saved.
-
-    Will be truncated to 4 decimal places, and ordered as -180 -> 180.
-    """
 
     def __post_init__(self) -> None:
         """Rigidly set input value ordering and precision."""
@@ -119,9 +116,7 @@ class NWPDimensionCoordinateMap:
         Ignores any dimensions that do not have a corresponding coordinate
         index value list.
         """
-        return [f.name for f in dataclasses.fields(self) if
-                getattr(self, f.name) is not None
-                and f.name != "maximum_number_of_chunks_in_one_dim"]
+        return [f.name for f in dataclasses.fields(self) if getattr(self, f.name) is not None]
 
     @property
     def shapemap(self) -> dict[str, int]:
@@ -384,6 +379,8 @@ class NWPDimensionCoordinateMap:
                 # TODO: of which might loop around the edges of the grid. In this case, it would
                 # TODO: be useful to determine if the run is non-contiguous only in that it wraps
                 # TODO: around that boundary, and in that case, split it and write it in two goes.
+                # TODO: 2025-01-06: I think this is a resolved problem now that fetch_init_data
+                # can return a list of DataArrays.
                 return Failure(
                     ValueError(
                         f"Coordinate values for dimension '{inner_dim_label}' do not correspond "
@@ -394,7 +391,26 @@ class NWPDimensionCoordinateMap:
                     ),
                 )
 
-            slices[inner_dim_label] = slice(outer_dim_indices[0], outer_dim_indices[-1] + 1)
+            slc: slice = slice(outer_dim_indices[0], outer_dim_indices[-1] + 1)
+
+            # For each dimensional slice, check that the slice represents an integer number
+            # of chunks along that dimension. This is to ensure that the data can safely be written
+            # in parallel. The start and and of each slice should be divisible by the chunk size.
+            chunk_size = self.default_chunking()[inner_dim_label]
+            if slc.start % chunk_size != 0 or slc.stop % chunk_size != 0:
+                log.warning(
+                    f"Determined region of raw data to be written for dimension '{inner_dim_label}'"
+                    f"does not align with chunk boundaries of the store. "
+                    f"Dimension '{inner_dim_label}' has a chunk size of {chunk_size}, "
+                    "but the data to be written for this dimension starts at chunk "
+                    f"{slc.start / chunk_size:.2f} (index {slc.start}) and ends at chunk "
+                    f"{slc.stop / chunk_size:.2f} (index {slc.stop}). "
+                    "As such, this region cannot be safely written in parallel. "
+                    "Ensure the chunking is granular enough to cover the raw data region.",
+                )
+
+            slices[inner_dim_label] = slc
+
 
         return Success(slices)
 
@@ -406,18 +422,20 @@ class NWPDimensionCoordinateMap:
         that wants to cover the entire dimension should have a size equal to the
         dimension length.
 
-        It defaults to a single chunk per init time and step, and 8 chunks
-        for each entire other dimension. These are purposefully small, to ensure
-        that when perfomring parallel writes, chunk boundaries are not crossed.
+        It defaults to a single chunk per init time, step, and variable coordinate,
+        and 2 chunks for each entire other dimension.
+        These are purposefully small, to ensure that when performing parallel writes,
+        chunk boundaries are not crossed.
         """
         out_dict: dict[str, int] = {
             "init_time": 1,
             "step": 1,
+            "variable": 1,
         } | {
-            dim: len(getattr(self, dim)) // self.maximum_number_of_chunks_in_one_dim
-            if len(getattr(self, dim)) > self.maximum_number_of_chunks_in_one_dim else 1
+            dim: len(getattr(self, dim)) // 2
+            if len(getattr(self, dim)) > 8 else 1
             for dim in self.dims
-            if dim not in ["init_time", "step"]
+            if dim not in ["init_time", "step", "variable"]
         }
 
         return out_dict
