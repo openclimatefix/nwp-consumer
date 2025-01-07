@@ -16,7 +16,7 @@ import logging
 import os
 import pathlib
 import shutil
-from collections.abc import MutableMapping
+from collections.abc import Mapping, MutableMapping
 from typing import Any
 
 import pandas as pd
@@ -287,9 +287,11 @@ class TensorStore(abc.ABC):
         # integer number of chunks along that dimension.
         # * This is to ensure that the data can safely be written in parallel.
         # * The start and and of each slice should be divisible by the chunk size.
-        chunksizes: tuple[int] = xr.open_dataarray(self.path, engine="zarr").data.chunksize
+        chunksizes: Mapping[Any, tuple[int, ...]] = xr.open_dataarray(
+            self.path, engine="zarr",
+        ).chunksizes
         for dim, slc in region.items():
-            chunk_size = chunksizes[da.get_axis_num(dim)]
+            chunk_size = chunksizes[dim][0]
             # TODO: Determine if this should return a full failure object
             if slc.start % chunk_size != 0 or slc.stop % chunk_size != 0:
                 log.warning(
