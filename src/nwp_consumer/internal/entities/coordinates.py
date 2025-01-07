@@ -62,7 +62,7 @@ log = logging.getLogger("nwp-consumer")
 class NWPDimensionCoordinateMap:
     """Container for dimensions names and their coordinate index values.
 
-    Each field in the container is a dimension label, and the corresponding
+    Each public field in the container is a dimension label, and the corresponding
     value is a list of the coordinate values for each index along the dimension.
 
     All NWP data has an associated init time, step, and variable,
@@ -391,30 +391,11 @@ class NWPDimensionCoordinateMap:
                     ),
                 )
 
-            slc: slice = slice(outer_dim_indices[0], outer_dim_indices[-1] + 1)
-
-            # For each dimensional slice, check that the slice represents an integer number
-            # of chunks along that dimension. This is to ensure that the data can safely be written
-            # in parallel. The start and and of each slice should be divisible by the chunk size.
-            chunk_size = self.default_chunking()[inner_dim_label]
-            if slc.start % chunk_size != 0 or slc.stop % chunk_size != 0:
-                log.warning(
-                    f"Determined region of raw data to be written for dimension '{inner_dim_label}'"
-                    f"does not align with chunk boundaries of the store. "
-                    f"Dimension '{inner_dim_label}' has a chunk size of {chunk_size}, "
-                    "but the data to be written for this dimension starts at chunk "
-                    f"{slc.start / chunk_size:.2f} (index {slc.start}) and ends at chunk "
-                    f"{slc.stop / chunk_size:.2f} (index {slc.stop}). "
-                    "As such, this region cannot be safely written in parallel. "
-                    "Ensure the chunking is granular enough to cover the raw data region.",
-                )
-
-            slices[inner_dim_label] = slc
-
+            slices[inner_dim_label] = slice(outer_dim_indices[0], outer_dim_indices[-1] + 1)
 
         return Success(slices)
 
-    def default_chunking(self) -> dict[str, int]:
+    def chunking(self, chunk_count_overrides: dict[str, int]) -> dict[str, int]:
         """The expected chunk sizes for each dimension.
 
         A dictionary mapping of dimension labels to the size of a chunk along that
@@ -423,16 +404,22 @@ class NWPDimensionCoordinateMap:
         dimension length.
 
         It defaults to a single chunk per init time, step, and variable coordinate,
-        and 2 chunks for each entire other dimension.
-        These are purposefully small, to ensure that when performing parallel writes,
-        chunk boundaries are not crossed.
+        and 2 chunks for each entire other dimension, unless overridden by the
+        `chunk_count_overrides` argument.
+
+        The defaults are purposefully small, to ensure that when performing parallel
+        writes, chunk boundaries are not crossed.
+
+        Args:
+            chunk_count_overrides: A dictionary mapping dimension labels to the
+                number of chunks to split the dimension into.
         """
         out_dict: dict[str, int] = {
             "init_time": 1,
             "step": 1,
             "variable": 1,
         } | {
-            dim: len(getattr(self, dim)) // 2
+            dim: len(getattr(self, dim)) // chunk_count_overrides.get(dim, 2)
             if len(getattr(self, dim)) > 8 else 1
             for dim in self.dims
             if dim not in ["init_time", "step", "variable"]
@@ -441,22 +428,25 @@ class NWPDimensionCoordinateMap:
         return out_dict
 
 
-    def as_zeroed_dataarray(self, name: str) -> xr.DataArray:
+    def as_zeroed_dataarray(self, name: str, chunks: dict[str, int]) -> xr.DataArray:
         """Express the coordinates as an xarray DataArray.
 
-        Data is populated with zeros and a default chunking scheme is applied.
+        The underlying dask array is a zeroed array with the shape of the dataset,
+        that is chunked according to the given chunking scheme.
 
         Args:
             name: The name of the DataArray.
+            chunks: A mapping of dimension names to the size of the chunks
+                along the dimensions.
 
         See Also:
-        - https://docs.xarray.dev/en/stable/user-guide/io.html#distributed-writes
+            - https://docs.xarray.dev/en/stable/user-guide/io.html#distributed-writes
         """
         # Create a dask array of zeros with the shape of the dataset
         # * The values of this are ignored, only the shape and chunks are used
         dummy_values = dask.array.zeros(  # type: ignore
             shape=list(self.shapemap.values()),
-            chunks=tuple([self.default_chunking()[k] for k in self.shapemap]),
+            chunks=tuple([chunks[k] for k in self.shapemap]),
         )
         attrs: dict[str, str] = {
             "produced_by": "".join((

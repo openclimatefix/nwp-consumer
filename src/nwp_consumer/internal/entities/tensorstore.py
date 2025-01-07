@@ -77,6 +77,7 @@ class TensorStore(abc.ABC):
         model: str,
         repository: str,
         coords: NWPDimensionCoordinateMap,
+        chunks: dict[str, int],
     ) -> ResultE["TensorStore"]:
         """Initialize a store for a given init time.
 
@@ -110,6 +111,7 @@ class TensorStore(abc.ABC):
                    This is also used as the name of the tensor.
             repository: The name of the repository providing the tensor data.
             coords: The coordinates of the store.
+            chunks: The chunk sizes for the store.
 
         Returns:
             An indicator of a successful store write containing the number of bytes written.
@@ -152,7 +154,8 @@ class TensorStore(abc.ABC):
         # Write the coordinates to a skeleton Zarr store
         # * 'compute=False' enables only saving metadata
         # * 'mode="w-"' fails if it finds an existing store
-        da: xr.DataArray = coords.as_zeroed_dataarray(name=model)
+
+        da: xr.DataArray = coords.as_zeroed_dataarray(name=model, chunks=chunks)
         encoding = {
             model: {"write_empty_chunks": False},
             "init_time": {"units": "nanoseconds since 1970-01-01"},
@@ -257,12 +260,19 @@ class TensorStore(abc.ABC):
         If the region dict is empty or not provided, the region is determined
         via the 'determine_region' method.
 
+        This function should be thread safe, so a check is performed on the region
+        to ensure that it can be safely written to in parallel, i.e. that it covers
+        an integer number of chunks.
+
         Args:
             da: The data to write to the store.
             region: The region to write to.
 
         Returns:
             An indicator of a successful store write containing the number of bytes written.
+
+        See Also:
+            - https://docs.xarray.dev/en/stable/user-guide/io.html#distributed-writes
         """
         # Attempt to determine the region if missing
         if region is None or region == {}:
@@ -270,8 +280,29 @@ class TensorStore(abc.ABC):
                 self.coordinate_map.determine_region,
             )
             if isinstance(region_result, Failure):
-                return Failure(region_result.failure())
+                return region_result
             region = region_result.unwrap()
+
+        # For each dimensional slice defining the region, check the slice represents an
+        # integer number of chunks along that dimension.
+        # * This is to ensure that the data can safely be written in parallel.
+        # * The start and and of each slice should be divisible by the chunk size.
+        chunksizes: tuple[int] = xr.open_dataarray(self.path, engine="zarr").data.chunksize
+        for dim, slc in region.items():
+            chunk_size = chunksizes[da.get_axis_num(dim)]
+            # TODO: Determine if this should return a full failure object
+            if slc.start % chunk_size != 0 or slc.stop % chunk_size != 0:
+                log.warning(
+                    f"Determined region of raw data to be written for dimension '{dim}'"
+                    f"does not align with chunk boundaries of the store. "
+                    f"Dimension '{dim}' has a chunk size of {chunk_size}, "
+                    "but the data to be written for this dimension starts at chunk "
+                    f"{slc.start / chunk_size:.2f} (index {slc.start}) and ends at chunk "
+                    f"{slc.stop / chunk_size:.2f} (index {slc.stop}). "
+                    "As such, this region cannot be safely written in parallel. "
+                    "Ensure the chunking is granular enough to cover the raw data region.",
+                )
+
 
         # Perform the regional write
         try:
