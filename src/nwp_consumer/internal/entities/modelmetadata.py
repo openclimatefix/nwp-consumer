@@ -55,6 +55,15 @@ class ModelMetadata:
     Which prints grid data from the grib file.
     """
 
+    chunk_count_overrides: dict[str, int] = dataclasses.field(default_factory=dict)
+    """Mapping of dimension names to the desired number of chunks in that dimension.
+
+    Overrides the default chunking strategy.
+
+    See Also:
+        - `entities.coordinates.NWPDimensionCoordinateMap.chunking`
+    """
+
     def __str__(self) -> str:
         """Return a pretty-printed string representation of the metadata."""
         pretty: str = "".join((
@@ -93,13 +102,14 @@ class ModelMetadata:
                 log.warning(f"Unknown region '{region}', not cropping expected coordinates.")
                 return self
 
-    def set_maximum_number_of_chunks_in_one_dim(self, maximum_number_of_chunks_in_one_dim: int) \
-            -> "ModelMetadata":
-        """Set the maximum number of chunks in one dimension."""
-        self.expected_coordinates.maximum_number_of_chunks_in_one_dim \
-            = maximum_number_of_chunks_in_one_dim
-        return self
-
+    def with_chunk_count_overrides(self, overrides: dict[str, int]) -> "ModelMetadata":
+        """Returns metadata for the given model with the given chunk count overrides."""
+        if not set(overrides.keys()).issubset(self.expected_coordinates.dims):
+            log.warning(
+                "Chunk count overrides contain keys not in the expected coordinates. "
+                "These will not modify the chunking strategy.",
+            )
+        return dataclasses.replace(self, chunk_count_overrides=overrides)
 
 class Models:
     """Namespace containing known models."""

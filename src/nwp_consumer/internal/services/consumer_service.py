@@ -106,13 +106,12 @@ class ConsumerService(ports.ConsumeUseCase):
             max_connections: The maximum number of connections to use.
         """
         # TODO: Change this based on threads instead of CPU count
+        # TODO: Enable choosing between threads and processes?
         n_jobs: int = max(cpu_count() - 1, max_connections)
         prefer = "threads"
 
-        concurrency = os.getenv("CONCURRENCY", "True").capitalize() == "False"
-        if concurrency:
+        if os.getenv("CONCURRENCY", "True").capitalize() == "False":
             n_jobs = 1
-            prefer = "processes"
 
         log.debug(f"Using {n_jobs} concurrent {prefer}")
 
@@ -155,6 +154,9 @@ class ConsumerService(ports.ConsumeUseCase):
             coords=dataclasses.replace(
                 model_metadata.expected_coordinates,
                 init_time=its,
+            ),
+            chunks=model_metadata.expected_coordinates.chunking(
+                chunk_count_overrides=model_metadata.chunk_count_overrides,
             ),
         )
 
