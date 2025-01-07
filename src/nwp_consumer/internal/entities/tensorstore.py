@@ -291,7 +291,7 @@ class TensorStore(abc.ABC):
             self.path, engine="zarr",
         ).chunksizes
         for dim, slc in region.items():
-            chunk_size = chunksizes[dim][0]
+            chunk_size = chunksizes.get(dim, (1,))[0]
             # TODO: Determine if this should return a full failure object
             if slc.start % chunk_size != 0 or slc.stop % chunk_size != 0:
                 log.warning(
