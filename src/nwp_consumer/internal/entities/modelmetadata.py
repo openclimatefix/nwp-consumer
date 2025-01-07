@@ -170,7 +170,7 @@ class Models:
         resolution="0.1 degrees",
         expected_coordinates=NWPDimensionCoordinateMap(
             init_time=[],
-            step=list(range(0, 48, 1)),
+            step=list(range(0, 3, 1)),
             variable=[
                 Parameter.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL,
                 Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
@@ -184,7 +184,7 @@ class Models:
                 Parameter.TEMPERATURE_SL,
                 Parameter.TOTAL_PRECIPITATION_RATE_GL,
             ],
-            ensemble_member=list(range(1, 51)),
+            ensemble_member=list(range(1, 3)),
             latitude=[v/10 for v in range(900, -900, -1)],
             longitude=[v/10 for v in range(-1800, 1800, 1)],
         ),

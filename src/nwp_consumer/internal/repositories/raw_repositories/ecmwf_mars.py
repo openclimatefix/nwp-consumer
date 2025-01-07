@@ -265,18 +265,18 @@ class ECMWFMARSRawRepository(ports.RawRepository):
             params=self.model().expected_coordinates.variable,
             init_time=it,
             steps=self.model().expected_coordinates.step,
-            nwse=",".join([str(ord) for ord in self.model().expected_coordinates.nwse()]),
+            nwse="/".join([str(ord) for ord in self.model().expected_coordinates.nwse()]),
             number=self.model().expected_coordinates.ensemble_member,
         )
 
-        match self.model().name:
-            case "ECMWF_HRES_IFS_0P1DEGREE":
-                yield delayed(self._download_and_convert)(req.as_operational_request())
-            case "ECMWF_ENS_STAT_0P1DEGREE":
-                for stat_req in [req.as_ensemble_mean_request(), req.as_ensemble_std_request()]:
-                    yield delayed(self._download_and_convert)(stat_req)
-            case "ECMWF_ENS_OP1DEGREE":
-                yield delayed(self._download_and_convert)(req.as_full_ensemble_request())
+        # Yield the download and convert function with the appropriate request type
+        if self.model().expected_coordinates.ensemble_stat is not None:
+            for stat_req in [req.as_ensemble_mean_request(), req.as_ensemble_std_request()]:
+                yield delayed(self._download_and_convert)(stat_req)
+        elif self.model().expected_coordinates.ensemble_member is not None:
+            yield delayed(self._download_and_convert)(req.as_full_ensemble_request())
+        else:
+            yield delayed(self._download_and_convert)(req.as_operational_request())
 
     def _download_and_convert(self, mr: _MARSRequest) -> ResultE[list[xr.DataArray]]:
         """Download and convert data from the ECMWF MARS server.
@@ -353,6 +353,8 @@ class ECMWFMARSRawRepository(ports.RawRepository):
                 .expand_dims("init_time")
                 .to_dataarray(name=ECMWFMARSRawRepository.model().name)
             )
+            if "number" in da.coords:
+                da = da.rename({"number": "ensemble_member"})
             da = (
                 da.drop_vars(
                     names=[
