@@ -121,7 +121,10 @@ class CEDAFTPRawRepository(ports.RawRepository):
             optional_env={},
             postprocess_options=entities.PostProcessOptions(),
             available_models={
-                "default": entities.Models.MO_UM_GLOBAL_17KM,
+                "default": entities.Models.MO_UM_GLOBAL_17KM.with_chunk_count_overrides({
+                    "latitude": 8,
+                    "longitude": 8,
+                }),
             },
         )
 

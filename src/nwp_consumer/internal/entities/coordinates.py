@@ -38,6 +38,7 @@ a key part of parallel writing.
 import dataclasses
 import datetime as dt
 import json
+import logging
 from importlib.metadata import PackageNotFoundError, version
 
 import dask.array
@@ -54,12 +55,14 @@ try:
 except PackageNotFoundError:
     __version__ = "v?"
 
+log = logging.getLogger("nwp-consumer")
+
 
 @dataclasses.dataclass(slots=True)
 class NWPDimensionCoordinateMap:
     """Container for dimensions names and their coordinate index values.
 
-    Each field in the container is a dimension label, and the corresponding
+    Each public field in the container is a dimension label, and the corresponding
     value is a list of the coordinate values for each index along the dimension.
 
     All NWP data has an associated init time, step, and variable,
@@ -90,10 +93,7 @@ class NWPDimensionCoordinateMap:
     Will be truncated to 4 decimal places, and ordered as 90 -> -90.
     """
     longitude: list[float] | None = None
-    """The longitude coordinates of the forecast grid in degrees.
-
-    Will be truncated to 4 decimal places, and ordered as -180 -> 180.
-    """
+    """The longitude coordinates of the forecast grid in degrees. """
 
     def __post_init__(self) -> None:
         """Rigidly set input value ordering and precision."""
@@ -379,6 +379,8 @@ class NWPDimensionCoordinateMap:
                 # TODO: of which might loop around the edges of the grid. In this case, it would
                 # TODO: be useful to determine if the run is non-contiguous only in that it wraps
                 # TODO: around that boundary, and in that case, split it and write it in two goes.
+                # TODO: 2025-01-06: I think this is a resolved problem now that fetch_init_data
+                # can return a list of DataArrays.
                 return Failure(
                     ValueError(
                         f"Coordinate values for dimension '{inner_dim_label}' do not correspond "
@@ -393,7 +395,7 @@ class NWPDimensionCoordinateMap:
 
         return Success(slices)
 
-    def default_chunking(self) -> dict[str, int]:
+    def chunking(self, chunk_count_overrides: dict[str, int]) -> dict[str, int]:
         """The expected chunk sizes for each dimension.
 
         A dictionary mapping of dimension labels to the size of a chunk along that
@@ -401,38 +403,50 @@ class NWPDimensionCoordinateMap:
         that wants to cover the entire dimension should have a size equal to the
         dimension length.
 
-        It defaults to a single chunk per init time and step, and 8 chunks
-        for each entire other dimension. These are purposefully small, to ensure
-        that when perfomring parallel writes, chunk boundaries are not crossed.
+        It defaults to a single chunk per init time, step, and variable coordinate,
+        and 2 chunks for each entire other dimension, unless overridden by the
+        `chunk_count_overrides` argument.
+
+        The defaults are purposefully small, to ensure that when performing parallel
+        writes, chunk boundaries are not crossed.
+
+        Args:
+            chunk_count_overrides: A dictionary mapping dimension labels to the
+                number of chunks to split the dimension into.
         """
         out_dict: dict[str, int] = {
             "init_time": 1,
             "step": 1,
+            "variable": 1,
         } | {
-            dim: len(getattr(self, dim)) // 8 if len(getattr(self, dim)) > 8 else 1
+            dim: len(getattr(self, dim)) // chunk_count_overrides.get(dim, 2)
+            if len(getattr(self, dim)) > 8 else 1
             for dim in self.dims
-            if dim not in ["init_time", "step"]
+            if dim not in ["init_time", "step", "variable"]
         }
 
         return out_dict
 
 
-    def as_zeroed_dataarray(self, name: str) -> xr.DataArray:
+    def as_zeroed_dataarray(self, name: str, chunks: dict[str, int]) -> xr.DataArray:
         """Express the coordinates as an xarray DataArray.
 
-        Data is populated with zeros and a default chunking scheme is applied.
+        The underlying dask array is a zeroed array with the shape of the dataset,
+        that is chunked according to the given chunking scheme.
 
         Args:
             name: The name of the DataArray.
+            chunks: A mapping of dimension names to the size of the chunks
+                along the dimensions.
 
         See Also:
-        - https://docs.xarray.dev/en/stable/user-guide/io.html#distributed-writes
+            - https://docs.xarray.dev/en/stable/user-guide/io.html#distributed-writes
         """
         # Create a dask array of zeros with the shape of the dataset
         # * The values of this are ignored, only the shape and chunks are used
         dummy_values = dask.array.zeros(  # type: ignore
             shape=list(self.shapemap.values()),
-            chunks=tuple([self.default_chunking()[k] for k in self.shapemap]),
+            chunks=tuple([chunks[k] for k in self.shapemap]),
         )
         attrs: dict[str, str] = {
             "produced_by": "".join((

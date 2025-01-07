@@ -194,7 +194,9 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
         ).with_suffix(".grib").expanduser()
 
         # Only download the file if not already present
-        if not local_path.exists() or local_path.stat().st_size == 0:
+        if local_path.exists() and local_path.stat().st_size > 0:
+            log.debug("Skipping download for existing file at '%s'.", local_path.as_posix())
+        else:
             local_path.parent.mkdir(parents=True, exist_ok=True)
             log.debug("Requesting file from S3 at: '%s'", url)
 
@@ -202,6 +204,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                 if not self._fs.exists(url):
                     raise FileNotFoundError(f"File not found at '{url}'")
 
+                log.debug("Writing file from '%s' to '%s'", url, local_path.as_posix())
                 with local_path.open("wb") as lf, self._fs.open(url, "rb") as rf:
                     for chunk in iter(lambda: rf.read(12 * 1024), b""):
                         lf.write(chunk)
@@ -280,6 +283,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                     .sortby(variables=["step", "variable", "longitude"])
                     .sortby(variables="latitude", ascending=False)
                 )
+
             except Exception as e:
                 return Failure(ValueError(
                     f"Error processing dataset {i} from '{path}' to DataArray: {e}",

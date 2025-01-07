@@ -89,6 +89,7 @@ class TestTensorStore(unittest.TestCase):
             model="test_da",
             repository="dummy_repository",
             coords=test_coords,
+            chunks=test_coords.chunking(chunk_count_overrides={}),
         )
         self.assertIsInstance(init_result, Success, msg=init_result)
         store = init_result.unwrap()
