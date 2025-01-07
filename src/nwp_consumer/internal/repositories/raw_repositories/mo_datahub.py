@@ -155,7 +155,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
         if "orderDetails" in data and "files" in data["orderDetails"]:
             for filedata in data["orderDetails"]["files"]:
                 if "fileId" in filedata and "+" not in filedata["fileId"]:
-                    urls.append(f"{self.request_url}/{filedata["fileId"]}/data")
+                    urls.append(f"{self.request_url}/{filedata['fileId']}/data")
 
         log.debug(
             f"Found {len(urls)} file(s) for init time '{it.strftime('%Y-%m-%d %H:%M')}' "
@@ -185,7 +185,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                         "RAWDIR",
                         f"~/.local/cache/nwp/{self.repository().name}/{self.model().name}/raw",
                     ),
-                ) / f"{url.split("/")[-2]}.grib"
+                ) / f"{url.split('/')[-2]}.grib"
         ).expanduser()
 
         # Only download the file if not already present
