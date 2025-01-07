@@ -83,9 +83,15 @@ class _MARSRequest:
         - "fc" for forecast
         - "em" for ensemble mean
         - "es" for ensemble standard deviation
+        - "pf" for perturbed forecast (full ensemble)
     """
     grid: str = "0.1/0.1"
     """The grid resolution."""
+    number: list[int] | None = None
+    """The ensemble member numbers to request.
+
+    Only relevant in full ensemble data requests.
+    """
 
     def as_ensemble_mean_request(self) -> "_MARSRequest":
         """Create a new request for the ensemble mean."""
@@ -144,10 +150,13 @@ class _MARSRequest:
                 date = {self.init_time:%Y%m%d},
                 expver = {self.expver},
                 levtype = {self.levtype},
+                stream = {self.stream},
                 param = {param},
                 step = {step},
-                stream = {self.stream},
                 time = {self.init_time:%H},
+        """
+        marsReq += f"number = {'/'.join(map(str, self.number))}," if self.number is not None else ""
+        marsReq += f"""
                 type = {self.field_type},
                 area = {self.nwse},
                 grid = {self.grid},
@@ -215,6 +224,7 @@ class ECMWFMARSRawRepository(ports.RawRepository):
                 "hres-ifs-india": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("india"),
                 "ens-stat-india": entities.Models.ECMWF_ENS_STAT_0P1DEGREE.with_region("india"),
                 "ens-stat-uk": entities.Models.ECMWF_ENS_STAT_0P1DEGREE.with_region("uk"),
+                "ens-uk": entities.Models.ECMWF_ENS_0P1DEGREE.with_region("uk"),
             },
         )
 
@@ -251,15 +261,22 @@ class ECMWFMARSRawRepository(ports.RawRepository):
     def fetch_init_data(
         self, it: dt.datetime,
     ) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
-        base_req: _MARSRequest = _MARSRequest(
+        req: _MARSRequest = _MARSRequest(
             params=self.model().expected_coordinates.variable,
             init_time=it,
             steps=self.model().expected_coordinates.step,
             nwse=",".join([str(ord) for ord in self.model().expected_coordinates.nwse()]),
+            number=self.model().expected_coordinates.ensemble_member,
         )
 
-        for req in [base_req.as_ensemble_mean_request(), base_req.as_ensemble_std_request()]:
-            yield delayed(self._download_and_convert)(req)
+        match self.model().name:
+            case "ECMWF_HRES_IFS_0P1DEGREE":
+                yield delayed(self._download_and_convert)(req.as_operational_request())
+            case "ECMWF_ENS_STAT_0P1DEGREE":
+                for stat_req in [req.as_ensemble_mean_request(), req.as_ensemble_std_request()]:
+                    yield delayed(self._download_and_convert)(stat_req)
+            case "ECMWF_ENS_OP1DEGREE":
+                yield delayed(self._download_and_convert)(req.as_full_ensemble_request())
 
     def _download_and_convert(self, mr: _MARSRequest) -> ResultE[list[xr.DataArray]]:
         """Download and convert data from the ECMWF MARS server.

@@ -87,6 +87,8 @@ class NWPDimensionCoordinateMap:
     """The variables in the forecast data."""
     ensemble_stat: list[str] | None = None
     """The relevant ensemble statistics of the forecast data."""
+    ensemble_member: list[int] | None = None
+    """The ensemble member numbers making up the ensemble forecast."""
     latitude: list[float] | None = None
     """The latitude coordinates of the forecast grid in degrees.
 

@@ -165,6 +165,32 @@ class Models:
     )
     """Summary statistics from ECMWF's Ensemble Forecast System."""
 
+    ECMWF_ENS_0P1DEGREE: ModelMetadata = ModelMetadata(
+        name="ENS",
+        resolution="0.1 degrees",
+        expected_coordinates=NWPDimensionCoordinateMap(
+            init_time=[],
+            step=list(range(0, 48, 1)),
+            variable=[
+                Parameter.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL,
+                Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
+                Parameter.WIND_U_COMPONENT_10m,
+                Parameter.WIND_V_COMPONENT_10m,
+                Parameter.SNOW_DEPTH_GL,
+                Parameter.CLOUD_COVER_HIGH,
+                Parameter.CLOUD_COVER_MEDIUM,
+                Parameter.CLOUD_COVER_LOW,
+                Parameter.CLOUD_COVER_TOTAL,
+                Parameter.TEMPERATURE_SL,
+                Parameter.TOTAL_PRECIPITATION_RATE_GL,
+            ],
+            ensemble_member=list(range(1, 51)),
+            latitude=[v/10 for v in range(900, -900, -1)],
+            longitude=[v/10 for v in range(-1800, 1800, 1)],
+        ),
+    )
+    """Full ensemble data from ECMWF's Ensemble Forecast System."""
+
     NCEP_GFS_1DEGREE: ModelMetadata = ModelMetadata(
         name="NCEP-GFS",
         resolution="1 degree",
