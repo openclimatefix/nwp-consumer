@@ -26,6 +26,13 @@ The following environment variables can be used to configure the application:
     |---------------------------|-------------------------------------|---------------------------------------------|
     | CONCURRENCY               | Whether to use concurrency.         | True                                        |
     |---------------------------|-------------------------------------|---------------------------------------------|
+    | USE_PROCESSES             | If to use "processes" when using    | False                                       |
+    |                           | joblib.Parallel                     |                                             |
+    |                           | (threads is used by default )       |                                             |
+    |---------------------------|-------------------------------------|---------------------------------------------|
+    | N_JOBS                    | Number of jobs to use for           | True                                        |
+    |                           |  parallel processing                |                                             |
+    |---------------------------|-------------------------------------|---------------------------------------------|
 
 There is also specific configuration variables for some model repositories.
 Refer to their documentation for more information: `nwp_consumer.internal.repositories`.
