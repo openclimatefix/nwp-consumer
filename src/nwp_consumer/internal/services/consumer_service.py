@@ -113,6 +113,10 @@ class ConsumerService(ports.ConsumeUseCase):
         if os.getenv("CONCURRENCY", "True").capitalize() == "False":
             n_jobs = 1
 
+
+        n_jobs=4
+        prefer="processes"
+
         log.debug(f"Using {n_jobs} concurrent {prefer}")
 
         return Parallel(  # type: ignore
