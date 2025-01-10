@@ -114,8 +114,11 @@ class ConsumerService(ports.ConsumeUseCase):
             n_jobs = 1
 
 
-        n_jobs=4
-        prefer="processes"
+        if os.getenv("USE_PROCESSES", "False").capitalize() == "True":
+            prefer="processes"
+
+        if os.getenv("N_JOBS", None) is not None:
+            n_jobs = int(os.getenv("N_JOBS"))
 
         log.debug(f"Using {n_jobs} concurrent {prefer}")
 
