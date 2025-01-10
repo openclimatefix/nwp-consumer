@@ -44,7 +44,7 @@ class NOAAS3RawRepository(ports.RawRepository):
             is_archive=False,
             is_order_based=False,
             running_hours=[0, 6, 12, 18],
-            delay_minutes=(60 * 24 * 7),  # 1 week
+            delay_minutes=(60 * 5),  # 5 hours
             max_connections=100,
             required_env=[],
             optional_env={},
