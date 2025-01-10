@@ -32,6 +32,7 @@ The following environment variables can be used to configure the application:
     |---------------------------|-------------------------------------|---------------------------------------------|
     | N_JOBS                    | Number of jobs to use for           | True                                        |
     |                           |  parallel processing                |                                             |
+    |                           |  Default is `max(cpu_count() - 1, max_connections)`                               |
     |---------------------------|-------------------------------------|---------------------------------------------|
 
 There is also specific configuration variables for some model repositories.
