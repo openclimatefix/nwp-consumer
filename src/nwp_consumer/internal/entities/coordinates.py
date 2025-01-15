@@ -39,6 +39,7 @@ import dataclasses
 import datetime as dt
 import json
 import logging
+import math
 from importlib.metadata import PackageNotFoundError, version
 
 import dask.array
@@ -87,6 +88,8 @@ class NWPDimensionCoordinateMap:
     """The variables in the forecast data."""
     ensemble_stat: list[str] | None = None
     """The relevant ensemble statistics of the forecast data."""
+    ensemble_member: list[int] | None = None
+    """The ensemble member numbers making up the ensemble forecast."""
     latitude: list[float] | None = None
     """The latitude coordinates of the forecast grid in degrees.
 
@@ -222,6 +225,8 @@ class NWPDimensionCoordinateMap:
                 ],
                 ensemble_stat=pd_indexes["ensemble_stat"].to_list() \
                     if "ensemble_stat" in pd_indexes else None,
+                ensemble_member=pd_indexes["ensemble_member"].to_list() \
+                    if "ensemble_member" in pd_indexes else None,
                 latitude=pd_indexes["latitude"].to_list() \
                     if "latitude" in pd_indexes else None,
                 longitude=pd_indexes["longitude"].to_list() \
@@ -333,7 +338,7 @@ class NWPDimensionCoordinateMap:
             return Failure(
                 KeyError(
                     "Cannot find slices in non-matching coordinate mappings: "
-                    "both objects must have identical dimensions (rank and labels)."
+                    "both objects must have identical dimensions (rank and labels). "
                     f"Got: {inner.dims} (inner) and {self.dims} (outer).",
                 ),
             )
@@ -414,16 +419,16 @@ class NWPDimensionCoordinateMap:
             chunk_count_overrides: A dictionary mapping dimension labels to the
                 number of chunks to split the dimension into.
         """
-        out_dict: dict[str, int] = {
-            "init_time": 1,
-            "step": 1,
-            "variable": 1,
-        } | {
-            dim: len(getattr(self, dim)) // chunk_count_overrides.get(dim, 2)
-            if len(getattr(self, dim)) > 8 else 1
+        default_dict: dict[str, int] = {
+            dim: 1
+                if len(getattr(self, dim)) <= 8 or dim in ["init_time", "step", "variable"]
+                else math.ceil(len(getattr(self, dim)))
             for dim in self.dims
-            if dim not in ["init_time", "step", "variable"]
         }
+
+        out_dict = {}
+        for key in default_dict:
+            out_dict[key] = chunk_count_overrides.get(key, default_dict[key])
 
         return out_dict
 

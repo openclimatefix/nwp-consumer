@@ -146,6 +146,7 @@ class ConsumerService(ports.ConsumeUseCase):
                     year=multiple_its.year,
                     month=multiple_its.month,
                 )
+        its = [it.replace(tzinfo=dt.UTC) for it in its]
 
         # Create a store for the data with the relevant init time coordinates
         return entities.TensorStore.initialize_empty_store(
