@@ -510,7 +510,7 @@ class NWPDimensionCoordinateMap:
                 " and both must sit between 180 and -180 degrees.",
             ))
 
-        if (south < self.latitude[0] or north > self.latitude[-1]
+        if (north > self.latitude[0] or south < self.latitude[-1]
             or west < self.longitude[0] or east > self.longitude[-1]):
             return Failure(ValueError(
                 "Cannot crop coordinates to a region outside the bounds of the map. "
