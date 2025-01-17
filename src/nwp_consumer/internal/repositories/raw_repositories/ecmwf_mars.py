@@ -343,12 +343,11 @@ class ECMWFMARSRawRepository(ports.RawRepository):
             )
             del dss
 
-            if "ens-stat" in path.as_posix():
-                # Add in missing coordinates for mean/std data
-                if "enfo-es" in path.name:
-                    ds = ds.expand_dims(dim={"ensemble_stat": ["std"]})
-                elif "enfo-em" in path.name:
-                    ds = ds.expand_dims(dim={"ensemble_stat": ["mean"]})
+            # Add in missing coordinates for mean/std data
+            if "enfo-es" in path.name:
+                ds = ds.expand_dims(dim={"ensemble_stat": ["std"]})
+            elif "enfo-em" in path.name:
+                ds = ds.expand_dims(dim={"ensemble_stat": ["mean"]})
             da: xr.DataArray = (
                 ds
                 .pipe(
