@@ -267,8 +267,8 @@ class NOAAS3RawRepository(ports.RawRepository):
             # * and so may not produce a contiguous subset of the expected coordinates.
             processed_das.extend(
                 [
-                    da.where(cond=da["variable"] == v, drop=True)
-                    for v in da["variable"].values
+                    da.where(cond=da.coords["variable"] == v, drop=True)
+                    for v in da.coords["variable"].values
                 ],
             )
 

@@ -98,6 +98,12 @@ class ModelMetadata:
                 ).map(lambda coords: dataclasses.replace(
                     self, name=f"{self.name}_india", expected_coordinates=coords,
                 )).unwrap()
+            case "west-europe":
+                return self.expected_coordinates.crop(
+                    north=63, west=-12, south=35, east=26,
+                ).map(lambda coords: dataclasses.replace(
+                    self, name=f"{self.name}_west-europe", expected_coordinates=coords,
+                )).unwrap()
             case _:
                 log.warning(f"Unknown region '{region}', not cropping expected coordinates.")
                 return self
@@ -115,7 +121,7 @@ class Models:
     """Namespace containing known models."""
 
     ECMWF_HRES_IFS_0P1DEGREE: ModelMetadata = ModelMetadata(
-        name="HRES-IFS",
+        name="hres-ifs",
         resolution="0.1 degrees",
         expected_coordinates=NWPDimensionCoordinateMap(
             init_time=[],
@@ -147,7 +153,7 @@ class Models:
     """ECMWF's High Resolution Integrated Forecast System."""
 
     ECMWF_ENS_STAT_0P1DEGREE: ModelMetadata = ModelMetadata(
-        name="ENS-Stat",
+        name="ens-stat",
         resolution="0.1 degrees",
         expected_coordinates=NWPDimensionCoordinateMap(
             init_time=[],
@@ -166,7 +172,7 @@ class Models:
     """Summary statistics from ECMWF's Ensemble Forecast System."""
 
     ECMWF_ENS_0P1DEGREE: ModelMetadata = ModelMetadata(
-        name="ENS",
+        name="ens",
         resolution="0.1 degrees",
         expected_coordinates=NWPDimensionCoordinateMap(
             init_time=[],
@@ -193,7 +199,7 @@ class Models:
     """Full ensemble data from ECMWF's Ensemble Forecast System."""
 
     NCEP_GFS_1DEGREE: ModelMetadata = ModelMetadata(
-        name="NCEP-GFS",
+        name="ncep-gfs",
         resolution="1 degree",
         expected_coordinates=NWPDimensionCoordinateMap(
             init_time=[],
@@ -224,7 +230,7 @@ class Models:
     """NCEP's Global Forecast System."""
 
     MO_UM_GLOBAL_17KM: ModelMetadata = ModelMetadata(
-        name="UM-Global",
+        name="um-global",
         resolution="17km",
         expected_coordinates = NWPDimensionCoordinateMap(
             init_time=[],
@@ -259,7 +265,7 @@ class Models:
     """MetOffice's Unified Model, in the Global configuration, at a resolution of 17km."""
 
     MO_UM_GLOBAL_10KM: ModelMetadata = ModelMetadata(
-        name="UM-Global",
+        name="um-global",
         resolution="10km",
         expected_coordinates=NWPDimensionCoordinateMap(
             init_time=[],

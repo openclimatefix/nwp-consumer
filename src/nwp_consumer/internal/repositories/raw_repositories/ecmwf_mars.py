@@ -222,12 +222,14 @@ class ECMWFMARSRawRepository(ports.RawRepository):
                 "default": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk"),
                 "hres-ifs-uk": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk"),
                 "hres-ifs-india": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("india"),
+                "hres-ifs-west-europe": entities.Models.ECMWF_HRES_IFS_0P1DEGREE\
+                    .with_region("west-europe"),
                 "ens-stat-india": entities.Models.ECMWF_ENS_STAT_0P1DEGREE.with_region("india"),
                 "ens-stat-uk": entities.Models.ECMWF_ENS_STAT_0P1DEGREE.with_region("uk"),
                 "ens-uk": entities.Models.ECMWF_ENS_0P1DEGREE.with_region("uk")\
-                        .with_chunk_count_overrides(
-                            {"latitude": 2, "longitude": 2, "variable": 1, "ensemble_member": 5},
-                        ),
+                    .with_chunk_count_overrides(
+                        {"latitude": 2, "longitude": 2, "variable": 1, "ensemble_member": 5},
+                    ),
             },
         )
 
@@ -331,6 +333,7 @@ class ECMWFMARSRawRepository(ports.RawRepository):
                 f"Error context: {e}",
             ))
 
+        processed_das: list[xr.DataArray] = []
         try:
             # Merge the datasets back into one
             ds: xr.Dataset = xr.merge(
@@ -340,7 +343,7 @@ class ECMWFMARSRawRepository(ports.RawRepository):
             )
             del dss
 
-            if "ens" in ECMWFMARSRawRepository.model().name.lower():
+            if "ens-stat" in path.as_posix():
                 # Add in missing coordinates for mean/std data
                 if "enfo-es" in path.name:
                     ds = ds.expand_dims(dim={"ensemble_stat": ["std"]})
@@ -356,7 +359,7 @@ class ECMWFMARSRawRepository(ports.RawRepository):
                 .expand_dims("init_time")
                 .to_dataarray(name=ECMWFMARSRawRepository.model().name)
             )
-            if "number" in da.coords:
+            if "ens" in path.as_posix():
                 da = da.rename({"number": "ensemble_member"})
             da = (
                 da.drop_vars(
@@ -370,11 +373,21 @@ class ECMWFMARSRawRepository(ports.RawRepository):
                 .sortby(variables=["step", "variable", "longitude"])
                 .sortby(variables="latitude", ascending=False)
             )
+            # Put each variable into its own DataArray:
+            # * Each raw file does not contain a full set of parameters
+            # * and so may not produce a contiguous subset of the expected coordinates.
+            processed_das.extend(
+                [
+                    da.where(cond=da.coords["variable"] == v, drop=True)
+                    for v in da.coords["variable"].values
+                ],
+            )
+
 
         except Exception as e:
             return Failure(ValueError(
                 f"Error processing DataArray for path '{path!s}'. Error context: {e}",
             ))
 
-        return Success([da])
+        return Success(processed_das)
 
