@@ -510,6 +510,14 @@ class NWPDimensionCoordinateMap:
                 " and both must sit between 180 and -180 degrees.",
             ))
 
+        if (north > self.latitude[0] or south < self.latitude[-1]
+            or west < self.longitude[0] or east > self.longitude[-1]):
+            return Failure(ValueError(
+                "Cannot crop coordinates to a region outside the bounds of the map. "
+                f"Crop region '{north, west, south, east}' not in "
+                f"map bounds '{self.nwse()}'.",
+            ))
+
         # Determine the indices of the region in the latitude and longitude lists
         lat_indices = [
             i for i, lat in enumerate(self.latitude)
