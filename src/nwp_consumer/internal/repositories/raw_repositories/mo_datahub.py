@@ -77,7 +77,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             name="MetOffice-Weather-Datahub",
             is_archive=False,
             is_order_based=True,
-            running_hours=[0, 12],
+            running_hours=[0, 12], # for UKV, we need to change this to every hour.
             delay_minutes=60,
             max_connections=10,
             required_env=["METOFFICE_API_KEY", "METOFFICE_ORDER_ID"],
@@ -86,6 +86,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             available_models={
                 "default": entities.Models.MO_UM_GLOBAL_10KM,
                 "um-global-10km": entities.Models.MO_UM_GLOBAL_10KM,
+                "ukv-uk-2km": entities.Models.MO_UKV_2KM,
             },
         )
 
@@ -286,10 +287,13 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                     allowed_parameters=MetOfficeDatahubRawRepository.model().expected_coordinates.variable,
                 )
                 .rename(name_dict={"time": "init_time"})
-                .expand_dims(dim="init_time")
-                .expand_dims(dim="step")
-                .to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
-            )
+                .expand_dims(dim="init_time"))
+
+            if "step" not in ds.dims:
+                da = da.expand_dims(dim="step")
+
+            da = da.to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
+
             da = (
                 da.drop_vars(
                     names=[
@@ -299,10 +303,14 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                     ],
                     errors="ignore",
                 )
-                .transpose(*MetOfficeDatahubRawRepository.model().expected_coordinates.dims)
-                .sortby(variables=["step", "variable", "longitude"])
-                .sortby(variables="latitude", ascending=False)
-            )
+                .transpose(*MetOfficeDatahubRawRepository.model().expected_coordinates.dims))
+
+            if "latitude" in MetOfficeDatahubRawRepository.model().expected_coordinates.dims:
+                da = da.sortby(variables=["step", "variable", "longitude"])
+                da = da.sortby(variables="latitude", ascending=False)
+            else:
+                da = da.sortby(variables=["step", "variable"])
+
         except Exception as e:
             return Failure(
                 ValueError(

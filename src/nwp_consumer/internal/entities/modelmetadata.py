@@ -297,3 +297,30 @@ class Models:
     )
     """MetOffice's Unified Model, in the Global configuration, at a resolution of 10km."""
 
+    MO_UKV_2KM: ModelMetadata = ModelMetadata(
+        name="ukv-uk",
+        resolution="2km",
+        expected_coordinates=NWPDimensionCoordinateMap(
+            init_time=[],
+            step=list(range(0, 55)),
+            variable=sorted(
+                [
+                    Parameter.CLOUD_COVER_TOTAL,
+                    Parameter.CLOUD_COVER_HIGH,
+                    Parameter.CLOUD_COVER_MEDIUM,
+                    Parameter.CLOUD_COVER_LOW,
+                    Parameter.VISIBILITY_SL,
+                    Parameter.RELATIVE_HUMIDITY_SL,
+                    Parameter.SNOW_DEPTH_GL,
+                    Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
+                    Parameter.TEMPERATURE_SL,
+                    Parameter.WIND_U_COMPONENT_10m,
+                    Parameter.WIND_V_COMPONENT_10m,
+                ],
+            ),
+            x=[0, 7e5],
+            y=[0, 1.2e6],
+        ),
+    )
+    """MetOffice's UKV Mode, at a resolution of approximate 2km."""
+

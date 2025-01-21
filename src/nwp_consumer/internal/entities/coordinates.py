@@ -98,6 +98,10 @@ class NWPDimensionCoordinateMap:
     longitude: list[float] | None = None
     """The longitude coordinates of the forecast grid in degrees. """
 
+    x: list[float] | None = None
+    y: list[float] | None = None
+    # These are the x and y osgb that the UKV model uses. They are not used in the other models
+
     def __post_init__(self) -> None:
         """Rigidly set input value ordering and precision."""
         self.variable = sorted(self.variable)
