@@ -298,7 +298,7 @@ class Models:
     """MetOffice's Unified Model, in the Global configuration, at a resolution of 10km."""
 
     MO_UKV_2KM: ModelMetadata = ModelMetadata(
-        name="ukv-uk",
+        name="UKV",
         resolution="2km",
         expected_coordinates=NWPDimensionCoordinateMap(
             init_time=[],
@@ -318,8 +318,8 @@ class Models:
                     Parameter.WIND_V_COMPONENT_10m,
                 ],
             ),
-            x=[0, 7e5],
-            y=[0, 1.2e6],
+            x=list(range(0, 455)),
+            y=list(range(0, 639)),
         ),
     )
     """MetOffice's UKV Mode, at a resolution of approximate 2km."""

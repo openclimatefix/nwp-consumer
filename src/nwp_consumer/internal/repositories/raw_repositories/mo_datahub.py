@@ -281,7 +281,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                 )
 
         try:
-            da: xr.DataArray = (
+            ds: xr.Dataset = (
                 ds.pipe(
                     entities.Parameter.rename_else_drop_ds_vars,
                     allowed_parameters=MetOfficeDatahubRawRepository.model().expected_coordinates.variable,
@@ -290,9 +290,9 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                 .expand_dims(dim="init_time"))
 
             if "step" not in ds.dims:
-                da = da.expand_dims(dim="step")
+                ds = ds.expand_dims(dim="step")
 
-            da = da.to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
+            da = ds.to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
 
             da = (
                 da.drop_vars(
@@ -304,7 +304,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                     errors="ignore",
                 )
                 .transpose(*MetOfficeDatahubRawRepository.model().expected_coordinates.dims))
-
+            print('ccc')
             if "latitude" in MetOfficeDatahubRawRepository.model().expected_coordinates.dims:
                 da = da.sortby(variables=["step", "variable", "longitude"])
                 da = da.sortby(variables="latitude", ascending=False)
