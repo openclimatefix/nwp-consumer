@@ -91,7 +91,7 @@ class TestMetOfficeDatahubRawRepository(unittest.TestCase):
                     self.assertIsInstance(region_result, Success, msg=f"{region_result}")
 
         @patch.dict(os.environ, {"MODEL": "UKV"}, clear=True)
-        def test_convert_ukv(self) -> None:
+        def test_convert_ukv() -> None:
 
             @dataclasses.dataclass
             class TestCase:

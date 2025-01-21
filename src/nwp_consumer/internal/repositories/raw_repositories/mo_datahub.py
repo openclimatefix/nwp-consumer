@@ -281,7 +281,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                 )
 
         try:
-            ds: xr.Dataset = (
+            ds = (
                 ds.pipe(
                     entities.Parameter.rename_else_drop_ds_vars,
                     allowed_parameters=MetOfficeDatahubRawRepository.model().expected_coordinates.variable,
@@ -292,7 +292,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             if "step" not in ds.dims:
                 ds = ds.expand_dims(dim="step")
 
-            da = ds.to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
+            da: xr.DataArray = ds.to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
 
             da = (
                 da.drop_vars(
