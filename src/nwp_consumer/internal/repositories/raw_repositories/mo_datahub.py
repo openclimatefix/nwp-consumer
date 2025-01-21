@@ -304,7 +304,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                     errors="ignore",
                 )
                 .transpose(*MetOfficeDatahubRawRepository.model().expected_coordinates.dims))
-            
+
             if "latitude" in MetOfficeDatahubRawRepository.model().expected_coordinates.dims:
                 da = da.sortby(variables=["step", "variable", "longitude"])
                 da = da.sortby(variables="latitude", ascending=False)
