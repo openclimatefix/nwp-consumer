@@ -84,8 +84,10 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             optional_env={},
             postprocess_options=entities.PostProcessOptions(),
             available_models={
-                "default": entities.Models.MO_UM_GLOBAL_10KM,
-                "um-global-10km": entities.Models.MO_UM_GLOBAL_10KM,
+                "default": entities.Models.MO_UM_GLOBAL_10KM\
+                    .with_region("india"),
+                "um-global-india": entities.Models.MO_UM_GLOBAL_10KM\
+                    .with_region("india"),
             },
         )
 
@@ -95,7 +97,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
         requested_model: str = os.getenv("MODEL", default="default")
         if requested_model not in MetOfficeDatahubRawRepository.repository().available_models:
             log.warn(
-                f"Unknown model '{requested_model}' requested, falling back to default. ",
+                f"Unknown model '{requested_model}' requested, falling back to default. "
                 "MetOffice Datahub repository only supports "
                 f"'{list(MetOfficeDatahubRawRepository.repository().available_models.keys())}'. "
                 "Ensure MODEL environment variable is set to a valid model name.",
