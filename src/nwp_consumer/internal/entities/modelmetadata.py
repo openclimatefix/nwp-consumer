@@ -346,9 +346,9 @@ class Models:
                     Parameter.TEMPERATURE_SL,
                     Parameter.WIND_U_COMPONENT_10m,
                     Parameter.WIND_V_COMPONENT_10m,
-                    Parameter.WIND_DIRECTION,
+                    Parameter.WIND_DIRECTION_10m,
                     Parameter.WIND_SPEED_10m,
-                    Parameter.TOTAL_PRECIPITATION_RATE_GL
+                    Parameter.TOTAL_PRECIPITATION_RATE_GL,
                 ],
             ),
             x=list(range(0, 455)),

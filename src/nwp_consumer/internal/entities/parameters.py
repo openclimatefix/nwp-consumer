@@ -133,7 +133,7 @@ class Parameter(StrEnum):
     DIRECT_SHORTWAVE_RADIATION_FLUX_GL = auto()
     WIND_SPEED_10m = auto()
     WIND_SPEED_100m = auto()
-    WIND_DIRECTION = auto()
+    WIND_DIRECTION_10m = auto()
     PRESSURE_MSL = auto()
 
     def metadata(self) -> ParameterData:
@@ -272,7 +272,7 @@ class Parameter(StrEnum):
                     grib2_code="240",
                 )
 
-            case self.WIND_DIRECTION.name:
+            case self.WIND_DIRECTION_10m.name:
                 return ParameterData(
                     name=str(self),
                     description="The wind direction from 0 to 360",
