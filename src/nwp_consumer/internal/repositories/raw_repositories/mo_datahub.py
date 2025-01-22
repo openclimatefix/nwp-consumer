@@ -75,7 +75,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
     def repository() -> entities.RawRepositoryMetadata:
 
         requested_model: str = os.getenv("MODEL", default="default")
-        running_hours = list(range(0, 24)) if requested_model == "ukv-uk-2km" else [0, 12]
+        running_hours = list(range(0, 24)) if requested_model == "um-ukv-2km" else [0, 12]
 
         return entities.RawRepositoryMetadata(
             name="MetOffice-Weather-Datahub",
@@ -90,7 +90,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             available_models={
                 "default": entities.Models.MO_UM_GLOBAL_10KM,
                 "um-global-10km": entities.Models.MO_UM_GLOBAL_10KM,
-                "ukv-uk-2km": entities.Models.MO_UKV_2KM,
+                "um-ukv-2km": entities.Models.MO_UKV_2KM,
             },
         )
 
