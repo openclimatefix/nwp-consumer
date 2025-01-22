@@ -25,7 +25,10 @@ class TestMetOfficeDatahubRawRepository(unittest.TestCase):
         self.assertIsInstance(auth_result, Success, msg=f"{auth_result!s}")
         c = auth_result.unwrap()
 
-        test_it = c.repository().determine_latest_it_from(dt.datetime.now(tz=dt.UTC))
+        test_it = c.repository().determine_latest_it_from(
+            dt.datetime.now(tz=dt.UTC),
+            c.model().running_hours,
+        )
 
         dl_result = c._download(
             f"{c.request_url}/agl_u-component-of-wind-surface-adjusted_10.0_{test_it:%Y%m%d%H}_1/data",

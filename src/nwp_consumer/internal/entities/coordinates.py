@@ -99,8 +99,9 @@ class NWPDimensionCoordinateMap:
     """The longitude coordinates of the forecast grid in degrees. """
 
     x: list[float] | None = None
+    """X coordinates of an OSGB (or other alternative projection) grid."""
     y: list[float] | None = None
-    # These are the x and y osgb that the UKV model uses. They are not used in the other models
+    """Y coordinates of an OSGB (or other alternative projection) grid."""
 
     def __post_init__(self) -> None:
         """Rigidly set input value ordering and precision."""
@@ -208,6 +209,20 @@ class NWPDimensionCoordinateMap:
                 "Longitude coordinates should run from -180 -> 180. "
                 "Modify the coordinate in the source data to be in ascending order.",
             ))
+        if "x" in pd_indexes \
+            and pd_indexes["x"].values[0] > pd_indexes["x"].values[-1]:
+            return Failure(ValueError(
+                "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
+                "as the x values are not in ascending order. "
+                "Modify the coordinate in the source data to be in ascending order.",
+            ))
+        if "y" in pd_indexes \
+            and pd_indexes["y"].values[0] > pd_indexes["y"].values[-1]:
+            return Failure(ValueError(
+                "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
+                "as the y values are not in ascending order. "
+                "Modify the coordinate in the source data to be in ascending order.",
+            ))
 
         # Convert the pandas Index objects to lists of the appropriate types
         return Success(
@@ -235,6 +250,10 @@ class NWPDimensionCoordinateMap:
                     if "latitude" in pd_indexes else None,
                 longitude=pd_indexes["longitude"].to_list() \
                     if "longitude" in pd_indexes else None,
+                x=pd_indexes["x"].to_list() \
+                    if "x" in pd_indexes else None,
+                y=pd_indexes["y"].to_list() \
+                    if "y" in pd_indexes else None,
             ),
         )
 

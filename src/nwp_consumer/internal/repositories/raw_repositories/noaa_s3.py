@@ -43,7 +43,6 @@ class NOAAS3RawRepository(ports.RawRepository):
             name="NOAA-GFS-S3",
             is_archive=False,
             is_order_based=False,
-            running_hours=[0, 6, 12, 18],
             delay_minutes=(60 * 5),  # 5 hours
             max_connections=100,
             required_env=[],

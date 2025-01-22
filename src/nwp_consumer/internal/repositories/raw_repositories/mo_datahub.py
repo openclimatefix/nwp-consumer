@@ -74,14 +74,10 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
     @override
     def repository() -> entities.RawRepositoryMetadata:
 
-        requested_model: str = os.getenv("MODEL", default="default")
-        running_hours = list(range(0, 24)) if requested_model == "um-ukv-2km" else [0, 12]
-
         return entities.RawRepositoryMetadata(
             name="MetOffice-Weather-Datahub",
             is_archive=False,
             is_order_based=True,
-            running_hours=running_hours,
             delay_minutes=60,
             max_connections=10,
             required_env=["METOFFICE_API_KEY", "METOFFICE_ORDER_ID"],
