@@ -86,7 +86,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             available_models={
                 "default": entities.Models.MO_UM_GLOBAL_10KM.with_region("india"),
                 "um-global-10km": entities.Models.MO_UM_GLOBAL_10KM.with_region("india"),
-                "um-ukv-2km": entities.Models.MO_UKV_2KM.with_region("uk"),
+                "um-ukv-2km": entities.Models.MO_UKV_2KM,
             },
         )
 
