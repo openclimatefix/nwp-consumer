@@ -198,7 +198,7 @@ class NOAAS3RawRepository(ports.RawRepository):
             # * 'filter_by_keys' reduces the number of variables loaded to only those
             #   with names of interest. "t" is filtered out as it exists in multiple
             #   levels
-            filters: list[dict[str, list[str] | list[int] | int]] = [
+            filters: list[dict[str, list[str] | list[int] | int | str]] = [
                 {"cfVarName": ["tcc", "hcc", "lcc", "mcc"], "level": 0, "stepType": "avg"},
                 {"cfVarName": ["u10", "v10"]},
                 {"cfVarName": ["u100", "v100"]},
