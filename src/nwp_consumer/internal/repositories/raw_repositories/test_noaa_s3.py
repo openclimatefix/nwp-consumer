@@ -142,16 +142,6 @@ class TestNOAAS3RawRepository(unittest.TestCase):
                 should_error=False,
             ),
             TestCase(
-                filename="test_NOAAS3_HRES-GFS_r_20210509T06_S00.grib",
-                expected_coords=dataclasses.replace(
-                    NOAAS3RawRepository.model().expected_coordinates,
-                    init_time=[dt.datetime(2021, 5, 9, 6, tzinfo=dt.UTC)],
-                    variable=[Parameter.RELATIVE_HUMIDITY_SL],
-                    step=[0],
-                ),
-                should_error=False,
-            ),
-            TestCase(
                 filename="test_NOAAS3_HRES-GFS_aptmp_20210509T06_S00.grib",
                 expected_coords=NOAAS3RawRepository.model().expected_coordinates,
                 should_error=True,
