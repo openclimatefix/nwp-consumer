@@ -199,10 +199,10 @@ class NOAAS3RawRepository(ports.RawRepository):
             #   with names of interest. "t" is filtered out as it exists in multiple
             #   levels
             filters: list[dict[str, list[str] | list[int] | int]] = [
-                {"cfVarName": ["tcc", "hcc", "lcc", "mcc"], "level": 0},
+                {"cfVarName": ["tcc", "hcc", "lcc", "mcc"], "level": 0, 'stepType': 'avg'},
                 {"cfVarName": ["u10", "v10"]},
                 {"cfVarName": ["u100", "v100"]},
-                {"typeOfLevel": ["surface", "heightAboveGround"], "level": [0, 2]},
+                {"typeOfLevel": ["surface", "heightAboveGround"], "level": [0, 2], 'stepType': 'avg'},
             ]
             ds: xr.Dataset = xr.merge(
                 [
