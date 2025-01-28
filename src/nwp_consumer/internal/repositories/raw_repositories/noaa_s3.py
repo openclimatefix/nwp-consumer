@@ -202,7 +202,11 @@ class NOAAS3RawRepository(ports.RawRepository):
                 {"cfVarName": ["tcc", "hcc", "lcc", "mcc"], "level": 0, "stepType": "avg"},
                 {"cfVarName": ["u10", "v10"]},
                 {"cfVarName": ["u100", "v100"]},
-                {"typeOfLevel": ["surface", "heightAboveGround"], "level": [0, 2], "stepType": "avg"},
+                {
+                    "typeOfLevel": ["surface", "heightAboveGround"],
+                    "level": [0, 2],
+                    "stepType": "avg",
+                },
             ]
             ds: xr.Dataset = xr.merge(
                 [
