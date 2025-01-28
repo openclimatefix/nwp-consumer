@@ -195,91 +195,66 @@ class NOAAS3RawRepository(ports.RawRepository):
         """
         try:
             # Use some options when opening the datasets:
-            # * 'squeeze' reduces length-1- dimensions to scalar coordinates,
-            #   thus single-level variables should not have any extra dimensions
-            # * 'ignore_keeys' reduces the number of variables loaded to only those
-            #   with level types of interest
-            dss: list[xr.Dataset] = cfgrib.open_datasets(
-                path.as_posix(),
-                backend_kwargs={
-                    "squeeze": True,
-                    "ignore_keys": {
-                        "levelType": ["isobaricInhPa", "depthBelowLandLayer", "meanSea"],
-                    },
-                    "errors": "raise",
-                    "indexpath": "",  # TODO: Change when above TODO is resolved
-                },
-            )
+            # * 'filter_by_keys' reduces the number of variables loaded to only those
+            #   with names of interest. "t" is filtered out as it exists in multiple
+            #   levels
+            filters: list[dict[str, list[str] | list[int] | int]] = [
+                {"cfVarName": ["tcc", "hcc", "lcc", "mcc"], "level": 0},
+                {"cfVarName": ["u10", "v10"]},
+                {"cfVarName": ["u100", "v100"]},
+                {"typeOfLevel": ["surface", "heightAboveGround"], "level": [0, 2]},
+            ]
+            ds: xr.Dataset = xr.merge(
+                [
+                    cfgrib.open_dataset(path.as_posix(), backend_kwargs={"filter_by_keys": f})
+                    for f in filters
+                ],
+                compat="minimal",
+            ).drop_vars("t", errors="ignore")
         except Exception as e:
             return Failure(ValueError(
                 f"Error opening '{path}' as list of xarray Datasets: {e}",
             ))
 
-        if len(dss) == 0:
+        if len(ds.data_vars) == 0:
             return Failure(ValueError(
                 f"No datasets found in '{path}'. File may be corrupted. "
                 "A redownload of the file may be required.",
             ))
 
-        processed_das: list[xr.DataArray] = []
-        for i, ds in enumerate(dss):
-            try:
-                ds = entities.Parameter.rename_else_drop_ds_vars(
-                    ds=ds,
-                    allowed_parameters=NOAAS3RawRepository.model().expected_coordinates.variable,
-                )
-                # Ignore datasets with no variables of interest
-                if len(ds.data_vars) == 0:
-                    continue
-                # Ignore datasets with multi-level variables
-                # * This would not work without the "squeeze" option in the open_datasets call,
-                #   which reduces single-length dimensions to scalar coordinates
-                if any(x not in ["latitude", "longitude" ,"time"] for x in ds.dims):
-                    continue
-                da: xr.DataArray = (
-                    ds
-                    .drop_vars(names=[
-                        c for c in ds.coords if c not in ["time", "step", "latitude", "longitude"]
-                    ])
-                    .rename(name_dict={"time": "init_time"})
-                    .expand_dims(dim="init_time")
-                    .expand_dims(dim="step")
-                    .to_dataarray(name=NOAAS3RawRepository.model().name)
-                )
-                da = (
-                    da.drop_vars(
-                        names=[
-                            c for c in da.coords
-                            if c not in NOAAS3RawRepository.model().expected_coordinates.dims
-                        ],
-                    )
-                    .transpose(*NOAAS3RawRepository.model().expected_coordinates.dims)
-                    .assign_coords(coords={"longitude": (da.coords["longitude"] + 180) % 360 - 180})
-                    .sortby(variables=["step", "variable", "longitude"])
-                    .sortby(variables="latitude", ascending=False)
-                )
-            except Exception as e:
-                return Failure(ValueError(
-                    f"Error processing dataset {i} from '{path}' to DataArray: {e}",
-                ))
-            # Put each variable into its own DataArray:
-            # * Each raw file does not contain a full set of parameters
-            # * and so may not produce a contiguous subset of the expected coordinates.
-            processed_das.extend(
-                [
-                    da.where(cond=da.coords["variable"] == v, drop=True)
-                    for v in da.coords["variable"].values
-                ],
+        try:
+            ds = entities.Parameter.rename_else_drop_ds_vars(
+                ds=ds,
+                allowed_parameters=NOAAS3RawRepository.model().expected_coordinates.variable,
             )
-
-        if len(processed_das) == 0:
+            da: xr.DataArray = (
+                ds
+                .drop_vars(names=[
+                    c for c in ds.coords if c not in ["time", "step", "latitude", "longitude"]
+                ])
+                .rename(name_dict={"time": "init_time"})
+                .expand_dims(dim="init_time")
+                .expand_dims(dim="step")
+                .to_dataarray(name=NOAAS3RawRepository.model().name)
+            )
+            da = (
+                da.drop_vars(
+                    names=[
+                        c for c in da.coords
+                        if c not in NOAAS3RawRepository.model().expected_coordinates.dims
+                    ],
+                )
+                .transpose(*NOAAS3RawRepository.model().expected_coordinates.dims)
+                .assign_coords(coords={"longitude": (da.coords["longitude"] + 180) % 360 - 180})
+                .sortby(variables=["step", "variable", "longitude"])
+                .sortby(variables="latitude", ascending=False)
+            )
+        except Exception as e:
             return Failure(ValueError(
-                f"The file at '{path}' does not contain any variables of interest. "
-                "Ensure the conversion pipeline is not accidentally dropping wanted variables, ",
-                "and that the file contains variables of interest.",
+                f"Error processing dataset from '{path}' to DataArray: {e}",
             ))
 
-        return Success(processed_das)
+        return Success([da])
 
     @staticmethod
     def _wanted_file(filename: str, it: dt.datetime, max_step: int) -> bool:
