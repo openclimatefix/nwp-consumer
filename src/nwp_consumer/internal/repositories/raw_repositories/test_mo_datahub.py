@@ -36,8 +36,7 @@ class TestMetOfficeDatahubRawRepository(unittest.TestCase):
 
         self.assertIsInstance(dl_result, Success, msg=f"{dl_result!s}")
 
-
-    def test__convert(self) -> None:
+    def test_convert(self) -> None:
         """Test the _convert method."""
 
         @dataclasses.dataclass
@@ -93,43 +92,42 @@ class TestMetOfficeDatahubRawRepository(unittest.TestCase):
                 else:
                     self.assertIsInstance(region_result, Success, msg=f"{region_result}")
 
-        @patch.dict(os.environ, {"MODEL": "UKV"}, clear=True)
-        def test_convert_ukv() -> None:
+    @patch.dict(os.environ, {"MODEL": "um-ukv-2km"}, clear=True)
+    def test_convert_ukv(self) -> None:
 
-            @dataclasses.dataclass
-            class TestCase:
-                filename: str
-                expected_coords: NWPDimensionCoordinateMap
-                should_error: bool
 
-            tests: list[TestCase] = [
-                TestCase(
-                    filename="test_MO_UKV_agl_relative-humidity_1.5_2025012112.grib",
-                    expected_coords=dataclasses.replace(
-                        MetOfficeDatahubRawRepository.model().expected_coordinates,
-                        init_time=[dt.datetime(2025, 1, 21, 12, tzinfo=dt.UTC)],
-                        variable=[Parameter.TEMPERATURE_SL],
-                        step=[0],
-                    ),
-                    should_error=False,
+        @dataclasses.dataclass
+        class TestCase:
+            filename: str
+            expected_coords: NWPDimensionCoordinateMap
+            should_error: bool
+
+        tests: list[TestCase] = [
+            TestCase(
+                filename="test_MO_UKV_agl_relative-humidity_1.5_2025012112.grib",
+                expected_coords=dataclasses.replace(
+                    MetOfficeDatahubRawRepository.model().expected_coordinates,
+                    init_time=[dt.datetime(2025, 1, 21, 12, tzinfo=dt.UTC)],
+                    variable=[Parameter.TEMPERATURE_SL],
+                    step=[0],
                 ),
-            ]
+                should_error=False,
+            ),
+        ]
 
-            for t in tests:
-                with self.subTest(name=t.filename):
-                    # Attempt to convert the file
-                    result = MetOfficeDatahubRawRepository._convert(
-                        path=pathlib.Path(__file__).parent.absolute() / "test_gribs" / t.filename,
-                    )
-                    region_result: ResultE[dict[str, slice]] = result.do(
-                        region
-                        for das in result
-                        for da in das
-                        for region in NWPDimensionCoordinateMap.from_xarray(da).bind(
-                            t.expected_coords.determine_region,
-                        )
-                    )
-                    if t.should_error:
-                        self.assertIsInstance(region_result, Failure, msg=f"{region_result}")
-                    else:
-                        self.assertIsInstance(region_result, Success, msg=f"{region_result}")
+        for t in tests:
+            with self.subTest(name=t.filename):
+                # Attempt to convert the file
+                result = MetOfficeDatahubRawRepository._convert(
+                    path=pathlib.Path(__file__).parent.absolute() / "test_gribs" / t.filename,
+                )
+                region_result: ResultE[dict[str, slice]] = result.do(
+                    region
+                    for das in result
+                    for da in das
+                    for region in NWPDimensionCoordinateMap.from_xarray(da)
+                )
+                if t.should_error:
+                    self.assertIsInstance(region_result, Failure, msg=f"{region_result}")
+                else:
+                    self.assertIsInstance(region_result, Success, msg=f"{region_result}")
