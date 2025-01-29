@@ -11,6 +11,17 @@ TODO: provide links etc
 Documented Structure
 --------------------
 
+The data is provided with a file per step. There is a difference between what is
+provided in the 0-step file and the remaning 3-hourly files. The 0-step file
+does not contain e.g. downward shortwave radiation flux and downward longwave
+radiation flux. As such, these will be NaNs in the 0-step file. This is because
+the 0-step file is contains an analysis of the forecast, while the remaining
+files are the forecast itself. I think this is just a quirk of NOAA's distribution.
+
+See Also:
+    - https://www.nco.ncep.noaa.gov/pmb/products/gfs/gfs.t00z.pgrb2.1p00.f000.shtml
+    - https://www.nco.ncep.noaa.gov/pmb/products/gfs/gfs.t00z.pgrb2.1p00.f003.shtml
+
 TODO: document filestructure
 """
 
@@ -74,7 +85,7 @@ class NOAAS3RawRepository(ports.RawRepository):
                 if self._wanted_file(
                     filename=f.split("/")[-1],
                     it=it,
-                    max_step=max(self.model().expected_coordinates.step),
+                    steps=self.model().expected_coordinates.step,
                 )
             ]
         except Exception as e:
@@ -199,12 +210,24 @@ class NOAAS3RawRepository(ports.RawRepository):
             #   with names of interest. "t" is filtered out as it exists in multiple
             #   levels
             filters: list[dict[str, list[str] | list[int] | int]] = [
-                {"cfVarName": ["tcc", "hcc", "lcc", "mcc"], "level": 0, "typeOfLevel": [
-                    "highCloudLayer", "lowCloudLayer", "middleCloudLayer", "convectiveCloudLayer",
-                ]},
+                {
+                    "cfVarName": ["tcc", "hcc", "lcc", "mcc"], "level": 0,
+                    "typeOfLevel": [
+                        "highCloudLayer", "lowCloudLayer",
+                        "middleCloudLayer", "convectiveCloudLayer",
+                    ],
+                    "stepType": ["instant"],
+                },
                 {"cfVarName": ["u10", "v10"]},
                 {"cfVarName": ["u100", "v100"]},
-                {"typeOfLevel": ["surface", "heightAboveGround"], "level": [0, 2]},
+                {
+                    "typeOfLevel": ["surface", "heightAboveGround"],
+                    "level": [0, 2], "stepType": ["instant"],
+                },
+                {
+                    "typeOfLevel": ["surface"], "stepType": ["avg"],
+                    "cfVarName": ["sdswrf", "sdlwrf"],
+                },
             ]
             ds: xr.Dataset = xr.merge(
                 [
@@ -259,7 +282,7 @@ class NOAAS3RawRepository(ports.RawRepository):
         return Success([da])
 
     @staticmethod
-    def _wanted_file(filename: str, it: dt.datetime, max_step: int) -> bool:
+    def _wanted_file(filename: str, it: dt.datetime, steps: list[int]) -> bool:
         """Determine if a file is wanted based on the init time and max step.
 
         See module docstring for file naming convention.
@@ -270,6 +293,6 @@ class NOAAS3RawRepository(ports.RawRepository):
             return False
         if int(match.group(1)) != it.hour:
             return False
-        return not int(match.group(2)) > max_step
+        return int(match.group(2)) in steps
 
 
