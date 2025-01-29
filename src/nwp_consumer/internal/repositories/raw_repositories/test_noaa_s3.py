@@ -106,7 +106,7 @@ class TestNOAAS3RawRepository(unittest.TestCase):
                 result = NOAAS3RawRepository._wanted_file(
                     filename=t.filename,
                     it=test_it,
-                    max_step=max(NOAAS3RawRepository.model().expected_coordinates.step),
+                    steps=NOAAS3RawRepository.model().expected_coordinates.step,
                 )
                 self.assertEqual(result, t.expected)
 
