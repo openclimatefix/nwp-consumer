@@ -43,7 +43,7 @@ class TestNOAAS3RawRepository(unittest.TestCase):
             if c._wanted_file(
                 filename=f.split("/")[-1],
                 it=test_it,
-                max_step=max(c.model().expected_coordinates.step),
+                steps=c.model().expected_coordinates.step
             )
         ]
 
