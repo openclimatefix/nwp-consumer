@@ -132,12 +132,15 @@ class TestNOAAS3RawRepository(unittest.TestCase):
                 should_error=False,
             ),
             TestCase(
-                filename="test_NOAAS3_HRES-GFS_lcc_20210509T06_S00.grib",
+                filename="test_NOAAS3_HRES-GFS_dswrf-dlwrf_20250129T06_S27.grib",
                 expected_coords=dataclasses.replace(
                     NOAAS3RawRepository.model().expected_coordinates,
-                    init_time=[dt.datetime(2021, 5, 9, 6, tzinfo=dt.UTC)],
-                    variable=[Parameter.CLOUD_COVER_LOW],
-                    step=[0],
+                    init_time=[dt.datetime(2025, 1, 29, 6, tzinfo=dt.UTC)],
+                    variable=[
+                        Parameter.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL,
+                        Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
+                    ],
+                    step=[27],
                 ),
                 should_error=False,
             ),
