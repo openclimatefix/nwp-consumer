@@ -204,7 +204,7 @@ class Models:
         resolution="1 degree",
         expected_coordinates=NWPDimensionCoordinateMap(
             init_time=[],
-            step=list(range(0, 49, 3)),
+            step=list(range(3, 49, 3)),
             variable=sorted(
                 [
                     Parameter.TEMPERATURE_SL,
