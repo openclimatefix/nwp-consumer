@@ -76,7 +76,7 @@ class TestNOAAS3RawRepository(unittest.TestCase):
         tests: list[TestCase] = [
             TestCase(
                 name="valid_filename",
-                filename=f"gfs.t{test_it:%H}z.pgrb2.1p00.f000",
+                filename=f"gfs.t{test_it:%H}z.pgrb2.1p00.f003",
                 expected=True,
             ),
             TestCase(
@@ -97,6 +97,11 @@ class TestNOAAS3RawRepository(unittest.TestCase):
             TestCase(
                 name="step_too_large",
                 filename=f"gfs.t{test_it:%H}z.pgrb2.1p00.f049",
+                expected=False,
+            ),
+            TestCase(
+                name="step_too_small",
+                filename=f"gfs.t{test_it:%H}z.pgrb2.1p00.f000",
                 expected=False,
             ),
         ]
