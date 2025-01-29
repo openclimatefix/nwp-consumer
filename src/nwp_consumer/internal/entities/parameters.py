@@ -133,6 +133,7 @@ class Parameter(StrEnum):
     DIRECT_SHORTWAVE_RADIATION_FLUX_GL = auto()
     WIND_SPEED_10m = auto()
     WIND_SPEED_100m = auto()
+    WIND_DIRECTION_10m = auto()
     PRESSURE_MSL = auto()
 
     def metadata(self) -> ParameterData:
@@ -271,6 +272,18 @@ class Parameter(StrEnum):
                     grib2_code="240",
                 )
 
+            case self.WIND_DIRECTION_10m.name:
+                return ParameterData(
+                    name=str(self),
+                    description="The wind direction from 0 to 360. 0 represents a Northerly "
+                                "wind and 90 is Easterly wind. This is confirmed by the UK mean "
+                                "wind direction being Westerly and = ~200. ",
+                    units="degrees",
+                    limits=ParameterLimits(upper=0, lower=360),
+                    alternate_shortnames=["wdir", "wdir10"],
+                    grib2_code="194",
+                )
+
             case self.SNOW_DEPTH_GL.name:
                 return ParameterData(
                     name=str(self),
@@ -341,7 +354,7 @@ class Parameter(StrEnum):
                                 "including rain, snow, and hail.",
                     units="kg/m^2/s",
                     limits=ParameterLimits(upper=0.2, lower=0),
-                    alternate_shortnames=["prate", "tprate"],
+                    alternate_shortnames=["prate", "tprate", "rprate"],
                     grib2_code="260048",
                 )
 
