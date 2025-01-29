@@ -121,7 +121,7 @@ class TestMetOfficeDatahubRawRepository(unittest.TestCase):
                 result = MetOfficeDatahubRawRepository._convert(
                     path=pathlib.Path(__file__).parent.absolute() / "test_gribs" / t.filename,
                 )
-                region_result: ResultE[dict[str, slice]] = result.do(
+                region_result: ResultE[NWPDimensionCoordinateMap] = result.do(
                     region
                     for das in result
                     for da in das
