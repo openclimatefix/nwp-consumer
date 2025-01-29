@@ -225,10 +225,9 @@ class ECMWFMARSRawRepository(ports.RawRepository):
                     .with_region("west-europe"),
                 "ens-stat-india": entities.Models.ECMWF_ENS_STAT_0P1DEGREE.with_region("india"),
                 "ens-stat-uk": entities.Models.ECMWF_ENS_STAT_0P1DEGREE.with_region("uk"),
-                "ens-uk": entities.Models.ECMWF_ENS_0P1DEGREE.with_region("uk")\
-                    .with_chunk_count_overrides(
-                        {"latitude": 2, "longitude": 2, "variable": 1, "ensemble_member": 5},
-                    ),
+                "ens-uk": entities.Models.ECMWF_ENS_0P1DEGREE\
+                    .with_region("uk")\
+                    .with_chunk_count_overrides({"latitude": 1, "longitude": 1}),
             },
         )
 

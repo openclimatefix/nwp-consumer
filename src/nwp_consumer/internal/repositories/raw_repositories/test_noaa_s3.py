@@ -43,7 +43,7 @@ class TestNOAAS3RawRepository(unittest.TestCase):
             if c._wanted_file(
                 filename=f.split("/")[-1],
                 it=test_it,
-                max_step=max(c.model().expected_coordinates.step),
+                steps=c.model().expected_coordinates.step,
             )
         ]
 
@@ -76,7 +76,7 @@ class TestNOAAS3RawRepository(unittest.TestCase):
         tests: list[TestCase] = [
             TestCase(
                 name="valid_filename",
-                filename=f"gfs.t{test_it:%H}z.pgrb2.1p00.f000",
+                filename=f"gfs.t{test_it:%H}z.pgrb2.1p00.f003",
                 expected=True,
             ),
             TestCase(
@@ -99,6 +99,11 @@ class TestNOAAS3RawRepository(unittest.TestCase):
                 filename=f"gfs.t{test_it:%H}z.pgrb2.1p00.f049",
                 expected=False,
             ),
+            TestCase(
+                name="step_too_small",
+                filename=f"gfs.t{test_it:%H}z.pgrb2.1p00.f000",
+                expected=False,
+            ),
         ]
 
         for t in tests:
@@ -106,7 +111,7 @@ class TestNOAAS3RawRepository(unittest.TestCase):
                 result = NOAAS3RawRepository._wanted_file(
                     filename=t.filename,
                     it=test_it,
-                    max_step=max(NOAAS3RawRepository.model().expected_coordinates.step),
+                    steps=NOAAS3RawRepository.model().expected_coordinates.step,
                 )
                 self.assertEqual(result, t.expected)
 
@@ -132,12 +137,25 @@ class TestNOAAS3RawRepository(unittest.TestCase):
                 should_error=False,
             ),
             TestCase(
-                filename="test_NOAAS3_HRES-GFS_lcc_20210509T06_S00.grib",
+                filename="test_NOAAS3_HRES-GFS_dswrf-dlwrf_20250129T06_S27.grib",
                 expected_coords=dataclasses.replace(
                     NOAAS3RawRepository.model().expected_coordinates,
-                    init_time=[dt.datetime(2021, 5, 9, 6, tzinfo=dt.UTC)],
-                    variable=[Parameter.CLOUD_COVER_LOW],
-                    step=[0],
+                    init_time=[dt.datetime(2025, 1, 29, 6, tzinfo=dt.UTC)],
+                    variable=[
+                        Parameter.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL,
+                        Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
+                    ],
+                    step=[27],
+                ),
+                should_error=False,
+            ),
+            TestCase(
+                filename="test_NOAAS3_HRES-GFS_tcc_20250129T00_S06.grib",
+                expected_coords=dataclasses.replace(
+                    NOAAS3RawRepository.model().expected_coordinates,
+                    init_time=[dt.datetime(2025, 1, 29, 0, tzinfo=dt.UTC)],
+                    variable=[Parameter.CLOUD_COVER_TOTAL],
+                    step=[6],
                 ),
                 should_error=False,
             ),
