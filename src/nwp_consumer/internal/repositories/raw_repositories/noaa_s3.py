@@ -199,7 +199,9 @@ class NOAAS3RawRepository(ports.RawRepository):
             #   with names of interest. "t" is filtered out as it exists in multiple
             #   levels
             filters: list[dict[str, list[str] | list[int] | int]] = [
-                {"cfVarName": ["tcc", "hcc", "lcc", "mcc"], "level": 0},
+                {"cfVarName": ["tcc", "hcc", "lcc", "mcc"], "level": 0, "typeOfLevel": [
+                    "highCloudLayer", "lowCloudLayer", "middleCloudLayer", "convectiveCloudLayer",
+                ]},
                 {"cfVarName": ["u10", "v10"]},
                 {"cfVarName": ["u100", "v100"]},
                 {"typeOfLevel": ["surface", "heightAboveGround"], "level": [0, 2]},

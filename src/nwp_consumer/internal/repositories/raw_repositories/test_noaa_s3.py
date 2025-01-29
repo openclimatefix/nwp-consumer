@@ -142,6 +142,16 @@ class TestNOAAS3RawRepository(unittest.TestCase):
                 should_error=False,
             ),
             TestCase(
+                filename="test_NOAAS3_HRES-GFS_tcc_20250129T00_S06.grib",
+                expected_coords=dataclasses.replace(
+                    NOAAS3RawRepository.model().expected_coordinates,
+                    init_time=[dt.datetime(2025, 1, 29, 0, tzinfo=dt.UTC)],
+                    variable=[Parameter.CLOUD_COVER_TOTAL],
+                    step=[6],
+                ),
+                should_error=False,
+            ),
+            TestCase(
                 filename="test_NOAAS3_HRES-GFS_aptmp_20210509T06_S00.grib",
                 expected_coords=NOAAS3RawRepository.model().expected_coordinates,
                 should_error=True,
