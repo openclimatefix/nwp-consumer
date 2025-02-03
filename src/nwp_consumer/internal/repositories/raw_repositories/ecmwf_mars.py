@@ -343,6 +343,8 @@ class ECMWFMARSRawRepository(ports.RawRepository):
             del dss
 
             # Add in missing coordinates for mean/std data
+            # * I don't really like basing this off the file name
+            # * TODO: Find a better way
             if "enfo-es" in path.name:
                 ds = ds.expand_dims(dim={"ensemble_stat": ["std"]})
             elif "enfo-em" in path.name:
@@ -357,7 +359,7 @@ class ECMWFMARSRawRepository(ports.RawRepository):
                 .expand_dims("init_time")
                 .to_dataarray(name=ECMWFMARSRawRepository.model().name)
             )
-            if "ens" in path.as_posix():
+            if "enfo-pf" in path.as_posix():
                 da = da.rename({"number": "ensemble_member"})
             da = (
                 da.drop_vars(
