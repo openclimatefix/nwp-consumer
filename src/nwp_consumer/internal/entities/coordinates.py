@@ -209,18 +209,18 @@ class NWPDimensionCoordinateMap:
                 "Longitude coordinates should run from -180 -> 180. "
                 "Modify the coordinate in the source data to be in ascending order.",
             ))
-        if "x" in pd_indexes \
-            and pd_indexes["x"].values[0] > pd_indexes["x"].values[-1]:
-            return Failure(ValueError(
-                "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
-                "as the x values are not in ascending order. "
-                "Modify the coordinate in the source data to be in ascending order.",
-            ))
         if "y" in pd_indexes \
             and pd_indexes["y"].values[0] > pd_indexes["y"].values[-1]:
             return Failure(ValueError(
                 "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
                 "as the y values are not in ascending order. "
+                "Modify the coordinate in the source data to be in ascending order.",
+            ))
+        if "x" in pd_indexes \
+            and pd_indexes["x"].values[0] > pd_indexes["x"].values[-1]:
+            return Failure(ValueError(
+                "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
+                "as the x values are not in ascending order. "
                 "Modify the coordinate in the source data to be in ascending order.",
             ))
 
@@ -250,10 +250,10 @@ class NWPDimensionCoordinateMap:
                     if "latitude" in pd_indexes else None,
                 longitude=pd_indexes["longitude"].to_list() \
                     if "longitude" in pd_indexes else None,
-                x=pd_indexes["x"].to_list() \
-                    if "x" in pd_indexes else None,
                 y=pd_indexes["y"].to_list() \
                     if "y" in pd_indexes else None,
+                x=pd_indexes["x"].to_list() \
+                    if "x" in pd_indexes else None,
             ),
         )
 

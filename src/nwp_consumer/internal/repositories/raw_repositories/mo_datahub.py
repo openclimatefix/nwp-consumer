@@ -85,8 +85,9 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             postprocess_options=entities.PostProcessOptions(),
             available_models={
                 "default": entities.Models.MO_UM_GLOBAL_10KM.with_region("india"),
-                "um-global-10km": entities.Models.MO_UM_GLOBAL_10KM.with_region("india"),
-                "um-ukv-2km": entities.Models.MO_UKV_2KM,
+                "um-global-10km-india": entities.Models.MO_UM_GLOBAL_10KM.with_region("india"),
+                "um-global-10km-uk": entities.Models.MO_UM_GLOBAL_10KM.with_region("uk"),
+                "um-ukv-2km": entities.Models.MO_UM_UKV_2KM,
             },
         )
 
@@ -291,11 +292,16 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
 
             if "step" not in ds.dims:
                 ds = ds.expand_dims(dim="step")
+            # Ensure x and y coordinates are present if dimensions are
+            if all(v in ds.dims for v in ["x", "y"]):
+                ds = ds.assign_coords(coords={
+                    "x": list(range(ds.sizes["x"])),
+                    "y": list(range(ds.sizes["y"])),
+                })
 
             da: xr.DataArray = ds.to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
-
             da = (
-                da.drop_vars(
+                    da.drop_vars(
                     names=[
                         c for c in ds.coords
                         if c not in
@@ -309,7 +315,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                 da = da.sortby(variables=["step", "variable", "longitude"])
                 da = da.sortby(variables="latitude", ascending=False)
             else:
-                da = da.sortby(variables=["step", "variable"])
+                da = da.sortby(variables=["step", "variable", "y", "x"])
 
         except Exception as e:
             return Failure(
@@ -317,6 +323,5 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                     f"Error processing DataArray for path '{path}'. Error context: {e}",
                 ),
             )
-
 
         return Success([da])

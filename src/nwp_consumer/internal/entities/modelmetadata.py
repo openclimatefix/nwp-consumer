@@ -327,7 +327,7 @@ class Models:
     )
     """MetOffice's Unified Model, in the Global configuration, at a resolution of 10km."""
 
-    MO_UKV_2KM: ModelMetadata = ModelMetadata(
+    MO_UM_UKV_2KM: ModelMetadata = ModelMetadata(
         name="um-ukv",
         resolution="2km",
         expected_coordinates=NWPDimensionCoordinateMap(

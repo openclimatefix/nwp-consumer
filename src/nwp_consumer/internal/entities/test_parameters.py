@@ -18,7 +18,7 @@ class TestParameters(unittest.TestCase):
         metadata = p.metadata()
         self.assertEqual(metadata.name, p.value)
 
-    @given(st.sampled_from([s for p in Parameter for s in p.metadata().alternate_shortnames]))
+    @given(st.sampled_from([s for p in Parameter for s in p.metadata().alternative_shortnames]))
     def test_try_from_shortname(self, shortname: str) -> None:
         """Test the try_from_shortname method."""
         p = Parameter.try_from_alternate(shortname)
@@ -28,7 +28,7 @@ class TestParameters(unittest.TestCase):
         self.assertFalse(is_successful(p))
 
     @given(
-        st.sampled_from([s for p in Parameter for s in p.metadata().alternate_shortnames]),
+        st.sampled_from([s for p in Parameter for s in p.metadata().alternative_shortnames]),
         st.sampled_from(Parameter),
     )
     def test_rename_else_drop_ds_vars(self, shortname: str, parameter: Parameter) -> None:
@@ -57,7 +57,7 @@ class TestParameters(unittest.TestCase):
             allowed_parameters=allowed_parameters,
         )
 
-        if shortname in parameter.metadata().alternate_shortnames:
+        if shortname in parameter.metadata().alternative_shortnames:
             self.assertTrue(len(list(ds.data_vars)) == 1)
             self.assertEqual(next(iter(ds.data_vars)), str(parameter))
         else:
