@@ -138,11 +138,16 @@ class ConsumerService(ports.ConsumeUseCase):
         its: list[dt.datetime] = []
         match period:
             case _ if period is None:
-                its = [repository_metadata.determine_latest_it_from(dt.datetime.now(tz=dt.UTC))]
+                its = [
+                    repository_metadata.determine_latest_it_from(
+                        t=dt.datetime.now(tz=dt.UTC),
+                            running_hours=model_metadata.running_hours,
+                    ),
+                ]
             case single_it if isinstance(period, dt.datetime):
                 its = [single_it] # type: ignore
             case multiple_its if isinstance(period, dt.date):
-                its = repository_metadata.month_its(
+                its = model_metadata.month_its(
                     year=multiple_its.year,
                     month=multiple_its.month,
                 )

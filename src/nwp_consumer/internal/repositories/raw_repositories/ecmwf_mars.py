@@ -208,7 +208,6 @@ class ECMWFMARSRawRepository(ports.RawRepository):
             name="ECMWF-MARS",
             is_archive=True,
             is_order_based=False,
-            running_hours=[0, 12],
             delay_minutes=(60 * 26),  # 1 day, plus leeway
             max_connections=20,
             required_env=[

@@ -73,21 +73,21 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
     @staticmethod
     @override
     def repository() -> entities.RawRepositoryMetadata:
+
         return entities.RawRepositoryMetadata(
             name="MetOffice-Weather-Datahub",
             is_archive=False,
             is_order_based=True,
-            running_hours=[0, 12],
             delay_minutes=60,
             max_connections=10,
             required_env=["METOFFICE_API_KEY", "METOFFICE_ORDER_ID"],
             optional_env={},
             postprocess_options=entities.PostProcessOptions(),
             available_models={
-                "default": entities.Models.MO_UM_GLOBAL_10KM\
-                    .with_region("india"),
-                "um-global-india": entities.Models.MO_UM_GLOBAL_10KM\
-                    .with_region("india"),
+                "default": entities.Models.MO_UM_GLOBAL_10KM.with_region("india"),
+                "um-global-10km-india": entities.Models.MO_UM_GLOBAL_10KM.with_region("india"),
+                "um-global-10km-uk": entities.Models.MO_UM_GLOBAL_10KM.with_region("uk"),
+                "um-ukv-2km": entities.Models.MO_UM_UKV_2KM,
             },
         )
 
@@ -282,18 +282,26 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                 )
 
         try:
-            da: xr.DataArray = (
+            ds = (
                 ds.pipe(
                     entities.Parameter.rename_else_drop_ds_vars,
                     allowed_parameters=MetOfficeDatahubRawRepository.model().expected_coordinates.variable,
                 )
                 .rename(name_dict={"time": "init_time"})
-                .expand_dims(dim="init_time")
-                .expand_dims(dim="step")
-                .to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
-            )
+                .expand_dims(dim="init_time"))
+
+            if "step" not in ds.dims:
+                ds = ds.expand_dims(dim="step")
+            # Ensure x and y coordinates are present if dimensions are
+            if all(v in ds.dims for v in ["x", "y"]):
+                ds = ds.assign_coords(coords={
+                    "x": list(range(ds.sizes["x"])),
+                    "y": list(range(ds.sizes["y"])),
+                })
+
+            da: xr.DataArray = ds.to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
             da = (
-                da.drop_vars(
+                    da.drop_vars(
                     names=[
                         c for c in ds.coords
                         if c not in
@@ -301,16 +309,19 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                     ],
                     errors="ignore",
                 )
-                .transpose(*MetOfficeDatahubRawRepository.model().expected_coordinates.dims)
-                .sortby(variables=["step", "variable", "longitude"])
-                .sortby(variables="latitude", ascending=False)
-            )
+                .transpose(*MetOfficeDatahubRawRepository.model().expected_coordinates.dims))
+
+            if "latitude" in MetOfficeDatahubRawRepository.model().expected_coordinates.dims:
+                da = da.sortby(variables=["step", "variable", "longitude"])
+                da = da.sortby(variables="latitude", ascending=False)
+            else:
+                da = da.sortby(variables=["step", "variable", "y", "x"])
+
         except Exception as e:
             return Failure(
                 ValueError(
                     f"Error processing DataArray for path '{path}'. Error context: {e}",
                 ),
             )
-
 
         return Success([da])

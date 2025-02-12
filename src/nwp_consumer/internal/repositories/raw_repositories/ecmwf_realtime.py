@@ -68,7 +68,6 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             name="ECMWF-Realtime-S3",
             is_archive=False,
             is_order_based=True,
-            running_hours=[0, 6, 12, 18],
             delay_minutes=(60 * 7), # 7 hours
             max_connections=100,
             required_env=[

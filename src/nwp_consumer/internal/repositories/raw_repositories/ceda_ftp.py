@@ -114,17 +114,17 @@ class CEDAFTPRawRepository(ports.RawRepository):
             name="CEDA",
             is_archive=True,
             is_order_based=False,
-            running_hours=[0, 12],  # 6 and 18 exist, but are lacking variables
             delay_minutes=(60 * 24 * 7) + (60 * 12),  # 7.5 days
             max_connections=20,
             required_env=["CEDA_FTP_USER", "CEDA_FTP_PASS"],
             optional_env={},
             postprocess_options=entities.PostProcessOptions(),
             available_models={
-                "default": entities.Models.MO_UM_GLOBAL_17KM.with_chunk_count_overrides({
+                "default": entities.Models.MO_UM_GLOBAL_17KM\
+                    .with_chunk_count_overrides({
                     "latitude": 8,
                     "longitude": 8,
-                }),
+                }).with_running_hours([0, 12]), # 6 and 18 exist, but are lacking variables
             },
         )
 
