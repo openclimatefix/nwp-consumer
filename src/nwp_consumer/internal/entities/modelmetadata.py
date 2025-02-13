@@ -74,6 +74,12 @@ class ModelMetadata:
         - `entities.coordinates.NWPDimensionCoordinateMap.chunking`
     """
 
+    extra_coordinates_to_save: list = None
+    """ Option to save extra coordinates in the zarr store. 
+    
+    This is needed for ukv model as it has latitude and longitude coordinates.
+    """
+
     def __str__(self) -> str:
         """Return a pretty-printed string representation of the metadata."""
         pretty: str = "".join((
@@ -356,6 +362,7 @@ class Models:
             y=list(range(0, 639)),
         ),
         running_hours=list(range(0, 24)),
+        extra_coordinates_to_save=['latitude', 'longitude']
     )
     """MetOffice's Unified Model in the UKV configuration, at a resolution of 2km"""
 

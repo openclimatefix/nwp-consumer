@@ -24,6 +24,7 @@ import xarray as xr
 import zarr
 from returns.result import Failure, ResultE, Success
 
+from .modelmetadata import ModelMetadata
 from .coordinates import NWPDimensionCoordinateMap
 from .parameters import Parameter
 from .postprocess import PostProcessOptions
@@ -56,6 +57,9 @@ class TensorStore(abc.ABC):
     and is capable of handling parallel, region-based updates.
     """
 
+    meta_model: ModelMetadata
+    """The model that is used"""
+
     name: str
     """Identifier for the store and the data within."""
 
@@ -78,6 +82,7 @@ class TensorStore(abc.ABC):
         repository: str,
         coords: NWPDimensionCoordinateMap,
         chunks: dict[str, int],
+        meta_model: ModelMetadata = None
     ) -> ResultE["TensorStore"]:
         """Initialize a store for a given init time.
 
@@ -183,6 +188,7 @@ class TensorStore(abc.ABC):
             log.info(f"Using existing store at '{path}'")
             return Success(
                 cls(
+                    meta_model=meta_model,
                     name=model,
                     path=path,
                     coordinate_map=coords,
@@ -209,6 +215,7 @@ class TensorStore(abc.ABC):
 
         return Success(
             cls(
+                meta_model=meta_model,
                 name=model,
                 path=path,
                 coordinate_map=coordinate_map_result.unwrap(),
@@ -287,9 +294,9 @@ class TensorStore(abc.ABC):
         # integer number of chunks along that dimension.
         # * This is to ensure that the data can safely be written in parallel.
         # * The start and and of each slice should be divisible by the chunk size.
-        chunksizes: Mapping[Any, tuple[int, ...]] = xr.open_dataarray(
+        chunksizes: Mapping[Any, tuple[int, ...]] = xr.open_dataset(
             self.path, engine="zarr",
-        ).chunksizes
+        )[self.name].chunksizes
         for dim, slc in region.items():
             chunk_size = chunksizes.get(dim, (1,))[0]
             # TODO: Determine if this should return a full failure object
@@ -307,7 +314,16 @@ class TensorStore(abc.ABC):
 
         # Perform the regional write
         try:
-            da.to_zarr(store=self.path, region=region, consolidated=True)
+            # Allow saving extra variables to zarr store.
+            # This is in particualr the case for um-ukv
+            # as 2D latitude and longitude are needed to be saved
+            if self.meta_model is not None and self.meta_model.extra_coordinates_to_save is not None:
+                mode = 'a'
+                if self.name != 'um-ukv':
+                    log.warning("Allowing override of zarr store for model %s", self.name)
+            else:
+                mode = None
+            da.to_zarr(store=self.path, region=region, consolidated=True, mode=mode)
         except Exception as e:
             return Failure(
                 OSError(

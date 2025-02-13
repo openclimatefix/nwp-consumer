@@ -78,7 +78,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             name="MetOffice-Weather-Datahub",
             is_archive=False,
             is_order_based=True,
-            delay_minutes=60,
+            delay_minutes=120,
             max_connections=10,
             required_env=["METOFFICE_API_KEY", "METOFFICE_ORDER_ID"],
             optional_env={},
@@ -299,22 +299,31 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                     "y": list(range(ds.sizes["y"])),
                 })
 
+
+            dims = MetOfficeDatahubRawRepository.model().expected_coordinates.dims
+            # if we are using the uk model, we need to keep the latitude and longitude coordinates too.
+            # Note these are not dimensions of the data, but are coordinates.
+            coords = dims
+            if MetOfficeDatahubRawRepository.model().extra_coordinates_to_save is not None:
+                coords = coords + MetOfficeDatahubRawRepository.model().extra_coordinates_to_save
+
             da: xr.DataArray = ds.to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
             da = (
                     da.drop_vars(
                     names=[
                         c for c in ds.coords
                         if c not in
-                        MetOfficeDatahubRawRepository.model().expected_coordinates.dims
+                        coords
                     ],
                     errors="ignore",
                 )
-                .transpose(*MetOfficeDatahubRawRepository.model().expected_coordinates.dims))
+                .transpose(*dims))
 
-            if "latitude" in MetOfficeDatahubRawRepository.model().expected_coordinates.dims:
+            if "latitude" in dims:
                 da = da.sortby(variables=["step", "variable", "longitude"])
                 da = da.sortby(variables="latitude", ascending=False)
             else:
+                # this is for the UK model
                 da = da.sortby(variables=["step", "variable", "y", "x"])
 
         except Exception as e:

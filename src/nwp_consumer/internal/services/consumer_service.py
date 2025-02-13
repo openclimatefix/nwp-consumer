@@ -155,6 +155,7 @@ class ConsumerService(ports.ConsumeUseCase):
 
         # Create a store for the data with the relevant init time coordinates
         return entities.TensorStore.initialize_empty_store(
+            meta_model=model_metadata,
             model=model_metadata.name,
             repository=repository_metadata.name,
             coords=dataclasses.replace(
