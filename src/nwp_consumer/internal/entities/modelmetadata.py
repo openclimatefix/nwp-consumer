@@ -74,7 +74,7 @@ class ModelMetadata:
         - `entities.coordinates.NWPDimensionCoordinateMap.chunking`
     """
 
-    extra_coordinates_to_save: list | None = None
+    extra_coordinates_to_save: list[str] | None = None
     """ Option to save extra coordinates in the zarr store.
 
     This is needed for ukv model as it has latitude and longitude coordinates.

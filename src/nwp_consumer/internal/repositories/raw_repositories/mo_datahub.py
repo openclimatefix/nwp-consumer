@@ -305,8 +305,10 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             # latitude and longitude coordinates too.
             # Note these are not dimensions of the data, but are coordinates.
             coords = dims
-            if MetOfficeDatahubRawRepository.model().extra_coordinates_to_save is not None:
-                coords = coords + MetOfficeDatahubRawRepository.model().extra_coordinates_to_save
+            extra_coordinates_to_save \
+                = MetOfficeDatahubRawRepository.model().extra_coordinates_to_save
+            if extra_coordinates_to_save is not None:
+                coords = coords + extra_coordinates_to_save
 
             da: xr.DataArray = ds.to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
             da = (

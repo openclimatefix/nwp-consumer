@@ -57,7 +57,7 @@ class TensorStore(abc.ABC):
     and is capable of handling parallel, region-based updates.
     """
 
-    meta_model: ModelMetadata
+    meta_model: ModelMetadata | None
     """The model that is used"""
 
     name: str
@@ -318,7 +318,7 @@ class TensorStore(abc.ABC):
             # Allow saving extra variables to zarr store.
             # This is in particualr the case for um-ukv
             # as 2D latitude and longitude are needed to be saved
-            mode = None
+            mode: xr.core.types.ZarrWriteModes | None = None
             if (self.meta_model is not None) \
                     and (self.meta_model.extra_coordinates_to_save is not None):
                 mode = "a"
