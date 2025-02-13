@@ -24,8 +24,8 @@ import xarray as xr
 import zarr
 from returns.result import Failure, ResultE, Success
 
-from .modelmetadata import ModelMetadata
 from .coordinates import NWPDimensionCoordinateMap
+from .modelmetadata import ModelMetadata
 from .parameters import Parameter
 from .postprocess import PostProcessOptions
 
@@ -82,7 +82,7 @@ class TensorStore(abc.ABC):
         repository: str,
         coords: NWPDimensionCoordinateMap,
         chunks: dict[str, int],
-        meta_model: ModelMetadata = None
+        meta_model: ModelMetadata = None,
     ) -> ResultE["TensorStore"]:
         """Initialize a store for a given init time.
 
@@ -117,6 +117,7 @@ class TensorStore(abc.ABC):
             repository: The name of the repository providing the tensor data.
             coords: The coordinates of the store.
             chunks: The chunk sizes for the store.
+            meta_model: Optional metamodel to use for the store.
 
         Returns:
             An indicator of a successful store write containing the number of bytes written.
@@ -317,9 +318,10 @@ class TensorStore(abc.ABC):
             # Allow saving extra variables to zarr store.
             # This is in particualr the case for um-ukv
             # as 2D latitude and longitude are needed to be saved
-            if self.meta_model is not None and self.meta_model.extra_coordinates_to_save is not None:
-                mode = 'a'
-                if self.name != 'um-ukv':
+            if self.meta_model is not None \
+                    and self.meta_model.extra_coordinates_to_save is not None:
+                mode = "a"
+                if self.name != "um-ukv":
                     log.warning("Allowing override of zarr store for model %s", self.name)
             else:
                 mode = None

@@ -301,7 +301,8 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
 
 
             dims = MetOfficeDatahubRawRepository.model().expected_coordinates.dims
-            # if we are using the uk model, we need to keep the latitude and longitude coordinates too.
+            # if we are using the uk model, we need to keep the
+            # latitude and longitude coordinates too.
             # Note these are not dimensions of the data, but are coordinates.
             coords = dims
             if MetOfficeDatahubRawRepository.model().extra_coordinates_to_save is not None:
