@@ -82,7 +82,7 @@ class TensorStore(abc.ABC):
         repository: str,
         coords: NWPDimensionCoordinateMap,
         chunks: dict[str, int],
-        meta_model: ModelMetadata = None,
+        meta_model: ModelMetadata | None = None,
     ) -> ResultE["TensorStore"]:
         """Initialize a store for a given init time.
 
@@ -318,13 +318,12 @@ class TensorStore(abc.ABC):
             # Allow saving extra variables to zarr store.
             # This is in particualr the case for um-ukv
             # as 2D latitude and longitude are needed to be saved
-            if self.meta_model is not None \
-                    and self.meta_model.extra_coordinates_to_save is not None:
+            mode = None
+            if (self.meta_model is not None) \
+                    and (self.meta_model.extra_coordinates_to_save is not None):
                 mode = "a"
                 if self.name != "um-ukv":
                     log.warning("Allowing override of zarr store for model %s", self.name)
-            else:
-                mode = None
             da.to_zarr(store=self.path, region=region, consolidated=True, mode=mode)
         except Exception as e:
             return Failure(
