@@ -75,7 +75,10 @@ As a result, the incoming data is modified to alleviate these issues.
 
 """
 
+import base64
 import datetime as dt
+import itertools
+import json
 import logging
 import os
 import pathlib
@@ -97,14 +100,14 @@ log = logging.getLogger("nwp-consumer")
 class CEDAFTPRawRepository(ports.RawRepository):
     """Repository implementation for the MetOffice global model data."""
 
-    url_base: str = "ftp.ceda.ac.uk/badc/ukmo-nwp/data/global-grib"
-    """The base URL for the CEDA FTP server."""
-    _url_auth: str
-    """The URL prefix containing authentication information."""
+    url_base: str = "dap.ceda.ac.uk/badc/ukmo-nwp/data"
+    """The base URL for the CEDA DAP server."""
+    _token: str
+    """The authentication token for the CEDA DAP server."""
 
-    def __init__(self, url_auth: str) -> None:
+    def __init__(self, token: str) -> None:
         """Create a new instance."""
-        self._url_auth = url_auth
+        self._token = token
 
 
     @staticmethod
@@ -116,7 +119,7 @@ class CEDAFTPRawRepository(ports.RawRepository):
             is_order_based=False,
             delay_minutes=(60 * 24 * 7) + (60 * 12),  # 7.5 days
             max_connections=20,
-            required_env=["CEDA_FTP_USER", "CEDA_FTP_PASS"],
+            required_env=["CEDA_USER", "CEDA_PASS"],
             optional_env={},
             postprocess_options=entities.PostProcessOptions(),
             available_models={
@@ -125,13 +128,28 @@ class CEDAFTPRawRepository(ports.RawRepository):
                     "latitude": 8,
                     "longitude": 8,
                 }).with_running_hours([0, 12]), # 6 and 18 exist, but are lacking variables
+                "mo-um-global": entities.Models.MO_UM_GLOBAL_17KM\
+                .with_chunk_count_overrides({
+                    "latitude": 8,
+                    "longitude": 8,
+                }).with_running_hours([0, 12]),
+                "mo-um-ukv": entities.Models.MO_UM_UKV_2KM,
             },
         )
 
     @staticmethod
     @override
     def model() -> entities.ModelMetadata:
-        return CEDAFTPRawRepository.repository().available_models["default"]
+        requested_model: str = os.getenv("MODEL", default="default")
+        if requested_model not in CEDAFTPRawRepository.repository().available_models:
+            log.warn(
+                f"Unknown model '{requested_model}' requested, falling back to default ",
+                "CEDA repository only supports "
+                f"'{list(CEDAFTPRawRepository.repository().available_models.keys())}'. "
+                "Ensure MODEL environment variable is set to a valid model name.",
+            )
+            requested_model = "default"
+        return CEDAFTPRawRepository.repository().available_models[requested_model]
 
     @override
     def fetch_init_data(self, it: dt.datetime) \
@@ -152,12 +170,22 @@ class CEDAFTPRawRepository(ports.RawRepository):
             "wind_v_10m",
         ]
 
-        for parameter in parameter_stubs:
-            for area in [f"Area{c}" for c in "ABCDEFGH"]:
-                url = (
-                        f"{self.url_base}/{it:%Y/%m/%d}/"
-                        + f"{it:%Y%m%d%H}_WSGlobal17km_{parameter}_{area}_000144.grib"
-                )
+        file_stubs: list[str] = [
+            "Wholesale1.grib",
+            "Wholesale1T54.grib",
+            "Wholesale2.grib",
+            "Wholesale2T54.grib",
+        ]
+
+        if self.model().name == entities.Models.MO_UM_UKV_2KM.name:
+            for file in file_stubs:
+                url = f"{self.url_base}/ukv-grib/{it:%Y/%m/%d}"\
+                    + f"/{it:%Y%m%d%H%M}_u1096_ng_umqv_{file}"
+                yield delayed(self._download_and_convert)(url=url)
+        else:
+            for param, area in itertools.product(parameter_stubs, [f"Area{c}" for c in "ABCDEFGH"]):
+                url = f"{self.url_base}/global-grib/{it:%Y/%m/%d}"\
+                    + f"/{it:%Y%m%d%H}_WSGlobal17km_{param}_{area}_000144.grib"
                 yield delayed(self._download_and_convert)(url=url)
 
         pass
@@ -184,10 +212,28 @@ class CEDAFTPRawRepository(ports.RawRepository):
                 f"Cannot authenticate with CEDA FTP service due to "
                 f"missing required environment variables: {', '.join(missing_envs)}",
             ))
-        username: str = urllib.parse.quote(os.environ["CEDA_FTP_USER"])
-        password: str = urllib.parse.quote(os.environ["CEDA_FTP_PASS"])
+        username: str = os.environ["CEDA_USER"]
+        password: str = os.environ["CEDA_PASS"]
+        token: str = base64.b64encode(f"{username}:{password}".encode()).decode("ascii")
+        request: urllib.request.Request = urllib.request.Request(
+            method="POST",
+            url="https://services-beta.ceda.ac.uk/api/token/create/",
+            headers={"Authorization": f"Basic {token}"},
+        )
+        with urllib.request.urlopen(request) as response:
+            if response.status != 200:
+                return Failure(OSError(
+                    f"Failed to authenticate with CEDA: {response.status} {response.reason}",
+                ))
+            try:
+                access_token: str = json.loads(response.read())["access_token"]
+            except Exception as e:
+                return Failure(OSError(
+                    f"Failed to parse CEDA access token: {e}",
+                ))
+        log.debug("Generated access token for CEDA")
 
-        return Success(cls(url_auth=f"ftp://{username}:{password}@"))
+        return Success(cls(token=access_token))
 
     def _download(self, url: str) -> ResultE[pathlib.Path]:
         """Download a file from the CEDA FTP server.
@@ -263,6 +309,7 @@ class CEDAFTPRawRepository(ports.RawRepository):
                     "Ensure file contains the expected variables, "
                     "and that desired variables are not being dropped.",
                 ))
+            processed_das: list[xr.DataArray] = []
             da: xr.DataArray = (
                 ds.sel(
                     step=slice(
@@ -279,12 +326,20 @@ class CEDAFTPRawRepository(ports.RawRepository):
                 .expand_dims(dim="init_time")
                 .to_dataarray(name=CEDAFTPRawRepository.model().name)
             )
-            da = (
-                da
-                .transpose(*CEDAFTPRawRepository.model().expected_coordinates.dims)
-                # Remove the last value of the longitude dimension as it overlaps with the next file
-                # Reverse the latitude dimension to be in descending order
-                .isel(longitude=slice(None, -1), latitude=slice(None, None, -1))
+            da = da.transpose(*CEDAFTPRawRepository.model().expected_coordinates.dims)
+            if "longitude" in da.coords:
+                # We are dealing with the "AreaX" files:
+                # * remove the last value of the longitude dimension as it overlaps with the next file
+                # * reverse the latitude dimension to be in descending order
+                da = da.isel(longitude=slice(None, -1), latitude=slice(None, None, -1))
+            # Put each variable into its own DataArray:
+            # * Each raw file does not contain a full set of parameters
+            # * and so may not produce a contiguous subset of the expected coordinates.
+            processed_das.extend(
+                [
+                    da.where(cond=da.coords["variable"] == v, drop=True)
+                    for v in da.coords["variable"].values
+                ],
             )
         except Exception as e:
             return Failure(
@@ -292,4 +347,4 @@ class CEDAFTPRawRepository(ports.RawRepository):
                     f"Error processing {path} to DataArray: {e}",
                 ),
             )
-        return Success([da])
+        return Success(processed_das)
