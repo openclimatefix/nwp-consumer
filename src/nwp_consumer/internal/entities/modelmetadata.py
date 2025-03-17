@@ -332,7 +332,7 @@ class Models:
         resolution="2km",
         expected_coordinates=NWPDimensionCoordinateMap(
             init_time=[],
-            step=list(range(0, 55)),
+            step=list(range(0, 49)),
             variable=sorted(
                 [
                     Parameter.CLOUD_COVER_TOTAL,
@@ -352,8 +352,9 @@ class Models:
                     Parameter.TOTAL_PRECIPITATION_RATE_GL,
                 ],
             ),
-            x=list(range(0, 455)),
-            y=list(range(0, 639)),
+            # Taken from page 4 of https://zenodo.org/record/7357056
+            y_osgb=[int(y) for y in np.arange(start=1223000, stop=-185000, step=-2000)],
+            x_osgb=[int(x) for x in np.arange(start=-239000, stop=857000, step=2000)],
         ),
         running_hours=list(range(0, 24)),
     )

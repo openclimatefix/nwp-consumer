@@ -84,7 +84,7 @@ class TestCEDAFTPRawRepository(unittest.TestCase):
             TestCase(
                 filename="test_CEDAFTP_UM-Global_ssrd_20241105T00_S01-03.grib",
                 expected_coords = dataclasses.replace(
-                    CEDAFTPRawRepository.model().expected_coordinates,
+                    entities.Models.MO_UM_GLOBAL_17KM.expected_coordinates,
                     init_time=[dt.datetime(2024, 11, 5, 0, tzinfo=dt.UTC)],
                     step=[1, 2, 3],
                     variable=[entities.parameters.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL],
@@ -94,7 +94,7 @@ class TestCEDAFTPRawRepository(unittest.TestCase):
             TestCase(
                 filename="test_CEDAFTP_UM-Global_u_20241105T00_S01-03_AreaC.grib",
                 expected_coords = dataclasses.replace(
-                    CEDAFTPRawRepository.model().expected_coordinates,
+                    entities.Models.MO_UM_GLOBAL_17KM.expected_coordinates,
                     init_time=[dt.datetime(2024, 11, 5, 0, tzinfo=dt.UTC)],
                     step=[1, 2, 3],
                     variable=[entities.parameters.Parameter.WIND_U_COMPONENT_10m],
@@ -103,8 +103,18 @@ class TestCEDAFTPRawRepository(unittest.TestCase):
             ),
             TestCase(
                 filename="test_MODatahub_UM-Global_t2m_20241120T00_S00.grib",
-                expected_coords = CEDAFTPRawRepository.model().expected_coordinates,
+                expected_coords = entities.Models.MO_UM_GLOBAL_17KM.expected_coordinates,
                 should_error=True,
+            ),
+            TestCase(
+                filename="test_subset_Wholesale1.grib",
+                expected_coords=dataclasses.replace(
+                    entities.Models.MO_UM_UKV_2KM.expected_coordinates,
+                    init_time=[dt.datetime(2022, 1, 1, 0, tzinfo=dt.UTC)],
+                    step=[1, 2],
+                    variable=[entities.parameters.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL],
+                ),
+                should_error=False,
             ),
         ]
 

@@ -87,6 +87,7 @@ import urllib.request
 from collections.abc import Callable, Iterator
 from typing import override
 
+import cfgrib
 import numpy as np
 import xarray as xr
 from joblib import delayed
@@ -100,7 +101,7 @@ log = logging.getLogger("nwp-consumer")
 class CEDAFTPRawRepository(ports.RawRepository):
     """Repository implementation for the MetOffice global model data."""
 
-    url_base: str = "dap.ceda.ac.uk/badc/ukmo-nwp/data"
+    url_base: str = "https://dap.ceda.ac.uk/badc/ukmo-nwp/data"
     """The base URL for the CEDA DAP server."""
     _token: str
     """The authentication token for the CEDA DAP server."""
@@ -196,7 +197,12 @@ class CEDAFTPRawRepository(ports.RawRepository):
         Args:
             url: The URL of the file to download.
         """
-        return self._download(url).bind(self._convert)
+        if "global-grib" in url:
+            return self._download(url).bind(self._convert_global)
+        elif "ukv-grib" in url:
+            return self._download(url).bind(self._convert_ukv)
+        else:
+            return Failure(ValueError(f"Unknown URL type: {url}"))
 
     @classmethod
     @override
@@ -220,7 +226,7 @@ class CEDAFTPRawRepository(ports.RawRepository):
             url="https://services-beta.ceda.ac.uk/api/token/create/",
             headers={"Authorization": f"Basic {token}"},
         )
-        with urllib.request.urlopen(request) as response:
+        with urllib.request.urlopen(request, timeout=20) as response: # noqa: S310
             if response.status != 200:
                 return Failure(OSError(
                     f"Failed to authenticate with CEDA: {response.status} {response.reason}",
@@ -253,12 +259,14 @@ class CEDAFTPRawRepository(ports.RawRepository):
         # Don't download the file if it already exists
         if not local_path.exists():
             local_path.parent.mkdir(parents=True, exist_ok=True)
-            log.debug("Sending request to CEDA FTP server for: '%s'", url)
+            log.debug("Sending request to CEDA DAP server for: '%s'", url)
             try:
-                response = urllib.request.urlopen(  # noqa: S310
-                    self._url_auth + url,
-                    timeout=30,
+                request: urllib.request.Request = urllib.request.Request( # noqa: S310
+                    method="GET",
+                    url=url,
+                    headers={"Authorization": f"Bearer {self._token}"},
                 )
+                response = urllib.request.urlopen(request, timeout=30) # noqa: S310
             except Exception as e:
                 return Failure(OSError(f"Error fetching {url}: {e}"))
 
@@ -283,64 +291,64 @@ class CEDAFTPRawRepository(ports.RawRepository):
         return Success(local_path)
 
     @staticmethod
-    def _convert(path: pathlib.Path) -> ResultE[list[xr.DataArray]]:
+    def _convert_global(path: pathlib.Path) -> ResultE[list[xr.DataArray]]:
         """Convert a local grib file to xarray DataArrays.
 
         Args:
             path: The path to the file to convert.
         """
         try:
-            ds: xr.Dataset = xr.open_dataset(path, engine="cfgrib")
+            dss: list[xr.Dataset] = cfgrib.open_datasets(path)
         except Exception as e:
             return Failure(
                 OSError(
-                    f"Error opening '{path}' as xarray Dataset: {e}",
+                    f"Error opening '{path}' as xarray Datasets: {e}",
                 ),
             )
         try:
-            ds = entities.Parameter.rename_else_drop_ds_vars(
-                ds=ds,
-                allowed_parameters=CEDAFTPRawRepository.model().expected_coordinates.variable,
-            )
-            # Ignore datasets with no variables of interest
-            if len(ds.data_vars) == 0:
-                return Failure(OSError(
-                    f"No relevant variables found in '{path}'. "
-                    "Ensure file contains the expected variables, "
-                    "and that desired variables are not being dropped.",
-                ))
             processed_das: list[xr.DataArray] = []
-            da: xr.DataArray = (
-                ds.sel(
-                    step=slice(
-                        np.timedelta64(0, "h"),
-                        np.timedelta64(
+            for ds in dss:
+                ds = entities.Parameter.rename_else_drop_ds_vars(
+                    ds=ds,
+                    allowed_parameters=CEDAFTPRawRepository.model().expected_coordinates.variable,
+                )
+                # Ignore datasets with no variables of interest
+                if len(ds.data_vars) == 0:
+                    return Failure(OSError(
+                        f"No relevant variables found in '{path}'. "
+                        "Ensure file contains the expected variables, "
+                        "and that desired variables are not being dropped.",
+                    ))
+                da: xr.DataArray = (
+                    ds.where(
+                        ds.step <= np.timedelta64(
                             CEDAFTPRawRepository.model().expected_coordinates.step[-1],
                             "h",
-                        ),
-                ))
-                .drop_vars(names=[
-                    c for c in ds.coords if c not in ["time", "step", "latitude", "longitude"]
-                ])
-                .rename(name_dict={"time": "init_time"})
-                .expand_dims(dim="init_time")
-                .to_dataarray(name=CEDAFTPRawRepository.model().name)
-            )
-            da = da.transpose(*CEDAFTPRawRepository.model().expected_coordinates.dims)
-            if "longitude" in da.coords:
-                # We are dealing with the "AreaX" files:
-                # * remove the last value of the longitude dimension as it overlaps with the next file
-                # * reverse the latitude dimension to be in descending order
-                da = da.isel(longitude=slice(None, -1), latitude=slice(None, None, -1))
-            # Put each variable into its own DataArray:
-            # * Each raw file does not contain a full set of parameters
-            # * and so may not produce a contiguous subset of the expected coordinates.
-            processed_das.extend(
-                [
-                    da.where(cond=da.coords["variable"] == v, drop=True)
-                    for v in da.coords["variable"].values
-                ],
-            )
+                        ), drop=True,
+                    )
+                    .drop_vars(names=[
+                        c for c in ds.coords if c not in ["time", "step", "latitude", "longitude"]
+                    ])
+                    .rename(name_dict={"time": "init_time"})
+                    .expand_dims(dim="init_time")
+                    .to_dataarray(name=CEDAFTPRawRepository.model().name)
+                )
+                da = da.transpose(*CEDAFTPRawRepository.model().expected_coordinates.dims)
+                if "longitude" in da.coords:
+                    # We are dealing with the "AreaX" files:
+                    # * remove the last value of the longitude dimension
+                    #   as it overlaps with the next file
+                    # * reverse the latitude dimension to be in descending order
+                    da = da.isel(longitude=slice(None, -1), latitude=slice(None, None, -1))
+                # Put each variable into its own DataArray:
+                # * Each raw file does not contain a full set of parameters
+                # * and so may not produce a contiguous subset of the expected coordinates.
+                processed_das.extend(
+                    [
+                        da.where(cond=da.coords["variable"] == v, drop=True)
+                        for v in da.coords["variable"].values
+                    ],
+                )
         except Exception as e:
             return Failure(
                 ValueError(
@@ -348,3 +356,108 @@ class CEDAFTPRawRepository(ports.RawRepository):
                 ),
             )
         return Success(processed_das)
+
+    def _convert_ukv(self, path: pathlib.Path) -> ResultE[list[xr.DataArray]]:
+        """Convert a local wholesale grib file to xarray DataArrays."""
+        # Load the wholesale file as a list of datasets
+        # * cfgrib loads multiple hypercubes for a single multi-parameter grib file
+        # * Can also set backend_kwargs={"indexpath": ""}, to avoid the index file
+        try:
+            dss: list[xr.Dataset] = cfgrib.open_datasets(
+                path=path.as_posix(),
+                chunks={"time": 1, "step": -1, "variable": -1, "x": "auto", "y": "auto"},
+                backend_kwargs={"indexpath": ""},
+            )
+        except Exception as e:
+            return Failure(
+                OSError(
+                    f"Error opening '{path}' as xarray Datasets: {e}",
+                ),
+            )
+
+        processed_das: list[xr.DataArray] = []
+        try:
+            for ds in dss:
+                # Ensure the temperature is defined at 1 meter above ground level
+                # * In the early NWPs (definitely in the 2016-03-22 NWPs):
+                #   - `heightAboveGround` only has one entry ("1" meter above ground)
+                #   - `heightAboveGround` isn't set as a dimension for `t`.
+                # * In later NWPs, 'heightAboveGround' has 2 values (0, 1) and is a dimension for `t`.
+                if "t" in ds and "heightAboveGround" in ds["t"].dims:
+                    ds = ds.sel(heightAboveGround=1)
+
+                # Delete unnecessary data variables
+                ds = entities.Parameter.rename_else_drop_ds_vars(
+                    ds=ds,
+                    allowed_parameters=CEDAFTPRawRepository.model().expected_coordinates.variable,
+                )
+                if len(ds.data_vars) == 0:
+                    continue
+
+                ds = (
+                    ds.rename({"time": "init_time"})
+                    .expand_dims("init_time")
+                    .drop_vars(
+                        names=[
+                            c for c in ds.coords
+                            if c not in CEDAFTPRawRepository.model().expected_coordinates.dims
+                        ],
+                        errors="ignore",
+                    )
+                    .where(
+                        ds.step <= np.timedelta64(
+                            CEDAFTPRawRepository.model().expected_coordinates.step[-1],
+                            "h",
+                        ), drop=True,
+                    )
+                )
+                # Adapted from https://stackoverflow.com/a/62667154 and
+                # https://github.com/SciTools/iris-grib/issues/140#issuecomment-1398634288
+                northing: list[int] = CEDAFTPRawRepository.model().expected_coordinates.y_osgb
+                easting: list[int] = CEDAFTPRawRepository.model().expected_coordinates.x_osgb
+                if ds.sizes["values"] != len(northing) * len(easting):
+                    raise ValueError(
+                        f"dataset has {ds.sizes['values']} values, "
+                        f"but expected {len(northing) * len(easting)}",
+                    )
+                ds = ds.assign_coords(
+                    {
+                        "x_osgb": ("values", np.tile(easting, reps=len(northing))),
+                        "y_osgb": ("values", np.repeat(northing, repeats=len(easting))),
+                    },
+                )
+                # Set `values` to be a MultiIndex, indexed by `y` and `x`, then unstack
+                # * This gets rid of the `values` dimension and indexes
+                #   the data variables using `y` and `x`.
+                ds = ds.set_index(values=("y_osgb", "x_osgb")).unstack("values")
+                da: xr.DataArray = (
+                    ds.to_array(name=CEDAFTPRawRepository.model().name)
+                    .sortby(variables=["step", "variable", "x_osgb"])
+                    .sortby(variables="y_osgb", ascending=False)
+                    .transpose("init_time", "step", "variable", "y_osgb", "x_osgb")
+                    .drop_vars(
+                        names=[
+                            c for c in ds.coords
+                            if c not in CEDAFTPRawRepository.model().expected_coordinates.dims
+                        ],
+                        errors="ignore",
+                    )
+                )
+                # Put each variable into its own DataArray:
+                # * Each raw file does not contain a full set of parameters
+                # * and so may not produce a contiguous subset of the expected coordinates.
+                processed_das.extend(
+                    [
+                        da.where(cond=da.coords["variable"] == v, drop=True)
+                        for v in da.coords["variable"].values
+                    ],
+                )
+        except Exception as e:
+            return Failure(
+                ValueError(
+                    f"Error processing {path} to DataArray: {e}",
+                ),
+            )
+
+        return Success(processed_das)
+

@@ -280,7 +280,7 @@ class Parameter(StrEnum):
                                 "wind direction being Westerly and = ~200. ",
                     units="degrees",
                     limits=ParameterLimits(upper=0, lower=360),
-                    alternative_shortnames=["wdir", "wdir10"],
+                    alternative_shortnames=["wdir", "wdir10", "10wdir"],
                     grib2_code="194",
                 )
 
@@ -290,7 +290,7 @@ class Parameter(StrEnum):
                     description="Depth of snow on the ground.",
                     units="m",
                     limits=ParameterLimits(upper=12, lower=0),
-                    alternative_shortnames=["sd", "sdwe"],
+                    alternative_shortnames=["sd", "sdwe", "sde"],
                     grib2_code="141",
                 )
 
