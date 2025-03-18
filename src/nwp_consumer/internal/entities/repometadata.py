@@ -75,8 +75,9 @@ class RawRepositoryMetadata:
         Returns:
             The latest available initialization time prior to the given time.
         """
-        it = t.replace(minute=0, second=0, microsecond=0) \
-             - dt.timedelta(minutes=self.delay_minutes)
+        it = (
+            t.replace(minute=0, second=0, microsecond=0) - dt.timedelta(minutes=self.delay_minutes)
+        ).replace(minute=0)
         while it.hour not in running_hours:
             it -= dt.timedelta(hours=1)
 
