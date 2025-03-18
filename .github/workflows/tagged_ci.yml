@@ -1,0 +1,18 @@
+name: Tagged CI
+run-name: 'Tagged CI for ${{ github.ref_name }} by ${{ github.actor }}'
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  packages: write
+  contents: read
+
+jobs:
+  tagged-ci:
+    uses: openclimatefix/.github/.github/workflows/tagged_ci.yml@main
+    secrets: inherit
+    with:
+      containerfile: Containerfile
+

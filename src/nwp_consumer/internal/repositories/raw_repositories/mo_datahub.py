@@ -11,21 +11,94 @@ Documented Structure
 
 MetOffice provide a number of models, a few of which OCF consume. Their flagship deterministic
 model us called the "Unified Model" (UM) and is run in two configurations: "Global" and "UK".
-The "Global" model has a resolution of 10km and the "UK" model has a resolution of 2km.
+The "Global" model has a resolution of 10km and the "UK" model has a resolution of ~2km.
 
 See https://datahub.metoffice.gov.uk/docs/f/category/atmospheric/overview for more information.
 
 Data is provided on a per-order basis, so the filestructure depends on the order ID.
 For OCF's purposes, on file per parameter per step is requested.
 
+
 Actual Structure
 ----------------
 
+For the global model, the grid of the provided data matches the described structure.
 The latitude and longitude increments are ascertained from the GRIB2 file's metadata:
 .. code-block:: none
 
     iDirectionIncrementInDegrees: 0.140625
     jDirectionIncrementInDegrees: 0.09375
+
+The UKV model X coordinate from MetOffice Datahub is as follows:
+
+    DimCoord :  projection_x_coordinate / (m)
+    points: [
+        -575999.97097653, -573999.97097653, ...,  330000.02902347,
+         332000.02902347]
+    shape: (455,)
+    dtype: float64
+    standard_name: 'projection_x_coordinate'
+    coord_system: LambertAzimuthalEqualArea(
+        latitude_of_projection_origin=54.9,
+        longitude_of_projection_origin=-2.5,
+        false_easting=0.0,
+        false_northing=0.0,
+        ellipsoid=GeogCS(semi_major_axis=6378137.0, semi_minor_axis=6356752.314140356))
+
+Which differs from the CEDA UKV data, as that is projected onto an OSGB grid:
+
+    DimCoord :  projection_x_coordinate / (m)
+    points: [-238000., -236000., ...,  854000.,  856000.]
+    shape: (548,)
+    dtype: float64
+    standard_name: 'projection_x_coordinate'
+    coord_system: TransverseMercator(
+        latitude_of_projection_origin=49.0,
+        longitude_of_central_meridian=-2.0,
+        false_easting=400000.0,
+        false_northing=-100000.0,
+        scale_factor_at_central_meridian=0.0,
+        ellipsoid=GeogCS(semi_major_axis=6377563.4, semi_minor_axis=6356256.91))
+
+Similar for the Y values, for MetOffice:
+
+    DimCoord :  projection_y_coordinate / (m)
+    points: [
+        -576000.00814487, -574000.00814487, ...,  697999.99185513,
+         699999.99185513]
+    shape: (639,)
+    dtype: float64
+    standard_name: 'projection_y_coordinate'
+    coord_system: LambertAzimuthalEqualArea(
+        latitude_of_projection_origin=54.9,
+        longitude_of_projection_origin=-2.5,
+        false_easting=0.0,
+        false_northing=0.0,
+        ellipsoid=GeogCS(semi_major_axis=6378137.0, semi_minor_axis=6356752.314140356))
+
+And for CEDA:
+
+    DimCoord :  projection_y_coordinate / (m)
+    points: [1222000., 1220000., ..., -182000., -184000.]
+    shape: (704,)
+    dtype: float64
+    standard_name: 'projection_y_coordinate'
+    coord_system: TransverseMercator(
+        latitude_of_projection_origin=49.0,
+        longitude_of_central_meridian=-2.0,
+        false_easting=400000.0,
+        false_northing=-100000.0,
+        scale_factor_at_central_meridian=0.0,
+        ellipsoid=GeogCS(semi_major_axis=6377563.4, semi_minor_axis=6356256.91))
+
+
+MetOffice's region selection allows you to choose a GB and EIRE region, which is then
+defined as a bounding box from
+
+    (-576719N, -576719E) to (700220N, 333408E)
+
+Which doesn't quite line up with the values extracted from the grib above.
+
 
 """
 
@@ -73,21 +146,21 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
     @staticmethod
     @override
     def repository() -> entities.RawRepositoryMetadata:
+
         return entities.RawRepositoryMetadata(
             name="MetOffice-Weather-Datahub",
             is_archive=False,
             is_order_based=True,
-            running_hours=[0, 12],
             delay_minutes=60,
             max_connections=10,
             required_env=["METOFFICE_API_KEY", "METOFFICE_ORDER_ID"],
             optional_env={},
             postprocess_options=entities.PostProcessOptions(),
             available_models={
-                "default": entities.Models.MO_UM_GLOBAL_10KM\
-                    .with_region("india"),
-                "um-global-india": entities.Models.MO_UM_GLOBAL_10KM\
-                    .with_region("india"),
+                "default": entities.Models.MO_UM_GLOBAL_10KM.with_region("india"),
+                "um-global-10km-india": entities.Models.MO_UM_GLOBAL_10KM.with_region("india"),
+                "um-global-10km-uk": entities.Models.MO_UM_GLOBAL_10KM.with_region("uk"),
+                "um-ukv-2km": entities.Models.MO_UM_UKV_2KM_LAEA,
             },
         )
 
@@ -173,7 +246,15 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
         Args:
             url: The URL of the file of interest.
         """
-        return self._download(url).bind(self._convert)
+        if "um-global" in self.model().name:
+            return self._download(url).bind(self._convert_global)
+        elif "um-ukv" in self.model().name:
+            return self._download(url).bind(self._convert_ukv)
+        else:
+            return Failure(ValueError(
+                f"Unknown model '{self.model().name}' requested. "
+                "Ensure MODEL environment variable is set to a valid model name.",
+            ))
 
     def _download(self, url: str) -> ResultE[pathlib.Path]:
         """Download a grib file from MetOffice Weather Datahub API.
@@ -234,7 +315,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
         return Success(local_path)
 
     @staticmethod
-    def _convert(path: pathlib.Path) -> ResultE[list[xr.DataArray]]:
+    def _convert_global(path: pathlib.Path) -> ResultE[list[xr.DataArray]]:
         """Convert a local grib file to xarray DataArrays.
 
         Args:
@@ -246,17 +327,10 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                 path,
                 engine="cfgrib",
                 backend_kwargs={"read_keys": ["name", "parameterNumber"], "indexpath": ""},
-                chunks={
-                    "time": 1,
-                    "step": -1,
-                },
+                chunks={"time": 1, "step": -1},
             )
         except Exception as e:
-            return Failure(
-                OSError(
-                    f"Error opening '{path}' as xarray Dataset: {e}",
-                ),
-            )
+            return Failure(OSError(f"Error opening '{path}' as xarray Dataset: {e}"))
 
         # Some parameters are surfaced in the dataset as 'unknown'
         # and have to be differentiated via the parameterNumber attribute
@@ -282,18 +356,20 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                 )
 
         try:
-            da: xr.DataArray = (
+            ds = (
                 ds.pipe(
                     entities.Parameter.rename_else_drop_ds_vars,
                     allowed_parameters=MetOfficeDatahubRawRepository.model().expected_coordinates.variable,
                 )
                 .rename(name_dict={"time": "init_time"})
-                .expand_dims(dim="init_time")
-                .expand_dims(dim="step")
-                .to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
-            )
+                .expand_dims(dim="init_time"))
+
+            if "step" not in ds.dims:
+                ds = ds.expand_dims(dim="step")
+
+            da: xr.DataArray = ds.to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
             da = (
-                da.drop_vars(
+                    da.drop_vars(
                     names=[
                         c for c in ds.coords
                         if c not in
@@ -301,10 +377,112 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                     ],
                     errors="ignore",
                 )
-                .transpose(*MetOfficeDatahubRawRepository.model().expected_coordinates.dims)
-                .sortby(variables=["step", "variable", "longitude"])
-                .sortby(variables="latitude", ascending=False)
+                .transpose(*MetOfficeDatahubRawRepository.model().expected_coordinates.dims))
+
+            da = da.sortby(variables=["step", "variable", "longitude"])
+            da = da.sortby(variables="latitude", ascending=False)
+
+        except Exception as e:
+            return Failure(
+                ValueError(f"Error processing DataArray for path '{path}'. Error context: {e}"),
             )
+
+        return Success([da])
+
+    @staticmethod
+    def _convert_ukv(path: pathlib.Path) -> ResultE[list[xr.DataArray]]:
+        """Convert a local UKV grib file to xarray DataArrays.
+
+        Args:
+            path: The path to the file to convert.
+        """
+        try:
+            # Read the file as a dataset, also reading the values of the keys in 'read_keys'
+            ds: xr.Dataset = xr.open_dataset(
+                path,
+                engine="cfgrib",
+                backend_kwargs={"read_keys": ["name", "parameterNumber"], "indexpath": ""},
+                chunks={"time": 1, "step": -1},
+            )
+        except Exception as e:
+            return Failure(OSError(f"Error opening '{path}' as xarray Dataset: {e}"))
+
+        try:
+            # Some parameters are surfaced in the dataset as 'unknown'
+            # and have to be differentiated via the parameterNumber attribute
+            # which lines up with the last number in the GRIB2 code specified below
+            # https://datahub.metoffice.gov.uk/docs/glossary?sortOrder=GRIB2_CODE
+            name = next(iter(ds.data_vars))
+            parameter_number = ds[name].attrs["GRIB_parameterNumber"]
+            match name, parameter_number:
+                case "unknown", 192:
+                    ds = ds.rename({name: "u10"})
+                case "unknown", 193:
+                    ds = ds.rename({name: "v10"})
+                case "unknown", 194:
+                    ds = ds.rename({name: "wdir"})
+                case "unknown", 195:
+                    ds = ds.rename({name: "wdir10"})
+                case "unknown", 1:
+                    ds = ds.rename({name: "tcc"})
+                case "unknown", _:
+                    log.warning(
+                        f"Encountered unknown parameter with parameterNumber {parameter_number} "
+                        f"in file '{path}'.",
+                    )
+
+            # Replace the coords with the expected values, as cfrib struggles to read them in.
+            # The actual values have been determined by using iris.
+            expected_coords = MetOfficeDatahubRawRepository.model().expected_coordinates
+            if ds.sizes["x"] != len(expected_coords.x_laea): #type: ignore
+                return Failure(ValueError(
+                    f"Coordinate length of '{ds.sizes['x']}' for the x dimension for file "
+                    f"'{path!s}' does not match expected length {len(expected_coords.x_laea)}", #type: ignore
+                ))
+            if ds.sizes["y"] != len(expected_coords.y_laea): #type: ignore
+                return Failure(ValueError(
+                    f"Coordinate length of '{ds.sizes['y']}' for the y dimension for file "
+                    f"'{path!s}' does not match expected length {len(expected_coords.y_laea)}", #type: ignore
+                ))
+            # Assign coordinates to the dataset, and reverse y so it is descending, before
+            # replacing the stand in values with the actual ones
+            ds = ds.assign_coords(
+                x=list(range(ds.sizes["x"])),
+                y=list(range(ds.sizes["y"])),
+            ).sortby("y", ascending=False).sortby("x").assign_coords(
+                x=expected_coords.x_laea,
+                y=expected_coords.y_laea,
+            ).rename({"x": "x_laea", "y": "y_laea"})
+
+            # Remove unwanted variables
+            ds = (
+                ds.pipe(
+                    entities.Parameter.rename_else_drop_ds_vars,
+                    allowed_parameters=MetOfficeDatahubRawRepository.model().expected_coordinates.variable,
+                )
+                .rename(name_dict={"time": "init_time"})
+                .expand_dims(dim="init_time"))
+
+            if "step" not in ds.dims:
+                ds = ds.expand_dims(dim="step")
+
+            da: xr.DataArray = ds.to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
+            da = (
+                    da.drop_vars(
+                    names=[
+                        c for c in ds.coords
+                        if c not in
+                        [*MetOfficeDatahubRawRepository.model().expected_coordinates.dims,
+                        "latitude", "longitude"]
+                        # Keep the 2d lat and long non-dimensional coords for pvnet-app
+                        # as it needs them for regridding
+                    ],
+                    errors="ignore",
+                )
+                .transpose(*MetOfficeDatahubRawRepository.model().expected_coordinates.dims)
+                .sortby(variables=["step", "variable", "x_laea"])
+            )
+
         except Exception as e:
             return Failure(
                 ValueError(
@@ -312,5 +490,5 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                 ),
             )
 
-
         return Success([da])
+

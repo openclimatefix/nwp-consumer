@@ -6,7 +6,7 @@
 [![pypi badge](https://img.shields.io/pypi/v/nwp-consumer?&color=086788)](https://pypi.org/project/nwp-consumer)
 [![documentation badge](https://img.shields.io/badge/docs-latest-333333)](https://openclimatefix.github.io/nwp-consumer/)
 [![contributors badge](https://img.shields.io/github/contributors/openclimatefix/nwp-consumer?color=FFFFFF)](https://github.com/openclimatefix/nwp-consumer/graphs/contributors)
-[![workflows badge](https://img.shields.io/github/actions/workflow/status/openclimatefix/nwp-consumer/branch_ci.yml?branch=main&color=FFD053)](https://github.com/openclimatefix/nwp-consumer/actions/workflows/ci.yml)
+[![workflows badge](https://img.shields.io/github/actions/workflow/status/openclimatefix/nwp-consumer/branch_ci.yml?branch=main&color=FFD053)](https://github.com/openclimatefix/nwp-consumer/actions/workflows/branch_ci.yml)
 [![ease of contribution: easy](https://img.shields.io/badge/ease%20of%20contribution:%20easy-32bd50)](https://github.com/openclimatefix/ocf-meta-repo?tab=readme-ov-file#overview-of-ocfs-nowcasting-repositories)
 
 Some renewables, such as solar and wind, generate power according to the weather conditions.
@@ -102,6 +102,8 @@ parameter modifications to the model's expected coordinates in it's metadata for
 repository. 
 
 ## Development
+
+### Linting and static type checking
  
 This project uses [MyPy](https://mypy.readthedocs.io/en/stable/) for static type checking
 and [Ruff](https://docs.astral.sh/ruff/) for linting.
@@ -151,7 +153,7 @@ src and flat layouts.
 
 ## Contributing and community
 
-[![issues badge](https://img.shields.io/github/issues/openclimatefix/ocf-template?color=FFAC5F)](https://github.com/openclimatefix/ocf-template/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc)
+[![issues badge](https://img.shields.io/github/issues/openclimatefix/nwp-consumer?color=FFAC5F)](https://github.com/openclimatefix/nwp-consumer/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc)
 
 - PR's are welcome! See the [Organisation Profile](https://github.com/openclimatefix) for details on contributing
 - Find out about our other projects in the [OCF Meta Repo](https://github.com/openclimatefix/ocf-meta-repo)

@@ -24,7 +24,7 @@ def parse_env() -> Adaptors:
                 repositories.raw_repositories.NOAAS3RawRepository
         case "ceda":
             model_repository_adaptor = \
-                repositories.raw_repositories.CEDAFTPRawRepository
+                repositories.raw_repositories.CEDARawRepository
         case "ecmwf-realtime":
             model_repository_adaptor = \
                 repositories.raw_repositories.ECMWFRealTimeS3RawRepository

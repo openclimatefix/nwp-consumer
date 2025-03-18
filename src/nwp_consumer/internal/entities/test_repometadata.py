@@ -13,7 +13,6 @@ class TestRawRepositoryMetadata(unittest.TestCase):
         name="test",
         is_archive=False,
         is_order_based=False,
-        running_hours=[0, 6, 12, 18],
         delay_minutes=60,
         required_env=["TEST"],
         optional_env={"TEST": "test"},
@@ -46,7 +45,7 @@ class TestRawRepositoryMetadata(unittest.TestCase):
 
         for test in tests:
             with self.subTest(name=test.name):
-                result = self.metadata.determine_latest_it_from(test.t)
+                result = self.metadata.determine_latest_it_from(test.t, [0, 6, 12, 18])
                 self.assertEqual(result, test.expected)
 
 

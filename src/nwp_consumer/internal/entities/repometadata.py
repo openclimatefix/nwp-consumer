@@ -15,8 +15,6 @@ import dataclasses
 import datetime as dt
 import os
 
-import pandas as pd
-
 from .modelmetadata import ModelMetadata
 from .postprocess import PostProcessOptions
 
@@ -41,11 +39,6 @@ class RawRepositoryMetadata:
     This means parameters cannot be chosen freely,
     but rather are defined by pre-selected agreements with the provider.
     """
-
-    running_hours: list[int]
-    """The running hours of the model.
-
-    Most NWP models are run at fixed intervals throughout the day."""
 
     delay_minutes: int
     """The approximate model delay in minutes.
@@ -72,30 +65,22 @@ class RawRepositoryMetadata:
     available_models: dict[str, ModelMetadata]
     """A dictionary of available models and their metadata."""
 
-    def determine_latest_it_from(self, t: dt.datetime) -> dt.datetime:
+    def determine_latest_it_from(self, t: dt.datetime, running_hours: list[int]) -> dt.datetime:
         """Determine the latest available initialization time from a given time.
 
         Args:
             t: The time from which to determine the latest initialization time.
+            running_hours: A list of hours at which the model runs each day.
 
         Returns:
             The latest available initialization time prior to the given time.
         """
         it = t.replace(minute=0, second=0, microsecond=0) \
              - dt.timedelta(minutes=self.delay_minutes)
-        while it.hour not in self.running_hours:
+        while it.hour not in running_hours:
             it -= dt.timedelta(hours=1)
 
         return it
-
-    def month_its(self, year: int, month: int) -> list[dt.datetime]:
-        """Generate all init times for a given month."""
-        days = pd.Period(f"{year}-{month}").days_in_month
-        its: list[dt.datetime] = []
-        for day in range(1, days + 1):
-            for hour in self.running_hours:
-                its.append(dt.datetime(year, month, day, hour, tzinfo=dt.UTC))
-        return its
 
     def missing_required_envs(self) -> list[str]:
         """Get a list of unset required environment variables.
@@ -110,8 +95,7 @@ class RawRepositoryMetadata:
         pretty: str = "".join((
             "Model Repository: ",
             f"\n\t{self.name} ({'archive' if self.is_archive else 'live/rolling'} dataset.)",
-            f"\n\truns at: {self.running_hours} hours ",
-            "(available after {self.delay_minutes} minute delay)",
+            f"\n\t\t(available after {self.delay_minutes} minute delay)",
             "\nEnvironment variables:",
             "\n\tRequired:",
             "\n".join(f"\t\t{var}" for var in self.required_env),

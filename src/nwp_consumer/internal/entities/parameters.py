@@ -93,7 +93,7 @@ class ParameterData:
         - https://codes.ecmwf.int/grib/param-db/?filter=All
     """
 
-    alternate_shortnames: list[str] = dataclasses.field(default_factory=list)
+    alternative_shortnames: list[str] = dataclasses.field(default_factory=list)
     """Alternate names for the parameter found in the wild."""
 
 
@@ -133,6 +133,7 @@ class Parameter(StrEnum):
     DIRECT_SHORTWAVE_RADIATION_FLUX_GL = auto()
     WIND_SPEED_10m = auto()
     WIND_SPEED_100m = auto()
+    WIND_DIRECTION_10m = auto()
     PRESSURE_MSL = auto()
 
     def metadata(self) -> ParameterData:
@@ -145,7 +146,7 @@ class Parameter(StrEnum):
                     description="Temperature at screen level",
                     units="C",
                     limits=ParameterLimits(upper=60, lower=-90),
-                    alternate_shortnames=["t", "t2m", "tas"],
+                    alternative_shortnames=["t", "t2m", "tas"],
                     grib2_code="167",
                 )
 
@@ -158,7 +159,7 @@ class Parameter(StrEnum):
                                 "This is made up of both direct and diffuse radiation.",
                     units="W/m^2",
                     limits=ParameterLimits(upper=1500, lower=0),
-                    alternate_shortnames=["swavr", "ssrd", "dswrf", "sdswrf"],
+                    alternative_shortnames=["swavr", "ssrd", "dswrf", "sdswrf"],
                     grib2_code="169",
                 )
 
@@ -170,7 +171,7 @@ class Parameter(StrEnum):
                                 "incident on the surface expected over the next hour.",
                     units="W/m^2",
                     limits=ParameterLimits(upper=500, lower=0),
-                    alternate_shortnames=["strd", "dlwrf", "sdlwrf"],
+                    alternative_shortnames=["strd", "dlwrf", "sdlwrf"],
                     grib2_code="175",
                 )
 
@@ -182,7 +183,7 @@ class Parameter(StrEnum):
                                 "to the equilibrium vapour pressure of water",
                     units="%",
                     limits=ParameterLimits(upper=100, lower=0),
-                    alternate_shortnames=["r", "r2"],
+                    alternative_shortnames=["r", "r2"],
                     grib2_code="157",
                 )
 
@@ -194,7 +195,7 @@ class Parameter(StrEnum):
                                 "horizontally in daylight conditions.",
                     units="m",
                     limits=ParameterLimits(upper=4500, lower=0),
-                    alternate_shortnames=["vis"],
+                    alternative_shortnames=["vis"],
                     grib2_code="20",
                 )
 
@@ -206,7 +207,7 @@ class Parameter(StrEnum):
                                 "the wind in the eastward direction.",
                     units="m/s",
                     limits=ParameterLimits(upper=100, lower=-100),
-                    alternate_shortnames=["u10", "u", "uas"],
+                    alternative_shortnames=["u10", "u", "uas"],
                     grib2_code="165",
                 )
 
@@ -219,7 +220,7 @@ class Parameter(StrEnum):
                     units="m/s",
                     # Non-tornadic winds are usually < 100m/s
                     limits=ParameterLimits(upper=100, lower=-100),
-                    alternate_shortnames=["v10", "v", "vas"],
+                    alternative_shortnames=["v10", "v", "vas"],
                     grib2_code="166",
                 )
 
@@ -231,7 +232,7 @@ class Parameter(StrEnum):
                                 "the wind in the eastward direction.",
                     units="m/s",
                     limits=ParameterLimits(upper=100, lower=-100),
-                    alternate_shortnames=["u100"],
+                    alternative_shortnames=["u100"],
                     grib2_code="246",
                 )
 
@@ -243,7 +244,7 @@ class Parameter(StrEnum):
                                 "the wind in the northward direction.",
                     units="m/s",
                     limits=ParameterLimits(upper=100, lower=-100),
-                    alternate_shortnames=["v100"],
+                    alternative_shortnames=["v100"],
                     grib2_code="247",
                 )
 
@@ -255,7 +256,7 @@ class Parameter(StrEnum):
                                 "the wind in the eastward direction.",
                     units="m/s",
                     limits=ParameterLimits(upper=150, lower=-150),
-                    alternate_shortnames=["u200"],
+                    alternative_shortnames=["u200"],
                     grib2_code="239",
                 )
 
@@ -267,8 +268,20 @@ class Parameter(StrEnum):
                                 "the wind in the northward direction.",
                     units="m/s",
                     limits=ParameterLimits(upper=150, lower=-150),
-                    alternate_shortnames=["v200"],
+                    alternative_shortnames=["v200"],
                     grib2_code="240",
+                )
+
+            case self.WIND_DIRECTION_10m.name:
+                return ParameterData(
+                    name=str(self),
+                    description="The wind direction from 0 to 360. 0 represents a Northerly "
+                                "wind and 90 is Easterly wind. This is confirmed by the UK mean "
+                                "wind direction being Westerly and = ~200. ",
+                    units="degrees",
+                    limits=ParameterLimits(upper=0, lower=360),
+                    alternative_shortnames=["wdir", "wdir10", "10wdir"],
+                    grib2_code="194",
                 )
 
             case self.SNOW_DEPTH_GL.name:
@@ -277,7 +290,7 @@ class Parameter(StrEnum):
                     description="Depth of snow on the ground.",
                     units="m",
                     limits=ParameterLimits(upper=12, lower=0),
-                    alternate_shortnames=["sd", "sdwe"],
+                    alternative_shortnames=["sd", "sdwe", "sde"],
                     grib2_code="141",
                 )
 
@@ -290,7 +303,7 @@ class Parameter(StrEnum):
                                 "to the square's total area.",
                     units="UI",
                     limits=ParameterLimits(upper=1, lower=0),
-                    alternate_shortnames=["hcc"],
+                    alternative_shortnames=["hcc"],
                     grib2_code="188",
                 )
 
@@ -303,7 +316,7 @@ class Parameter(StrEnum):
                                 "to the square's total area.",
                     units="UI",
                     limits=ParameterLimits(upper=1, lower=0),
-                    alternate_shortnames=["mcc"],
+                    alternative_shortnames=["mcc"],
                     grib2_code="187",
                 )
 
@@ -316,7 +329,7 @@ class Parameter(StrEnum):
                                 "to the square's total area.",
                     units="UI",
                     limits=ParameterLimits(upper=1, lower=0),
-                    alternate_shortnames=["lcc"],
+                    alternative_shortnames=["lcc"],
                     grib2_code="186",
                 )
 
@@ -329,7 +342,7 @@ class Parameter(StrEnum):
                                 "to the square's total area.",
                     units="UI",
                     limits=ParameterLimits(upper=1, lower=0),
-                    alternate_shortnames=["tcc", "clt"],
+                    alternative_shortnames=["tcc", "clt"],
                     grib2_code="164",
                 )
 
@@ -341,7 +354,7 @@ class Parameter(StrEnum):
                                 "including rain, snow, and hail.",
                     units="kg/m^2/s",
                     limits=ParameterLimits(upper=0.2, lower=0),
-                    alternate_shortnames=["prate", "tprate"],
+                    alternative_shortnames=["prate", "tprate", "rprate"],
                     grib2_code="260048",
                 )
 
@@ -354,7 +367,7 @@ class Parameter(StrEnum):
                                 "expected over the next hour.",
                     units="W/m^2",
                     limits=ParameterLimits(upper=1000, lower=0),
-                    alternate_shortnames=["uvb"],
+                    alternative_shortnames=["uvb"],
                     grib2_code="57",
                 )
 
@@ -368,7 +381,7 @@ class Parameter(StrEnum):
                                 "expected over the next hour.",
                     units="W/m^2",
                     limits=ParameterLimits(upper=1000, lower=0),
-                    alternate_shortnames=["dsrp"],
+                    alternative_shortnames=["dsrp"],
                     grib2_code="47",
                 )
 
@@ -379,7 +392,7 @@ class Parameter(StrEnum):
                                 "Defined as the magnitude of the wind vector.",
                     units="m/s",
                     limits=ParameterLimits(upper=150, lower=0),
-                    alternate_shortnames=["10si", "si10"],
+                    alternative_shortnames=["10si", "si10"],
                     grib2_code="207",
                 )
 
@@ -390,7 +403,7 @@ class Parameter(StrEnum):
                                 "Defined as the magnitude of the wind vector.",
                     units="m/s",
                     limits=ParameterLimits(upper=200, lower=0),
-                    alternate_shortnames=["100si", "si100"],
+                    alternative_shortnames=["100si", "si100"],
                     grib2_code="249",
                 )
 
@@ -404,7 +417,7 @@ class Parameter(StrEnum):
                                 "on the Earth's surface. 100 Pa = 1 hPa = 1 mbar.",
                     units="Pa",
                     limits=ParameterLimits(upper=105000, lower=95000),
-                    alternate_shortnames=["mslp", "msl"],
+                    alternative_shortnames=["mslp", "msl"],
                     grib2_code="151",
                 )
             case _:
@@ -414,7 +427,7 @@ class Parameter(StrEnum):
     def try_from_alternate(name: str) -> ResultE["Parameter"]:
         """Map an alternate name to a parameter."""
         for p in Parameter:
-            if name in p.metadata().alternate_shortnames:
+            if name in p.metadata().alternative_shortnames:
                 return Success(p)
         return Failure(ValueError(f"Unknown shortname: {name}"))
 

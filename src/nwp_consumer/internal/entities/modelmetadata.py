@@ -12,9 +12,11 @@ to the model used to generate the data itself.
 """
 
 import dataclasses
+import datetime as dt
 import logging
 
 import numpy as np
+import pandas as pd
 
 from .coordinates import NWPDimensionCoordinateMap
 from .parameters import Parameter
@@ -53,6 +55,14 @@ class ModelMetadata:
     >>> grib_ls -n geography -wcount=13 raw_file.grib
 
     Which prints grid data from the grib file.
+    """
+
+    running_hours: list[int]
+    """The hours of the day that the model runs.
+
+    Raw Repositories that provide data for the model may not have every running time.
+    In this instance, use `with_running_hours` to specify the running hours specific
+    to the repository.
     """
 
     chunk_count_overrides: dict[str, int] = dataclasses.field(default_factory=dict)
@@ -117,6 +127,19 @@ class ModelMetadata:
             )
         return dataclasses.replace(self, chunk_count_overrides=overrides)
 
+    def with_running_hours(self, hours: list[int]) -> "ModelMetadata":
+        """Returns metadata for the given model with the given running hours."""
+        return dataclasses.replace(self, running_hours=hours)
+
+    def month_its(self, year: int, month: int) -> list[dt.datetime]:
+        """Generate all init times for a given month."""
+        days = pd.Period(f"{year}-{month}").days_in_month
+        its: list[dt.datetime] = []
+        for day in range(1, days + 1):
+            for hour in self.running_hours:
+                its.append(dt.datetime(year, month, day, hour, tzinfo=dt.UTC))
+        return its
+
 class Models:
     """Namespace containing known models."""
 
@@ -149,6 +172,7 @@ class Models:
             latitude=[float(f"{lat / 10:.2f}") for lat in range(900, -900 - 1, -1)],
             longitude=[float(f"{lon / 10:.2f}") for lon in range(-1800, 1800 + 1, 1)],
         ),
+        running_hours=[0, 6, 12, 18],
     )
     """ECMWF's High Resolution Integrated Forecast System."""
 
@@ -168,6 +192,7 @@ class Models:
             latitude=[v/10 for v in range(900, -900, -1)],
             longitude=[v/10 for v in range(-1800, 1800, 1)],
         ),
+        running_hours=[0, 12],
     )
     """Summary statistics from ECMWF's Ensemble Forecast System."""
 
@@ -196,6 +221,7 @@ class Models:
             latitude=[v/10 for v in range(900, -900, -1)],
             longitude=[v/10 for v in range(-1800, 1800, 1)],
         ),
+        running_hours=[0, 6, 12, 18],
     )
     """Full ensemble data from ECMWF's Ensemble Forecast System."""
 
@@ -227,6 +253,7 @@ class Models:
             latitude=[float(lat) for lat in range(90, -90 - 1, -1)],
             longitude=[float(lon) for lon in range(-180, 180 + 1, 1)],
         ),
+        running_hours=[0, 6, 12, 18],
     )
     """NCEP's Global Forecast System."""
 
@@ -262,6 +289,7 @@ class Models:
             ],
             # TODO: Change to -180 -> 180
         ),
+        running_hours=[0, 6, 12, 18],
     )
     """MetOffice's Unified Model, in the Global configuration, at a resolution of 17km."""
 
@@ -295,6 +323,72 @@ class Models:
                 for lon in np.arange(-179.929687, 179.929688 + 0.140625, 0.140625)
             ],
         ),
+        running_hours=[0, 6, 12, 18],
     )
     """MetOffice's Unified Model, in the Global configuration, at a resolution of 10km."""
 
+    MO_UM_UKV_2KM_OSGB: ModelMetadata = ModelMetadata(
+        name="um-ukv",
+        resolution="2km",
+        expected_coordinates=NWPDimensionCoordinateMap(
+            init_time=[],
+            step=list(range(0, 49)),
+            variable=sorted(
+                [
+                    Parameter.CLOUD_COVER_TOTAL,
+                    Parameter.CLOUD_COVER_HIGH,
+                    Parameter.CLOUD_COVER_MEDIUM,
+                    Parameter.CLOUD_COVER_LOW,
+                    Parameter.VISIBILITY_SL,
+                    Parameter.RELATIVE_HUMIDITY_SL,
+                    Parameter.SNOW_DEPTH_GL,
+                    Parameter.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL,
+                    Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
+                    Parameter.TEMPERATURE_SL,
+                    Parameter.WIND_U_COMPONENT_10m,
+                    Parameter.WIND_V_COMPONENT_10m,
+                    Parameter.WIND_DIRECTION_10m,
+                    Parameter.WIND_SPEED_10m,
+                    Parameter.TOTAL_PRECIPITATION_RATE_GL,
+                ],
+            ),
+            # Taken from page 4 of https://zenodo.org/record/7357056
+            y_osgb=[int(y) for y in np.arange(start=1223000, stop=-185000, step=-2000)],
+            x_osgb=[int(x) for x in np.arange(start=-239000, stop=857000, step=2000)],
+        ),
+        running_hours=list(range(0, 24, 6)),
+    )
+    """MetOffice's Unified Model in the UKV configuration, at a resolution of 2km"""
+
+    MO_UM_UKV_2KM_LAEA: ModelMetadata = ModelMetadata(
+        name="um-ukv",
+        resolution="2km",
+        expected_coordinates=NWPDimensionCoordinateMap(
+            init_time=[],
+            step=list(range(0, 49)),
+            variable=sorted(
+                [
+                    Parameter.CLOUD_COVER_TOTAL,
+                    Parameter.CLOUD_COVER_HIGH,
+                    Parameter.CLOUD_COVER_MEDIUM,
+                    Parameter.CLOUD_COVER_LOW,
+                    Parameter.VISIBILITY_SL,
+                    Parameter.RELATIVE_HUMIDITY_SL,
+                    Parameter.SNOW_DEPTH_GL,
+                    Parameter.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL,
+                    Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
+                    Parameter.TEMPERATURE_SL,
+                    Parameter.WIND_U_COMPONENT_10m,
+                    Parameter.WIND_V_COMPONENT_10m,
+                    Parameter.WIND_DIRECTION_10m,
+                    Parameter.WIND_SPEED_10m,
+                    Parameter.TOTAL_PRECIPITATION_RATE_GL,
+                ],
+            ),
+            # Taken from iris-grib reading in MetOffice UKV data
+            y_laea=[int(y) for y in np.arange(start=700000, stop=-576000-2000, step=-2000)],
+            x_laea=[int(x) for x in np.arange(start=-576000, stop=332000+2000, step=2000)],
+        ),
+        running_hours=list(range(0, 24)),
+    )
+    """MetOffice's Unified Model in the UKV configuration, at a resolution of 2km"""

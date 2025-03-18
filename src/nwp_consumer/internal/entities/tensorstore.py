@@ -305,7 +305,6 @@ class TensorStore(abc.ABC):
                     "Ensure the chunking is granular enough to cover the raw data region.",
                 )
 
-
         # Perform the regional write
         try:
             da.to_zarr(store=self.path, region=region, consolidated=True)

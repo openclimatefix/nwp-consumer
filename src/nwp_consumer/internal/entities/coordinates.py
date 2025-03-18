@@ -98,6 +98,16 @@ class NWPDimensionCoordinateMap:
     longitude: list[float] | None = None
     """The longitude coordinates of the forecast grid in degrees. """
 
+    y_osgb: list[int] | None = None
+    """Y coordinates of an OSGB grid."""
+    x_osgb: list[int] | None = None
+    """X coordinates of an OSGB grid."""
+
+    y_laea: list[int] | None = None
+    """Y coordinates of a Lambert Azimuthal Equal Area grid."""
+    x_laea: list[int] | None = None
+    """X coordinates of a Lambert Azimuthal Equal Area grid."""
+
     def __post_init__(self) -> None:
         """Rigidly set input value ordering and precision."""
         self.variable = sorted(self.variable)
@@ -204,6 +214,34 @@ class NWPDimensionCoordinateMap:
                 "Longitude coordinates should run from -180 -> 180. "
                 "Modify the coordinate in the source data to be in ascending order.",
             ))
+        if "y_osgb" in pd_indexes \
+            and pd_indexes["y_osgb"].values[0] < pd_indexes["y_osgb"].values[-1]:
+            return Failure(ValueError(
+                "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
+                "as the y_osgb values are not in descending order. "
+                "Modify the coordinate in the source data to be in descending order.",
+            ))
+        if "x_osgb" in pd_indexes \
+            and pd_indexes["x_osgb"].values[0] > pd_indexes["x_osgb"].values[-1]:
+            return Failure(ValueError(
+                "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
+                "as the x_osgb values are not in ascending order. "
+                "Modify the coordinate in the source data to be in ascending order.",
+            ))
+        if "y_laea" in pd_indexes \
+            and pd_indexes["y_laea"].values[0] < pd_indexes["y_laea"].values[-1]:
+            return Failure(ValueError(
+                "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
+                "as the y_laea values are not in descending order. "
+                "Modify the coordinate in the source data to be in descending order.",
+            ))
+        if "x_laea" in pd_indexes \
+            and pd_indexes["x_laea"].values[0] > pd_indexes["x_laea"].values[-1]:
+            return Failure(ValueError(
+                "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
+                "as the x_laea values are not in ascending order. "
+                "Modify the coordinate in the source data to be in ascending order.",
+            ))
 
         # Convert the pandas Index objects to lists of the appropriate types
         return Success(
@@ -231,6 +269,14 @@ class NWPDimensionCoordinateMap:
                     if "latitude" in pd_indexes else None,
                 longitude=pd_indexes["longitude"].to_list() \
                     if "longitude" in pd_indexes else None,
+                y_osgb=pd_indexes["y_osgb"].to_list() \
+                    if "y_osgb" in pd_indexes else None,
+                x_osgb=pd_indexes["x_osgb"].to_list() \
+                    if "x_osgb" in pd_indexes else None,
+                y_laea=pd_indexes["y_laea"].to_list() \
+                    if "y_laea" in pd_indexes else None,
+                x_laea=pd_indexes["x_laea"].to_list() \
+                    if "x_laea" in pd_indexes else None,
             ),
         )
 
@@ -380,12 +426,6 @@ class NWPDimensionCoordinateMap:
             contiguous_index_run = list(range(outer_dim_indices[0], outer_dim_indices[-1] + 1))
             if outer_dim_indices != contiguous_index_run:
                 idxs = np.argwhere(np.gradient(outer_dim_indices) > 1).flatten()
-                # TODO: Sometimes, providers send their data in multiple files, the area
-                # TODO: of which might loop around the edges of the grid. In this case, it would
-                # TODO: be useful to determine if the run is non-contiguous only in that it wraps
-                # TODO: around that boundary, and in that case, split it and write it in two goes.
-                # TODO: 2025-01-06: I think this is a resolved problem now that fetch_init_data
-                # can return a list of DataArrays.
                 return Failure(
                     ValueError(
                         f"Coordinate values for dimension '{inner_dim_label}' do not correspond "

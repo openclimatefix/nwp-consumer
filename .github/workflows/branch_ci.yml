@@ -1,184 +1,23 @@
-# Workflow that runs on pushes to non-default branches
+name: Branch CI (Python)
+run-name: 'Branch CI for ${{ github.event.head_commit.message }} by ${{ github.actor }}'
 
-name: Non-Default Branch Push CI (Python)
-
-on:
+on:  
   push:
-    branches-ignore: ['main']
+    branches-ignore: [ "main" ]
     paths-ignore: ['README.md']
 
-# Specify concurrency such that only one workflow can run at a time
-# * Different workflow files are not affected
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-# Registry for storing Container images
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
-# Ensure the GitHub token can remove packages
 permissions:
   packages: write
-
+  contents: read
 
 jobs:
-
-  # Job to run a linter and typechecker against the codebase
-  lint-typecheck:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
-          cache-dependency-glob: "pyproject.toml"
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: "pyproject.toml"
-
-      - name: Install editable package and required dependencies
-        run: uv sync
-
-      - name: Lint package
-        run: uv run ruff check --output-format=github .
-
-      - name: Typecheck package
-        run: uv run mypy .
-        # TODO: GitHub output when https://github.com/python/mypy/pull/17771 merged
-
-  # Job to run unittests
-  # * Produces a JUnit XML report that can be displayed in the GitHub UI
-  test-unit:
-    runs-on: ubuntu-latest
-    needs: lint-typecheck
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
-          cache-dependency-glob: "pyproject.toml"
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: "pyproject.toml"
-
-      - name: Install editable package and required dependencies
-        run: uv sync
-
-      # Run unittests
-      # * Produce JUnit XML report
-      - name: Run unit tests
-        run: uv run python -m xmlrunner discover -s src/nwp_consumer -p "test_*.py" --output-file ut-report.xml
-
-      # Create test summary to be visualised on the job summary screen on GitHub
-      # * Runs even if previous steps fail
-      - name: Create test summary
-        uses: test-summary/action@v2
-        with:
-          paths: "*t-report.xml"
-          show: "fail, skip"
-        if: always()
-
-  # Define a job that builds the documentation
-  # * Surfaces the documentation as an artifact
-  build-docs:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
-          cache-dependency-glob: "pyproject.toml"
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: "pyproject.toml"
-
-      - name: Install editable package and required dependencies
-        run: uv sync
-
-        # Pydoctor is ran to find any linking errors in the docs
-      - name: Build documentation
-        run: |
-          uv run pydoctor --html-output=tmpdocs -W -q
-          PDOC_ALLOW_EXEC=1 uv run pdoc -o docs \
-            --docformat=google \
-            --logo="https://cdn.prod.website-files.com/62d92550f6774db58d441cca/6324a2038936ecda71599a8b_OCF_Logo_black_trans.png" \
-            src/nwp_consumer
-
-      - name: Upload documentation
-        uses: actions/upload-artifact@v4
-        with:
-          name: docs
-          path: docs
-
-  # Job for building container image
-  # * Builds and pushes an OCI Container image to the registry defined in the environment variables
-  # * Only runs if test and lint jobs pass
-  build-container:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    needs: ["lint-typecheck", "test-unit"]
-
-    steps:
-      # Do a non-shallow clone of the repo to ensure tags are present
-      # * This allows setuptools-git-versioning to automatically set the version
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Tag the built image according to the event type
-      # The event is a branch commit, so use the commit sha
-      - name: Extract metadata (tags, labels) for Container
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: type=ref,event=branch
-
-      # Build and push the Container image to the registry
-      # * Creates a multiplatform-aware image
-      # * Pulls build cache from the registry
-      - name: Build and push container image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Containerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+  branch-ci:
+    uses: openclimatefix/.github/.github/workflows/branch_ci.yml@main
+    secrets: inherit
+    with:
+      enable_linting: true
+      enable_typechecking: true
+      tests_folder: "src/nwp_consumer"
+      tests_runner: "unittest"
+      containerfile: Containerfile
 
