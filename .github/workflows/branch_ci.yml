@@ -19,4 +19,5 @@ jobs:
       enable_typechecking: true
       tests_folder: "src/nwp_consumer"
       tests_runner: "unittest"
+      containerfile: Containerfile
 
