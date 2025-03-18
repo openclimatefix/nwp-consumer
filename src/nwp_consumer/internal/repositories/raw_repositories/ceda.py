@@ -178,7 +178,7 @@ class CEDARawRepository(ports.RawRepository):
             "Wholesale2T54.grib",
         ]
 
-        if self.model().name == entities.Models.MO_UM_UKV_2KM.name:
+        if self.model().name == entities.Models.MO_UM_UKV_2KM_OSGB.name:
             for file in file_stubs:
                 url = f"{self.url_base}/ukv-grib/{it:%Y/%m/%d}"\
                     + f"/{it:%Y%m%d%H%M}_u1096_ng_umqv_{file}"
@@ -415,8 +415,8 @@ class CEDARawRepository(ports.RawRepository):
                 )
                 # Adapted from https://stackoverflow.com/a/62667154 and
                 # https://github.com/SciTools/iris-grib/issues/140#issuecomment-1398634288
-                northing: list[int] = CEDARawRepository.model().expected_coordinates.y_osgb
-                easting: list[int] = CEDARawRepository.model().expected_coordinates.x_osgb
+                northing: list[int] = CEDARawRepository.model().expected_coordinates.y_osgb # type: ignore
+                easting: list[int] = CEDARawRepository.model().expected_coordinates.x_osgb # type: ignore
                 if ds.sizes["values"] != len(northing) * len(easting):
                     raise ValueError(
                         f"dataset has {ds.sizes['values']} values, "

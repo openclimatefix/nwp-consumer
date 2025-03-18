@@ -58,7 +58,7 @@ class TestCEDARawRepository(unittest.TestCase):
             TestCase(
                 filename="test_subset_Wholesale1.grib",
                 expected_coords=dataclasses.replace(
-                    entities.Models.MO_UM_UKV_2KM.expected_coordinates,
+                    entities.Models.MO_UM_UKV_2KM_OSGB.expected_coordinates,
                     init_time=[dt.datetime(2022, 1, 1, 0, tzinfo=dt.UTC)],
                     step=[1, 2],
                     variable=[entities.parameters.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL],
@@ -69,7 +69,7 @@ class TestCEDARawRepository(unittest.TestCase):
             TestCase(
                 filename="test_subset_Wholesale2.grib",
                 expected_coords=dataclasses.replace(
-                    entities.Models.MO_UM_UKV_2KM.expected_coordinates,
+                    entities.Models.MO_UM_UKV_2KM_OSGB.expected_coordinates,
                     init_time=[dt.datetime(2022, 1, 1, 0, tzinfo=dt.UTC)],
                     step=[1, 2],
                     variable=[entities.parameters.Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL],
