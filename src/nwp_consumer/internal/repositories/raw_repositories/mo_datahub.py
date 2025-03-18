@@ -151,7 +151,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             name="MetOffice-Weather-Datahub",
             is_archive=False,
             is_order_based=True,
-            delay_minutes=60,
+            delay_minutes=90,
             max_connections=10,
             required_env=["METOFFICE_API_KEY", "METOFFICE_ORDER_ID"],
             optional_env={},
