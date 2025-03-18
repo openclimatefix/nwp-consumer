@@ -383,7 +383,7 @@ class CEDARawRepository(ports.RawRepository):
                 # * In the early NWPs (definitely in the 2016-03-22 NWPs):
                 #   - `heightAboveGround` only has one entry ("1" meter above ground)
                 #   - `heightAboveGround` isn't set as a dimension for `t`.
-                # * In later NWPs, 'heightAboveGround' has 2 values (0, 1) and is a 
+                # * In later NWPs, 'heightAboveGround' has 2 values (0, 1) and is a
                 #   dimension for `t`.
                 if "t" in ds and "heightAboveGround" in ds["t"].dims:
                     ds = ds.sel(heightAboveGround=1)
