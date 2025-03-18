@@ -473,7 +473,9 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                         c for c in ds.coords
                         if c not in
                         [*MetOfficeDatahubRawRepository.model().expected_coordinates.dims,
-                        "latitude", "longitude"] # Keep the 2d lat and long non-dimensional coords for pvnet-app
+                        "latitude", "longitude"]
+                        # Keep the 2d lat and long non-dimensional coords for pvnet-app
+                        # as it needs them for regridding
                     ],
                     errors="ignore",
                 )
