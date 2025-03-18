@@ -6,6 +6,9 @@ on:
     branches-ignore: [ "main" ]
     paths-ignore: ['README.md']
 
+permissions:
+  packages: write
+
 jobs:
   branch-ci:
     uses: openclimatefix/.github/.github/workflows/branch_ci.yml@main

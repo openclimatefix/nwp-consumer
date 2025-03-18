@@ -5,6 +5,9 @@ on:
   push:
     tags: ["v*.*.*"]
 
+permissions:
+  packages: write
+
 jobs:
   tagged-ci:
     uses: openclimatefix/.github/.github/workflows/tagged_ci.yml@main

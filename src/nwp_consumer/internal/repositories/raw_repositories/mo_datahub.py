@@ -384,7 +384,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
 
         except Exception as e:
             return Failure(
-                ValueError(f"Error processing DataArray for path '{path}'. Error context: {e}")
+                ValueError(f"Error processing DataArray for path '{path}'. Error context: {e}"),
             )
 
         return Success([da])
