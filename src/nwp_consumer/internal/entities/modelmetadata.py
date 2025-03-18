@@ -327,7 +327,7 @@ class Models:
     )
     """MetOffice's Unified Model, in the Global configuration, at a resolution of 10km."""
 
-    MO_UM_UKV_2KM: ModelMetadata = ModelMetadata(
+    MO_UM_UKV_2KM_OSGB: ModelMetadata = ModelMetadata(
         name="um-ukv",
         resolution="2km",
         expected_coordinates=NWPDimensionCoordinateMap(
@@ -356,7 +356,39 @@ class Models:
             y_osgb=[int(y) for y in np.arange(start=1223000, stop=-185000, step=-2000)],
             x_osgb=[int(x) for x in np.arange(start=-239000, stop=857000, step=2000)],
         ),
-        running_hours=list(range(0, 24)),
+        running_hours=list(range(0, 24, 6)),
     )
     """MetOffice's Unified Model in the UKV configuration, at a resolution of 2km"""
 
+    MO_UM_UKV_2KM_LAEA: ModelMetadata = ModelMetadata(
+        name="um-ukv",
+        resolution="2km",
+        expected_coordinates=NWPDimensionCoordinateMap(
+            init_time=[],
+            step=list(range(0, 49)),
+            variable=sorted(
+                [
+                    Parameter.CLOUD_COVER_TOTAL,
+                    Parameter.CLOUD_COVER_HIGH,
+                    Parameter.CLOUD_COVER_MEDIUM,
+                    Parameter.CLOUD_COVER_LOW,
+                    Parameter.VISIBILITY_SL,
+                    Parameter.RELATIVE_HUMIDITY_SL,
+                    Parameter.SNOW_DEPTH_GL,
+                    Parameter.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL,
+                    Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
+                    Parameter.TEMPERATURE_SL,
+                    Parameter.WIND_U_COMPONENT_10m,
+                    Parameter.WIND_V_COMPONENT_10m,
+                    Parameter.WIND_DIRECTION_10m,
+                    Parameter.WIND_SPEED_10m,
+                    Parameter.TOTAL_PRECIPITATION_RATE_GL,
+                ],
+            ),
+            # Taken from iris-grib reading in MetOffice UKV data
+            y_laea=[int(y) for y in np.arange(start=700000, stop=-576000-2000, step=-2000)],
+            x_laea=[int(x) for x in np.arange(start=-576000, stop=332000+2000, step=2000)],
+        ),
+        running_hours=list(range(0, 24)),
+    )
+    """MetOffice's Unified Model in the UKV configuration, at a resolution of 2km"""

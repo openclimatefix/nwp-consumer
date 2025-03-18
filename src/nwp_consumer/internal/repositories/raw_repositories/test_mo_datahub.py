@@ -76,7 +76,7 @@ class TestMetOfficeDatahubRawRepository(unittest.TestCase):
         for t in tests:
             with self.subTest(name=t.filename):
                 # Attempt to convert the file
-                result = MetOfficeDatahubRawRepository._convert(
+                result = MetOfficeDatahubRawRepository._convert_global(
                     path=pathlib.Path(__file__).parent.absolute() / "test_gribs" / t.filename,
                 )
                 region_result: ResultE[dict[str, slice]] = result.do(
@@ -118,7 +118,7 @@ class TestMetOfficeDatahubRawRepository(unittest.TestCase):
         for t in tests:
             with self.subTest(name=t.filename):
                 # Attempt to convert the file
-                result = MetOfficeDatahubRawRepository._convert(
+                result = MetOfficeDatahubRawRepository._convert_ukv(
                     path=pathlib.Path(__file__).parent.absolute() / "test_gribs" / t.filename,
                 )
                 region_result: ResultE[NWPDimensionCoordinateMap] = result.do(

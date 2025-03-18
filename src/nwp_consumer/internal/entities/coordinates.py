@@ -103,6 +103,11 @@ class NWPDimensionCoordinateMap:
     x_osgb: list[int] | None = None
     """X coordinates of an OSGB grid."""
 
+    y_laea: list[int] | None = None
+    """Y coordinates of a Lambert Azimuthal Equal Area grid."""
+    x_laea: list[int] | None = None
+    """X coordinates of a Lambert Azimuthal Equal Area grid."""
+
     def __post_init__(self) -> None:
         """Rigidly set input value ordering and precision."""
         self.variable = sorted(self.variable)
@@ -223,6 +228,20 @@ class NWPDimensionCoordinateMap:
                 "as the x_osgb values are not in ascending order. "
                 "Modify the coordinate in the source data to be in ascending order.",
             ))
+        if "y_laea" in pd_indexes \
+            and pd_indexes["y_laea"].values[0] < pd_indexes["y_laea"].values[-1]:
+            return Failure(ValueError(
+                "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
+                "as the y_laea values are not in descending order. "
+                "Modify the coordinate in the source data to be in descending order.",
+            ))
+        if "x_laea" in pd_indexes \
+            and pd_indexes["x_laea"].values[0] > pd_indexes["x_laea"].values[-1]:
+            return Failure(ValueError(
+                "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
+                "as the x_laea values are not in ascending order. "
+                "Modify the coordinate in the source data to be in ascending order.",
+            ))
 
         # Convert the pandas Index objects to lists of the appropriate types
         return Success(
@@ -254,6 +273,10 @@ class NWPDimensionCoordinateMap:
                     if "y_osgb" in pd_indexes else None,
                 x_osgb=pd_indexes["x_osgb"].to_list() \
                     if "x_osgb" in pd_indexes else None,
+                y_laea=pd_indexes["y_laea"].to_list() \
+                    if "y_laea" in pd_indexes else None,
+                x_laea=pd_indexes["x_laea"].to_list() \
+                    if "x_laea" in pd_indexes else None,
             ),
         )
 

@@ -134,7 +134,7 @@ class CEDARawRepository(ports.RawRepository):
                     "latitude": 8,
                     "longitude": 8,
                 }).with_running_hours([0, 12]),
-                "mo-um-ukv": entities.Models.MO_UM_UKV_2KM,
+                "mo-um-ukv": entities.Models.MO_UM_UKV_2KM_OSGB,
             },
         )
 
