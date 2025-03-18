@@ -123,7 +123,7 @@ COPY pyproject.toml /_lock/
 # Delete any unwanted parts of the installed packages to reduce size
 RUN apt-get -qq update && apt-get -qq -y install gcc && \
     echo "Creating virtualenv at /venv" && \
-    conda create --quiet --yes -p /venv python=3.12 eccodes
+    conda create --quiet --yes -p /venv python=3.12 eccodes=2.38.3
 RUN echo "Installing dependencies into /venv" && \
     cd /_lock && \
     mkdir src && \
