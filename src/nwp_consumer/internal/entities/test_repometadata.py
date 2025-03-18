@@ -13,7 +13,7 @@ class TestRawRepositoryMetadata(unittest.TestCase):
         name="test",
         is_archive=False,
         is_order_based=False,
-        delay_minutes=60,
+        delay_minutes=55,
         required_env=["TEST"],
         optional_env={"TEST": "test"},
         max_connections=1,
@@ -39,6 +39,11 @@ class TestRawRepositoryMetadata(unittest.TestCase):
             TestCase(
                 name="rolls_back_intra-day",
                 t=dt.datetime(2021, 1, 1, 5, tzinfo=dt.UTC),
+                expected=dt.datetime(2021, 1, 1, 0, tzinfo=dt.UTC),
+            ),
+            TestCase(
+                name="returns_to_hours",
+                t=dt.datetime(2021, 1, 1, 6, tzinfo=dt.UTC),
                 expected=dt.datetime(2021, 1, 1, 0, tzinfo=dt.UTC),
             ),
         ]
