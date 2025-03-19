@@ -41,6 +41,7 @@ import json
 import logging
 import math
 from importlib.metadata import PackageNotFoundError, version
+from typing import Any
 
 import dask.array
 import numpy as np
@@ -140,6 +141,44 @@ class NWPDimensionCoordinateMap:
         axis.
         """
         return {dim: len(getattr(self, dim)) for dim in self.dims}
+
+    @property
+    def coord_system(self) -> dict[str, Any]:
+        """The coordinate system of the map.
+
+        Returns:
+            A string representing the coordinate system of the map.
+        """
+        if self.latitude is not None and self.longitude is not None:
+            return {"geodesic_ellipsiodal": {"crs": "EPSG:4326"}}
+        if self.y_osgb is not None and self.x_osgb is not None:
+            return {
+                "transverse_mercator": {
+                    "latitude_of_projection_origin": 49.0,
+                    "longitude_of_central_meridian": -2.0,
+                    "false_easting": 400000.0,
+                    "false_northing": -100000.0,
+                    "scale_factor_at_central_meridian": 0.0,
+                    "ellipsoid": {
+                        "semi_major_axis": 6377563.4,
+                        "semi_minor_axis": 6356256.91,
+                    },
+                },
+            }
+        if self.y_laea is not None and self.x_laea is not None:
+            return {
+                "lambert_azimuthal_equal_area": {
+                    "latitude_of_projection_origin": 54.9,
+                    "longitude_of_projection_origin": -2.5,
+                    "false_easting": 0.0,
+                    "false_northing": 0.0,
+                    "ellipsoid": {
+                        "semi_major_axis": 6378137.0,
+                        "semi_minor_axis": 6356752.314140356,
+                    },
+                },
+            }
+        return {}
 
     @classmethod
     def from_pandas(
@@ -504,6 +543,7 @@ class NWPDimensionCoordinateMap:
                     "units": p.metadata().units,
                 } for p in self.variable
             }),
+            "coord_system": json.dumps(self.coord_system),
         }
         # Create a DataArray object with the given coordinates and dummy values
         da: xr.DataArray = xr.DataArray(
