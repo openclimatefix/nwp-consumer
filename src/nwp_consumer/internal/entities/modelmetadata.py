@@ -365,7 +365,7 @@ class Models:
         resolution="2km",
         expected_coordinates=NWPDimensionCoordinateMap(
             init_time=[],
-            step=list(range(0, 49)),
+            step=list(range(0, 43)),
             variable=sorted(
                 [
                     Parameter.CLOUD_COVER_TOTAL,
@@ -389,6 +389,6 @@ class Models:
             y_laea=[int(y) for y in np.arange(start=700000, stop=-576000-2000, step=-2000)],
             x_laea=[int(x) for x in np.arange(start=-576000, stop=332000+2000, step=2000)],
         ),
-        running_hours=list(range(0, 24)),
+        running_hours=list(range(0, 24, 6)), # Only first 12 steps available for hourly runs
     )
     """MetOffice's Unified Model in the UKV configuration, at a resolution of 2km"""
