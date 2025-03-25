@@ -389,6 +389,6 @@ class Models:
             y_laea=[int(y) for y in np.arange(start=700000, stop=-576000-2000, step=-2000)],
             x_laea=[int(x) for x in np.arange(start=-576000, stop=332000+2000, step=2000)],
         ),
-        running_hours=list(range(0, 24, 6)), # Only first 12 steps available for hourly runs
+        running_hours=list(range(0, 24, 3)), # Only first 12 steps available for hourly runs
     )
     """MetOffice's Unified Model in the UKV configuration, at a resolution of 2km"""
