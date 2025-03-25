@@ -248,6 +248,7 @@ class NOAAS3RawRepository(ports.RawRepository):
             ))
 
         try:
+            ds = ds.drop_vars("sdwe", errors="ignore") # Datasets contain both SDWE and SD
             ds = entities.Parameter.rename_else_drop_ds_vars(
                 ds=ds,
                 allowed_parameters=NOAAS3RawRepository.model().expected_coordinates.variable,
