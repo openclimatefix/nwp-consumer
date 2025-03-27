@@ -368,7 +368,6 @@ class Models:
             step=list(range(0, 43)),
             variable=sorted(
                 [
-                    Parameter.CLOUD_COVER_TOTAL,
                     Parameter.CLOUD_COVER_HIGH,
                     Parameter.CLOUD_COVER_MEDIUM,
                     Parameter.CLOUD_COVER_LOW,
@@ -378,8 +377,6 @@ class Models:
                     Parameter.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL,
                     Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
                     Parameter.TEMPERATURE_SL,
-                    Parameter.WIND_U_COMPONENT_10m,
-                    Parameter.WIND_V_COMPONENT_10m,
                     Parameter.WIND_DIRECTION_10m,
                     Parameter.WIND_SPEED_10m,
                     Parameter.TOTAL_PRECIPITATION_RATE_GL,
