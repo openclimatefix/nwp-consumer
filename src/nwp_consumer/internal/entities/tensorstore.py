@@ -384,6 +384,7 @@ class TensorStore(abc.ABC):
         Returns:
             A bool indicating the result of the validation.
         """
+        log.debug(f"Validating store at '{self.path}'")
         store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")
 
         # Check for NaNs
