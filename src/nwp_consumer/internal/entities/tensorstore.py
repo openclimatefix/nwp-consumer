@@ -325,7 +325,7 @@ class TensorStore(abc.ABC):
     @staticmethod
     def _has_nans(store_da: xr.DataArray) -> ResultE[bool]:
         """Check the store for NaN values."""
-        nans_in_image_threshold: float = 0.3
+        nans_in_image_threshold: float = 0.1
         images_failing_nan_check_threshold: float = 0.0
         def _calc_null_percentage(data: np.typing.NDArray[np.float32]) -> float:
             nulls = np.isnan(data)
@@ -364,13 +364,15 @@ class TensorStore(abc.ABC):
         if failed_image_percentage > images_failing_nan_check_threshold:
             log.warning(
                 f"Dataset failed validation. "
-                f"{failed_image_percentage:.2%} of images have greater than 5% null values"
+                f"{failed_image_percentage:.2%} of images have greater than "
+                f"{int(nans_in_image_threshold * 100)}% null values"
                 f"({failed_image_count}/{total_image_count})",
             )
             return Success(True)
         log.info(
             f"{failed_image_count}/{total_image_count} "
-            f"({failed_image_percentage:.2%}) of images have greater than 5% null values",
+            f"({failed_image_percentage:.2%}) of images have greater than "
+            f"{int(nans_in_image_threshold * 100)}% null values",
         )
         return Success(False)
 
