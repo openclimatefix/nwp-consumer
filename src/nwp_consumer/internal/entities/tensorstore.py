@@ -335,7 +335,7 @@ class TensorStore(abc.ABC):
                     "to coordinate values in the dataset",
                 )
                 return 1.0
-            return float(nulls.sum() / len(nulls))
+            return float(nulls.sum() / np.prod(nulls.shape))
 
         if "latitude" in store_da.dims:
             spatial_dims: list[str] = ["latitude", "longitude"]
