@@ -354,7 +354,7 @@ class TensorStore(abc.ABC):
             dim=spatial_dims,
         ).mean("step")
 
-        failed_image_count: int = (nan_percentage_per_step > nans_in_image_threshold).sum().values
+        failed_image_count: int = int((nan_percentage_per_step > nans_in_image_threshold).sum().values)
         total_image_count: int = nan_percentage_per_step.size
         failed_image_percentage: float = failed_image_count / total_image_count
         if failed_image_percentage > images_failing_nan_check_threshold:
