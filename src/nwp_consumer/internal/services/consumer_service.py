@@ -203,6 +203,11 @@ class ConsumerService(ports.ConsumeUseCase):
 
             missing_times_result = store.missing_times()
             if isinstance(missing_times_result, Failure):
+                delete_store_result = store.delete_store()
+                if isinstance(delete_store_result, Failure):
+                    log.error(
+                        f"Failed to delete store after error: {delete_store_result}",
+                    )
                 return missing_times_result
 
             for n, it in enumerate(missing_times_result.unwrap()):
@@ -218,7 +223,22 @@ class ConsumerService(ports.ConsumeUseCase):
                     functools.partial(self._fold_dataarrays_generator, store=store),
                 )
                 if isinstance(process_result, Failure):
+                    delete_store_result = store.delete_store()
+                    if isinstance(delete_store_result, Failure):
+                        log.error(
+                            f"Failed to delete store after error: {delete_store_result}",
+                        )
                     return process_result
+
+            validation_result = store.validate_store()
+            if isinstance(validation_result, Failure):
+                delete_store_result = store.delete_store()
+                if isinstance(delete_store_result, Failure):
+                    log.error(
+                        f"Failed to delete store after error: {delete_store_result}",
+                    )
+                return validation_result
+
 
         notification_message = entities.StoreCreatedNotification(
             filename=pathlib.Path(store.path).name,
