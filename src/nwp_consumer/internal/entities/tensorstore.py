@@ -325,7 +325,7 @@ class TensorStore(abc.ABC):
     @staticmethod
     def _has_nans(store_da: xr.DataArray) -> ResultE[bool]:
         """Check the store for NaN values."""
-        nans_in_image_threshold: float = 0.2
+        nans_in_image_threshold: float = 0.25
         images_failing_nan_check_threshold: float = 0.0
         def _calc_null_percentage(data: np.typing.NDArray[np.float32]) -> float:
             nulls = np.isnan(data)
