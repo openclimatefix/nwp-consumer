@@ -350,16 +350,12 @@ class TensorStore(abc.ABC):
                 f"Got: {store_da.dims}.",
             ))
 
-        result = xr.apply_ufunc(
-            _calc_null_percentage,
-            store_da,
-            input_core_dims=[spatial_dims],
-            vectorize=True,
-            dask="parallelized",
-        )
+        nan_percentage_per_step: xr.DataArray = store_da.isnull().mean(
+            dim=spatial_dims,
+        ).mean("step")
 
-        failed_image_count: int = (result > nans_in_image_threshold).sum().values
-        total_image_count: int = result.size
+        failed_image_count: int = (nan_percentage_per_step > nans_in_image_threshold).sum().values
+        total_image_count: int = nan_percentage_per_step.size
         failed_image_percentage: float = failed_image_count / total_image_count
         if failed_image_percentage > images_failing_nan_check_threshold:
             log.warning(
