@@ -148,7 +148,7 @@ class Models:
         resolution="0.1 degrees",
         expected_coordinates=NWPDimensionCoordinateMap(
             init_time=[],
-            step=list(range(0, 84, 1)),
+            step=list(range(0, 85, 1)),
             variable=[
                 Parameter.WIND_U_COMPONENT_10m,
                 Parameter.WIND_V_COMPONENT_10m,

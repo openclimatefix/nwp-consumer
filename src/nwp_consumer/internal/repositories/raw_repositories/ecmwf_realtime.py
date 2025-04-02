@@ -330,4 +330,4 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             str(it.year) + match.group(2) + "+0000",
             "%Y%m%d%H%M%z",
         )
-        return tt < it + dt.timedelta(hours=max_step)
+        return tt <= it + dt.timedelta(hours=max_step)
