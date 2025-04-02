@@ -346,7 +346,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             case "unknown", 194:
                 ds = ds.rename({name: "wdir"})
             case "unknown", 195:
-                ds = ds.rename({name: "wdir10"})
+                ds = ds.rename({name: "si10"})
             case "unknown", 1:
                 ds = ds.rename({name: "tcc"})
             case "unknown", _:
@@ -422,7 +422,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                 case "unknown", 194:
                     ds = ds.rename({name: "wdir"})
                 case "unknown", 195:
-                    ds = ds.rename({name: "wdir10"})
+                    ds = ds.rename({name: "si10"})
                 case "unknown", 1:
                     ds = ds.rename({name: "tcc"})
                 case "unknown", _:
