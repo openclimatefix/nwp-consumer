@@ -546,7 +546,8 @@ class TensorStore(abc.ABC):
             }).isnull().all().values:
                 missing_times.append(pd.Timestamp(it).to_pydatetime().replace(tzinfo=dt.UTC))
         if len(missing_times) > 0:
-            log.debug(f"NaNs in init times '{missing_times}' suggest they are missing, will redownload")
+            log.debug(f"NaNs in init times '{missing_times}' suggest they are missing, "
+                      f"will redownload")
         return Success(missing_times)
 
     @staticmethod
