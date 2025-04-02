@@ -325,7 +325,7 @@ class TensorStore(abc.ABC):
     @staticmethod
     def _has_nans(store_da: xr.DataArray) -> ResultE[bool]:
         """Check the store for NaN values."""
-        nans_in_image_threshold: float = 0.2
+        nans_in_image_threshold: float = 0.1
         images_failing_nan_check_threshold: float = 0.0
         def _calc_null_percentage(data: np.typing.NDArray[np.float32]) -> float:
             nulls = np.isnan(data)
@@ -350,14 +350,16 @@ class TensorStore(abc.ABC):
                 f"Got: {store_da.dims}.",
             ))
 
-        nan_percentage_per_step: xr.DataArray = store_da.isnull().mean(
-            dim=spatial_dims,
-        ).mean("step")
-
-        failed_image_count: int = int(
-            (nan_percentage_per_step > nans_in_image_threshold).sum().values,
+        result = xr.apply_ufunc(
+            _calc_null_percentage,
+            store_da,
+            input_core_dims=[spatial_dims],
+            vectorize=True,
+            dask="parallelized",
         )
-        total_image_count: int = nan_percentage_per_step.size
+
+        failed_image_count: int = (result > nans_in_image_threshold).sum().values
+        total_image_count: int = result.size
         failed_image_percentage: float = failed_image_count / total_image_count
         if failed_image_percentage > images_failing_nan_check_threshold:
             log.warning(
