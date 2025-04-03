@@ -102,6 +102,13 @@ class ModelMetadata:
                 ).map(lambda coords: dataclasses.replace(
                     self, name=f"{self.name}_uk", expected_coordinates=coords,
                 )).unwrap()
+            case "uk-north60":
+                # same as uk. but north is 60, not 62
+                return self.expected_coordinates.crop(
+                    north=60, west=-12, south=48, east=3,
+                ).map(lambda coords: dataclasses.replace(
+                    self, name=f"{self.name}_uk", expected_coordinates=coords,
+                )).unwrap()
             case "india":
                 return self.expected_coordinates.crop(
                     north=35, west=67, south=6, east=97,
