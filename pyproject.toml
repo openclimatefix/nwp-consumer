@@ -23,6 +23,7 @@ dependencies = [
     "cfgrib == 0.9.14.1",
     "dagster-pipes == 1.9.3",
     "joblib == 1.4.2",
+    "numcodecs == 0.15.1",
     "numpy == 2.1.0",
     "ocf-blosc2 == 0.0.11",
     "psutil == 6.0.0",
