@@ -86,6 +86,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                 "hres-ifs-uk": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk-north60"),
                 "hres-ifs-india": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("india")\
                     .with_chunk_count_overrides({"variable": 1}),
+                "hres-ifs-nl": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("nl"),
             },
         )
 
