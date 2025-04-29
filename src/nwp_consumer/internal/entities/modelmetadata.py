@@ -144,6 +144,16 @@ class ModelMetadata:
         """Returns metadata for the given model with the given running hours."""
         return dataclasses.replace(self, running_hours=hours)
 
+    def with_max_step(self, max_step: int) -> "ModelMetadata":
+        """Returns metadata for the given model with the given max step."""
+        return dataclasses.replace(
+            self,
+            expected_coordinates=dataclasses.replace(
+                self.expected_coordinates,
+                step=[s for s in self.expected_coordinates.step if s <= max_step],
+            ),
+        )
+
     def month_its(self, year: int, month: int) -> list[dt.datetime]:
         """Generate all init times for a given month."""
         days = pd.Period(f"{year}-{month}").days_in_month
