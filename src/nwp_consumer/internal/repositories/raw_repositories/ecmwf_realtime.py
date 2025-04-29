@@ -86,7 +86,8 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                 "hres-ifs-uk": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk-north60"),
                 "hres-ifs-india": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("india")\
                     .with_chunk_count_overrides({"variable": 1}),
-                "hres-ifs-nl": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("nl"),
+                "hres-ifs-nl": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("nl")\
+                    .with_max_step(56),
             },
         )
 
@@ -320,7 +321,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             it: The init time of the model run.
             max_step: The maximum step in hours to consider.
         """
-        prefix: str = os.getenv("ECMWF_DISSEMINATION_REALTIME_FILE_PREFIX", "A2")
+        prefix: str = os.getenv("ECMWF_REALTIME_DISSEMINATION_FILE_PREFIX", "A2")
         pattern: str = r"^" + prefix + r"[DS](\d{8})(\d{8})\d$"
         match: re.Match[str] | None = re.search(pattern=pattern, string=filename)
         if match is None:
