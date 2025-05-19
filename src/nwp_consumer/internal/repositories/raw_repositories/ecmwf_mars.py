@@ -321,7 +321,7 @@ class ECMWFMARSRawRepository(ports.RawRepository):
         try:
             dss: list[xr.Dataset] = cfgrib.open_datasets(
                 path=path.as_posix(),
-                chunks={"time": 1, "step": -1, "longitude": "auto", "latitude": "auto"},
+                chunks={"time": 1, "step": -1, "longitude": -1, "latitude": -1},
                 backend_kwargs={"indexpath": ""},
             )
         except Exception as e:
