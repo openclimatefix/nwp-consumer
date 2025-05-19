@@ -496,7 +496,7 @@ class NWPDimensionCoordinateMap:
 
         Args:
             chunk_count_overrides: A dictionary mapping dimension labels to the
-                number of chunks to split the dimension into.
+                *number* of chunks to split the dimension into.
         """
         default_dict: dict[str, int] = {
             dim: 1
@@ -506,8 +506,12 @@ class NWPDimensionCoordinateMap:
         }
 
         out_dict = {}
+        # Put overrides in
         for key in default_dict:
-            out_dict[key] = chunk_count_overrides.get(key, default_dict[key])
+            if key in chunk_count_overrides:
+                out_dict[key] = len(getattr(self, key)) // chunk_count_overrides[key]
+            else:
+                out_dict[key] = default_dict[key]
 
         return out_dict
 
