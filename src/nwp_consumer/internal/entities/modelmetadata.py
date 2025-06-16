@@ -123,7 +123,7 @@ class ModelMetadata:
                 )).unwrap()
             case "nl":
                 return self.expected_coordinates.crop(
-                    north=53.8, west=2.8, south=50.6, east=7.7,
+                    north=54, west=2, south=50, east=8,
                 ).map(lambda coords: dataclasses.replace(
                     self, name=f"{self.name}_nl", expected_coordinates=coords,
                 )).unwrap()

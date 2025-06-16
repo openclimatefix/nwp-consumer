@@ -87,7 +87,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                 "hres-ifs-india": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("india")\
                     .with_chunk_count_overrides({"variable": 1}),
                 "hres-ifs-nl": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("nl")\
-                    .with_max_step(56),
+                    .with_max_step(84),
             },
         )
 
@@ -245,6 +245,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             ))
 
         processed_das: list[xr.DataArray] = []
+        num_skipped: int = 0
         expected_lons = ECMWFRealTimeS3RawRepository.model().expected_coordinates.longitude
         expected_lats = ECMWFRealTimeS3RawRepository.model().expected_coordinates.latitude
 
@@ -259,6 +260,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                 (expected_lats[-1] <= max(ds.coords["latitude"].values) <= expected_lats[0])
             )
             if not is_relevant_dataset_predicate:
+                num_skipped += 1
                 continue
             try:
                 da: xr.DataArray = (
@@ -301,10 +303,11 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             )
 
         if len(processed_das) == 0:
-            return Failure(ValueError(
+            # Some files do not have data for the relevant area, so don't error here
+            log.warning(
                 f"No DataArrays found in '{path}' after processing. "
                 "Ensure the file contains the expected parameters.",
-            ))
+            )
 
         return Success(processed_das)
 
