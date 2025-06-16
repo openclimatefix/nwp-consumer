@@ -303,11 +303,10 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             )
 
         if len(processed_das) == 0:
-            # Some files do not have data for the relevant area, so don't error here
-            log.warning(
+            return Failure(ValueError(
                 f"Skipped {num_skipped}/{len(dss)} datasets from '{path}'. "
                 "File may not contain the expected parameters and geographic bounds.",
-            )
+            ))
 
         return Success(processed_das)
 
