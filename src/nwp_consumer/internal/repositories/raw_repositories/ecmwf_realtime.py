@@ -305,8 +305,8 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
         if len(processed_das) == 0:
             # Some files do not have data for the relevant area, so don't error here
             log.warning(
-                f"No DataArrays found in '{path}' after processing. "
-                "Ensure the file contains the expected parameters.",
+                f"Skipped {num_skipped}/{len(dss)} datasets from '{path}'. "
+                "File may not contain the expected parameters and geographic bounds.",
             )
 
         return Success(processed_das)
