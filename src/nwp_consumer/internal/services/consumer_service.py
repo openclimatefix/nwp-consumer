@@ -74,12 +74,16 @@ class ConsumerService(ports.ConsumeUseCase):
         for value in generator:
             if isinstance(value, Failure):
                 results.extend([value])
+            elif len(value.unwrap()) == 0:
+                continue
             else:
                 results.extend([store.write_to_region(da=da) for da in value.unwrap()])
         successes, failures = partition(results)
         # TODO: Define the failure threshold for number of write attempts properly
+        # ECMWF Realtime for instance needs a bit of tolerance because of some files not containing
+        # data for all geographic regions.
         log.info(f"Processed {len(successes)} DataArrays successfully with {len(failures)} errors.")
-        if len(failures) > 0:
+        if len(failures)/len(results) > 0.06:
             for i, exc in enumerate(failures):
                 if i < 5:
                     log.error(str(exc))
@@ -87,7 +91,7 @@ class ConsumerService(ports.ConsumeUseCase):
                     break
             return Failure(OSError(
                 "Error threshold exceeded: "
-                f"{len(failures)} errors (>0) occurred during processing.",
+                f"{len(failures)/len(results)} errors (>6%) occurred during processing.",
             ))
         else:
             return Success(sum(successes))
