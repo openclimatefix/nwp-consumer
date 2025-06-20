@@ -11,7 +11,6 @@ from nwp_consumer.internal import entities, ports
 
 
 class DummyRawRepository(ports.RawRepository):
-
     @classmethod
     @override
     def authenticate(cls) -> ResultE["DummyRawRepository"]:
@@ -52,18 +51,18 @@ class DummyRawRepository(ports.RawRepository):
             running_hours=[0, 6, 12, 18],
         )
 
-
     @override
-    def fetch_init_data(self, it: dt.datetime) \
-            -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
-
+    def fetch_init_data(
+        self, it: dt.datetime
+    ) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         def gen_dataset(step: int, variable: str) -> ResultE[list[xr.DataArray]]:
             """Define a generator that provides one variable at one step."""
             da = xr.DataArray(
                 name=self.model().name,
                 dims=["init_time", "step", "variable", "latitude", "longitude"],
                 data=np.random.rand(1, 1, 1, 721, 1440),
-                coords=self.model().expected_coordinates.to_pandas() | {
+                coords=self.model().expected_coordinates.to_pandas()
+                | {
                     "init_time": [np.datetime64(it.replace(tzinfo=None), "ns")],
                     "step": [step],
                     "variable": [variable],
@@ -71,19 +70,15 @@ class DummyRawRepository(ports.RawRepository):
             )
             return Success([da])
 
-
         for s in self.model().expected_coordinates.step:
             for v in self.model().expected_coordinates.variable:
                 yield delayed(gen_dataset)(s, v.value)
 
 
 class DummyNotificationRepository(ports.NotificationRepository):
-
     @override
     def notify(
-            self,
-            message: entities.StoreAppendedNotification | entities.StoreCreatedNotification,
+        self,
+        message: entities.StoreAppendedNotification | entities.StoreCreatedNotification,
     ) -> ResultE[str]:
         return Success(str(message))
-
-

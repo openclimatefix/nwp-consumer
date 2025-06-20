@@ -58,7 +58,8 @@ class TestNOAAS3RawRepository(unittest.TestCase):
                     test_coordinates.determine_region,
                 )
                 self.assertIsInstance(
-                    determine_region_result, Success,
+                    determine_region_result,
+                    Success,
                     msg=f"{determine_region_result!s}",
                 )
 
@@ -114,7 +115,6 @@ class TestNOAAS3RawRepository(unittest.TestCase):
                     steps=NOAAS3RawRepository.model().expected_coordinates.step,
                 )
                 self.assertEqual(result, t.expected)
-
 
     def test__convert(self) -> None:
         """Test the _convert method."""
@@ -189,4 +189,3 @@ class TestNOAAS3RawRepository(unittest.TestCase):
                     self.assertIsInstance(region_result, Failure, msg=f"{region_result}")
                 else:
                     self.assertIsInstance(region_result, Success, msg=f"{region_result}")
-

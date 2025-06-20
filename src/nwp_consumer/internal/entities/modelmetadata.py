@@ -76,17 +76,19 @@ class ModelMetadata:
 
     def __str__(self) -> str:
         """Return a pretty-printed string representation of the metadata."""
-        pretty: str = "".join((
-            "Model:",
-            "\n\t{self.name} ({self.resolution} resolution)",
-            "\tCoordinates:",
-            "\n".join(
-                f"\t\t{dim}: {vals}"
-                if len(vals) < 5
-                else f"\t\t{dim}: {vals[:3]} ... {vals[-3:]}"
-                for dim, vals in self.expected_coordinates.__dict__.items()
-            ),
-        ))
+        pretty: str = "".join(
+            (
+                "Model:",
+                "\n\t{self.name} ({self.resolution} resolution)",
+                "\tCoordinates:",
+                "\n".join(
+                    f"\t\t{dim}: {vals}"
+                    if len(vals) < 5
+                    else f"\t\t{dim}: {vals[:3]} ... {vals[-3:]}"
+                    for dim, vals in self.expected_coordinates.__dict__.items()
+                ),
+            )
+        )
         return pretty
 
     def with_region(self, region: str) -> "ModelMetadata":
@@ -97,36 +99,91 @@ class ModelMetadata:
         """
         match region:
             case "uk":
-                return self.expected_coordinates.crop(
-                    north=62, west=-12, south=48, east=3,
-                ).map(lambda coords: dataclasses.replace(
-                    self, name=f"{self.name}_uk", expected_coordinates=coords,
-                )).unwrap()
+                return (
+                    self.expected_coordinates.crop(
+                        north=62,
+                        west=-12,
+                        south=48,
+                        east=3,
+                    )
+                    .map(
+                        lambda coords: dataclasses.replace(
+                            self,
+                            name=f"{self.name}_uk",
+                            expected_coordinates=coords,
+                        )
+                    )
+                    .unwrap()
+                )
             case "uk-north60":
                 # same as uk. but north is 60, not 62
-                return self.expected_coordinates.crop(
-                    north=60, west=-12, south=48, east=3,
-                ).map(lambda coords: dataclasses.replace(
-                    self, name=f"{self.name}_uk", expected_coordinates=coords,
-                )).unwrap()
+                return (
+                    self.expected_coordinates.crop(
+                        north=60,
+                        west=-12,
+                        south=48,
+                        east=3,
+                    )
+                    .map(
+                        lambda coords: dataclasses.replace(
+                            self,
+                            name=f"{self.name}_uk",
+                            expected_coordinates=coords,
+                        )
+                    )
+                    .unwrap()
+                )
             case "india":
-                return self.expected_coordinates.crop(
-                    north=35, west=67, south=6, east=97,
-                ).map(lambda coords: dataclasses.replace(
-                    self, name=f"{self.name}_india", expected_coordinates=coords,
-                )).unwrap()
+                return (
+                    self.expected_coordinates.crop(
+                        north=35,
+                        west=67,
+                        south=6,
+                        east=97,
+                    )
+                    .map(
+                        lambda coords: dataclasses.replace(
+                            self,
+                            name=f"{self.name}_india",
+                            expected_coordinates=coords,
+                        )
+                    )
+                    .unwrap()
+                )
             case "west-europe":
-                return self.expected_coordinates.crop(
-                    north=63, west=-12, south=35, east=26,
-                ).map(lambda coords: dataclasses.replace(
-                    self, name=f"{self.name}_west-europe", expected_coordinates=coords,
-                )).unwrap()
+                return (
+                    self.expected_coordinates.crop(
+                        north=63,
+                        west=-12,
+                        south=35,
+                        east=26,
+                    )
+                    .map(
+                        lambda coords: dataclasses.replace(
+                            self,
+                            name=f"{self.name}_west-europe",
+                            expected_coordinates=coords,
+                        )
+                    )
+                    .unwrap()
+                )
             case "nl":
-                return self.expected_coordinates.crop(
-                    north=54, west=2, south=50, east=8,
-                ).map(lambda coords: dataclasses.replace(
-                    self, name=f"{self.name}_nl", expected_coordinates=coords,
-                )).unwrap()
+                return (
+                    self.expected_coordinates.crop(
+                        north=54,
+                        west=2,
+                        south=50,
+                        east=8,
+                    )
+                    .map(
+                        lambda coords: dataclasses.replace(
+                            self,
+                            name=f"{self.name}_nl",
+                            expected_coordinates=coords,
+                        )
+                    )
+                    .unwrap()
+                )
             case _:
                 log.warning(f"Unknown region '{region}', not cropping expected coordinates.")
                 return self
@@ -162,6 +219,7 @@ class ModelMetadata:
             for hour in self.running_hours:
                 its.append(dt.datetime(year, month, day, hour, tzinfo=dt.UTC))
         return its
+
 
 class Models:
     """Namespace containing known models."""
@@ -212,8 +270,8 @@ class Models:
                 Parameter.TEMPERATURE_SL,
             ],
             ensemble_stat=["mean", "std", "P10", "P25", "P75", "P90"],
-            latitude=[v/10 for v in range(900, -900, -1)],
-            longitude=[v/10 for v in range(-1800, 1800, 1)],
+            latitude=[v / 10 for v in range(900, -900, -1)],
+            longitude=[v / 10 for v in range(-1800, 1800, 1)],
         ),
         running_hours=[0, 12],
     )
@@ -241,8 +299,8 @@ class Models:
                 # Parameter.TOTAL_PRECIPITATION_RATE_GL,
             ],
             ensemble_member=list(range(1, 51)),
-            latitude=[v/10 for v in range(900, -900, -1)],
-            longitude=[v/10 for v in range(-1800, 1800, 1)],
+            latitude=[v / 10 for v in range(900, -900, -1)],
+            longitude=[v / 10 for v in range(-1800, 1800, 1)],
         ),
         running_hours=[0, 6, 12, 18],
     )
@@ -283,7 +341,7 @@ class Models:
     MO_UM_GLOBAL_17KM: ModelMetadata = ModelMetadata(
         name="um-global",
         resolution="17km",
-        expected_coordinates = NWPDimensionCoordinateMap(
+        expected_coordinates=NWPDimensionCoordinateMap(
             init_time=[],
             step=list(range(0, 48, 1)),
             variable=[
@@ -299,16 +357,17 @@ class Models:
                 Parameter.WIND_V_COMPONENT_10m,
                 Parameter.VISIBILITY_SL,
             ],
-            latitude=[
-                float(f"{lat:.4f}") for lat in np.arange(89.856, -89.856 - 0.156, -0.156)
-            ],
+            latitude=[float(f"{lat:.4f}") for lat in np.arange(89.856, -89.856 - 0.156, -0.156)],
             longitude=[
-                float(f"{lon:.4f}") for lon in np.concatenate([
-                    np.arange(-45, 45, 0.234),
-                    np.arange(45, 135, 0.234),
-                    np.arange(135, 225, 0.234),
-                    np.arange(225, 315, 0.234),
-                ])
+                float(f"{lon:.4f}")
+                for lon in np.concatenate(
+                    [
+                        np.arange(-45, 45, 0.234),
+                        np.arange(45, 135, 0.234),
+                        np.arange(135, 225, 0.234),
+                        np.arange(225, 315, 0.234),
+                    ]
+                )
             ],
             # TODO: Change to -180 -> 180
         ),
@@ -338,8 +397,7 @@ class Models:
                 ],
             ),
             latitude=[
-                float(f"{lat:.4f}")
-                for lat in np.arange(89.953125, -89.953125 - 0.09375, -0.09375)
+                float(f"{lat:.4f}") for lat in np.arange(89.953125, -89.953125 - 0.09375, -0.09375)
             ],
             longitude=[
                 float(f"{lon:.4f}")
@@ -406,9 +464,9 @@ class Models:
                 ],
             ),
             # Taken from iris-grib reading in MetOffice UKV data
-            y_laea=[int(y) for y in np.arange(start=700000, stop=-576000-2000, step=-2000)],
-            x_laea=[int(x) for x in np.arange(start=-576000, stop=332000+2000, step=2000)],
+            y_laea=[int(y) for y in np.arange(start=700000, stop=-576000 - 2000, step=-2000)],
+            x_laea=[int(x) for x in np.arange(start=-576000, stop=332000 + 2000, step=2000)],
         ),
-        running_hours=list(range(0, 24, 3)), # Only first 12 steps available for hourly runs
+        running_hours=list(range(0, 24, 3)),  # Only first 12 steps available for hourly runs
     )
     """MetOffice's Unified Model in the UKV configuration, at a resolution of 2km"""

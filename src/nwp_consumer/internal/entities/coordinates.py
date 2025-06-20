@@ -182,8 +182,8 @@ class NWPDimensionCoordinateMap:
 
     @classmethod
     def from_pandas(
-            cls,
-            pd_indexes: dict[str, pd.Index], # type: ignore
+        cls,
+        pd_indexes: dict[str, pd.Index],  # type: ignore
     ) -> ResultE["NWPDimensionCoordinateMap"]:
         """Create a new NWPDimensionCoordinateMap from a dictionary of pandas Index objects.
 
@@ -208,79 +208,111 @@ class NWPDimensionCoordinateMap:
             `NWPDimensionCoordinateMap.to_pandas` for the reverse operation.
         """
         if not all(key in pd_indexes for key in ["init_time", "step", "variable"]):
-            return Failure(KeyError(
-                f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
-                "as required keys 'init_time', 'step', and 'variable' are not all present. "
-                f"Got: '{list(pd_indexes.keys())}'",
-            ))
+            return Failure(
+                KeyError(
+                    f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
+                    "as required keys 'init_time', 'step', and 'variable' are not all present. "
+                    f"Got: '{list(pd_indexes.keys())}'",
+                )
+            )
         if not all(len(pd_indexes[key].to_list()) > 0 for key in ["init_time", "step", "variable"]):
-            return Failure(ValueError(
-                f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
-                "as the 'init_time', 'step', and 'variable' dimensions must have "
-                "at least one coordinate value.",
-            ))
+            return Failure(
+                ValueError(
+                    f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
+                    "as the 'init_time', 'step', and 'variable' dimensions must have "
+                    "at least one coordinate value.",
+                )
+            )
         input_parameter_set: set[str] = set(pd_indexes["variable"].to_list())
         known_parameter_set: set[str] = {str(p) for p in Parameter}
         if not input_parameter_set.issubset(known_parameter_set):
-            return Failure(ValueError(
-                f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
-                "as the 'variable' dimension contains unknown parameters: ",
-                f"'{list(input_parameter_set.difference(known_parameter_set))}'. "
-                "Ensure the parameter names match the names of the standard parameter set "
-                "defined by the `entities.Parameter` Enum.",
-            ))
+            return Failure(
+                ValueError(
+                    f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
+                    "as the 'variable' dimension contains unknown parameters: ",
+                    f"'{list(input_parameter_set.difference(known_parameter_set))}'. "
+                    "Ensure the parameter names match the names of the standard parameter set "
+                    "defined by the `entities.Parameter` Enum.",
+                )
+            )
         if not all(key in [f.name for f in dataclasses.fields(cls)] for key in pd_indexes):
             unknown_keys: list[str] = list(
                 set(pd_indexes.keys()).difference([f.name for f in dataclasses.fields(cls)]),
             )
-            return Failure(KeyError(
-                f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
-                f"as unknown index/dimension keys were encountered: {unknown_keys}.",
-            ))
-        if "latitude" in pd_indexes \
-            and pd_indexes["latitude"].values[0] < pd_indexes["latitude"].values[-1]:
-            return Failure(ValueError(
-                "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
-                "as the latitude values are not in descending order. "
-                "Latitude coordinates should run from 90 -> -90. "
-                "Modify the coordinate in the source data to be in descending order.",
-            ))
-        if "longitude" in pd_indexes \
-            and pd_indexes["longitude"].values[0] > pd_indexes["longitude"].values[-1]:
-            return Failure(ValueError(
-                "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
-                "as the longitude values are not in ascending order. "
-                "Longitude coordinates should run from -180 -> 180. "
-                "Modify the coordinate in the source data to be in ascending order.",
-            ))
-        if "y_osgb" in pd_indexes \
-            and pd_indexes["y_osgb"].values[0] < pd_indexes["y_osgb"].values[-1]:
-            return Failure(ValueError(
-                "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
-                "as the y_osgb values are not in descending order. "
-                "Modify the coordinate in the source data to be in descending order.",
-            ))
-        if "x_osgb" in pd_indexes \
-            and pd_indexes["x_osgb"].values[0] > pd_indexes["x_osgb"].values[-1]:
-            return Failure(ValueError(
-                "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
-                "as the x_osgb values are not in ascending order. "
-                "Modify the coordinate in the source data to be in ascending order.",
-            ))
-        if "y_laea" in pd_indexes \
-            and pd_indexes["y_laea"].values[0] < pd_indexes["y_laea"].values[-1]:
-            return Failure(ValueError(
-                "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
-                "as the y_laea values are not in descending order. "
-                "Modify the coordinate in the source data to be in descending order.",
-            ))
-        if "x_laea" in pd_indexes \
-            and pd_indexes["x_laea"].values[0] > pd_indexes["x_laea"].values[-1]:
-            return Failure(ValueError(
-                "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
-                "as the x_laea values are not in ascending order. "
-                "Modify the coordinate in the source data to be in ascending order.",
-            ))
+            return Failure(
+                KeyError(
+                    f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
+                    f"as unknown index/dimension keys were encountered: {unknown_keys}.",
+                )
+            )
+        if (
+            "latitude" in pd_indexes
+            and pd_indexes["latitude"].values[0] < pd_indexes["latitude"].values[-1]
+        ):
+            return Failure(
+                ValueError(
+                    "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
+                    "as the latitude values are not in descending order. "
+                    "Latitude coordinates should run from 90 -> -90. "
+                    "Modify the coordinate in the source data to be in descending order.",
+                )
+            )
+        if (
+            "longitude" in pd_indexes
+            and pd_indexes["longitude"].values[0] > pd_indexes["longitude"].values[-1]
+        ):
+            return Failure(
+                ValueError(
+                    "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
+                    "as the longitude values are not in ascending order. "
+                    "Longitude coordinates should run from -180 -> 180. "
+                    "Modify the coordinate in the source data to be in ascending order.",
+                )
+            )
+        if (
+            "y_osgb" in pd_indexes
+            and pd_indexes["y_osgb"].values[0] < pd_indexes["y_osgb"].values[-1]
+        ):
+            return Failure(
+                ValueError(
+                    "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
+                    "as the y_osgb values are not in descending order. "
+                    "Modify the coordinate in the source data to be in descending order.",
+                )
+            )
+        if (
+            "x_osgb" in pd_indexes
+            and pd_indexes["x_osgb"].values[0] > pd_indexes["x_osgb"].values[-1]
+        ):
+            return Failure(
+                ValueError(
+                    "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
+                    "as the x_osgb values are not in ascending order. "
+                    "Modify the coordinate in the source data to be in ascending order.",
+                )
+            )
+        if (
+            "y_laea" in pd_indexes
+            and pd_indexes["y_laea"].values[0] < pd_indexes["y_laea"].values[-1]
+        ):
+            return Failure(
+                ValueError(
+                    "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
+                    "as the y_laea values are not in descending order. "
+                    "Modify the coordinate in the source data to be in descending order.",
+                )
+            )
+        if (
+            "x_laea" in pd_indexes
+            and pd_indexes["x_laea"].values[0] > pd_indexes["x_laea"].values[-1]
+        ):
+            return Failure(
+                ValueError(
+                    "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
+                    "as the x_laea values are not in ascending order. "
+                    "Modify the coordinate in the source data to be in ascending order.",
+                )
+            )
 
         # Convert the pandas Index objects to lists of the appropriate types
         return Success(
@@ -296,34 +328,28 @@ class NWPDimensionCoordinateMap:
                 # NOTE: This list comprehension can be done safely, as above we have
                 # already performed a check on the pandas variable names being a subset
                 # of the `Parameter` enum value names.
-                variable=[
-                    Parameter(pdp)
-                    for pdp in pd_indexes["variable"].to_list()
-                ],
-                ensemble_stat=pd_indexes["ensemble_stat"].to_list() \
-                    if "ensemble_stat" in pd_indexes else None,
-                ensemble_member=pd_indexes["ensemble_member"].to_list() \
-                    if "ensemble_member" in pd_indexes else None,
-                latitude=pd_indexes["latitude"].to_list() \
-                    if "latitude" in pd_indexes else None,
-                longitude=pd_indexes["longitude"].to_list() \
-                    if "longitude" in pd_indexes else None,
-                y_osgb=pd_indexes["y_osgb"].to_list() \
-                    if "y_osgb" in pd_indexes else None,
-                x_osgb=pd_indexes["x_osgb"].to_list() \
-                    if "x_osgb" in pd_indexes else None,
-                y_laea=pd_indexes["y_laea"].to_list() \
-                    if "y_laea" in pd_indexes else None,
-                x_laea=pd_indexes["x_laea"].to_list() \
-                    if "x_laea" in pd_indexes else None,
+                variable=[Parameter(pdp) for pdp in pd_indexes["variable"].to_list()],
+                ensemble_stat=pd_indexes["ensemble_stat"].to_list()
+                if "ensemble_stat" in pd_indexes
+                else None,
+                ensemble_member=pd_indexes["ensemble_member"].to_list()
+                if "ensemble_member" in pd_indexes
+                else None,
+                latitude=pd_indexes["latitude"].to_list() if "latitude" in pd_indexes else None,
+                longitude=pd_indexes["longitude"].to_list() if "longitude" in pd_indexes else None,
+                y_osgb=pd_indexes["y_osgb"].to_list() if "y_osgb" in pd_indexes else None,
+                x_osgb=pd_indexes["x_osgb"].to_list() if "x_osgb" in pd_indexes else None,
+                y_laea=pd_indexes["y_laea"].to_list() if "y_laea" in pd_indexes else None,
+                x_laea=pd_indexes["x_laea"].to_list() if "x_laea" in pd_indexes else None,
             ),
         )
 
     @classmethod
-    def from_xarray(cls, xarray_obj: xr.DataArray | xr.Dataset) \
-            -> ResultE["NWPDimensionCoordinateMap"]:
+    def from_xarray(
+        cls, xarray_obj: xr.DataArray | xr.Dataset
+    ) -> ResultE["NWPDimensionCoordinateMap"]:
         """Create a new NWPDimensionCoordinateMap from an XArray DataArray or Dataset object."""
-        return cls.from_pandas(xarray_obj.coords.indexes)   # type: ignore
+        return cls.from_pandas(xarray_obj.coords.indexes)  # type: ignore
 
     def to_pandas(self) -> dict[str, pd.Index]:  # type: ignore
         """Convert the coordinate map to a dictionary of pandas Index objects.
@@ -500,8 +526,8 @@ class NWPDimensionCoordinateMap:
         """
         default_dict: dict[str, int] = {
             dim: 1
-                if len(getattr(self, dim)) <= 8 or dim in ["init_time", "step", "variable"]
-                else math.ceil(len(getattr(self, dim)))
+            if len(getattr(self, dim)) <= 8 or dim in ["init_time", "step", "variable"]
+            else math.ceil(len(getattr(self, dim)))
             for dim in self.dims
         }
 
@@ -514,7 +540,6 @@ class NWPDimensionCoordinateMap:
                 out_dict[key] = default_dict[key]
 
         return out_dict
-
 
     def as_zeroed_dataarray(self, name: str, chunks: dict[str, int]) -> xr.DataArray:
         """Express the coordinates as an xarray DataArray.
@@ -537,16 +562,21 @@ class NWPDimensionCoordinateMap:
             chunks=tuple([chunks[k] for k in self.shapemap]),
         )
         attrs: dict[str, str] = {
-            "produced_by": "".join((
-                f"nwp-consumer {__version__} at ",
-                f"{dt.datetime.now(tz=dt.UTC).strftime('%Y-%m-%d %H:%M')}",
-            )),
-            "variables": json.dumps({
-                p.value: {
-                    "description": p.metadata().description,
-                    "units": p.metadata().units,
-                } for p in self.variable
-            }),
+            "produced_by": "".join(
+                (
+                    f"nwp-consumer {__version__} at ",
+                    f"{dt.datetime.now(tz=dt.UTC).strftime('%Y-%m-%d %H:%M')}",
+                )
+            ),
+            "variables": json.dumps(
+                {
+                    p.value: {
+                        "description": p.metadata().description,
+                        "units": p.metadata().units,
+                    }
+                    for p in self.variable
+                }
+            ),
             "coord_system": json.dumps(self.coord_system),
         }
         # Create a DataArray object with the given coordinates and dummy values
@@ -559,12 +589,12 @@ class NWPDimensionCoordinateMap:
         return da
 
     def crop(
-            self,
-            north: float,
-            west: float,
-            south: float,
-            east: float,
-        ) -> ResultE["NWPDimensionCoordinateMap"]:
+        self,
+        north: float,
+        west: float,
+        south: float,
+        east: float,
+    ) -> ResultE["NWPDimensionCoordinateMap"]:
         """Return a new map cropped to the given region.
 
         Args:
@@ -579,45 +609,51 @@ class NWPDimensionCoordinateMap:
         """
         # Ensure the region is valid
         if self.latitude is None or self.longitude is None:
-            return Failure(ValueError(
-                "Cannot crop coordinates to a region as latitude and/or longitude "
-                "dimension coordinates are not present in the map. "
-                f"Dimensions: '{self.dims}'.",
-            ))
+            return Failure(
+                ValueError(
+                    "Cannot crop coordinates to a region as latitude and/or longitude "
+                    "dimension coordinates are not present in the map. "
+                    f"Dimensions: '{self.dims}'.",
+                )
+            )
 
         if not (-90 <= south < north <= 90 and -180 <= west < east <= 180):
-            return Failure(ValueError(
-                "Cannot crop coordinates to an invalid region. "
-                f"North ({north}) must be greater than South ({south}) "
-                " and both must sit between 90 and -90 degrees; "
-                f"East ({east}) greater than West ({west}) "
-                " and both must sit between 180 and -180 degrees.",
-            ))
+            return Failure(
+                ValueError(
+                    "Cannot crop coordinates to an invalid region. "
+                    f"North ({north}) must be greater than South ({south}) "
+                    " and both must sit between 90 and -90 degrees; "
+                    f"East ({east}) greater than West ({west}) "
+                    " and both must sit between 180 and -180 degrees.",
+                )
+            )
 
-        if (north > self.latitude[0] or south < self.latitude[-1]
-            or west < self.longitude[0] or east > self.longitude[-1]):
-            return Failure(ValueError(
-                "Cannot crop coordinates to a region outside the bounds of the map. "
-                f"Crop region '{north, west, south, east}' not in "
-                f"map bounds '{self.nwse()}'.",
-            ))
+        if (
+            north > self.latitude[0]
+            or south < self.latitude[-1]
+            or west < self.longitude[0]
+            or east > self.longitude[-1]
+        ):
+            return Failure(
+                ValueError(
+                    "Cannot crop coordinates to a region outside the bounds of the map. "
+                    f"Crop region '{north, west, south, east}' not in "
+                    f"map bounds '{self.nwse()}'.",
+                )
+            )
 
         # Determine the indices of the region in the latitude and longitude lists
-        lat_indices = [
-            i for i, lat in enumerate(self.latitude)
-            if south <= lat <= north
-        ]
-        lon_indices = [
-            i for i, lon in enumerate(self.longitude)
-            if west <= lon <= east
-        ]
+        lat_indices = [i for i, lat in enumerate(self.latitude) if south <= lat <= north]
+        lon_indices = [i for i, lon in enumerate(self.longitude) if west <= lon <= east]
 
         # Create a new map with the cropped coordinates
-        return Success(dataclasses.replace(
-            self,
-            latitude=[self.latitude[i] for i in lat_indices],
-            longitude=[self.longitude[i] for i in lon_indices],
-        ))
+        return Success(
+            dataclasses.replace(
+                self,
+                latitude=[self.latitude[i] for i in lat_indices],
+                longitude=[self.longitude[i] for i in lon_indices],
+            )
+        )
 
     def nwse(self) -> tuple[float, float, float, float]:
         """Return the north, west, south, and east bounds of the map.
@@ -627,5 +663,4 @@ class NWPDimensionCoordinateMap:
         """
         if self.latitude is not None and self.longitude is not None:
             return self.latitude[0], self.longitude[0], self.latitude[-1], self.longitude[-1]
-        return 90.0, -180.0, -90.0, 180.0 # TODO: Cross this bridge when we come to it
-
+        return 90.0, -180.0, -90.0, 180.0  # TODO: Cross this bridge when we come to it

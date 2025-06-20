@@ -96,7 +96,6 @@ class ParameterData:
     alternative_shortnames: list[str] = dataclasses.field(default_factory=list)
     """Alternate names for the parameter found in the wild."""
 
-
     def __str__(self) -> str:
         """String representation of the parameter."""
         return self.name
@@ -139,7 +138,6 @@ class Parameter(StrEnum):
     def metadata(self) -> ParameterData:
         """Get the metadata for the parameter."""
         match self.name:
-
             case self.TEMPERATURE_SL.name:
                 return ParameterData(
                     name=str(self),
@@ -154,9 +152,9 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="Downward shortwave radiation flux at ground level. "
-                                "Defined as the mean amount of solar radiation "
-                                "incident on the surface expected over the next hour."
-                                "This is made up of both direct and diffuse radiation.",
+                    "Defined as the mean amount of solar radiation "
+                    "incident on the surface expected over the next hour."
+                    "This is made up of both direct and diffuse radiation.",
                     units="W/m^2",
                     limits=ParameterLimits(upper=1500, lower=0),
                     alternative_shortnames=["swavr", "ssrd", "dswrf", "sdswrf"],
@@ -167,8 +165,8 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="Downward longwave radiation flux at ground level. "
-                                "Defined as the mean amount of thermal radiation "
-                                "incident on the surface expected over the next hour.",
+                    "Defined as the mean amount of thermal radiation "
+                    "incident on the surface expected over the next hour.",
                     units="W/m^2",
                     limits=ParameterLimits(upper=500, lower=0),
                     alternative_shortnames=["strd", "dlwrf", "sdlwrf"],
@@ -179,8 +177,8 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="Relative humidity at screen level. "
-                                "Defined as the ratio of partial pressure of water vapour "
-                                "to the equilibrium vapour pressure of water",
+                    "Defined as the ratio of partial pressure of water vapour "
+                    "to the equilibrium vapour pressure of water",
                     units="%",
                     limits=ParameterLimits(upper=100, lower=0),
                     alternative_shortnames=["r", "r2"],
@@ -191,8 +189,8 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="Visibility at screen level. "
-                                "Defined as the distance at which an object can be seen "
-                                "horizontally in daylight conditions.",
+                    "Defined as the distance at which an object can be seen "
+                    "horizontally in daylight conditions.",
                     units="m",
                     limits=ParameterLimits(upper=4500, lower=0),
                     alternative_shortnames=["vis"],
@@ -203,8 +201,8 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="U component of wind at 10m above ground level. "
-                                "Defined as the horizontal speed of "
-                                "the wind in the eastward direction.",
+                    "Defined as the horizontal speed of "
+                    "the wind in the eastward direction.",
                     units="m/s",
                     limits=ParameterLimits(upper=100, lower=-100),
                     alternative_shortnames=["u10", "u", "uas"],
@@ -215,8 +213,8 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="V component of wind at 10m above ground level. "
-                                "Defined as the horizontal speed of "
-                                "the wind in the northward direction.",
+                    "Defined as the horizontal speed of "
+                    "the wind in the northward direction.",
                     units="m/s",
                     # Non-tornadic winds are usually < 100m/s
                     limits=ParameterLimits(upper=100, lower=-100),
@@ -228,8 +226,8 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="U component of wind at 100m above ground level. "
-                                "Defined as the horizontal speed of "
-                                "the wind in the eastward direction.",
+                    "Defined as the horizontal speed of "
+                    "the wind in the eastward direction.",
                     units="m/s",
                     limits=ParameterLimits(upper=100, lower=-100),
                     alternative_shortnames=["u100"],
@@ -240,8 +238,8 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="V component of wind at 100m above ground level. "
-                                "Defined as the horizontal speed of "
-                                "the wind in the northward direction.",
+                    "Defined as the horizontal speed of "
+                    "the wind in the northward direction.",
                     units="m/s",
                     limits=ParameterLimits(upper=100, lower=-100),
                     alternative_shortnames=["v100"],
@@ -252,8 +250,8 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="U component of wind at 200m above ground level. "
-                                "Defined as the horizontal speed of "
-                                "the wind in the eastward direction.",
+                    "Defined as the horizontal speed of "
+                    "the wind in the eastward direction.",
                     units="m/s",
                     limits=ParameterLimits(upper=150, lower=-150),
                     alternative_shortnames=["u200"],
@@ -264,8 +262,8 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="V component of wind at 200m above ground level. "
-                                "Defined as the horizontal speed of "
-                                "the wind in the northward direction.",
+                    "Defined as the horizontal speed of "
+                    "the wind in the northward direction.",
                     units="m/s",
                     limits=ParameterLimits(upper=150, lower=-150),
                     alternative_shortnames=["v200"],
@@ -276,8 +274,8 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="The wind direction from 0 to 360. 0 represents a Northerly "
-                                "wind and 90 is Easterly wind. This is confirmed by the UK mean "
-                                "wind direction being Westerly and = ~200. ",
+                    "wind and 90 is Easterly wind. This is confirmed by the UK mean "
+                    "wind direction being Westerly and = ~200. ",
                     units="degrees",
                     limits=ParameterLimits(upper=0, lower=360),
                     alternative_shortnames=["wdir", "wdir10", "10wdir"],
@@ -298,9 +296,9 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="Fraction of grid square covered by high-level cloud. "
-                                "Defined as the ratio of "
-                                "the area of the grid square covered by high-level (>6km) cloud "
-                                "to the square's total area.",
+                    "Defined as the ratio of "
+                    "the area of the grid square covered by high-level (>6km) cloud "
+                    "to the square's total area.",
                     units="UI",
                     limits=ParameterLimits(upper=1, lower=0),
                     alternative_shortnames=["hcc"],
@@ -311,9 +309,9 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="Fraction of grid square covered by medium-level cloud. "
-                                "Defined as the ratio of "
-                                "the area of the grid square covered by medium-level (2-6km) cloud "
-                                "to the square's total area.",
+                    "Defined as the ratio of "
+                    "the area of the grid square covered by medium-level (2-6km) cloud "
+                    "to the square's total area.",
                     units="UI",
                     limits=ParameterLimits(upper=1, lower=0),
                     alternative_shortnames=["mcc"],
@@ -324,9 +322,9 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="Fraction of grid square covered by low-level cloud. "
-                                "Defined as the ratio of "
-                                "the area of the grid square covered by low-level (<2km) cloud "
-                                "to the square's total area.",
+                    "Defined as the ratio of "
+                    "the area of the grid square covered by low-level (<2km) cloud "
+                    "to the square's total area.",
                     units="UI",
                     limits=ParameterLimits(upper=1, lower=0),
                     alternative_shortnames=["lcc"],
@@ -337,9 +335,9 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="Fraction of grid square covered by any cloud. "
-                                "Defined as the ratio of "
-                                "the area of the grid square covered by any cloud "
-                                "to the square's total area.",
+                    "Defined as the ratio of "
+                    "the area of the grid square covered by any cloud "
+                    "to the square's total area.",
                     units="UI",
                     limits=ParameterLimits(upper=1, lower=0),
                     alternative_shortnames=["tcc", "clt"],
@@ -350,8 +348,8 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="Total precipitation rate at ground level. "
-                                "Defined as the rate at which liquid is deposited on the ground "
-                                "including rain, snow, and hail.",
+                    "Defined as the rate at which liquid is deposited on the ground "
+                    "including rain, snow, and hail.",
                     units="kg/m^2/s",
                     limits=ParameterLimits(upper=0.2, lower=0),
                     alternative_shortnames=["prate", "tprate", "rprate"],
@@ -362,9 +360,9 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="Downward ultraviolet radiation flux at ground level. "
-                                "Defined as the mean amount of "
-                                "ultraviolet radiation incident on the surface "
-                                "expected over the next hour.",
+                    "Defined as the mean amount of "
+                    "ultraviolet radiation incident on the surface "
+                    "expected over the next hour.",
                     units="W/m^2",
                     limits=ParameterLimits(upper=1000, lower=0),
                     alternative_shortnames=["uvb"],
@@ -375,10 +373,10 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="Direct shortwave radiation flux at ground level. "
-                                "Defined as the mean amount of "
-                                "unscattered solar radiation incident on"
-                                "a surface plane perpendicular to the direction of the sun "
-                                "expected over the next hour.",
+                    "Defined as the mean amount of "
+                    "unscattered solar radiation incident on"
+                    "a surface plane perpendicular to the direction of the sun "
+                    "expected over the next hour.",
                     units="W/m^2",
                     limits=ParameterLimits(upper=1000, lower=0),
                     alternative_shortnames=["dsrp"],
@@ -389,7 +387,7 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="Wind speed at 10m above ground level. "
-                                "Defined as the magnitude of the wind vector.",
+                    "Defined as the magnitude of the wind vector.",
                     units="m/s",
                     limits=ParameterLimits(upper=150, lower=0),
                     alternative_shortnames=["10si", "si10"],
@@ -400,7 +398,7 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="Wind speed at 100m above ground level. "
-                                "Defined as the magnitude of the wind vector.",
+                    "Defined as the magnitude of the wind vector.",
                     units="m/s",
                     limits=ParameterLimits(upper=200, lower=0),
                     alternative_shortnames=["100si", "si100"],
@@ -411,10 +409,10 @@ class Parameter(StrEnum):
                 return ParameterData(
                     name=str(self),
                     description="Mean sea level pressure. "
-                                "Defined as the force per unit area of the atmosphere "
-                                "adjusted to the height of mean sea level. This corresponds "
-                                "to the weight of a column of air vertically above a point "
-                                "on the Earth's surface. 100 Pa = 1 hPa = 1 mbar.",
+                    "Defined as the force per unit area of the atmosphere "
+                    "adjusted to the height of mean sea level. This corresponds "
+                    "to the weight of a column of air vertically above a point "
+                    "on the Earth's surface. 100 Pa = 1 hPa = 1 mbar.",
                     units="Pa",
                     limits=ParameterLimits(upper=105000, lower=95000),
                     alternative_shortnames=["mslp", "msl"],
@@ -433,7 +431,8 @@ class Parameter(StrEnum):
 
     @staticmethod
     def rename_else_drop_ds_vars(
-        ds: xr.Dataset, allowed_parameters: list["Parameter"],
+        ds: xr.Dataset,
+        allowed_parameters: list["Parameter"],
     ) -> xr.Dataset:
         """Rename variables to match expected names, dropping invalid ones.
 
@@ -455,4 +454,3 @@ class Parameter(StrEnum):
             log.debug("Dropping invalid parameter '%s' from dataset", var)
             ds = ds.drop_vars(str(var))
         return ds
-

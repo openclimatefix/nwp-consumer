@@ -93,15 +93,16 @@ class RawRepositoryMetadata:
 
     def __str__(self) -> str:
         """Return a pretty-printed string representation of the metadata."""
-        pretty: str = "".join((
-            "Model Repository: ",
-            f"\n\t{self.name} ({'archive' if self.is_archive else 'live/rolling'} dataset.)",
-            f"\n\t\t(available after {self.delay_minutes} minute delay)",
-            "\nEnvironment variables:",
-            "\n\tRequired:",
-            "\n".join(f"\t\t{var}" for var in self.required_env),
-            "\n\tOptional:",
-            "\n".join(f"\t\t{var}={val}" for var, val in self.optional_env.items()),
-        ))
+        pretty: str = "".join(
+            (
+                "Model Repository: ",
+                f"\n\t{self.name} ({'archive' if self.is_archive else 'live/rolling'} dataset.)",
+                f"\n\t\t(available after {self.delay_minutes} minute delay)",
+                "\nEnvironment variables:",
+                "\n\tRequired:",
+                "\n".join(f"\t\t{var}" for var in self.required_env),
+                "\n\tOptional:",
+                "\n".join(f"\t\t{var}={val}" for var, val in self.optional_env.items()),
+            )
+        )
         return pretty
-

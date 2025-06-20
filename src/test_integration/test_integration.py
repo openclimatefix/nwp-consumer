@@ -10,9 +10,10 @@ from nwp_consumer.internal import repositories, services
 if TYPE_CHECKING:
     from returns.result import ResultE
 
+
 class TestIntegration(unittest.TestCase):
     def test_ceda_metoffice_global_model(self) -> None:
-        test_it =dt.datetime(2021, 1, 1, tzinfo=dt.UTC)
+        test_it = dt.datetime(2021, 1, 1, tzinfo=dt.UTC)
         service_result = services.ConsumerService.from_adaptors(
             model_adaptor=repositories.raw_repositories.CEDARawRepository,
             notification_adaptor=repositories.notification_repositories.StdoutNotificationRepository,
@@ -28,4 +29,3 @@ class TestIntegration(unittest.TestCase):
         da = xr.open_dataarray(result.unwrap(), engine="zarr")
 
         self.assertTrue(da.sizes["init_time"] > 0)
-

@@ -41,4 +41,3 @@ class DagsterPipesNotificationRepository(ports.NotificationRepository):
                 },
             )
         return Success("Notification sent to dagster successfully.")
-

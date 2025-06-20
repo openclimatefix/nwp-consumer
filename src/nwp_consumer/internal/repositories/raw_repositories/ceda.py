@@ -110,7 +110,6 @@ class CEDARawRepository(ports.RawRepository):
         """Create a new instance."""
         self._token = token
 
-
     @staticmethod
     @override
     def repository() -> entities.RawRepositoryMetadata:
@@ -124,16 +123,18 @@ class CEDARawRepository(ports.RawRepository):
             optional_env={},
             postprocess_options=entities.PostProcessOptions(),
             available_models={
-                "default": entities.Models.MO_UM_GLOBAL_17KM\
-                    .with_chunk_count_overrides({
-                    "latitude": 8,
-                    "longitude": 8,
-                }).with_running_hours([0, 12]), # 6 and 18 exist, but are lacking variables
-                "mo-um-global": entities.Models.MO_UM_GLOBAL_17KM\
-                .with_chunk_count_overrides({
-                    "latitude": 8,
-                    "longitude": 8,
-                }).with_running_hours([0, 12]),
+                "default": entities.Models.MO_UM_GLOBAL_17KM.with_chunk_count_overrides(
+                    {
+                        "latitude": 8,
+                        "longitude": 8,
+                    }
+                ).with_running_hours([0, 12]),  # 6 and 18 exist, but are lacking variables
+                "mo-um-global": entities.Models.MO_UM_GLOBAL_17KM.with_chunk_count_overrides(
+                    {
+                        "latitude": 8,
+                        "longitude": 8,
+                    }
+                ).with_running_hours([0, 12]),
                 "mo-um-ukv": entities.Models.MO_UM_UKV_2KM_OSGB,
             },
         )
@@ -153,9 +154,9 @@ class CEDARawRepository(ports.RawRepository):
         return CEDARawRepository.repository().available_models[requested_model]
 
     @override
-    def fetch_init_data(self, it: dt.datetime) \
-            -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
-
+    def fetch_init_data(
+        self, it: dt.datetime
+    ) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         parameter_stubs: list[str] = [
             "Total_Downward_Surface_SW_Flux",
             "high_cloud_amount",
@@ -180,13 +181,17 @@ class CEDARawRepository(ports.RawRepository):
 
         if self.model().name == entities.Models.MO_UM_UKV_2KM_OSGB.name:
             for file in file_stubs:
-                url = f"{self.url_base}/ukv-grib/{it:%Y/%m/%d}"\
+                url = (
+                    f"{self.url_base}/ukv-grib/{it:%Y/%m/%d}"
                     + f"/{it:%Y%m%d%H%M}_u1096_ng_umqv_{file}"
+                )
                 yield delayed(self._download_and_convert)(url=url)
         else:
             for param, area in itertools.product(parameter_stubs, [f"Area{c}" for c in "ABCDEFGH"]):
-                url = f"{self.url_base}/global-grib/{it:%Y/%m/%d}"\
+                url = (
+                    f"{self.url_base}/global-grib/{it:%Y/%m/%d}"
                     + f"/{it:%Y%m%d%H}_WSGlobal17km_{param}_{area}_000144.grib"
+                )
                 yield delayed(self._download_and_convert)(url=url)
 
         pass
@@ -214,10 +219,12 @@ class CEDARawRepository(ports.RawRepository):
         """
         missing_envs = cls.repository().missing_required_envs()
         if len(missing_envs) > 0:
-            return Failure(OSError(
-                f"Cannot authenticate with CEDA FTP service due to "
-                f"missing required environment variables: {', '.join(missing_envs)}",
-            ))
+            return Failure(
+                OSError(
+                    f"Cannot authenticate with CEDA FTP service due to "
+                    f"missing required environment variables: {', '.join(missing_envs)}",
+                )
+            )
         username: str = os.environ["CEDA_USER"]
         password: str = os.environ["CEDA_PASS"]
         token: str = base64.b64encode(f"{username}:{password}".encode()).decode("ascii")
@@ -226,17 +233,21 @@ class CEDARawRepository(ports.RawRepository):
             url="https://services-beta.ceda.ac.uk/api/token/create/",
             headers={"Authorization": f"Basic {token}"},
         )
-        with urllib.request.urlopen(request, timeout=20) as response: # noqa: S310
+        with urllib.request.urlopen(request, timeout=20) as response:  # noqa: S310
             if response.status != 200:
-                return Failure(OSError(
-                    f"Failed to authenticate with CEDA: {response.status} {response.reason}",
-                ))
+                return Failure(
+                    OSError(
+                        f"Failed to authenticate with CEDA: {response.status} {response.reason}",
+                    )
+                )
             try:
                 access_token: str = json.loads(response.read())["access_token"]
             except Exception as e:
-                return Failure(OSError(
-                    f"Failed to parse CEDA access token: {e}",
-                ))
+                return Failure(
+                    OSError(
+                        f"Failed to parse CEDA access token: {e}",
+                    )
+                )
         log.debug("Generated access token for CEDA")
 
         return Success(cls(token=access_token))
@@ -253,7 +264,8 @@ class CEDARawRepository(ports.RawRepository):
                     "RAWDIR",
                     f"~/.local/cache/nwp/{self.repository().name}/{self.model().name}/raw",
                 ),
-            ) / url.split("/")[-1]
+            )
+            / url.split("/")[-1]
         ).expanduser()
 
         # Don't download the file if it already exists
@@ -261,12 +273,12 @@ class CEDARawRepository(ports.RawRepository):
             local_path.parent.mkdir(parents=True, exist_ok=True)
             log.debug("Sending request to CEDA DAP server for: '%s'", url)
             try:
-                request: urllib.request.Request = urllib.request.Request( # noqa: S310
+                request: urllib.request.Request = urllib.request.Request(  # noqa: S310
                     method="GET",
                     url=url,
                     headers={"Authorization": f"Bearer {self._token}"},
                 )
-                response = urllib.request.urlopen(request, timeout=30) # noqa: S310
+                response = urllib.request.urlopen(request, timeout=30)  # noqa: S310
             except Exception as e:
                 return Failure(OSError(f"Error fetching {url}: {e}"))
 
@@ -314,21 +326,29 @@ class CEDARawRepository(ports.RawRepository):
                 )
                 # Ignore datasets with no variables of interest
                 if len(ds.data_vars) == 0:
-                    return Failure(OSError(
-                        f"No relevant variables found in '{path}'. "
-                        "Ensure file contains the expected variables, "
-                        "and that desired variables are not being dropped.",
-                    ))
+                    return Failure(
+                        OSError(
+                            f"No relevant variables found in '{path}'. "
+                            "Ensure file contains the expected variables, "
+                            "and that desired variables are not being dropped.",
+                        )
+                    )
                 da: xr.DataArray = (
                     ds.where(
-                        ds.step <= np.timedelta64(
+                        ds.step
+                        <= np.timedelta64(
                             CEDARawRepository.model().expected_coordinates.step[-1],
                             "h",
-                        ), drop=True,
+                        ),
+                        drop=True,
                     )
-                    .drop_vars(names=[
-                        c for c in ds.coords if c not in ["time", "step", "latitude", "longitude"]
-                    ])
+                    .drop_vars(
+                        names=[
+                            c
+                            for c in ds.coords
+                            if c not in ["time", "step", "latitude", "longitude"]
+                        ]
+                    )
                     .rename(name_dict={"time": "init_time"})
                     .expand_dims(dim="init_time")
                     .to_dataarray(name=CEDARawRepository.model().name)
@@ -401,22 +421,25 @@ class CEDARawRepository(ports.RawRepository):
                     .expand_dims("init_time")
                     .drop_vars(
                         names=[
-                            c for c in ds.coords
+                            c
+                            for c in ds.coords
                             if c not in CEDARawRepository.model().expected_coordinates.dims
                         ],
                         errors="ignore",
                     )
                     .where(
-                        ds.step <= np.timedelta64(
+                        ds.step
+                        <= np.timedelta64(
                             CEDARawRepository.model().expected_coordinates.step[-1],
                             "h",
-                        ), drop=True,
+                        ),
+                        drop=True,
                     )
                 )
                 # Adapted from https://stackoverflow.com/a/62667154 and
                 # https://github.com/SciTools/iris-grib/issues/140#issuecomment-1398634288
-                northing: list[int] = CEDARawRepository.model().expected_coordinates.y_osgb # type: ignore
-                easting: list[int] = CEDARawRepository.model().expected_coordinates.x_osgb # type: ignore
+                northing: list[int] = CEDARawRepository.model().expected_coordinates.y_osgb  # type: ignore
+                easting: list[int] = CEDARawRepository.model().expected_coordinates.x_osgb  # type: ignore
                 if ds.sizes["values"] != len(northing) * len(easting):
                     raise ValueError(
                         f"dataset has {ds.sizes['values']} values, "
@@ -439,7 +462,8 @@ class CEDARawRepository(ports.RawRepository):
                     .transpose("init_time", "step", "variable", "y_osgb", "x_osgb")
                     .drop_vars(
                         names=[
-                            c for c in ds.coords
+                            c
+                            for c in ds.coords
                             if c not in CEDARawRepository.model().expected_coordinates.dims
                         ],
                         errors="ignore",
@@ -462,4 +486,3 @@ class CEDARawRepository(ports.RawRepository):
             )
 
         return Success(processed_das)
-

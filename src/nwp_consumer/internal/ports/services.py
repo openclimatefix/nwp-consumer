@@ -20,12 +20,11 @@ class ConsumeUseCase(abc.ABC):
     - 'A user should be able to consume NWP data for a given initialization time.'
     """
 
-
     @abc.abstractmethod
     def consume(
-            self,
-            period: dt.datetime | dt.date | None = None,
-        ) -> ResultE[str]:
+        self,
+        period: dt.datetime | dt.date | None = None,
+    ) -> ResultE[str]:
         """Consume NWP data to Zarr format for desired time period.
 
         Where possible the implementation should be as memory-efficient as possible.

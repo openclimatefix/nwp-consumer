@@ -11,7 +11,6 @@ from ._dummy_adaptors import DummyNotificationRepository, DummyRawRepository
 
 
 class TestParallelConsumer(unittest.TestCase):
-
     def test_consume(self) -> None:
         """Test the consume method of the ParallelConsumer class."""
 
@@ -37,4 +36,3 @@ class TestParallelConsumer(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

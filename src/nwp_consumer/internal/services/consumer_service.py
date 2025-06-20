@@ -19,6 +19,7 @@ from nwp_consumer.internal import entities, ports
 
 log = logging.getLogger("nwp-consumer")
 
+
 class ConsumerService(ports.ConsumeUseCase):
     """Service implementation for the NWP Consumer.
 
@@ -29,20 +30,20 @@ class ConsumerService(ports.ConsumeUseCase):
     nr: ports.NotificationRepository
 
     def __init__(
-            self,
-            model_repository: ports.RawRepository,
-            notification_repository: ports.NotificationRepository,
-        ) -> None:
+        self,
+        model_repository: ports.RawRepository,
+        notification_repository: ports.NotificationRepository,
+    ) -> None:
         """Create a new instance of the service."""
         self.mr = model_repository
         self.nr = notification_repository
 
     @classmethod
     def from_adaptors(
-            cls,
-            model_adaptor: type[ports.RawRepository],
-            notification_adaptor: type[ports.NotificationRepository],
-        ) -> ResultE["ConsumerService"]:
+        cls,
+        model_adaptor: type[ports.RawRepository],
+        notification_adaptor: type[ports.NotificationRepository],
+    ) -> ResultE["ConsumerService"]:
         """Create a new instance of the service from adaptors."""
         notification_repository = notification_adaptor()
         model_repository_result = model_adaptor.authenticate()
@@ -56,9 +57,9 @@ class ConsumerService(ports.ConsumeUseCase):
 
     @staticmethod
     def _fold_dataarrays_generator(
-            generator: Iterator[ResultE[list[xr.DataArray]]],
-            store: entities.TensorStore,
-        ) -> ResultE[int]:
+        generator: Iterator[ResultE[list[xr.DataArray]]],
+        store: entities.TensorStore,
+    ) -> ResultE[int]:
         """Process data from data generator.
 
         Args:
@@ -82,23 +83,25 @@ class ConsumerService(ports.ConsumeUseCase):
         # ECMWF Realtime for instance needs a bit of tolerance because of some files not containing
         # data for all geographic regions.
         log.info(f"Processed {len(successes)} DataArrays successfully with {len(failures)} errors.")
-        if len(failures)/len(results) > 0.06:
+        if len(failures) / len(results) > 0.06:
             for i, exc in enumerate(failures):
                 if i < 5:
                     log.error(str(exc))
                 else:
                     break
-            return Failure(OSError(
-                "Error threshold exceeded: "
-                f"{len(failures)/len(results)} errors (>6%) occurred during processing.",
-            ))
+            return Failure(
+                OSError(
+                    "Error threshold exceeded: "
+                    f"{len(failures)/len(results)} errors (>6%) occurred during processing.",
+                )
+            )
         else:
             return Success(sum(successes))
 
     @staticmethod
     def _parallelize_generator[T](
-            delayed_generator: Iterator[Callable[..., T]],
-            max_connections: int,
+        delayed_generator: Iterator[Callable[..., T]],
+        max_connections: int,
     ) -> Iterator[T]:
         """Parallelize a generator of delayed functions.
 
@@ -127,10 +130,10 @@ class ConsumerService(ports.ConsumeUseCase):
 
     @staticmethod
     def _create_suitable_store(
-            repository_metadata: entities.RawRepositoryMetadata,
-            model_metadata: entities.ModelMetadata,
-            period: dt.datetime | dt.date | None = None,
-        ) -> ResultE[entities.TensorStore]:
+        repository_metadata: entities.RawRepositoryMetadata,
+        model_metadata: entities.ModelMetadata,
+        period: dt.datetime | dt.date | None = None,
+    ) -> ResultE[entities.TensorStore]:
         """Create a store for the data with the relevant init time coordinates.
 
         Args:
@@ -144,11 +147,11 @@ class ConsumerService(ports.ConsumeUseCase):
                 its = [
                     repository_metadata.determine_latest_it_from(
                         t=dt.datetime.now(tz=dt.UTC),
-                            running_hours=model_metadata.running_hours,
+                        running_hours=model_metadata.running_hours,
                     ),
                 ]
             case single_it if isinstance(period, dt.datetime):
-                its = [single_it] # type: ignore
+                its = [single_it]  # type: ignore
             case multiple_its if isinstance(period, dt.date):
                 its = model_metadata.month_its(
                     year=multiple_its.year,
@@ -171,10 +174,10 @@ class ConsumerService(ports.ConsumeUseCase):
 
     @override
     def consume(
-            self,
-            period: dt.datetime | dt.date | None = None,
-            delete_on_failure: bool = True,
-        ) -> ResultE[str]:
+        self,
+        period: dt.datetime | dt.date | None = None,
+        delete_on_failure: bool = True,
+    ) -> ResultE[str]:
         """Consume NWP data to Zarr format for desired time period.
 
         Where possible the implementation should be as memory-efficient as possible.
@@ -201,9 +204,11 @@ class ConsumerService(ports.ConsumeUseCase):
                 period=period,
             )
             if isinstance(init_store_result, Failure):
-                return Failure(OSError(
-                    f"Failed to initialize store for init time: {init_store_result!s}",
-                ))
+                return Failure(
+                    OSError(
+                        f"Failed to initialize store for init time: {init_store_result!s}",
+                    )
+                )
             store = init_store_result.unwrap()
 
             missing_times_result = store.missing_times()
@@ -244,7 +249,6 @@ class ConsumerService(ports.ConsumeUseCase):
                     )
                 return validation_result
 
-
         notification_message = entities.StoreCreatedNotification(
             filename=pathlib.Path(store.path).name,
             size_mb=store.size_kb // 1024,
@@ -270,9 +274,8 @@ class ConsumerService(ports.ConsumeUseCase):
 
     @staticmethod
     def info(
-            model_adaptor: type[ports.RawRepository],
-            notification_adaptor: type[ports.NotificationRepository],
-        ) -> str:
+        model_adaptor: type[ports.RawRepository],
+        notification_adaptor: type[ports.NotificationRepository],
+    ) -> str:
         """Get information about the service."""
         raise NotImplementedError("Not yet implemented")
-

@@ -127,7 +127,9 @@ log = logging.getLogger("nwp-consumer")
 class MetOfficeDatahubRawRepository(ports.RawRepository):
     """Repository implementation for data from MetOffice's DataHub service."""
 
-    base_url: ClassVar[str] = "https://data.hub.api.metoffice.gov.uk/atmospheric-models/1.0.0/orders"
+    base_url: ClassVar[str] = (
+        "https://data.hub.api.metoffice.gov.uk/atmospheric-models/1.0.0/orders"
+    )
 
     request_url: str
     order_id: str
@@ -142,11 +144,9 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
         self.order_id = order_id
         self.request_url = f"{self.base_url}/{self.order_id}/latest"
 
-
     @staticmethod
     @override
     def repository() -> entities.RawRepositoryMetadata:
-
         return entities.RawRepositoryMetadata(
             name="MetOffice-Weather-Datahub",
             is_archive=False,
@@ -184,17 +184,20 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
         """Authenticate with the MetOffice DataHub service."""
         missing_envs = cls.repository().missing_required_envs()
         if len(missing_envs) > 0:
-            return Failure(OSError(
-                f"Cannot authenticate with MetOffice DataHub service due to "
-                f"missing required environment variables: {', '.join(missing_envs)}",
-            ))
+            return Failure(
+                OSError(
+                    f"Cannot authenticate with MetOffice DataHub service due to "
+                    f"missing required environment variables: {', '.join(missing_envs)}",
+                )
+            )
         api_key: str = os.environ["METOFFICE_API_KEY"]
         order_id: str = os.environ["METOFFICE_ORDER_ID"]
         return Success(cls(order_id=order_id, api_key=api_key))
 
     @override
     def fetch_init_data(
-        self, it: dt.datetime,
+        self,
+        it: dt.datetime,
     ) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         req: urllib.request.Request = urllib.request.Request(  # noqa: S310
             url=self.request_url + f"?detail=MINIMAL&runfilter={it:%Y%m%d%H}",
@@ -209,22 +212,26 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
         try:
             response: http.client.HTTPResponse = urllib.request.urlopen(req, timeout=30)  # noqa: S310
         except Exception as e:
-            yield delayed(Failure)(OSError(
-                "Unable to list files from MetOffice DataHub for order "
-                f"{self.order_id} at '{self.request_url}'. "
-                f"Ensure API key and Order ID are correct. Error context: {e}",
-            ))
+            yield delayed(Failure)(
+                OSError(
+                    "Unable to list files from MetOffice DataHub for order "
+                    f"{self.order_id} at '{self.request_url}'. "
+                    f"Ensure API key and Order ID are correct. Error context: {e}",
+                )
+            )
             return
         try:
             data = json.loads(
                 response.read().decode(response.info().get_param("charset") or "utf-8"),  # type: ignore
             )
         except Exception as e:
-            yield delayed(Failure)(ValueError(
-                "Unable to decode JSON response from MetOffice DataHub. "
-                "Check the response from the '/latest' endpoint looks as expected. "
-                f"Error context: {e}",
-            ))
+            yield delayed(Failure)(
+                ValueError(
+                    "Unable to decode JSON response from MetOffice DataHub. "
+                    "Check the response from the '/latest' endpoint looks as expected. "
+                    f"Error context: {e}",
+                )
+            )
             return
         urls: list[str] = []
         if "orderDetails" in data and "files" in data["orderDetails"]:
@@ -251,10 +258,12 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
         elif "um-ukv" in self.model().name:
             return self._download(url).bind(self._convert_ukv)
         else:
-            return Failure(ValueError(
-                f"Unknown model '{self.model().name}' requested. "
-                "Ensure MODEL environment variable is set to a valid model name.",
-            ))
+            return Failure(
+                ValueError(
+                    f"Unknown model '{self.model().name}' requested. "
+                    "Ensure MODEL environment variable is set to a valid model name.",
+                )
+            )
 
     def _download(self, url: str) -> ResultE[pathlib.Path]:
         """Download a grib file from MetOffice Weather Datahub API.
@@ -263,12 +272,13 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             url: The URL of the file of interest.
         """
         local_path: pathlib.Path = (
-                pathlib.Path(
-                    os.getenv(
-                        "RAWDIR",
-                        f"~/.local/cache/nwp/{self.repository().name}/{self.model().name}/raw",
-                    ),
-                ) / f"{url.split("/")[-2]}.grib"
+            pathlib.Path(
+                os.getenv(
+                    "RAWDIR",
+                    f"~/.local/cache/nwp/{self.repository().name}/{self.model().name}/raw",
+                ),
+            )
+            / f"{url.split("/")[-2]}.grib"
         ).expanduser()
 
         # Only download the file if not already present
@@ -289,10 +299,11 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                     timeout=60,
                 )
             except Exception as e:
-                return Failure(OSError(
-                    "Unable to request file data from MetOffice DataHub at "
-                    f"'{url}': {e}",
-                ))
+                return Failure(
+                    OSError(
+                        "Unable to request file data from MetOffice DataHub at " f"'{url}': {e}",
+                    )
+                )
 
             # Download the file
             log.debug("Downloading %s to %s", url, local_path)
@@ -362,22 +373,21 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                     allowed_parameters=MetOfficeDatahubRawRepository.model().expected_coordinates.variable,
                 )
                 .rename(name_dict={"time": "init_time"})
-                .expand_dims(dim="init_time"))
+                .expand_dims(dim="init_time")
+            )
 
             if "step" not in ds.dims:
                 ds = ds.expand_dims(dim="step")
 
             da: xr.DataArray = ds.to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
-            da = (
-                    da.drop_vars(
-                    names=[
-                        c for c in ds.coords
-                        if c not in
-                        MetOfficeDatahubRawRepository.model().expected_coordinates.dims
-                    ],
-                    errors="ignore",
-                )
-                .transpose(*MetOfficeDatahubRawRepository.model().expected_coordinates.dims))
+            da = da.drop_vars(
+                names=[
+                    c
+                    for c in ds.coords
+                    if c not in MetOfficeDatahubRawRepository.model().expected_coordinates.dims
+                ],
+                errors="ignore",
+            ).transpose(*MetOfficeDatahubRawRepository.model().expected_coordinates.dims)
 
             da = da.sortby(variables=["step", "variable", "longitude"])
             da = da.sortby(variables="latitude", ascending=False)
@@ -434,25 +444,35 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             # Replace the coords with the expected values, as cfrib struggles to read them in.
             # The actual values have been determined by using iris.
             expected_coords = MetOfficeDatahubRawRepository.model().expected_coordinates
-            if ds.sizes["x"] != len(expected_coords.x_laea): #type: ignore
-                return Failure(ValueError(
-                    f"Coordinate length of '{ds.sizes['x']}' for the x dimension for file "
-                    f"'{path!s}' does not match expected length {len(expected_coords.x_laea)}", #type: ignore
-                ))
-            if ds.sizes["y"] != len(expected_coords.y_laea): #type: ignore
-                return Failure(ValueError(
-                    f"Coordinate length of '{ds.sizes['y']}' for the y dimension for file "
-                    f"'{path!s}' does not match expected length {len(expected_coords.y_laea)}", #type: ignore
-                ))
+            if ds.sizes["x"] != len(expected_coords.x_laea):  # type: ignore
+                return Failure(
+                    ValueError(
+                        f"Coordinate length of '{ds.sizes['x']}' for the x dimension for file "
+                        f"'{path!s}' does not match expected length {len(expected_coords.x_laea)}",  # type: ignore
+                    )
+                )
+            if ds.sizes["y"] != len(expected_coords.y_laea):  # type: ignore
+                return Failure(
+                    ValueError(
+                        f"Coordinate length of '{ds.sizes['y']}' for the y dimension for file "
+                        f"'{path!s}' does not match expected length {len(expected_coords.y_laea)}",  # type: ignore
+                    )
+                )
             # Assign coordinates to the dataset, and reverse y so it is descending, before
             # replacing the stand in values with the actual ones
-            ds = ds.assign_coords(
-                x=list(range(ds.sizes["x"])),
-                y=list(range(ds.sizes["y"])),
-            ).sortby("y", ascending=False).sortby("x").assign_coords(
-                x=expected_coords.x_laea,
-                y=expected_coords.y_laea,
-            ).rename({"x": "x_laea", "y": "y_laea"})
+            ds = (
+                ds.assign_coords(
+                    x=list(range(ds.sizes["x"])),
+                    y=list(range(ds.sizes["y"])),
+                )
+                .sortby("y", ascending=False)
+                .sortby("x")
+                .assign_coords(
+                    x=expected_coords.x_laea,
+                    y=expected_coords.y_laea,
+                )
+                .rename({"x": "x_laea", "y": "y_laea"})
+            )
 
             # Remove unwanted variables
             ds = (
@@ -461,16 +481,18 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                     allowed_parameters=MetOfficeDatahubRawRepository.model().expected_coordinates.variable,
                 )
                 .rename(name_dict={"time": "init_time"})
-                .expand_dims(dim="init_time"))
+                .expand_dims(dim="init_time")
+            )
 
             if "step" not in ds.dims:
                 ds = ds.expand_dims(dim="step")
 
             da: xr.DataArray = ds.to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
             da = (
-                    da.drop_vars(
+                da.drop_vars(
                     names=[
-                        c for c in ds.coords
+                        c
+                        for c in ds.coords
                         if c not in MetOfficeDatahubRawRepository.model().expected_coordinates.dims
                     ],
                     errors="ignore",
@@ -487,4 +509,3 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             )
 
         return Success([da])
-

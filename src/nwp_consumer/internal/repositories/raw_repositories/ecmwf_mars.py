@@ -42,6 +42,7 @@ def _mars_logger(msg: str) -> None:
     if any(map(msg.__contains__, errorSubstrings)):
         log.warning("[MARS] %s", msg)
 
+
 @dataclasses.dataclass
 class _MARSRequest:
     """A request for data in the MARS format.
@@ -184,11 +185,13 @@ class _MARSRequest:
             )
             log.debug("Downloaded to '%s'", target)
         except Exception as e:
-            return Failure(OSError(
-                "Failed to download data from ECMWF MARS. "
-                "Ensure request targets available parameters and steps. "
-                f"Error context: {e}",
-            ))
+            return Failure(
+                OSError(
+                    "Failed to download data from ECMWF MARS. "
+                    "Ensure request targets available parameters and steps. "
+                    f"Error context: {e}",
+                )
+            )
         return Success(target)
 
 
@@ -221,13 +224,14 @@ class ECMWFMARSRawRepository(ports.RawRepository):
                 "default": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk"),
                 "hres-ifs-uk": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk"),
                 "hres-ifs-india": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("india"),
-                "hres-ifs-west-europe": entities.Models.ECMWF_HRES_IFS_0P1DEGREE\
-                    .with_region("west-europe"),
+                "hres-ifs-west-europe": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region(
+                    "west-europe"
+                ),
                 "ens-stat-india": entities.Models.ECMWF_ENS_STAT_0P1DEGREE.with_region("india"),
                 "ens-stat-uk": entities.Models.ECMWF_ENS_STAT_0P1DEGREE.with_region("uk"),
-                "ens-uk": entities.Models.ECMWF_ENS_0P1DEGREE\
-                    .with_region("uk")\
-                    .with_chunk_count_overrides({"latitude": 1, "longitude": 1}),
+                "ens-uk": entities.Models.ECMWF_ENS_0P1DEGREE.with_region(
+                    "uk"
+                ).with_chunk_count_overrides({"latitude": 1, "longitude": 1}),
             },
         )
 
@@ -250,10 +254,12 @@ class ECMWFMARSRawRepository(ports.RawRepository):
     def authenticate(cls) -> ResultE["ECMWFMARSRawRepository"]:
         missing_envs = cls.repository().missing_required_envs()
         if len(missing_envs) > 0:
-            return Failure(OSError(
-                "Cannot authenticate with ECMWF's MARS service due to "
-                f"missing required environment variables: {', '.join(missing_envs)}",
-            ))
+            return Failure(
+                OSError(
+                    "Cannot authenticate with ECMWF's MARS service due to "
+                    f"missing required environment variables: {', '.join(missing_envs)}",
+                )
+            )
         # Auth is picked up from required environment variables
         server = ECMWFService(
             service="mars",
@@ -262,7 +268,8 @@ class ECMWFMARSRawRepository(ports.RawRepository):
 
     @override
     def fetch_init_data(
-        self, it: dt.datetime,
+        self,
+        it: dt.datetime,
     ) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         req: _MARSRequest = _MARSRequest(
             params=self.model().expected_coordinates.variable,
@@ -325,11 +332,13 @@ class ECMWFMARSRawRepository(ports.RawRepository):
                 backend_kwargs={"indexpath": ""},
             )
         except Exception as e:
-            return Failure(OSError(
-                f"Failed to convert raw MARS data at '{path!s}' to xarray. "
-                "Ensure file is in GRIB format and contains expected data. "
-                f"Error context: {e}",
-            ))
+            return Failure(
+                OSError(
+                    f"Failed to convert raw MARS data at '{path!s}' to xarray. "
+                    "Ensure file is in GRIB format and contains expected data. "
+                    f"Error context: {e}",
+                )
+            )
 
         processed_das: list[xr.DataArray] = []
         try:
@@ -349,8 +358,7 @@ class ECMWFMARSRawRepository(ports.RawRepository):
             elif "enfo-em" in path.name:
                 ds = ds.expand_dims(dim={"ensemble_stat": ["mean"]})
             da: xr.DataArray = (
-                ds
-                .pipe(
+                ds.pipe(
                     entities.Parameter.rename_else_drop_ds_vars,
                     allowed_parameters=ECMWFMARSRawRepository.model().expected_coordinates.variable,
                 )
@@ -363,7 +371,8 @@ class ECMWFMARSRawRepository(ports.RawRepository):
             da = (
                 da.drop_vars(
                     names=[
-                        c for c in ds.coords
+                        c
+                        for c in ds.coords
                         if c not in ECMWFMARSRawRepository.model().expected_coordinates.dims
                     ],
                     errors="ignore",
@@ -382,11 +391,11 @@ class ECMWFMARSRawRepository(ports.RawRepository):
                 ],
             )
 
-
         except Exception as e:
-            return Failure(ValueError(
-                f"Error processing DataArray for path '{path!s}'. Error context: {e}",
-            ))
+            return Failure(
+                ValueError(
+                    f"Error processing DataArray for path '{path!s}'. Error context: {e}",
+                )
+            )
 
         return Success(processed_das)
-

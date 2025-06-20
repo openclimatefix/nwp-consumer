@@ -38,10 +38,12 @@ class TestParameters(unittest.TestCase):
         ds = xr.Dataset(
             data_vars={
                 shortname: (
-                    ("init_time", "step", "latitude", "longitude"), np.random.rand(1, 12, 15, 15),
+                    ("init_time", "step", "latitude", "longitude"),
+                    np.random.rand(1, 12, 15, 15),
                 ),
                 "unknown-parameter": (
-                    ("init_time", "step", "latitude", "longitude"), np.random.rand(1, 12, 15, 15),
+                    ("init_time", "step", "latitude", "longitude"),
+                    np.random.rand(1, 12, 15, 15),
                 ),
             },
             coords={

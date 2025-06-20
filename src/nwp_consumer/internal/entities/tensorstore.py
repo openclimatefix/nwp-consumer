@@ -146,11 +146,13 @@ class TensorStore(abc.ABC):
                 path = pathlib.Path("/".join((zarrdir, filename))).expanduser().as_posix()
                 store = zarr.storage.DirectoryStore(path)
         except Exception as e:
-            return Failure(OSError(
-                f"Unable to create Directory Store at dir '{zarrdir}'. "
-                "Ensure ZARRDIR environment variable is specified correctly. "
-                f"Error context: {e}",
-            ))
+            return Failure(
+                OSError(
+                    f"Unable to create Directory Store at dir '{zarrdir}'. "
+                    "Ensure ZARRDIR environment variable is specified correctly. "
+                    f"Error context: {e}",
+                )
+            )
 
         # Write the coordinates to a skeleton Zarr store
         # * 'compute=False' enables only saving metadata
@@ -176,11 +178,13 @@ class TensorStore(abc.ABC):
         except zarr.errors.ContainsGroupError:
             store_da = xr.open_dataarray(store, engine="zarr")
             if store_da.name != da.name:  # TODO: Also check for equality of coordinates
-                return Failure(OSError(
-                    f"Existing store at '{path}' is for a different model. "
-                    "Delete the existing store or move it to a new location, "
-                    "or choose a new location for the new store via ZARRDIR.",
-                ))
+                return Failure(
+                    OSError(
+                        f"Existing store at '{path}' is for a different model. "
+                        "Delete the existing store or move it to a new location, "
+                        "or choose a new location for the new store via ZARRDIR.",
+                    )
+                )
             log.info(f"Using existing store at '{path}'")
             return Success(
                 cls(
@@ -218,11 +222,11 @@ class TensorStore(abc.ABC):
             ),
         )
 
-    #def from_existing_store(
+    # def from_existing_store(
     #    model: str,
     #    repository: str,
     #    expected_coords: NWPDimensionCoordinateMap,
-    #) -> ResultE["TensorStore"]:
+    # ) -> ResultE["TensorStore"]:
     #    """Create a TensorStore instance from an existing store."""
     #    pass # TODO
 
@@ -289,7 +293,8 @@ class TensorStore(abc.ABC):
         # * This is to ensure that the data can safely be written in parallel.
         # * The start and and of each slice should be divisible by the chunk size.
         chunksizes: Mapping[Any, tuple[int, ...]] = xr.open_dataarray(
-            self.path, engine="zarr",
+            self.path,
+            engine="zarr",
         ).chunksizes
         for dim, slc in region.items():
             chunk_size = chunksizes.get(dim, (1,))[0]
@@ -327,6 +332,7 @@ class TensorStore(abc.ABC):
         """Check the store for NaN values."""
         nans_in_image_threshold: float = 0.05
         images_failing_nan_check_threshold: float = 0.02
+
         def _calc_null_percentage(data: np.typing.NDArray[np.float32]) -> float:
             nulls = np.isnan(data)
             if 0 in data.shape:
@@ -344,11 +350,13 @@ class TensorStore(abc.ABC):
         elif "x_laea" in store_da.dims:
             spatial_dims = ["x_laea", "y_laea"]
         else:
-            return Failure(ValueError(
-                "Store does not have expected spatial dimensions. "
-                "Expected: ['latitude', 'longitude'], ['x_osgb', 'y_osgb'], ['x_laea', 'y_laea']. "
-                f"Got: {store_da.dims}.",
-            ))
+            return Failure(
+                ValueError(
+                    "Store does not have expected spatial dimensions. "
+                    "Expected: ['latitude', 'longitude'], ['x_osgb', 'y_osgb'], ['x_laea', 'y_laea']. "
+                    f"Got: {store_da.dims}.",
+                )
+            )
 
         result = xr.apply_ufunc(
             _calc_null_percentage,
@@ -393,10 +401,12 @@ class TensorStore(abc.ABC):
             return has_nans_result
         else:
             if has_nans_result.unwrap():
-                return Failure(ValueError(
-                    "Store contains NaN values. "
-                    "Check the source data for missing values and reprocess the data.",
-                ))
+                return Failure(
+                    ValueError(
+                        "Store contains NaN values. "
+                        "Check the source data for missing values and reprocess the data.",
+                    )
+                )
 
         # TODO: Use consistency checks instead
         """
@@ -431,6 +441,7 @@ class TensorStore(abc.ABC):
         """Delete the store."""
         if self.path.startswith("s3://"):
             import s3fs
+
             try:
                 fs = s3fs.S3FileSystem(
                     anon=False,
@@ -441,19 +452,22 @@ class TensorStore(abc.ABC):
                 )
                 fs.rm(self.path, recursive=True)
             except Exception as e:
-                return Failure(OSError(
-                    f"Unable to delete S3 store at path '{self.path}'."
-                    "Ensure AWS credentials are correct and discoverable by botocore. "
-                    f"Error context: {e}",
-                ))
+                return Failure(
+                    OSError(
+                        f"Unable to delete S3 store at path '{self.path}'."
+                        "Ensure AWS credentials are correct and discoverable by botocore. "
+                        f"Error context: {e}",
+                    )
+                )
         else:
             try:
                 shutil.rmtree(self.path)
             except Exception as e:
-                return Failure(OSError(
-                    f"Unable to delete store at path '{self.path}'. "
-                    f"Error context: {e}",
-                ))
+                return Failure(
+                    OSError(
+                        f"Unable to delete store at path '{self.path}'. " f"Error context: {e}",
+                    )
+                )
         log.info("Deleted zarr store at '%s'", self.path)
         return Success(None)
 
@@ -471,14 +485,16 @@ class TensorStore(abc.ABC):
             A ParameterScanResult object.
         """
         if p not in self.coordinate_map.variable:
-            return Failure(KeyError(
-                "Parameter scan failed: "
-                f"Cannot validate unknown parameter: {p.name}. "
-                "Ensure the parameter has been renamed to match the entities "
-                "parameters defined in `entities.parameters` if desired, or "
-                "add the parameter to the entities parameters if it is new. "
-                f"Store parameters: {[p.name for p in self.coordinate_map.variable]}.",
-            ))
+            return Failure(
+                KeyError(
+                    "Parameter scan failed: "
+                    f"Cannot validate unknown parameter: {p.name}. "
+                    "Ensure the parameter has been renamed to match the entities "
+                    "parameters defined in `entities.parameters` if desired, or "
+                    "add the parameter to the entities parameters if it is new. "
+                    f"Store parameters: {[p.name for p in self.coordinate_map.variable]}.",
+                )
+            )
         store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")
 
         # Calculating the mean of a dataarray returns another dataarray, so it
@@ -534,25 +550,31 @@ class TensorStore(abc.ABC):
         try:
             store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")
         except Exception as e:
-            return Failure(OSError(
-                "Cannot determine missing times in store due to "
-                f"error reading '{self.path}': {e}",
-            ))
+            return Failure(
+                OSError(
+                    "Cannot determine missing times in store due to "
+                    f"error reading '{self.path}': {e}",
+                )
+            )
         missing_times: list[dt.datetime] = []
         for it in store_da.coords["init_time"].values:
-            if store_da.sel(init_time=it).isel({
-                d: slice(0, 2) for d in self.coordinate_map.dims
-                if d != "init_time"
-            }).isnull().all().values:
+            if (
+                store_da.sel(init_time=it)
+                .isel({d: slice(0, 2) for d in self.coordinate_map.dims if d != "init_time"})
+                .isnull()
+                .all()
+                .values
+            ):
                 missing_times.append(pd.Timestamp(it).to_pydatetime().replace(tzinfo=dt.UTC))
         if len(missing_times) > 0:
-            log.debug(f"NaNs in init times '{missing_times}' suggest they are missing, "
-                      f"will redownload")
+            log.debug(
+                f"NaNs in init times '{missing_times}' suggest they are missing, "
+                f"will redownload"
+            )
         return Success(missing_times)
 
     @staticmethod
-    def _create_zarrstore_s3(s3_folder: str, filename: str) \
-            -> ResultE[tuple[MutableMapping, str]]:  # type: ignore
+    def _create_zarrstore_s3(s3_folder: str, filename: str) -> ResultE[tuple[MutableMapping, str]]:  # type: ignore
         """Create a mutable mapping to an S3 store.
 
         Authentication with S3 is done via botocore's credential discovery.
@@ -565,11 +587,13 @@ class TensorStore(abc.ABC):
           - https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html#configuring-credentials
         """
         import s3fs
+
         if not s3_folder.startswith("s3://"):
-            return Failure(ValueError(
-                "S3 folder path must start with 's3://'. "
-                f"Got: {s3_folder}",
-            ))
+            return Failure(
+                ValueError(
+                    "S3 folder path must start with 's3://'. " f"Got: {s3_folder}",
+                )
+            )
         log.debug("Attempting AWS connection using credential discovery")
         try:
             fs = s3fs.S3FileSystem(
@@ -583,12 +607,14 @@ class TensorStore(abc.ABC):
             fs.mkdirs(path=path, exist_ok=True)
             store = s3fs.mapping.S3Map(path, fs, check=False, create=True)
         except Exception as e:
-            return Failure(OSError(
-                f"Unable to create file mapping for path '{path}'. "
-                "Ensure ZARRDIR environment variable is specified correctly, "
-                "and AWS credentials are discoverable by botocore. "
-                f"Error context: {e}",
-            ))
+            return Failure(
+                OSError(
+                    f"Unable to create file mapping for path '{path}'. "
+                    "Ensure ZARRDIR environment variable is specified correctly, "
+                    "and AWS credentials are discoverable by botocore. "
+                    f"Error context: {e}",
+                )
+            )
         return Success((store, path))
 
     @staticmethod
@@ -604,4 +630,3 @@ class TensorStore(abc.ABC):
             store_range = f"{coords.init_time[0]:%Y%m%d%H}-{coords.init_time[-1]:%Y%m%d%H}"
 
         return store_range + ".zarr"
-

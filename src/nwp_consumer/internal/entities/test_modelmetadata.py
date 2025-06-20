@@ -61,11 +61,11 @@ class TestModelMetadata(unittest.TestCase):
             new_metadata = metadata.with_region(test_case.region)
             self.assertEqual(new_metadata.name, test_case.expected_name)
             self.assertListEqual(
-                    new_metadata.expected_coordinates.latitude, # type: ignore
+                new_metadata.expected_coordinates.latitude,  # type: ignore
                 test_case.expected_lat,
             )
             self.assertListEqual(
-                    new_metadata.expected_coordinates.longitude, # type: ignore
+                new_metadata.expected_coordinates.longitude,  # type: ignore
                 test_case.expected_lon,
             )
 
@@ -76,4 +76,3 @@ class TestModelMetadata(unittest.TestCase):
     def hypothesis_test_with_region(self, model: ModelMetadata, region: str) -> None:
         """Assert that with_region does not raise an exception."""
         model.with_region(region)
-

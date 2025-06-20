@@ -9,6 +9,7 @@ import ocf_blosc2
 
 class CodecOptions(Codec, Enum):
     """Options for compression codecs."""
+
     UNSET = None
     OCF_BLOSC2 = ocf_blosc2.Blosc2(clevel=5)
     """Use the OCF Blosc2 codec.
@@ -47,7 +48,6 @@ class PostProcessOptions:
     plot: bool = False
     """Whether to save a plot of the data."""
 
-
     def requires_rewrite(self) -> bool:
         """Boolean indicating whether the specified options necessitate a rewrite."""
         return any(
@@ -65,4 +65,3 @@ class PostProcessOptions:
                 self.plot,
             ],
         )
-

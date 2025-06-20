@@ -34,11 +34,13 @@ class StoreCreatedNotification:
 
     def __str__(self) -> str:
         """Return a string representation of the notification."""
-        return "".join((
-            f"Store created: {self.filename} ({self.size_mb} MB) in ",
-            f"{self.performance.duration_seconds} secs ",
-            f"(using {self.performance.memory_mb} MB RAM)",
-        ))
+        return "".join(
+            (
+                f"Store created: {self.filename} ({self.size_mb} MB) in ",
+                f"{self.performance.duration_seconds} secs ",
+                f"(using {self.performance.memory_mb} MB RAM)",
+            )
+        )
 
 
 @dataclasses.dataclass(slots=True)

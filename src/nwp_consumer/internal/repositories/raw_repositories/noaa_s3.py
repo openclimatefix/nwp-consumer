@@ -73,7 +73,8 @@ class NOAAS3RawRepository(ports.RawRepository):
 
     @override
     def fetch_init_data(
-        self, it: dt.datetime,
+        self,
+        it: dt.datetime,
     ) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         # List relevant files in the s3 bucket
         bucket_path: str = f"noaa-gfs-bdp-pds/gfs.{it:%Y%m%d}/{it:%H}/atmos"
@@ -142,7 +143,9 @@ class NOAAS3RawRepository(ports.RawRepository):
                     "RAWDIR",
                     f"~/.local/cache/nwp/{self.repository().name}/{self.model().name}/raw",
                 ),
-            ) / it.strftime("%Y/%m/%d/%H") / (url.split("/")[-1] + ".grib")
+            )
+            / it.strftime("%Y/%m/%d/%H")
+            / (url.split("/")[-1] + ".grib")
         ).expanduser()
 
         # Only download the file if not already present
@@ -163,18 +166,22 @@ class NOAAS3RawRepository(ports.RawRepository):
                     lf.flush()
 
         except Exception as e:
-            return Failure(OSError(
-                f"Failed to download file from S3 at '{url}'. Encountered error: {e}",
-            ))
+            return Failure(
+                OSError(
+                    f"Failed to download file from S3 at '{url}'. Encountered error: {e}",
+                )
+            )
 
         # For some reason, the GFS files are about 2MB larger when downloaded
         # then their losted size in AWS. I'd be interested to know why!
         if local_path.stat().st_size < fs.info(url)["size"]:
-            return Failure(ValueError(
-                f"File size mismatch from file at '{url}': "
-                f"{local_path.stat().st_size} != {fs.info(url)['size']} (remote). "
-                "File may be corrupted.",
-            ))
+            return Failure(
+                ValueError(
+                    f"File size mismatch from file at '{url}': "
+                    f"{local_path.stat().st_size} != {fs.info(url)['size']} (remote). "
+                    "File may be corrupted.",
+                )
+            )
 
         # Also download the associated index file
         # * This isn't critical, but speeds up reading the file in when converting
@@ -211,10 +218,13 @@ class NOAAS3RawRepository(ports.RawRepository):
             #   levels
             filters: list[dict[str, list[str] | list[int] | int]] = [
                 {
-                    "cfVarName": ["tcc", "hcc", "lcc", "mcc"], "level": 0,
+                    "cfVarName": ["tcc", "hcc", "lcc", "mcc"],
+                    "level": 0,
                     "typeOfLevel": [
-                        "highCloudLayer", "lowCloudLayer",
-                        "middleCloudLayer", "convectiveCloudLayer",
+                        "highCloudLayer",
+                        "lowCloudLayer",
+                        "middleCloudLayer",
+                        "convectiveCloudLayer",
                     ],
                     "stepType": ["instant"],
                 },
@@ -222,10 +232,12 @@ class NOAAS3RawRepository(ports.RawRepository):
                 {"cfVarName": ["u100", "v100"]},
                 {
                     "typeOfLevel": ["surface", "heightAboveGround"],
-                    "level": [0, 2], "stepType": ["instant"],
+                    "level": [0, 2],
+                    "stepType": ["instant"],
                 },
                 {
-                    "typeOfLevel": ["surface"], "stepType": ["avg"],
+                    "typeOfLevel": ["surface"],
+                    "stepType": ["avg"],
                     "cfVarName": ["sdswrf", "sdlwrf"],
                 },
             ]
@@ -237,27 +249,32 @@ class NOAAS3RawRepository(ports.RawRepository):
                 compat="minimal",
             ).drop_vars("t", errors="ignore")
         except Exception as e:
-            return Failure(ValueError(
-                f"Error opening '{path}' as list of xarray Datasets: {e}",
-            ))
+            return Failure(
+                ValueError(
+                    f"Error opening '{path}' as list of xarray Datasets: {e}",
+                )
+            )
 
         if len(ds.data_vars) == 0:
-            return Failure(ValueError(
-                f"No datasets found in '{path}'. File may be corrupted. "
-                "A redownload of the file may be required.",
-            ))
+            return Failure(
+                ValueError(
+                    f"No datasets found in '{path}'. File may be corrupted. "
+                    "A redownload of the file may be required.",
+                )
+            )
 
         try:
-            ds = ds.drop_vars("sdwe", errors="ignore") # Datasets contain both SDWE and SD
+            ds = ds.drop_vars("sdwe", errors="ignore")  # Datasets contain both SDWE and SD
             ds = entities.Parameter.rename_else_drop_ds_vars(
                 ds=ds,
                 allowed_parameters=NOAAS3RawRepository.model().expected_coordinates.variable,
             )
             da: xr.DataArray = (
-                ds
-                .drop_vars(names=[
-                    c for c in ds.coords if c not in ["time", "step", "latitude", "longitude"]
-                ])
+                ds.drop_vars(
+                    names=[
+                        c for c in ds.coords if c not in ["time", "step", "latitude", "longitude"]
+                    ]
+                )
                 .rename(name_dict={"time": "init_time"})
                 .expand_dims(dim="init_time")
                 .expand_dims(dim="step")
@@ -266,7 +283,8 @@ class NOAAS3RawRepository(ports.RawRepository):
             da = (
                 da.drop_vars(
                     names=[
-                        c for c in da.coords
+                        c
+                        for c in da.coords
                         if c not in NOAAS3RawRepository.model().expected_coordinates.dims
                     ],
                 )
@@ -276,9 +294,11 @@ class NOAAS3RawRepository(ports.RawRepository):
                 .sortby(variables="latitude", ascending=False)
             )
         except Exception as e:
-            return Failure(ValueError(
-                f"Error processing dataset from '{path}' to DataArray: {e}",
-            ))
+            return Failure(
+                ValueError(
+                    f"Error processing dataset from '{path}' to DataArray: {e}",
+                )
+            )
 
         return Success([da])
 
@@ -295,5 +315,3 @@ class NOAAS3RawRepository(ports.RawRepository):
         if int(match.group(1)) != it.hour:
             return False
         return int(match.group(2)) in steps
-
-

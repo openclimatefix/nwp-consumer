@@ -19,17 +19,17 @@ class TestCase:
     should_error: bool
     expected_coords: entities.NWPDimensionCoordinateMap
 
+
 class TestCEDARawRepository(unittest.TestCase):
     """Test the business methods of the CEDAFTPRawRepository class."""
 
     def test__convert_global(self) -> None:
         """Test the _convert_global method."""
 
-
         tests: list[TestCase] = [
             TestCase(
                 filename="test_CEDAFTP_UM-Global_ssrd_20241105T00_S01-03.grib",
-                expected_coords = dataclasses.replace(
+                expected_coords=dataclasses.replace(
                     entities.Models.MO_UM_GLOBAL_17KM.expected_coordinates,
                     init_time=[dt.datetime(2024, 11, 5, 0, tzinfo=dt.UTC)],
                     step=[1, 2, 3],
@@ -39,7 +39,7 @@ class TestCEDARawRepository(unittest.TestCase):
             ),
             TestCase(
                 filename="test_CEDAFTP_UM-Global_u_20241105T00_S01-03_AreaC.grib",
-                expected_coords = dataclasses.replace(
+                expected_coords=dataclasses.replace(
                     entities.Models.MO_UM_GLOBAL_17KM.expected_coordinates,
                     init_time=[dt.datetime(2024, 11, 5, 0, tzinfo=dt.UTC)],
                     step=[1, 2, 3],
@@ -49,11 +49,10 @@ class TestCEDARawRepository(unittest.TestCase):
             ),
             TestCase(
                 filename="test_MODatahub_UM-Global_t2m_20241120T00_S00.grib",
-                expected_coords = entities.Models.MO_UM_GLOBAL_17KM.expected_coordinates,
+                expected_coords=entities.Models.MO_UM_GLOBAL_17KM.expected_coordinates,
                 should_error=True,
             ),
         ]
-
 
         for t in tests:
             with self.subTest(name=t.filename):
@@ -118,6 +117,7 @@ class TestCEDARawRepository(unittest.TestCase):
                     self.assertIsInstance(region_result, Failure, msg=f"{region_result}")
                 else:
                     self.assertIsInstance(region_result, Success, msg=f"{region_result}")
+
 
 if __name__ == "__main__":
     unittest.main()
