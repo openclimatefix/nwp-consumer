@@ -39,7 +39,7 @@ class StoreCreatedNotification:
                 f"Store created: {self.filename} ({self.size_mb} MB) in ",
                 f"{self.performance.duration_seconds} secs ",
                 f"(using {self.performance.memory_mb} MB RAM)",
-            )
+            ),
         )
 
 

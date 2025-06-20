@@ -87,7 +87,7 @@ class ModelMetadata:
                     else f"\t\t{dim}: {vals[:3]} ... {vals[-3:]}"
                     for dim, vals in self.expected_coordinates.__dict__.items()
                 ),
-            )
+            ),
         )
         return pretty
 
@@ -111,7 +111,7 @@ class ModelMetadata:
                             self,
                             name=f"{self.name}_uk",
                             expected_coordinates=coords,
-                        )
+                        ),
                     )
                     .unwrap()
                 )
@@ -129,7 +129,7 @@ class ModelMetadata:
                             self,
                             name=f"{self.name}_uk",
                             expected_coordinates=coords,
-                        )
+                        ),
                     )
                     .unwrap()
                 )
@@ -146,7 +146,7 @@ class ModelMetadata:
                             self,
                             name=f"{self.name}_india",
                             expected_coordinates=coords,
-                        )
+                        ),
                     )
                     .unwrap()
                 )
@@ -163,7 +163,7 @@ class ModelMetadata:
                             self,
                             name=f"{self.name}_west-europe",
                             expected_coordinates=coords,
-                        )
+                        ),
                     )
                     .unwrap()
                 )
@@ -180,7 +180,7 @@ class ModelMetadata:
                             self,
                             name=f"{self.name}_nl",
                             expected_coordinates=coords,
-                        )
+                        ),
                     )
                     .unwrap()
                 )
@@ -366,7 +366,7 @@ class Models:
                         np.arange(45, 135, 0.234),
                         np.arange(135, 225, 0.234),
                         np.arange(225, 315, 0.234),
-                    ]
+                    ],
                 )
             ],
             # TODO: Change to -180 -> 180

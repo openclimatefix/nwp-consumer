@@ -169,7 +169,7 @@ class NOAAS3RawRepository(ports.RawRepository):
             return Failure(
                 OSError(
                     f"Failed to download file from S3 at '{url}'. Encountered error: {e}",
-                )
+                ),
             )
 
         # For some reason, the GFS files are about 2MB larger when downloaded
@@ -180,7 +180,7 @@ class NOAAS3RawRepository(ports.RawRepository):
                     f"File size mismatch from file at '{url}': "
                     f"{local_path.stat().st_size} != {fs.info(url)['size']} (remote). "
                     "File may be corrupted.",
-                )
+                ),
             )
 
         # Also download the associated index file
@@ -252,7 +252,7 @@ class NOAAS3RawRepository(ports.RawRepository):
             return Failure(
                 ValueError(
                     f"Error opening '{path}' as list of xarray Datasets: {e}",
-                )
+                ),
             )
 
         if len(ds.data_vars) == 0:
@@ -260,7 +260,7 @@ class NOAAS3RawRepository(ports.RawRepository):
                 ValueError(
                     f"No datasets found in '{path}'. File may be corrupted. "
                     "A redownload of the file may be required.",
-                )
+                ),
             )
 
         try:
@@ -273,7 +273,7 @@ class NOAAS3RawRepository(ports.RawRepository):
                 ds.drop_vars(
                     names=[
                         c for c in ds.coords if c not in ["time", "step", "latitude", "longitude"]
-                    ]
+                    ],
                 )
                 .rename(name_dict={"time": "init_time"})
                 .expand_dims(dim="init_time")
@@ -297,7 +297,7 @@ class NOAAS3RawRepository(ports.RawRepository):
             return Failure(
                 ValueError(
                     f"Error processing dataset from '{path}' to DataArray: {e}",
-                )
+                ),
             )
 
         return Success([da])

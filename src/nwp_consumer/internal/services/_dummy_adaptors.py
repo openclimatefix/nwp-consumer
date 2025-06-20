@@ -53,7 +53,7 @@ class DummyRawRepository(ports.RawRepository):
 
     @override
     def fetch_init_data(
-        self, it: dt.datetime
+        self, it: dt.datetime,
     ) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         def gen_dataset(step: int, variable: str) -> ResultE[list[xr.DataArray]]:
             """Define a generator that provides one variable at one step."""

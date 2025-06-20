@@ -127,13 +127,13 @@ class CEDARawRepository(ports.RawRepository):
                     {
                         "latitude": 8,
                         "longitude": 8,
-                    }
+                    },
                 ).with_running_hours([0, 12]),  # 6 and 18 exist, but are lacking variables
                 "mo-um-global": entities.Models.MO_UM_GLOBAL_17KM.with_chunk_count_overrides(
                     {
                         "latitude": 8,
                         "longitude": 8,
-                    }
+                    },
                 ).with_running_hours([0, 12]),
                 "mo-um-ukv": entities.Models.MO_UM_UKV_2KM_OSGB,
             },
@@ -155,7 +155,7 @@ class CEDARawRepository(ports.RawRepository):
 
     @override
     def fetch_init_data(
-        self, it: dt.datetime
+        self, it: dt.datetime,
     ) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         parameter_stubs: list[str] = [
             "Total_Downward_Surface_SW_Flux",
@@ -223,7 +223,7 @@ class CEDARawRepository(ports.RawRepository):
                 OSError(
                     f"Cannot authenticate with CEDA FTP service due to "
                     f"missing required environment variables: {', '.join(missing_envs)}",
-                )
+                ),
             )
         username: str = os.environ["CEDA_USER"]
         password: str = os.environ["CEDA_PASS"]
@@ -238,7 +238,7 @@ class CEDARawRepository(ports.RawRepository):
                 return Failure(
                     OSError(
                         f"Failed to authenticate with CEDA: {response.status} {response.reason}",
-                    )
+                    ),
                 )
             try:
                 access_token: str = json.loads(response.read())["access_token"]
@@ -246,7 +246,7 @@ class CEDARawRepository(ports.RawRepository):
                 return Failure(
                     OSError(
                         f"Failed to parse CEDA access token: {e}",
-                    )
+                    ),
                 )
         log.debug("Generated access token for CEDA")
 
@@ -331,7 +331,7 @@ class CEDARawRepository(ports.RawRepository):
                             f"No relevant variables found in '{path}'. "
                             "Ensure file contains the expected variables, "
                             "and that desired variables are not being dropped.",
-                        )
+                        ),
                     )
                 da: xr.DataArray = (
                     ds.where(
@@ -347,7 +347,7 @@ class CEDARawRepository(ports.RawRepository):
                             c
                             for c in ds.coords
                             if c not in ["time", "step", "latitude", "longitude"]
-                        ]
+                        ],
                     )
                     .rename(name_dict={"time": "init_time"})
                     .expand_dims(dim="init_time")

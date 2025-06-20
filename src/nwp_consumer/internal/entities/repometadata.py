@@ -103,6 +103,6 @@ class RawRepositoryMetadata:
                 "\n".join(f"\t\t{var}" for var in self.required_env),
                 "\n\tOptional:",
                 "\n".join(f"\t\t{var}={val}" for var, val in self.optional_env.items()),
-            )
+            ),
         )
         return pretty

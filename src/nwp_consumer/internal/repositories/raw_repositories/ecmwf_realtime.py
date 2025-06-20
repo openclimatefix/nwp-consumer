@@ -84,10 +84,10 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                 "default": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk-north60"),
                 "hres-ifs-uk": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk-north60"),
                 "hres-ifs-india": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region(
-                    "india"
+                    "india",
                 ).with_chunk_count_overrides({"variable": 1}),
                 "hres-ifs-nl": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region(
-                    "nl"
+                    "nl",
                 ).with_max_step(84),
             },
         )
@@ -108,7 +108,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
 
     @override
     def fetch_init_data(
-        self, it: dt.datetime
+        self, it: dt.datetime,
     ) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         # List relevant files in the S3 bucket
         try:
@@ -127,7 +127,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                     f"Failed to list files in bucket path '{self.bucket}/ecmwf'. "
                     "Ensure the path exists and the caller has relevant access permissions. "
                     f"Encountered error: {e}",
-                )
+                ),
             )
             return
 
@@ -137,7 +137,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                     f"No raw files found for init time '{it.strftime('%Y-%m-%d %H:%M')}' "
                     f"in bucket path '{self.bucket}/ecmwf'. Ensure files exist at the given path "
                     "named with the expected pattern, e.g. 'A2S10250000102603001.",
-                )
+                ),
             )
             return
 
@@ -157,7 +157,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                 OSError(
                     f"Cannot authenticate with ECMWF Realtime S3 service due to "
                     f"missing required environment variables: {', '.join(missing_envs)}",
-                )
+                ),
             )
         try:
             bucket: str = os.environ["ECMWF_REALTIME_S3_BUCKET"]
@@ -174,7 +174,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                 ConnectionError(
                     "Failed to connect to S3 for ECMWF data. "
                     f"Credentials may be wrong or undefined. Encountered error: {e}",
-                )
+                ),
             )
 
         log.debug(f"Successfully authenticated with S3 instance '{bucket}'")
@@ -229,7 +229,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                 return Failure(
                     OSError(
                         f"Failed to download file from S3 at '{url}'. Encountered error: {e}",
-                    )
+                    ),
                 )
 
             if local_path.stat().st_size != self._fs.info(url)["size"]:
@@ -237,7 +237,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                     ValueError(
                         f"Failed to download file from S3 at '{url}'. "
                         "File size mismatch. File may be corrupted.",
-                    )
+                    ),
                 )
 
         return Success(local_path)
@@ -255,14 +255,14 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             return Failure(
                 OSError(
                     f"Error opening '{path}' as list of xarray Datasets: {e}",
-                )
+                ),
             )
         if len(dss) == 0:
             return Failure(
                 ValueError(
                     f"No datasets found in '{path}'. File may be corrupted. "
                     "A redownload of the file may be required.",
-                )
+                ),
             )
 
         processed_das: list[xr.DataArray] = []
@@ -311,7 +311,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                 return Failure(
                     ValueError(
                         f"Error processing dataset {i} from '{path}' to DataArray: {e}",
-                    )
+                    ),
                 )
             # Put each variable into its own DataArray:
             # * Each raw file does not contain a full set of parameters
@@ -325,7 +325,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                 ValueError(
                     f"Skipped {num_skipped}/{len(dss)} datasets from '{path}'. "
                     "File may not contain the expected parameters and geographic bounds.",
-                )
+                ),
             )
 
         return Success(processed_das)

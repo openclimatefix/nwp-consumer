@@ -151,7 +151,7 @@ class TensorStore(abc.ABC):
                     f"Unable to create Directory Store at dir '{zarrdir}'. "
                     "Ensure ZARRDIR environment variable is specified correctly. "
                     f"Error context: {e}",
-                )
+                ),
             )
 
         # Write the coordinates to a skeleton Zarr store
@@ -183,7 +183,7 @@ class TensorStore(abc.ABC):
                         f"Existing store at '{path}' is for a different model. "
                         "Delete the existing store or move it to a new location, "
                         "or choose a new location for the new store via ZARRDIR.",
-                    )
+                    ),
                 )
             log.info(f"Using existing store at '{path}'")
             return Success(
@@ -355,7 +355,7 @@ class TensorStore(abc.ABC):
                     "Store does not have expected spatial dimensions. "
                     "Expected: ['latitude', 'longitude'], ['x_osgb', 'y_osgb'], ['x_laea', 'y_laea']. "
                     f"Got: {store_da.dims}.",
-                )
+                ),
             )
 
         result = xr.apply_ufunc(
@@ -405,7 +405,7 @@ class TensorStore(abc.ABC):
                     ValueError(
                         "Store contains NaN values. "
                         "Check the source data for missing values and reprocess the data.",
-                    )
+                    ),
                 )
 
         # TODO: Use consistency checks instead
@@ -457,7 +457,7 @@ class TensorStore(abc.ABC):
                         f"Unable to delete S3 store at path '{self.path}'."
                         "Ensure AWS credentials are correct and discoverable by botocore. "
                         f"Error context: {e}",
-                    )
+                    ),
                 )
         else:
             try:
@@ -466,7 +466,7 @@ class TensorStore(abc.ABC):
                 return Failure(
                     OSError(
                         f"Unable to delete store at path '{self.path}'. " f"Error context: {e}",
-                    )
+                    ),
                 )
         log.info("Deleted zarr store at '%s'", self.path)
         return Success(None)
@@ -493,7 +493,7 @@ class TensorStore(abc.ABC):
                     "parameters defined in `entities.parameters` if desired, or "
                     "add the parameter to the entities parameters if it is new. "
                     f"Store parameters: {[p.name for p in self.coordinate_map.variable]}.",
-                )
+                ),
             )
         store_da: xr.DataArray = xr.open_dataarray(self.path, engine="zarr")
 
@@ -554,7 +554,7 @@ class TensorStore(abc.ABC):
                 OSError(
                     "Cannot determine missing times in store due to "
                     f"error reading '{self.path}': {e}",
-                )
+                ),
             )
         missing_times: list[dt.datetime] = []
         for it in store_da.coords["init_time"].values:
@@ -569,7 +569,7 @@ class TensorStore(abc.ABC):
         if len(missing_times) > 0:
             log.debug(
                 f"NaNs in init times '{missing_times}' suggest they are missing, "
-                f"will redownload"
+                f"will redownload",
             )
         return Success(missing_times)
 
@@ -592,7 +592,7 @@ class TensorStore(abc.ABC):
             return Failure(
                 ValueError(
                     "S3 folder path must start with 's3://'. " f"Got: {s3_folder}",
-                )
+                ),
             )
         log.debug("Attempting AWS connection using credential discovery")
         try:
@@ -613,7 +613,7 @@ class TensorStore(abc.ABC):
                     "Ensure ZARRDIR environment variable is specified correctly, "
                     "and AWS credentials are discoverable by botocore. "
                     f"Error context: {e}",
-                )
+                ),
             )
         return Success((store, path))
 

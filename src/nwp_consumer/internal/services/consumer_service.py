@@ -93,7 +93,7 @@ class ConsumerService(ports.ConsumeUseCase):
                 OSError(
                     "Error threshold exceeded: "
                     f"{len(failures)/len(results)} errors (>6%) occurred during processing.",
-                )
+                ),
             )
         else:
             return Success(sum(successes))
@@ -207,7 +207,7 @@ class ConsumerService(ports.ConsumeUseCase):
                 return Failure(
                     OSError(
                         f"Failed to initialize store for init time: {init_store_result!s}",
-                    )
+                    ),
                 )
             store = init_store_result.unwrap()
 

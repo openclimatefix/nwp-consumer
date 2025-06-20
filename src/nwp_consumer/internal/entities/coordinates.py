@@ -213,7 +213,7 @@ class NWPDimensionCoordinateMap:
                     f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
                     "as required keys 'init_time', 'step', and 'variable' are not all present. "
                     f"Got: '{list(pd_indexes.keys())}'",
-                )
+                ),
             )
         if not all(len(pd_indexes[key].to_list()) > 0 for key in ["init_time", "step", "variable"]):
             return Failure(
@@ -221,7 +221,7 @@ class NWPDimensionCoordinateMap:
                     f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
                     "as the 'init_time', 'step', and 'variable' dimensions must have "
                     "at least one coordinate value.",
-                )
+                ),
             )
         input_parameter_set: set[str] = set(pd_indexes["variable"].to_list())
         known_parameter_set: set[str] = {str(p) for p in Parameter}
@@ -233,7 +233,7 @@ class NWPDimensionCoordinateMap:
                     f"'{list(input_parameter_set.difference(known_parameter_set))}'. "
                     "Ensure the parameter names match the names of the standard parameter set "
                     "defined by the `entities.Parameter` Enum.",
-                )
+                ),
             )
         if not all(key in [f.name for f in dataclasses.fields(cls)] for key in pd_indexes):
             unknown_keys: list[str] = list(
@@ -243,7 +243,7 @@ class NWPDimensionCoordinateMap:
                 KeyError(
                     f"Cannot create {cls.__class__.__name__} instance from pandas indexes "
                     f"as unknown index/dimension keys were encountered: {unknown_keys}.",
-                )
+                ),
             )
         if (
             "latitude" in pd_indexes
@@ -255,7 +255,7 @@ class NWPDimensionCoordinateMap:
                     "as the latitude values are not in descending order. "
                     "Latitude coordinates should run from 90 -> -90. "
                     "Modify the coordinate in the source data to be in descending order.",
-                )
+                ),
             )
         if (
             "longitude" in pd_indexes
@@ -267,7 +267,7 @@ class NWPDimensionCoordinateMap:
                     "as the longitude values are not in ascending order. "
                     "Longitude coordinates should run from -180 -> 180. "
                     "Modify the coordinate in the source data to be in ascending order.",
-                )
+                ),
             )
         if (
             "y_osgb" in pd_indexes
@@ -278,7 +278,7 @@ class NWPDimensionCoordinateMap:
                     "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
                     "as the y_osgb values are not in descending order. "
                     "Modify the coordinate in the source data to be in descending order.",
-                )
+                ),
             )
         if (
             "x_osgb" in pd_indexes
@@ -289,7 +289,7 @@ class NWPDimensionCoordinateMap:
                     "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
                     "as the x_osgb values are not in ascending order. "
                     "Modify the coordinate in the source data to be in ascending order.",
-                )
+                ),
             )
         if (
             "y_laea" in pd_indexes
@@ -300,7 +300,7 @@ class NWPDimensionCoordinateMap:
                     "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
                     "as the y_laea values are not in descending order. "
                     "Modify the coordinate in the source data to be in descending order.",
-                )
+                ),
             )
         if (
             "x_laea" in pd_indexes
@@ -311,7 +311,7 @@ class NWPDimensionCoordinateMap:
                     "Cannot create NWPDimensionCoordinateMap instance from pandas indexes "
                     "as the x_laea values are not in ascending order. "
                     "Modify the coordinate in the source data to be in ascending order.",
-                )
+                ),
             )
 
         # Convert the pandas Index objects to lists of the appropriate types
@@ -346,7 +346,7 @@ class NWPDimensionCoordinateMap:
 
     @classmethod
     def from_xarray(
-        cls, xarray_obj: xr.DataArray | xr.Dataset
+        cls, xarray_obj: xr.DataArray | xr.Dataset,
     ) -> ResultE["NWPDimensionCoordinateMap"]:
         """Create a new NWPDimensionCoordinateMap from an XArray DataArray or Dataset object."""
         return cls.from_pandas(xarray_obj.coords.indexes)  # type: ignore
@@ -566,7 +566,7 @@ class NWPDimensionCoordinateMap:
                 (
                     f"nwp-consumer {__version__} at ",
                     f"{dt.datetime.now(tz=dt.UTC).strftime('%Y-%m-%d %H:%M')}",
-                )
+                ),
             ),
             "variables": json.dumps(
                 {
@@ -575,7 +575,7 @@ class NWPDimensionCoordinateMap:
                         "units": p.metadata().units,
                     }
                     for p in self.variable
-                }
+                },
             ),
             "coord_system": json.dumps(self.coord_system),
         }
@@ -614,7 +614,7 @@ class NWPDimensionCoordinateMap:
                     "Cannot crop coordinates to a region as latitude and/or longitude "
                     "dimension coordinates are not present in the map. "
                     f"Dimensions: '{self.dims}'.",
-                )
+                ),
             )
 
         if not (-90 <= south < north <= 90 and -180 <= west < east <= 180):
@@ -625,7 +625,7 @@ class NWPDimensionCoordinateMap:
                     " and both must sit between 90 and -90 degrees; "
                     f"East ({east}) greater than West ({west}) "
                     " and both must sit between 180 and -180 degrees.",
-                )
+                ),
             )
 
         if (
@@ -639,7 +639,7 @@ class NWPDimensionCoordinateMap:
                     "Cannot crop coordinates to a region outside the bounds of the map. "
                     f"Crop region '{north, west, south, east}' not in "
                     f"map bounds '{self.nwse()}'.",
-                )
+                ),
             )
 
         # Determine the indices of the region in the latitude and longitude lists
@@ -652,7 +652,7 @@ class NWPDimensionCoordinateMap:
                 self,
                 latitude=[self.latitude[i] for i in lat_indices],
                 longitude=[self.longitude[i] for i in lon_indices],
-            )
+            ),
         )
 
     def nwse(self) -> tuple[float, float, float, float]:

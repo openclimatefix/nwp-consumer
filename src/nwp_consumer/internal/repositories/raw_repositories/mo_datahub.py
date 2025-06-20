@@ -188,7 +188,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                 OSError(
                     f"Cannot authenticate with MetOffice DataHub service due to "
                     f"missing required environment variables: {', '.join(missing_envs)}",
-                )
+                ),
             )
         api_key: str = os.environ["METOFFICE_API_KEY"]
         order_id: str = os.environ["METOFFICE_ORDER_ID"]
@@ -217,7 +217,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                     "Unable to list files from MetOffice DataHub for order "
                     f"{self.order_id} at '{self.request_url}'. "
                     f"Ensure API key and Order ID are correct. Error context: {e}",
-                )
+                ),
             )
             return
         try:
@@ -230,7 +230,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                     "Unable to decode JSON response from MetOffice DataHub. "
                     "Check the response from the '/latest' endpoint looks as expected. "
                     f"Error context: {e}",
-                )
+                ),
             )
             return
         urls: list[str] = []
@@ -262,7 +262,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                 ValueError(
                     f"Unknown model '{self.model().name}' requested. "
                     "Ensure MODEL environment variable is set to a valid model name.",
-                )
+                ),
             )
 
     def _download(self, url: str) -> ResultE[pathlib.Path]:
@@ -302,7 +302,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                 return Failure(
                     OSError(
                         "Unable to request file data from MetOffice DataHub at " f"'{url}': {e}",
-                    )
+                    ),
                 )
 
             # Download the file
@@ -449,14 +449,14 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                     ValueError(
                         f"Coordinate length of '{ds.sizes['x']}' for the x dimension for file "
                         f"'{path!s}' does not match expected length {len(expected_coords.x_laea)}",  # type: ignore
-                    )
+                    ),
                 )
             if ds.sizes["y"] != len(expected_coords.y_laea):  # type: ignore
                 return Failure(
                     ValueError(
                         f"Coordinate length of '{ds.sizes['y']}' for the y dimension for file "
                         f"'{path!s}' does not match expected length {len(expected_coords.y_laea)}",  # type: ignore
-                    )
+                    ),
                 )
             # Assign coordinates to the dataset, and reverse y so it is descending, before
             # replacing the stand in values with the actual ones

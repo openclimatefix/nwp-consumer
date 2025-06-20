@@ -143,7 +143,7 @@ class TestCoordinates(unittest.TestCase):
                             "2021-01-01T00:00:00Z",
                             "2021-01-01T03:00:00Z",
                             "2021-01-01T06:00:00Z",
-                        ]
+                        ],
                     ),
                     "step": pd.Index([hour * 60 * 60 * 1000000000 for hour in range(12)]),
                     "variable": pd.Index(
@@ -151,7 +151,7 @@ class TestCoordinates(unittest.TestCase):
                             Parameter.CLOUD_COVER_HIGH.value,
                             Parameter.TEMPERATURE_SL.value,
                             Parameter.TOTAL_PRECIPITATION_RATE_GL.value,
-                        ]
+                        ],
                     ),
                     "latitude": pd.Index([62.0, 61.0, 60.0]),
                     "longitude": pd.Index([10.0, 11.0, 12.0]),
@@ -166,7 +166,7 @@ class TestCoordinates(unittest.TestCase):
                 self.assertListEqual(list(result.keys()), list(t.expected_indexes.keys()))
                 for key in result:
                     self.assertListEqual(
-                        result[key].values.tolist(), t.expected_indexes[key].values.tolist()
+                        result[key].values.tolist(), t.expected_indexes[key].values.tolist(),
                     )
 
     def test_from_pandas(self) -> None:
