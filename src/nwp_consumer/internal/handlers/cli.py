@@ -18,10 +18,10 @@ class CLIHandler:
     notification_adaptor: type[ports.NotificationRepository]
 
     def __init__(
-            self,
-            model_adaptor: type[ports.RawRepository],
-            notification_adaptor: type[ports.NotificationRepository],
-        ) -> None:
+        self,
+        model_adaptor: type[ports.RawRepository],
+        notification_adaptor: type[ports.NotificationRepository],
+    ) -> None:
         """Create a new instance."""
         self.model_adaptor = model_adaptor
         self.notification_adaptor = notification_adaptor
@@ -37,11 +37,18 @@ class CLIHandler:
             help="Consume NWP data for a single init time",
         )
         consume_command.add_argument(
-            "--init-time", "-i",
+            "--init-time",
+            "-i",
             help="Initialization time of the forecast (YYYY-MM-DDTHH). "
-                 "Omit to pull the latest available forecast.",
+            "Omit to pull the latest available forecast.",
             type=dt.datetime.fromisoformat,
             required=False,
+        )
+        consume_command.add_argument(
+            "--delete-on-failure",
+            help="Delete the data if archiving fails",
+            action="store_true",
+            default=True,
         )
 
         archive_command = subparsers.add_parser(
@@ -49,16 +56,24 @@ class CLIHandler:
             help="Archive NWP data for a given month",
         )
         archive_command.add_argument(
-            "--year", "-y",
+            "--year",
+            "-y",
             help="Year to archive",
             type=int,
             required=True,
         )
         archive_command.add_argument(
-            "--month", "-m",
+            "--month",
+            "-m",
             help="Month to archive",
             type=int,
             required=True,
+        )
+        archive_command.add_argument(
+            "--delete-on-failure",
+            help="Delete the data if archiving fails",
+            action="store_true",
+            default=True,
         )
 
         info_command = subparsers.add_parser("info", help="Show model repository info")
@@ -91,7 +106,10 @@ class CLIHandler:
                 result: ResultE[str] = service_result.do(
                     consume_result
                     for service in service_result
-                    for consume_result in service.consume(period=args.init_time)
+                    for consume_result in service.consume(
+                        period=args.init_time,
+                        delete_on_failure=args.delete_on_failure,
+                    )
                 )
                 if isinstance(result, Failure):
                     log.error(f"Failed to consume NWP data: {result!s}")
@@ -106,7 +124,10 @@ class CLIHandler:
                 result = service_result.do(
                     consume_result
                     for service in service_result
-                    for consume_result in service.consume(period=period)
+                    for consume_result in service.consume(
+                        period=period,
+                        delete_on_failure=args.delete_on_failure,
+                    )
                 )
                 if isinstance(result, Failure):
                     log.error(f"Failed to archive NWP data: {result!s}")

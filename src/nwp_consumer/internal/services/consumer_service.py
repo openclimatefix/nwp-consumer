@@ -37,7 +37,6 @@ class ConsumerService(ports.ConsumeUseCase):
         self.mr = model_repository
         self.nr = notification_repository
 
-
     @classmethod
     def from_adaptors(
             cls,
@@ -174,6 +173,7 @@ class ConsumerService(ports.ConsumeUseCase):
     def consume(
             self,
             period: dt.datetime | dt.date | None = None,
+            delete_on_failure: bool = True,
         ) -> ResultE[str]:
         """Consume NWP data to Zarr format for desired time period.
 
@@ -183,6 +183,7 @@ class ConsumerService(ports.ConsumeUseCase):
 
         Args:
             period: The period for which to gather init time data.
+            delete_on_failure: Whether to delete the store if the operation fails.
 
         Returns:
             The path to the produced Zarr store.
@@ -235,7 +236,7 @@ class ConsumerService(ports.ConsumeUseCase):
                     return process_result
 
             validation_result = store.validate_store()
-            if isinstance(validation_result, Failure):
+            if isinstance(validation_result, Failure) and delete_on_failure:
                 delete_store_result = store.delete_store()
                 if isinstance(delete_store_result, Failure):
                     log.error(
