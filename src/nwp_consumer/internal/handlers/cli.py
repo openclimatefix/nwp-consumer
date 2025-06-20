@@ -45,10 +45,9 @@ class CLIHandler:
             required=False,
         )
         consume_command.add_argument(
-            "--delete-on-failure",
-            help="Delete the data if archiving fails",
+            "--keep-failed",
+            help="Don't delete the data if consuming fails",
             action="store_true",
-            default=True,
         )
 
         archive_command = subparsers.add_parser(
@@ -70,10 +69,9 @@ class CLIHandler:
             required=True,
         )
         archive_command.add_argument(
-            "--delete-on-failure",
-            help="Delete the data if archiving fails",
+            "--keep-failed",
+            help="Don't delete the data if archiving fails",
             action="store_true",
-            default=True,
         )
 
         info_command = subparsers.add_parser("info", help="Show model repository info")
@@ -108,7 +106,7 @@ class CLIHandler:
                     for service in service_result
                     for consume_result in service.consume(
                         period=args.init_time,
-                        delete_on_failure=args.delete_on_failure,
+                        delete_on_failure=not args.keep_failed,
                     )
                 )
                 if isinstance(result, Failure):
@@ -126,7 +124,7 @@ class CLIHandler:
                     for service in service_result
                     for consume_result in service.consume(
                         period=period,
-                        delete_on_failure=args.delete_on_failure,
+                        delete_on_failure=not args.keep_failed,
                     )
                 )
                 if isinstance(result, Failure):
