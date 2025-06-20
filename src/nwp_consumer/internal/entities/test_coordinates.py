@@ -13,7 +13,6 @@ class TestCoordinates(unittest.TestCase):
     """Test the business methods of the NWPDimensionCoordinateMap class."""
 
     def test_determine_region(self) -> None:
-
         @dataclasses.dataclass
         class TestCase:
             name: str
@@ -55,10 +54,7 @@ class TestCoordinates(unittest.TestCase):
             TestCase(
                 name="subset_with_multiple_span",
                 inner=NWPDimensionCoordinateMap(
-                    init_time=[
-                        dt.datetime(2021, 1, 1, i, tzinfo=dt.UTC)
-                        for i in [3, 6]
-                    ],
+                    init_time=[dt.datetime(2021, 1, 1, i, tzinfo=dt.UTC) for i in [3, 6]],
                     step=outer.step,
                     variable=outer.variable,
                     latitude=outer.latitude,
@@ -93,7 +89,7 @@ class TestCoordinates(unittest.TestCase):
                     variable=outer.variable,
                     latitude=[12, 13, 14, 15],
                     longitude=outer.longitude,
-                    ),
+                ),
                 expected_slices={},
                 should_error=True,
             ),
@@ -121,12 +117,11 @@ class TestCoordinates(unittest.TestCase):
                     self.assertEqual(result, Success(t.expected_slices))
 
     def test_to_pandas(self) -> None:
-
         @dataclasses.dataclass
         class TestCase:
             name: str
             coords: NWPDimensionCoordinateMap
-            expected_indexes: dict[str, pd.Index] # type: ignore
+            expected_indexes: dict[str, pd.Index]  # type: ignore
 
         tests = [
             TestCase(
@@ -143,17 +138,21 @@ class TestCoordinates(unittest.TestCase):
                     longitude=[10.0, 11.0, 12.0],
                 ),
                 expected_indexes={
-                    "init_time": pd.to_datetime([
-                        "2021-01-01T00:00:00Z",
-                        "2021-01-01T03:00:00Z",
-                        "2021-01-01T06:00:00Z",
-                    ]),
+                    "init_time": pd.to_datetime(
+                        [
+                            "2021-01-01T00:00:00Z",
+                            "2021-01-01T03:00:00Z",
+                            "2021-01-01T06:00:00Z",
+                        ],
+                    ),
                     "step": pd.Index([hour * 60 * 60 * 1000000000 for hour in range(12)]),
-                    "variable": pd.Index([
-                        Parameter.CLOUD_COVER_HIGH.value,
-                        Parameter.TEMPERATURE_SL.value,
-                        Parameter.TOTAL_PRECIPITATION_RATE_GL.value,
-                    ]),
+                    "variable": pd.Index(
+                        [
+                            Parameter.CLOUD_COVER_HIGH.value,
+                            Parameter.TEMPERATURE_SL.value,
+                            Parameter.TOTAL_PRECIPITATION_RATE_GL.value,
+                        ],
+                    ),
                     "latitude": pd.Index([62.0, 61.0, 60.0]),
                     "longitude": pd.Index([10.0, 11.0, 12.0]),
                 },
@@ -167,8 +166,8 @@ class TestCoordinates(unittest.TestCase):
                 self.assertListEqual(list(result.keys()), list(t.expected_indexes.keys()))
                 for key in result:
                     self.assertListEqual(
-                        result[key].values.tolist(),
-                        t.expected_indexes[key].values.tolist())
+                        result[key].values.tolist(), t.expected_indexes[key].values.tolist(),
+                    )
 
     def test_from_pandas(self) -> None:
         @dataclasses.dataclass
@@ -191,7 +190,8 @@ class TestCoordinates(unittest.TestCase):
                 expected_coordinates=NWPDimensionCoordinateMap(
                     init_time=[
                         dt.datetime(2021, 1, 1, 0, tzinfo=dt.UTC),
-                        dt.datetime(2021, 1, 1, 3, tzinfo=dt.UTC)],
+                        dt.datetime(2021, 1, 1, 3, tzinfo=dt.UTC),
+                    ],
                     step=[0, 72],
                     variable=[Parameter.TEMPERATURE_SL, Parameter.CLOUD_COVER_HIGH],
                     latitude=[60.0, 61.0],
@@ -319,10 +319,9 @@ class TestCoordinates(unittest.TestCase):
                 else:
                     self.assertIsInstance(result, Success)
                     coords = result.unwrap()
-                    self.assertListEqual(coords.latitude, t.expected_latitude) # type: ignore
-                    self.assertListEqual(coords.longitude, t.expected_longitude) # type: ignore
+                    self.assertListEqual(coords.latitude, t.expected_latitude)  # type: ignore
+                    self.assertListEqual(coords.longitude, t.expected_longitude)  # type: ignore
 
 
 if __name__ == "__main__":
     unittest.main()
-

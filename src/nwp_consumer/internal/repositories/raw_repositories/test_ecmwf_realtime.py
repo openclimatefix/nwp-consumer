@@ -23,7 +23,7 @@ class TestECMWFRealTimeS3RawRepository(unittest.TestCase):
     @unittest.skipIf(
         condition="CI" in os.environ,
         reason="Skipping integration test that requires S3 access.",
-    ) # TODO: Move into integration tests, or remove
+    )  # TODO: Move into integration tests, or remove
     def test__download_and_convert(self) -> None:
         """Test the _download_and_convert method."""
 
@@ -48,7 +48,7 @@ class TestECMWFRealTimeS3RawRepository(unittest.TestCase):
         ]
 
         for url in urls:
-            with (self.subTest(url=url)):
+            with self.subTest(url=url):
                 result = c._download_and_convert(url)
 
                 self.assertIsInstance(result, Success, msg=f"{result!s}")
@@ -58,7 +58,9 @@ class TestECMWFRealTimeS3RawRepository(unittest.TestCase):
                     test_coordinates.determine_region,
                 )
                 self.assertIsInstance(
-                    determine_region_result, Success, msg=f"{determine_region_result!s}",
+                    determine_region_result,
+                    Success,
+                    msg=f"{determine_region_result!s}",
                 )
 
     def test__wanted_file(self) -> None:
@@ -105,7 +107,8 @@ class TestECMWFRealTimeS3RawRepository(unittest.TestCase):
                 result = ECMWFRealTimeS3RawRepository._wanted_file(
                     filename=t.filename,
                     it=test_it,
-                    max_step=max(ECMWFRealTimeS3RawRepository.model().expected_coordinates.step))
+                    max_step=max(ECMWFRealTimeS3RawRepository.model().expected_coordinates.step),
+                )
                 self.assertEqual(result, t.expected)
 
     def test__convert(self) -> None:
@@ -163,7 +166,6 @@ class TestECMWFRealTimeS3RawRepository(unittest.TestCase):
                     self.assertIsInstance(region_result, Failure, msg=f"{region_result}")
                 else:
                     self.assertIsInstance(region_result, Success, msg=f"{region_result}")
-
 
     @patch.dict(os.environ, {"MODEL": "hres-ifs-india"}, clear=True)
     def test_convert_india(self) -> None:

@@ -20,4 +20,3 @@ class StdoutNotificationRepository(ports.NotificationRepository):
     ) -> ResultE[str]:
         log.info(f"{message}")
         return Success("Notification sent to stdout successfully.")
-

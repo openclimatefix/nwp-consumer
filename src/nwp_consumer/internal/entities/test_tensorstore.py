@@ -25,7 +25,6 @@ logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
 
 class MockS3Bucket:
-
     client: BotocoreClient
     server: ThreadedMotoServer
     bucket: str = "test-bucket"
@@ -49,11 +48,11 @@ class MockS3Bucket:
         )
 
     def __exit__(
-            self,
-            exc_type: type[BaseException] | None,
-            exc_val: BaseException | None,
-            exc_tb: TracebackType | None,
-        ) -> None:
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         response = self.client.list_objects_v2(
             Bucket=self.bucket,
         )
@@ -75,10 +74,7 @@ class TestTensorStore(unittest.TestCase):
         """Create an instance of the TensorStore class."""
 
         test_coords: NWPDimensionCoordinateMap = NWPDimensionCoordinateMap(
-            init_time=[
-                dt.datetime(year, 1, 1, h, tzinfo=dt.UTC)
-                for h in [0, 6, 12, 18]
-            ],
+            init_time=[dt.datetime(year, 1, 1, h, tzinfo=dt.UTC) for h in [0, 6, 12, 18]],
             step=[1, 2, 3, 4],
             variable=[Parameter.TEMPERATURE_SL],
             latitude=np.linspace(90, -90, 12).tolist(),
@@ -96,12 +92,16 @@ class TestTensorStore(unittest.TestCase):
         yield store
         store.delete_store()
 
-    @patch.dict(os.environ, {
-        "AWS_ENDPOINT_URL": "http://localhost:5000",
-        "AWS_ACCESS_KEY_ID": "test-key",
-        "AWS_SECRET_ACCESS_KEY": "test-secret",
-        "ZARRDIR": "s3://test-bucket/data",
-    }, clear=True)
+    @patch.dict(
+        os.environ,
+        {
+            "AWS_ENDPOINT_URL": "http://localhost:5000",
+            "AWS_ACCESS_KEY_ID": "test-key",
+            "AWS_SECRET_ACCESS_KEY": "test-secret",
+            "ZARRDIR": "s3://test-bucket/data",
+        },
+        clear=True,
+    )
     def test_initialize_and_delete_s3(self) -> None:
         """Test the initialize_empty_store method."""
 
@@ -125,7 +125,8 @@ class TestTensorStore(unittest.TestCase):
                 for step in test_da.coords["step"].values:
                     write_result = ts.write_to_region(
                         da=test_da.where(
-                            test_da["init_time"] == it, drop=True,
+                            test_da["init_time"] == it,
+                            drop=True,
                         ).where(test_da["step"] == step, drop=True),
                     )
                     self.assertIsInstance(write_result, Success, msg=write_result)
@@ -199,7 +200,8 @@ class TestTensorStore(unittest.TestCase):
                                         for k, v in ts.coordinate_map.shapemap.items()
                                     ],
                                 ),
-                                coords=ts.coordinate_map.to_pandas() | {
+                                coords=ts.coordinate_map.to_pandas()
+                                | {
                                     "init_time": [np.datetime64(i.replace(tzinfo=None), "ns")],
                                 },
                             ),
@@ -209,6 +211,6 @@ class TestTensorStore(unittest.TestCase):
                     missing_times = result.unwrap()
                     self.assertListEqual(missing_times, t.expected)
 
+
 if __name__ == "__main__":
     unittest.main()
-

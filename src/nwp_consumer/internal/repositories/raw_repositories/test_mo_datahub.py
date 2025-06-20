@@ -94,8 +94,6 @@ class TestMetOfficeDatahubRawRepository(unittest.TestCase):
 
     @patch.dict(os.environ, {"MODEL": "um-ukv-2km"}, clear=True)
     def test_convert_ukv(self) -> None:
-
-
         @dataclasses.dataclass
         class TestCase:
             filename: str

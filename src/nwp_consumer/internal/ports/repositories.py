@@ -48,10 +48,10 @@ class RawRepository(abc.ABC):
         """Create a new authenticated instance of the class."""
         pass
 
-
     @abc.abstractmethod
-    def fetch_init_data(self, it: dt.datetime) \
-            -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
+    def fetch_init_data(
+        self, it: dt.datetime,
+    ) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         """Fetch raw data files for an init time as xarray datasets.
 
         As per the typing, the return value is a generator of functions that
@@ -110,7 +110,6 @@ class RawRepository(abc.ABC):
         """
         pass
 
-
     @staticmethod
     @abc.abstractmethod
     def repository() -> entities.RawRepositoryMetadata:
@@ -123,6 +122,7 @@ class RawRepository(abc.ABC):
         """Metadata about the model."""
         pass
 
+
 class NotificationRepository(abc.ABC):
     """Interface for a repository that sends notifications.
 
@@ -132,8 +132,8 @@ class NotificationRepository(abc.ABC):
 
     @abc.abstractmethod
     def notify(
-            self,
-            message: entities.StoreAppendedNotification | entities.StoreCreatedNotification,
+        self,
+        message: entities.StoreAppendedNotification | entities.StoreCreatedNotification,
     ) -> ResultE[str]:
         """Send a notification_repositories."""
         pass

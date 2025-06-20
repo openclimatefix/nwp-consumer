@@ -36,11 +36,11 @@ class PerformanceMonitor(Thread):
         self.start()
 
     def __exit__(
-            self,
-            exc_type: type[BaseException] | None,
-            exc_val: BaseException | None,
-            exc_tb: TracebackType | None,
-        ) -> None:
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Stop the performance monitor, saving the results."""
         self.stop = True
         self.end_time = time.time()
@@ -83,4 +83,3 @@ class PerformanceMonitor(Thread):
     def max_cpu_percent(self) -> float:
         """Get the maximum CPU usage during the thread's runtime."""
         return max(self.cpu_buffer)
-

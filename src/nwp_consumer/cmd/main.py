@@ -9,10 +9,13 @@ from nwp_consumer.internal import handlers, ports, repositories
 
 log = logging.getLogger("nwp-consumer")
 
+
 class Adaptors(NamedTuple):
     """Adaptors for the CLI."""
+
     model_repository: type[ports.RawRepository]
     notification_repository: type[ports.NotificationRepository]
+
 
 def parse_env() -> Adaptors:
     """Parse from the environment."""
@@ -20,20 +23,15 @@ def parse_env() -> Adaptors:
     match os.getenv("MODEL_REPOSITORY"):
         # Default to NOAA S3 as it is freely accessible
         case None | "gfs":
-            model_repository_adaptor = \
-                repositories.raw_repositories.NOAAS3RawRepository
+            model_repository_adaptor = repositories.raw_repositories.NOAAS3RawRepository
         case "ceda":
-            model_repository_adaptor = \
-                repositories.raw_repositories.CEDARawRepository
+            model_repository_adaptor = repositories.raw_repositories.CEDARawRepository
         case "ecmwf-realtime":
-            model_repository_adaptor = \
-                repositories.raw_repositories.ECMWFRealTimeS3RawRepository
+            model_repository_adaptor = repositories.raw_repositories.ECMWFRealTimeS3RawRepository
         case "metoffice-datahub":
-            model_repository_adaptor = \
-                repositories.raw_repositories.MetOfficeDatahubRawRepository
+            model_repository_adaptor = repositories.raw_repositories.MetOfficeDatahubRawRepository
         case "ecmwf-mars":
-            model_repository_adaptor = \
-                    repositories.raw_repositories.ECMWFMARSRawRepository
+            model_repository_adaptor = repositories.raw_repositories.ECMWFMARSRawRepository
         case _ as mr:
             log.error(
                 f"Unknown model repository '{mr}'. Expected one of "
@@ -44,11 +42,13 @@ def parse_env() -> Adaptors:
     notification_repository_adaptor: type[ports.NotificationRepository]
     match os.getenv("NOTIFICATION_REPOSITORY", "stdout"):
         case "stdout":
-            notification_repository_adaptor = \
+            notification_repository_adaptor = (
                 repositories.notification_repositories.StdoutNotificationRepository
+            )
         case "dagster-pipes":
-            notification_repository_adaptor = \
+            notification_repository_adaptor = (
                 repositories.notification_repositories.DagsterPipesNotificationRepository
+            )
         case _ as notification:
             log.error(f"Unknown notification repository: {notification}")
             sys.exit(1)
@@ -68,4 +68,3 @@ def run_cli() -> None:
     )
     returncode: int = c.run()
     sys.exit(returncode)
-
