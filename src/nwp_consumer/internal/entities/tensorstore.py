@@ -353,8 +353,8 @@ class TensorStore(abc.ABC):
             return Failure(
                 ValueError(
                     "Store does not have expected spatial dimensions. "
-                    "Expected: ['latitude', 'longitude'], ['x_osgb', 'y_osgb'], ['x_laea', 'y_laea']. "
-                    f"Got: {store_da.dims}.",
+                    "Expected: ['latitude', 'longitude'], ['x_osgb', 'y_osgb'], "
+                    "['x_laea', 'y_laea']. Got: {store_da.dims}.",
                 ),
             )
 
