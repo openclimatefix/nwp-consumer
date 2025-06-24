@@ -282,7 +282,7 @@ class Models:
         resolution="0.1 degrees",
         expected_coordinates=NWPDimensionCoordinateMap(
             init_time=[],
-            step=list(range(0, 49, 1)),
+            step=list(range(0, 56, 1)),
             variable=[
                 Parameter.DOWNWARD_LONGWAVE_RADIATION_FLUX_GL,
                 Parameter.DOWNWARD_SHORTWAVE_RADIATION_FLUX_GL,
