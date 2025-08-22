@@ -42,6 +42,15 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "markkvdb",
+      "name": "Mark van der Broek",
+      "avatar_url": "https://avatars.githubusercontent.com/u/6012624?v=4",
+      "profile": "http://mvanderbroek.com",
+      "contributions": [
+        "doc"
+      ]
     }
   ],
   "contributorsPerLine": 7,
