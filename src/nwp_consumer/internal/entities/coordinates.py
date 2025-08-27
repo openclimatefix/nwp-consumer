@@ -183,7 +183,7 @@ class NWPDimensionCoordinateMap:
     @classmethod
     def from_pandas(
         cls,
-        pd_indexes: dict[str, pd.Index],  # type: ignore
+        pd_indexes: dict[str, pd.Index],
     ) -> ResultE["NWPDimensionCoordinateMap"]:
         """Create a new NWPDimensionCoordinateMap from a dictionary of pandas Index objects.
 
@@ -351,7 +351,7 @@ class NWPDimensionCoordinateMap:
         """Create a new NWPDimensionCoordinateMap from an XArray DataArray or Dataset object."""
         return cls.from_pandas(xarray_obj.coords.indexes)  # type: ignore
 
-    def to_pandas(self) -> dict[str, pd.Index]:  # type: ignore
+    def to_pandas(self) -> dict[str, pd.Index]:
         """Convert the coordinate map to a dictionary of pandas Index objects.
 
         This is useful for interoperability with xarray, which prefers to define

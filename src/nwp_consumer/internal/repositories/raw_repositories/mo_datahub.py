@@ -237,7 +237,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
         if "orderDetails" in data and "files" in data["orderDetails"]:
             for filedata in data["orderDetails"]["files"]:
                 if "fileId" in filedata and "+" not in filedata["fileId"]:
-                    urls.append(f"{self.request_url}/{filedata["fileId"]}/data")
+                    urls.append(f"{self.request_url}/{filedata["fileId"]}/data?dataSpec=1.1.0")
 
         log.debug(
             f"Found {len(urls)} file(s) for init time '{it.strftime('%Y-%m-%d %H:%M')}' "
