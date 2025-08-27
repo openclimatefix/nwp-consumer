@@ -121,7 +121,7 @@ class TestCoordinates(unittest.TestCase):
         class TestCase:
             name: str
             coords: NWPDimensionCoordinateMap
-            expected_indexes: dict[str, pd.Index]  # type: ignore
+            expected_indexes: dict[str, pd.Index]
 
         tests = [
             TestCase(
@@ -173,7 +173,7 @@ class TestCoordinates(unittest.TestCase):
         @dataclasses.dataclass
         class TestCase:
             name: str
-            data: dict[str, pd.Index]  # type: ignore
+            data: dict[str, pd.Index]
             expected_coordinates: NWPDimensionCoordinateMap | None
             should_error: bool
 
