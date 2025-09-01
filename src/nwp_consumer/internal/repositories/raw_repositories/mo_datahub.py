@@ -133,6 +133,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
 
     request_url: str
     order_id: str
+    dataspec: str
     _headers: dict[str, str]
 
     def __init__(self, order_id: str, api_key: str) -> None:
@@ -143,6 +144,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
         }
         self.order_id = order_id
         self.request_url = f"{self.base_url}/{self.order_id}/latest"
+        self.dataspec = os.getenv("METOFFICE_DATASPEC", self.repository().optional_env["METOFFICE_DATASPEC"])
 
     @staticmethod
     @override
@@ -154,7 +156,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             delay_minutes=120,
             max_connections=10,
             required_env=["METOFFICE_API_KEY", "METOFFICE_ORDER_ID"],
-            optional_env={},
+            optional_env={"METOFFICE_DATASPEC": "1.1.0"},
             postprocess_options=entities.PostProcessOptions(),
             available_models={
                 "default": entities.Models.MO_UM_GLOBAL_10KM.with_region("india"),
@@ -200,7 +202,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
         it: dt.datetime,
     ) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         req: urllib.request.Request = urllib.request.Request(  # noqa: S310
-            url=self.request_url + f"?detail=MINIMAL&runfilter={it:%Y%m%d%H}",
+            url=self.request_url + f"?detail=MINIMAL&runfilter={it:%Y%m%d%H}&dataSpec={self.dataspec}",
             headers=self._headers,
             method="GET",
         )
@@ -237,7 +239,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
         if "orderDetails" in data and "files" in data["orderDetails"]:
             for filedata in data["orderDetails"]["files"]:
                 if "fileId" in filedata and "+" not in filedata["fileId"]:
-                    urls.append(f"{self.request_url}/{filedata["fileId"]}/data?dataSpec=1.1.0")
+                    urls.append(f"{self.request_url}/{filedata["fileId"]}/data?dataSpec={self.dataspec}")
 
         log.debug(
             f"Found {len(urls)} file(s) for init time '{it.strftime('%Y-%m-%d %H:%M')}' "
