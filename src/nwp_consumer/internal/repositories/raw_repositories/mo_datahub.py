@@ -144,7 +144,10 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
         }
         self.order_id = order_id
         self.request_url = f"{self.base_url}/{self.order_id}/latest"
-        self.dataspec = os.getenv("METOFFICE_DATASPEC", self.repository().optional_env["METOFFICE_DATASPEC"])
+        self.dataspec = os.getenv(
+            "METOFFICE_DATASPEC",
+            self.repository().optional_env["METOFFICE_DATASPEC"],
+        )
 
     @staticmethod
     @override
@@ -202,7 +205,8 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
         it: dt.datetime,
     ) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         req: urllib.request.Request = urllib.request.Request(  # noqa: S310
-            url=self.request_url + f"?detail=MINIMAL&runfilter={it:%Y%m%d%H}&dataSpec={self.dataspec}",
+            url=self.request_url + \
+                f"?detail=MINIMAL&runfilter={it:%Y%m%d%H}&dataSpec={self.dataspec}",
             headers=self._headers,
             method="GET",
         )
@@ -239,7 +243,9 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
         if "orderDetails" in data and "files" in data["orderDetails"]:
             for filedata in data["orderDetails"]["files"]:
                 if "fileId" in filedata and "+" not in filedata["fileId"]:
-                    urls.append(f"{self.request_url}/{filedata["fileId"]}/data?dataSpec={self.dataspec}")
+                    urls.append(
+                        f"{self.request_url}/{filedata["fileId"]}/data?dataSpec={self.dataspec}",
+                    )
 
         log.debug(
             f"Found {len(urls)} file(s) for init time '{it.strftime('%Y-%m-%d %H:%M')}' "
