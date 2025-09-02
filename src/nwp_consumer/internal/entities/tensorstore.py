@@ -330,8 +330,11 @@ class TensorStore(abc.ABC):
     @staticmethod
     def _has_nans(store_da: xr.DataArray) -> ResultE[bool]:
         """Check the store for NaN values."""
-        nans_in_image_threshold: float = 0.05
-        images_failing_nan_check_threshold: float = 0.02
+        # I don't like having environ calls buried like this - needs refactoring to the top
+        nans_in_image_threshold: float = float(os.getenv("ALLOWED_NAN_PERCENTAGE", "0.05"))
+        images_failing_nan_check_threshold: float = float(
+            os.getenv("ALLOWED_VALIDATION_FAILURE_PERCENTAGE", "0.02"),
+        )
 
         def _calc_null_percentage(data: np.typing.NDArray[np.float32]) -> float:
             nulls = np.isnan(data)
