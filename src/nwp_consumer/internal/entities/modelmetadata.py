@@ -197,10 +197,6 @@ class ModelMetadata:
             )
         return dataclasses.replace(self, chunk_count_overrides=overrides)
 
-    def with_delay_minutes(self, minutes: int) -> "ModelMetadata":
-        """Returns metadata for the given model with the given delay minutes."""
-        return dataclasses.replace(self, delay_minutes=minutes)
-
     def with_running_hours(self, hours: list[int]) -> "ModelMetadata":
         """Returns metadata for the given model with the given running hours."""
         return dataclasses.replace(self, running_hours=hours)
