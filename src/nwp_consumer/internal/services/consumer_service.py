@@ -83,7 +83,7 @@ class ConsumerService(ports.ConsumeUseCase):
         # ECMWF Realtime for instance needs a bit of tolerance because of some files not containing
         # data for all geographic regions.
         log.info(f"Processed {len(successes)} DataArrays successfully with {len(failures)} errors.")
-        if len(failures) / len(results) > 0.06:
+        if len(results) > 0 and (len(failures) / len(results) > 0.06):
             for i, exc in enumerate(failures):
                 if i < 5:
                     log.error(str(exc))
