@@ -518,8 +518,10 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
 
 
 class MetOfficeDatahubGlobalRawRepository(MetOfficeDatahubRawRepository):
+    """Repository implementation for data from MetOffice's Global DataHub service.
 
-
+    See above for more information.
+    """
     @staticmethod
     @override
     def repository() -> entities.RawRepositoryMetadata:

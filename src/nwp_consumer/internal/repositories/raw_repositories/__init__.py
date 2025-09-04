@@ -7,7 +7,7 @@ from .ceda import CEDARawRepository
 from .ecmwf_realtime import ECMWFRealTimeS3RawRepository
 from .ecmwf_mars import ECMWFMARSRawRepository
 from .noaa_s3 import NOAAS3RawRepository
-from .mo_datahub import MetOfficeDatahubRawRepository
+from .mo_datahub import MetOfficeDatahubRawRepository, MetOfficeDatahubGlobalRawRepository
 
 __all__ = [
     "CEDARawRepository",
