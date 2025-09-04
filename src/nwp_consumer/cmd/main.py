@@ -30,6 +30,8 @@ def parse_env() -> Adaptors:
             model_repository_adaptor = repositories.raw_repositories.ECMWFRealTimeS3RawRepository
         case "metoffice-datahub":
             model_repository_adaptor = repositories.raw_repositories.MetOfficeDatahubRawRepository
+        case "metoffice-datahub-global":
+            model_repository_adaptor = repositories.raw_repositories.MetOfficeDatahubGlobalRawRepository
         case "ecmwf-mars":
             model_repository_adaptor = repositories.raw_repositories.ECMWFMARSRawRepository
         case _ as mr:

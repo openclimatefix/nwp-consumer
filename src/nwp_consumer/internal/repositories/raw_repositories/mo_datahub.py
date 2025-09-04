@@ -162,11 +162,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             optional_env={"METOFFICE_DATASPEC": "1.1.0"},
             postprocess_options=entities.PostProcessOptions(),
             available_models={
-                "default": entities.Models.MO_UM_GLOBAL_10KM.with_region("india"),
-                "um-global-10km-india": entities.Models.MO_UM_GLOBAL_10KM.with_region("india"),
-                "um-global-10km-india-0-12": entities.Models.MO_UM_GLOBAL_10KM.with_region("india")\
-                    .with_running_hours([0, 12]),
-                "um-global-10km-uk": entities.Models.MO_UM_GLOBAL_10KM.with_region("uk"),
+                "default": entities.Models.MO_UM_UKV_2KM_LAEA,
                 "um-ukv-2km": entities.Models.MO_UM_UKV_2KM_LAEA,
             },
         )
@@ -519,3 +515,27 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             )
 
         return Success([da])
+
+
+class MetOfficeDatahubGlobalRawRepository(MetOfficeDatahubRawRepository):
+
+
+    @staticmethod
+    @override
+    def repository() -> entities.RawRepositoryMetadata:
+        return entities.RawRepositoryMetadata(
+            name="MetOffice-Weather-Datahub",
+            is_archive=False,
+            is_order_based=True,
+            delay_minutes=60*5,
+            max_connections=10,
+            required_env=["METOFFICE_API_KEY", "METOFFICE_ORDER_ID"],
+            optional_env={"METOFFICE_DATASPEC": "1.1.0"},
+            postprocess_options=entities.PostProcessOptions(),
+            available_models={
+                "default": entities.Models.MO_UM_GLOBAL_10KM.with_region("india"),
+                "um-global-10km-india": entities.Models.MO_UM_GLOBAL_10KM.with_region("india"),
+                "um-global-10km-uk": entities.Models.MO_UM_GLOBAL_10KM.with_region("uk"),
+            },
+        )
+
