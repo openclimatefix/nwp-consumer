@@ -14,7 +14,7 @@ __all__ = [
     "ECMWFRealTimeS3RawRepository",
     "NOAAS3RawRepository",
     "MetOfficeDatahubRawRepository",
-    "MetOfficeDatahubGlobalRawRepository"
     "ECMWFMARSRawRepository",
+    "MetOfficeDatahubGlobalRawRepository",
 ]
 
