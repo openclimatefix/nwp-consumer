@@ -152,11 +152,18 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
     @staticmethod
     @override
     def repository() -> entities.RawRepositoryMetadata:
+
+        requested_model: str = os.getenv("MODEL", default="default")
+        delay_minutes_all = {"default": 300,
+                             "um-global-10km-india": 300,
+                             "um-global-10km-uk":300,
+                             "um-ukv-2km": 120}
+
         return entities.RawRepositoryMetadata(
             name="MetOffice-Weather-Datahub",
             is_archive=False,
             is_order_based=True,
-            delay_minutes=None,
+            delay_minutes=delay_minutes_all[requested_model],
             max_connections=10,
             required_env=["METOFFICE_API_KEY", "METOFFICE_ORDER_ID"],
             optional_env={"METOFFICE_DATASPEC": "1.1.0"},

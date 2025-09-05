@@ -43,7 +43,7 @@ class RawRepositoryMetadata:
     but rather are defined by pre-selected agreements with the provider.
     """
 
-    delay_minutes: int  | None
+    delay_minutes: int
     """The approximate model delay in minutes.
 
     This delay is the time between the running of the model and the time
@@ -70,27 +70,6 @@ class RawRepositoryMetadata:
     available_models: dict[str, ModelMetadata]
     """A dictionary of available models and their metadata."""
 
-    def __post_init__(self) -> None:
-        """Post-initialization to set delay_minutes if not set."""
-        self.set_delay_minutes()
-
-    @staticmethod
-    def model() -> ModelMetadata:
-        """Get the model metadata."""
-        raise NotImplementedError("Subclasses must implement this method.")
-
-    def set_delay_minutes(self) -> None:
-        """Set the delay_minutes from the model if not already set."""
-        if self.delay_minutes is None:
-            # get the delay minutes from the models
-            log.info(f"Setting delay_minutes from model metadata for {self.model().name}")
-            delay_minutes = self.model().delay_minutes
-            if delay_minutes is None:
-                message = f"Repository {self.name} and \
-                Model {self.model().name} has no delay_minutes set. Set one of these."
-                raise Exception(message)
-
-            self.delay_minutes = delay_minutes
 
     def determine_latest_it_from(self, t: dt.datetime, running_hours: list[int]) -> dt.datetime:
         """Determine the latest available initialization time from a given time.
@@ -102,9 +81,6 @@ class RawRepositoryMetadata:
         Returns:
             The latest available initialization time prior to the given time.
         """
-        if self.delay_minutes is None:
-            raise ValueError("delay_minutes must be set to determine latest initialization time.")
-
         it = (
             t.replace(minute=0, second=0, microsecond=0) - dt.timedelta(minutes=self.delay_minutes)
         ).replace(minute=0)
