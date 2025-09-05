@@ -404,7 +404,7 @@ class Models:
                 for lon in np.arange(-179.929687, 179.929688 + 0.140625, 0.140625)
             ],
         ),
-        running_hours=[0, 6, 12, 18],
+        running_hours=[0, 12],
     )
     """MetOffice's Unified Model, in the Global configuration, at a resolution of 10km."""
 

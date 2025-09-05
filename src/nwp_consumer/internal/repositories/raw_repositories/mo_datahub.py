@@ -123,6 +123,14 @@ if TYPE_CHECKING:
 
 log = logging.getLogger("nwp-consumer")
 
+# List of available model names
+available_models_names = [
+    "default",
+    "um-global-10km-india",
+    "um-global-10km-uk",
+    "um-ukv-2km",
+]
+
 
 class MetOfficeDatahubRawRepository(ports.RawRepository):
     """Repository implementation for data from MetOffice's DataHub service."""
@@ -152,11 +160,18 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
     @staticmethod
     @override
     def repository() -> entities.RawRepositoryMetadata:
+
+        delay_minutes_all = {"default": 300,
+                             "um-global-10km-india": 300,
+                             "um-global-10km-uk":300,
+                             "um-ukv-2km": 120}
+        requested_model: str = get_requested_model_name()
+
         return entities.RawRepositoryMetadata(
             name="MetOffice-Weather-Datahub",
             is_archive=False,
             is_order_based=True,
-            delay_minutes=120,
+            delay_minutes=delay_minutes_all[requested_model],
             max_connections=10,
             required_env=["METOFFICE_API_KEY", "METOFFICE_ORDER_ID"],
             optional_env={"METOFFICE_DATASPEC": "1.1.0"},
@@ -172,15 +187,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
     @staticmethod
     @override
     def model() -> entities.ModelMetadata:
-        requested_model: str = os.getenv("MODEL", default="default")
-        if requested_model not in MetOfficeDatahubRawRepository.repository().available_models:
-            log.warn(
-                f"Unknown model '{requested_model}' requested, falling back to default. "
-                "MetOffice Datahub repository only supports "
-                f"'{list(MetOfficeDatahubRawRepository.repository().available_models.keys())}'. "
-                "Ensure MODEL environment variable is set to a valid model name.",
-            )
-            requested_model = "default"
+        requested_model: str = get_requested_model_name()
         return MetOfficeDatahubRawRepository.repository().available_models[requested_model]
 
     @classmethod
@@ -517,3 +524,16 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             )
 
         return Success([da])
+
+
+def get_requested_model_name() -> str:
+    """Get the requested model name from the environment variable."""
+    requested_model: str = os.getenv("MODEL", default="default")
+    if requested_model not in available_models_names:
+        log.warn(
+            f"Unknown model '{requested_model}' requested, falling back to default. "
+            f"MetOffice Datahub repository only supports '{available_models_names}'. "
+            "Ensure MODEL environment variable is set to a valid model name.",
+            )
+        requested_model = "default"
+    return requested_model
