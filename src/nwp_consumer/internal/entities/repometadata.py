@@ -74,6 +74,10 @@ class RawRepositoryMetadata:
         """Post-initialization to set delay_minutes if not set."""
         self.set_delay_minutes()
 
+    @staticmethod
+    def model() -> ModelMetadata:
+        """Get the model metadata."""
+        raise NotImplementedError("Subclasses must implement this method.")
 
     def set_delay_minutes(self) -> None:
         """Set the delay_minutes from the model if not already set."""
@@ -98,6 +102,9 @@ class RawRepositoryMetadata:
         Returns:
             The latest available initialization time prior to the given time.
         """
+        if self.delay_minutes is None:
+            raise ValueError("delay_minutes must be set to determine latest initialization time.")
+
         it = (
             t.replace(minute=0, second=0, microsecond=0) - dt.timedelta(minutes=self.delay_minutes)
         ).replace(minute=0)
