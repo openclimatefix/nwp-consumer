@@ -13,13 +13,10 @@ about the repository where NWP data produced by the model resides.
 
 import dataclasses
 import datetime as dt
-import logging
 import os
 
 from .modelmetadata import ModelMetadata
 from .postprocess import PostProcessOptions
-
-log = logging.getLogger("nwp-consumer")
 
 
 @dataclasses.dataclass(slots=True)
@@ -48,7 +45,6 @@ class RawRepositoryMetadata:
 
     This delay is the time between the running of the model and the time
     at which the data is actually available.
-    This can be None, and then the delay minutes is take from the sepecific model.
     """
 
     required_env: list[str]
