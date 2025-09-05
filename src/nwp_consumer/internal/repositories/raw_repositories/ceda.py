@@ -352,6 +352,7 @@ class CEDARawRepository(ports.RawRepository):
                     .rename(name_dict={"time": "init_time"})
                     .expand_dims(dim="init_time")
                     .to_dataarray(name=CEDARawRepository.model().name)
+                    .astype(np.float32)  
                 )
                 da = da.transpose(*CEDARawRepository.model().expected_coordinates.dims)
                 if "longitude" in da.coords:
@@ -457,6 +458,7 @@ class CEDARawRepository(ports.RawRepository):
                 ds = ds.set_index(values=("y_osgb", "x_osgb")).unstack("values")
                 da: xr.DataArray = (
                     ds.to_array(name=CEDARawRepository.model().name)
+                    .astype(np.float32)  
                     .sortby(variables=["step", "variable", "x_osgb"])
                     .sortby(variables="y_osgb", ascending=False)
                     .transpose("init_time", "step", "variable", "y_osgb", "x_osgb")

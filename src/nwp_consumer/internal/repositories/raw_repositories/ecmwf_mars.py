@@ -18,6 +18,7 @@ from collections.abc import Callable, Iterator
 from typing import override
 
 import cfgrib
+import numpy as np
 import xarray as xr
 from ecmwfapi import ECMWFService
 from joblib import delayed
@@ -365,6 +366,7 @@ class ECMWFMARSRawRepository(ports.RawRepository):
                 .rename({"time": "init_time"})
                 .expand_dims("init_time")
                 .to_dataarray(name=ECMWFMARSRawRepository.model().name)
+                .astype(np.float32) 
             )
             if "enfo-pf" in path.as_posix():
                 da = da.rename({"number": "ensemble_member"})

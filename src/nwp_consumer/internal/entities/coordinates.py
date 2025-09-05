@@ -560,6 +560,7 @@ class NWPDimensionCoordinateMap:
         dummy_values = dask.array.zeros(  # type: ignore
             shape=list(self.shapemap.values()),
             chunks=tuple([chunks[k] for k in self.shapemap]),
+            dtype=np.float32,
         )
         attrs: dict[str, str] = {
             "produced_by": "".join(

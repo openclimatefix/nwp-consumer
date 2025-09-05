@@ -35,6 +35,7 @@ from collections.abc import Callable, Iterator
 from typing import override
 
 import cfgrib
+import numpy as np
 import s3fs
 import xarray as xr
 from joblib import delayed
@@ -279,6 +280,7 @@ class NOAAS3RawRepository(ports.RawRepository):
                 .expand_dims(dim="init_time")
                 .expand_dims(dim="step")
                 .to_dataarray(name=NOAAS3RawRepository.model().name)
+                .astype(np.float32)  # Convert to float32 to reduce memory usage
             )
             da = (
                 da.drop_vars(

@@ -160,7 +160,7 @@ class TensorStore(abc.ABC):
 
         da: xr.DataArray = coords.as_zeroed_dataarray(name=model, chunks=chunks)
         encoding = {
-            model: {"write_empty_chunks": False},
+            model: {"write_empty_chunks": False, "dtype": "float32"},
             "init_time": {"units": "nanoseconds since 1970-01-01"},
             "step": {"units": "hours"},
         }

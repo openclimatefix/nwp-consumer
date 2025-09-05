@@ -112,6 +112,7 @@ import urllib.request
 from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING, ClassVar, override
 
+import numpy as np
 import xarray as xr
 from joblib import delayed
 from returns.result import Failure, ResultE, Success
@@ -387,7 +388,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             if "step" not in ds.dims:
                 ds = ds.expand_dims(dim="step")
 
-            da: xr.DataArray = ds.to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
+            da: xr.DataArray = ds.to_dataarray(name=MetOfficeDatahubRawRepository.model().name).astype(np.float32)  
             da = da.drop_vars(
                 names=[
                     c
@@ -495,7 +496,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             if "step" not in ds.dims:
                 ds = ds.expand_dims(dim="step")
 
-            da: xr.DataArray = ds.to_dataarray(name=MetOfficeDatahubRawRepository.model().name)
+            da: xr.DataArray = ds.to_dataarray(name=MetOfficeDatahubRawRepository.model().name).astype(np.float32)  # Convert to float32 to reduce memory usage
             da = (
                 da.drop_vars(
                     names=[

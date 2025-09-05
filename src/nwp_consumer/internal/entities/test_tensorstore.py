@@ -116,6 +116,7 @@ class TestTensorStore(unittest.TestCase):
                 name="test_da",
                 data=np.ones(
                     shape=list(ts.coordinate_map.shapemap.values()),
+                    dtype=np.float32,  
                 ),
                 coords=ts.coordinate_map.to_pandas(),
             )
@@ -199,6 +200,7 @@ class TestTensorStore(unittest.TestCase):
                                         1 if k == "init_time" else v
                                         for k, v in ts.coordinate_map.shapemap.items()
                                     ],
+                                    dtype=np.float32, 
                                 ),
                                 coords=ts.coordinate_map.to_pandas()
                                 | {
