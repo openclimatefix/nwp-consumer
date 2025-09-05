@@ -468,7 +468,7 @@ class TensorStore(abc.ABC):
             except Exception as e:
                 return Failure(
                     OSError(
-                        f"Unable to delete store at path '{self.path}'. " f"Error context: {e}",
+                        f"Unable to delete store at path '{self.path}'. Error context: {e}",
                     ),
                 )
         log.info("Deleted zarr store at '%s'", self.path)
@@ -571,8 +571,7 @@ class TensorStore(abc.ABC):
                 missing_times.append(pd.Timestamp(it).to_pydatetime().replace(tzinfo=dt.UTC))
         if len(missing_times) > 0:
             log.debug(
-                f"NaNs in init times '{missing_times}' suggest they are missing, "
-                f"will redownload",
+                f"NaNs in init times '{missing_times}' suggest they are missing, will redownload",
             )
         return Success(missing_times)
 
@@ -594,7 +593,7 @@ class TensorStore(abc.ABC):
         if not s3_folder.startswith("s3://"):
             return Failure(
                 ValueError(
-                    "S3 folder path must start with 's3://'. " f"Got: {s3_folder}",
+                    f"S3 folder path must start with 's3://'. Got: {s3_folder}",
                 ),
             )
         log.debug("Attempting AWS connection using credential discovery")

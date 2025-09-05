@@ -35,6 +35,7 @@ from collections.abc import Callable, Iterator
 from typing import override
 
 import cfgrib
+import numpy as np
 import s3fs
 import xarray as xr
 from joblib import delayed
@@ -300,7 +301,7 @@ class NOAAS3RawRepository(ports.RawRepository):
                 ),
             )
 
-        return Success([da])
+        return Success([da.astype(np.float32)])
 
     @staticmethod
     def _wanted_file(filename: str, it: dt.datetime, steps: list[int]) -> bool:
