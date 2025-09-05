@@ -74,6 +74,10 @@ class ModelMetadata:
         - `entities.coordinates.NWPDimensionCoordinateMap.chunking`
     """
 
+    delay_minutes: int | None = None
+    """The model delay in minutes. This can be taken from the repository metadata.
+    """
+
     def __str__(self) -> str:
         """Return a pretty-printed string representation of the metadata."""
         pretty: str = "".join(
@@ -404,7 +408,8 @@ class Models:
                 for lon in np.arange(-179.929687, 179.929688 + 0.140625, 0.140625)
             ],
         ),
-        running_hours=[0, 6, 12, 18],
+        running_hours=[0, 12],
+        delay_minutes=300,
     )
     """MetOffice's Unified Model, in the Global configuration, at a resolution of 10km."""
 
@@ -438,6 +443,7 @@ class Models:
             x_osgb=[int(x) for x in np.arange(start=-239000, stop=857000, step=2000)],
         ),
         running_hours=list(range(0, 24, 6)),
+        delay_minutes=120,
     )
     """MetOffice's Unified Model in the UKV configuration, at a resolution of 2km"""
 

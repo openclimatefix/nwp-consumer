@@ -13,10 +13,13 @@ about the repository where NWP data produced by the model resides.
 
 import dataclasses
 import datetime as dt
+import logging
 import os
 
 from .modelmetadata import ModelMetadata
 from .postprocess import PostProcessOptions
+
+log = logging.getLogger("nwp-consumer")
 
 
 @dataclasses.dataclass(slots=True)
@@ -40,11 +43,13 @@ class RawRepositoryMetadata:
     but rather are defined by pre-selected agreements with the provider.
     """
 
-    delay_minutes: int
+    delay_minutes: int  | None
     """The approximate model delay in minutes.
 
     This delay is the time between the running of the model and the time
-    at which the data is actually available."""
+    at which the data is actually available.
+    This can be None, and then the delay minutes is take from the sepecific model.
+    """
 
     required_env: list[str]
     """Environment variables required for usage."""
@@ -64,6 +69,24 @@ class RawRepositoryMetadata:
 
     available_models: dict[str, ModelMetadata]
     """A dictionary of available models and their metadata."""
+
+    def __post_init__(self) -> None:
+        """Post-initialization to set delay_minutes if not set."""
+        self.set_delay_minutes()
+
+
+    def set_delay_minutes(self) -> None:
+        """Set the delay_minutes from the model if not already set."""
+        if self.delay_minutes is None:
+            # get the delay minutes from the models
+            log.info(f"Setting delay_minutes from model metadata for {self.model().name}")
+            delay_minutes = self.model().delay_minutes
+            if delay_minutes is None:
+                message = f"Repository {self.name} and \
+                Model {self.model().name} has no delay_minutes set. Set one of these."
+                raise Exception(message)
+
+            self.delay_minutes = delay_minutes
 
     def determine_latest_it_from(self, t: dt.datetime, running_hours: list[int]) -> dt.datetime:
         """Determine the latest available initialization time from a given time.
