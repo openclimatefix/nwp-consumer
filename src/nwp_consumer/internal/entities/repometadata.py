@@ -44,8 +44,7 @@ class RawRepositoryMetadata:
     """The approximate model delay in minutes.
 
     This delay is the time between the running of the model and the time
-    at which the data is actually available.
-    """
+    at which the data is actually available."""
 
     required_env: list[str]
     """Environment variables required for usage."""
@@ -65,7 +64,6 @@ class RawRepositoryMetadata:
 
     available_models: dict[str, ModelMetadata]
     """A dictionary of available models and their metadata."""
-
 
     def determine_latest_it_from(self, t: dt.datetime, running_hours: list[int]) -> dt.datetime:
         """Determine the latest available initialization time from a given time.
