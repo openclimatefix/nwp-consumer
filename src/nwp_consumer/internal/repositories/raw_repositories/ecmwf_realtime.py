@@ -81,8 +81,8 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             },
             postprocess_options=entities.PostProcessOptions(),
             available_models={
-                "default": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk-north60"),
-                "hres-ifs-uk": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk-north60"),
+                "default": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk"),
+                "hres-ifs-uk": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk"),
                 "hres-ifs-india": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region(
                     "india",
                 ).with_chunk_count_overrides({"variable": 1}),
