@@ -39,6 +39,7 @@ from collections.abc import Callable, Iterator
 from typing import override
 
 import cfgrib
+import numpy as np
 import s3fs
 import xarray as xr
 from joblib import delayed
@@ -108,7 +109,8 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
 
     @override
     def fetch_init_data(
-        self, it: dt.datetime,
+        self,
+        it: dt.datetime,
     ) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         # List relevant files in the S3 bucket
         try:
@@ -317,7 +319,10 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             # * Each raw file does not contain a full set of parameters
             # * and so may not produce a contiguous subset of the expected coordinates.
             processed_das.extend(
-                [da.where(cond=da["variable"] == v, drop=True) for v in da["variable"].values],
+                [
+                    da.where(cond=da["variable"] == v, drop=True).astype(np.float32)
+                    for v in da["variable"].values
+                ],
             )
 
         if len(processed_das) == 0:

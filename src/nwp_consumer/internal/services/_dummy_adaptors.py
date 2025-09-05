@@ -53,14 +53,15 @@ class DummyRawRepository(ports.RawRepository):
 
     @override
     def fetch_init_data(
-        self, it: dt.datetime,
+        self,
+        it: dt.datetime,
     ) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         def gen_dataset(step: int, variable: str) -> ResultE[list[xr.DataArray]]:
             """Define a generator that provides one variable at one step."""
             da = xr.DataArray(
                 name=self.model().name,
                 dims=["init_time", "step", "variable", "latitude", "longitude"],
-                data=np.random.rand(1, 1, 1, 721, 1440),
+                data=np.random.rand(1, 1, 1, 721, 1440).astype(np.float32),
                 coords=self.model().expected_coordinates.to_pandas()
                 | {
                     "init_time": [np.datetime64(it.replace(tzinfo=None), "ns")],

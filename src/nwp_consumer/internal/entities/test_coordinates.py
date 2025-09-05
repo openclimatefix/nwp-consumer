@@ -166,7 +166,8 @@ class TestCoordinates(unittest.TestCase):
                 self.assertListEqual(list(result.keys()), list(t.expected_indexes.keys()))
                 for key in result:
                     self.assertListEqual(
-                        result[key].values.tolist(), t.expected_indexes[key].values.tolist(),
+                        result[key].values.tolist(),
+                        t.expected_indexes[key].values.tolist(),
                     )
 
     def test_from_pandas(self) -> None:
@@ -321,6 +322,29 @@ class TestCoordinates(unittest.TestCase):
                     coords = result.unwrap()
                     self.assertListEqual(coords.latitude, t.expected_latitude)  # type: ignore
                     self.assertListEqual(coords.longitude, t.expected_longitude)  # type: ignore
+
+    def test_as_zeroed_dataarray_float32_dtype(self) -> None:
+        """Test that as_zeroed_dataarray creates data with float32 dtype."""
+        coords = NWPDimensionCoordinateMap(
+            init_time=[dt.datetime(2021, 1, 1, 0, tzinfo=dt.UTC)],
+            step=[0, 3, 6],
+            variable=[Parameter.TEMPERATURE_SL],
+            latitude=[50.0, 51.0],
+            longitude=[0.0, 1.0],
+        )
+
+        chunks = {"init_time": 1, "step": 1, "variable": 1, "latitude": 2, "longitude": 2}
+
+        da = coords.as_zeroed_dataarray(name="test_model", chunks=chunks)
+
+        # Check that the data type is float32
+        self.assertEqual(da.dtype, "float32")
+
+        # Also check the underlying dask array dtype
+        import dask.array as dask_array
+
+        if hasattr(da.data, "dtype"):
+            self.assertEqual(da.data.dtype, dask_array.float32)
 
 
 if __name__ == "__main__":
