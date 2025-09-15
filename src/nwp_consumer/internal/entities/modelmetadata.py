@@ -65,6 +65,12 @@ class ModelMetadata:
     to the repository.
     """
 
+    delay_minutes: int
+    """The model delay in minutes.
+
+    Note that this can be overwritten by using `with_delay_minutes`.
+    """
+
     chunk_count_overrides: dict[str, int] = dataclasses.field(default_factory=dict)
     """Mapping of dimension names to the desired number of chunks in that dimension.
 
@@ -201,6 +207,10 @@ class ModelMetadata:
         """Returns metadata for the given model with the given running hours."""
         return dataclasses.replace(self, running_hours=hours)
 
+    def with_delay_minutes(self, delay_minutes: int) -> "ModelMetadata":
+        """Returns metadata for the given model with the given delay minutes."""
+        return dataclasses.replace(self, delay_minutes=delay_minutes)
+
     def with_max_step(self, max_step: int) -> "ModelMetadata":
         """Returns metadata for the given model with the given max step."""
         return dataclasses.replace(
@@ -254,6 +264,7 @@ class Models:
             longitude=[float(f"{lon / 10:.2f}") for lon in range(-1800, 1800 + 1, 1)],
         ),
         running_hours=[0, 6, 12, 18],
+        delay_minutes=(60 * 26),  # 1 day, plus leeway
     )
     """ECMWF's High Resolution Integrated Forecast System."""
 
@@ -274,6 +285,7 @@ class Models:
             longitude=[v / 10 for v in range(-1800, 1800, 1)],
         ),
         running_hours=[0, 12],
+        delay_minutes=(60 * 26),  # 1 day, plus leeway
     )
     """Summary statistics from ECMWF's Ensemble Forecast System."""
 
@@ -303,6 +315,7 @@ class Models:
             longitude=[v / 10 for v in range(-1800, 1800, 1)],
         ),
         running_hours=[0, 6, 12, 18],
+        delay_minutes=(60 * 26),  # 1 day, plus leeway
     )
     """Full ensemble data from ECMWF's Ensemble Forecast System."""
 
@@ -335,6 +348,7 @@ class Models:
             longitude=[float(lon) for lon in range(-180, 180 + 1, 1)],
         ),
         running_hours=[0, 6, 12, 18],
+        delay_minutes=(60 * 5),  # 5 hours
     )
     """NCEP's Global Forecast System."""
 
@@ -372,6 +386,7 @@ class Models:
             # TODO: Change to -180 -> 180
         ),
         running_hours=[0, 6, 12, 18],
+        delay_minutes=(60 * 24 * 7) + (60 * 12),  # 7.5 days
     )
     """MetOffice's Unified Model, in the Global configuration, at a resolution of 17km."""
 
@@ -405,6 +420,7 @@ class Models:
             ],
         ),
         running_hours=[0, 12],
+        delay_minutes=300,
     )
     """MetOffice's Unified Model, in the Global configuration, at a resolution of 10km."""
 
@@ -438,6 +454,7 @@ class Models:
             x_osgb=[int(x) for x in np.arange(start=-239000, stop=857000, step=2000)],
         ),
         running_hours=list(range(0, 24, 6)),
+        delay_minutes=120,
     )
     """MetOffice's Unified Model in the UKV configuration, at a resolution of 2km"""
 
@@ -468,5 +485,6 @@ class Models:
             x_laea=[int(x) for x in np.arange(start=-576000, stop=332000 + 2000, step=2000)],
         ),
         running_hours=list(range(0, 24, 3)),  # Only first 12 steps available for hourly runs
+        delay_minutes=120,
     )
     """MetOffice's Unified Model in the UKV configuration, at a resolution of 2km"""

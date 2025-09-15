@@ -36,6 +36,7 @@ class TestMetOfficeDatahubRawRepository(unittest.TestCase):
 
         self.assertIsInstance(dl_result, Success, msg=f"{dl_result!s}")
 
+    @patch.dict(os.environ, {"MODEL": "um-global-10km-india"}, clear=True)
     def test_convert(self) -> None:
         """Test the _convert method."""
 
@@ -91,6 +92,8 @@ class TestMetOfficeDatahubRawRepository(unittest.TestCase):
                     self.assertIsInstance(region_result, Failure, msg=f"{region_result}")
                 else:
                     self.assertIsInstance(region_result, Success, msg=f"{region_result}")
+
+
 
     @patch.dict(os.environ, {"MODEL": "um-ukv-2km"}, clear=True)
     def test_convert_ukv(self) -> None:
