@@ -37,7 +37,6 @@ class TestMetOfficeDatahubRawRepository(unittest.TestCase):
 
         self.assertIsInstance(dl_result, Success, msg=f"{dl_result!s}")
 
-    @patch.dict(os.environ, {"MODEL": "um-global-10km-india"}, clear=True)
     def test_convert(self) -> None:
         """Test the _convert method."""
 
