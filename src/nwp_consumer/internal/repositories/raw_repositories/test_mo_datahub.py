@@ -28,6 +28,7 @@ class TestMetOfficeDatahubRawRepository(unittest.TestCase):
         test_it = c.repository().determine_latest_it_from(
             dt.datetime.now(tz=dt.UTC),
             c.model().running_hours,
+            delay_minutes=c.model().delay_minutes,
         )
 
         dl_result = c._download(
@@ -91,6 +92,8 @@ class TestMetOfficeDatahubRawRepository(unittest.TestCase):
                     self.assertIsInstance(region_result, Failure, msg=f"{region_result}")
                 else:
                     self.assertIsInstance(region_result, Success, msg=f"{region_result}")
+
+
 
     @patch.dict(os.environ, {"MODEL": "um-ukv-2km"}, clear=True)
     def test_convert_ukv(self) -> None:
