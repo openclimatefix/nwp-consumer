@@ -96,7 +96,6 @@ class RawRepositoryMetadata:
             (
                 "Model Repository: ",
                 f"\n\t{self.name} ({'archive' if self.is_archive else 'live/rolling'} dataset.)",
-                f"\n\t\t(available after {self.delay_minutes} minute delay)",
                 "\nEnvironment variables:",
                 "\n\tRequired:",
                 "\n".join(f"\t\t{var}" for var in self.required_env),

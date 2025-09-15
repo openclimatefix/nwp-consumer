@@ -28,6 +28,7 @@ class TestMetOfficeDatahubRawRepository(unittest.TestCase):
         test_it = c.repository().determine_latest_it_from(
             dt.datetime.now(tz=dt.UTC),
             c.model().running_hours,
+            delay_minutes=c.model().delay_minutes,
         )
 
         dl_result = c._download(
