@@ -386,7 +386,7 @@ class Models:
             # TODO: Change to -180 -> 180
         ),
         running_hours=[0, 6, 12, 18],
-        delay_minutes=300
+        delay_minutes=300,
     )
     """MetOffice's Unified Model, in the Global configuration, at a resolution of 17km."""
 
