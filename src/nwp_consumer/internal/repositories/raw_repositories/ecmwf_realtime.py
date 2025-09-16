@@ -67,7 +67,6 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             name="ECMWF-Realtime-S3",
             is_archive=False,
             is_order_based=True,
-            delay_minutes=(60 * 7),  # 7 hours
             max_connections=100,
             required_env=[
                 "ECMWF_REALTIME_S3_ACCESS_KEY",
@@ -81,14 +80,16 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             },
             postprocess_options=entities.PostProcessOptions(),
             available_models={
-                "default": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk-north60"),
-                "hres-ifs-uk": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk-north60"),
+                "default": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk-north60").
+                    with_delay_minutes(60 * 7),
+                "hres-ifs-uk": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region("uk-north60").
+                    with_delay_minutes(60 * 7),
                 "hres-ifs-india": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region(
                     "india",
-                ).with_chunk_count_overrides({"variable": 1}),
+                ).with_chunk_count_overrides({"variable": 1}).with_delay_minutes(60 * 7),
                 "hres-ifs-nl": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region(
                     "nl",
-                ).with_max_step(84),
+                ).with_max_step(84).with_delay_minutes(60 * 7),
             },
         )
 

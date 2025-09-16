@@ -152,11 +152,11 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
     @staticmethod
     @override
     def repository() -> entities.RawRepositoryMetadata:
+
         return entities.RawRepositoryMetadata(
             name="MetOffice-Weather-Datahub",
             is_archive=False,
             is_order_based=True,
-            delay_minutes=120,
             max_connections=10,
             required_env=["METOFFICE_API_KEY", "METOFFICE_ORDER_ID"],
             optional_env={"METOFFICE_DATASPEC": "1.1.0"},
