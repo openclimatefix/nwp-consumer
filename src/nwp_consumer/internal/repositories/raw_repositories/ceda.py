@@ -117,7 +117,6 @@ class CEDARawRepository(ports.RawRepository):
             name="CEDA",
             is_archive=True,
             is_order_based=False,
-            delay_minutes=(60 * 24 * 7) + (60 * 12),  # 7.5 days
             max_connections=20,
             required_env=["CEDA_USER", "CEDA_PASS"],
             optional_env={},
