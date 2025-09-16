@@ -44,8 +44,8 @@ class ParameterScanResult:
     This is determined according to the parameter's limits and threshold.
     See `entities.parameters.Parameter`.
     """
-    has_nulls: bool
-    """Whether the parameter's data contains null values."""
+    has_nans: bool
+    """Whether the parameter's data contains nan values."""
 
 
 @dataclasses.dataclass(slots=True)
@@ -336,15 +336,15 @@ class TensorStore(abc.ABC):
             os.getenv("ALLOWED_VALIDATION_FAILURE_PERCENTAGE", "0.02"),
         )
 
-        def _calc_null_percentage(data: np.typing.NDArray[np.float32]) -> float:
-            nulls = np.isnan(data)
+        def _calc_nan_percentage(data: np.typing.NDArray[np.float32]) -> float:
+            nans = np.isnan(data)
             if 0 in data.shape:
                 log.warning(
                     "Validation region has 0 area, check input slices correspond"
                     "to coordinate values in the dataset",
                 )
                 return 1.0
-            return float(nulls.sum() / np.prod(nulls.shape))
+            return float(nans.sum() / np.prod(nans.shape))
 
         if "latitude" in store_da.dims:
             spatial_dims: list[str] = ["latitude", "longitude"]
@@ -362,7 +362,7 @@ class TensorStore(abc.ABC):
             )
 
         result = xr.apply_ufunc(
-            _calc_null_percentage,
+            _calc_nan_percentage,
             store_da,
             input_core_dims=[spatial_dims],
             vectorize=True,
@@ -376,14 +376,14 @@ class TensorStore(abc.ABC):
             log.warning(
                 f"Dataset failed validation. "
                 f"{failed_image_percentage:.2%} of images have greater than "
-                f"{int(nans_in_image_threshold * 100)}% null values"
+                f"{int(nans_in_image_threshold * 100)}% nan values"
                 f"({failed_image_count}/{total_image_count})",
             )
             return Success(True)
         log.info(
             f"{failed_image_count}/{total_image_count} "
             f"({failed_image_percentage:.2%}) of images have greater than "
-            f"{int(nans_in_image_threshold * 100)}% null values",
+            f"{int(nans_in_image_threshold * 100)}% nan values",
         )
         return Success(False)
 
@@ -434,7 +434,7 @@ class TensorStore(abc.ABC):
                     return Failure(e)
                 case Success(scan):
                     log.debug(f"Scanned parameter {param.name}: {scan.__repr__()}")
-                    if not scan.is_valid or scan.has_nulls:
+                    if not scan.is_valid or scan.has_nans:
                         return Failure(ValueError("Parameter validation failed."))
         """
 
@@ -510,7 +510,7 @@ class TensorStore(abc.ABC):
             ParameterScanResult(
                 mean=mean,
                 is_valid=True,
-                has_nulls=False,
+                has_nans=False,
             ),
         )
 
