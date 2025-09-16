@@ -346,7 +346,8 @@ class NWPDimensionCoordinateMap:
 
     @classmethod
     def from_xarray(
-        cls, xarray_obj: xr.DataArray | xr.Dataset,
+        cls,
+        xarray_obj: xr.DataArray | xr.Dataset,
     ) -> ResultE["NWPDimensionCoordinateMap"]:
         """Create a new NWPDimensionCoordinateMap from an XArray DataArray or Dataset object."""
         return cls.from_pandas(xarray_obj.coords.indexes)  # type: ignore
@@ -560,6 +561,7 @@ class NWPDimensionCoordinateMap:
         dummy_values = dask.array.zeros(  # type: ignore
             shape=list(self.shapemap.values()),
             chunks=tuple([chunks[k] for k in self.shapemap]),
+            dtype=np.float32,
         )
         attrs: dict[str, str] = {
             "produced_by": "".join(

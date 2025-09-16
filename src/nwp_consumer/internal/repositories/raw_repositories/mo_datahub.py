@@ -112,6 +112,7 @@ import urllib.request
 from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING, ClassVar, override
 
+import numpy as np
 import xarray as xr
 from joblib import delayed
 from returns.result import Failure, ResultE, Success
@@ -205,8 +206,8 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
         it: dt.datetime,
     ) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         req: urllib.request.Request = urllib.request.Request(  # noqa: S310
-            url=self.request_url + \
-                f"?detail=MINIMAL&runfilter={it:%Y%m%d%H}&dataSpec={self.dataspec}",
+            url=self.request_url
+            + f"?detail=MINIMAL&runfilter={it:%Y%m%d%H}&dataSpec={self.dataspec}",
             headers=self._headers,
             method="GET",
         )
@@ -244,7 +245,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             for filedata in data["orderDetails"]["files"]:
                 if "fileId" in filedata and "+" not in filedata["fileId"]:
                     urls.append(
-                        f"{self.request_url}/{filedata["fileId"]}/data?dataSpec={self.dataspec}",
+                        f"{self.request_url}/{filedata['fileId']}/data?dataSpec={self.dataspec}",
                     )
 
         log.debug(
@@ -286,7 +287,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                     f"~/.local/cache/nwp/{self.repository().name}/{self.model().name}/raw",
                 ),
             )
-            / f"{url.split("/")[-2]}.grib"
+            / f"{url.split('/')[-2]}.grib"
         ).expanduser()
 
         # Only download the file if not already present
@@ -309,7 +310,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
             except Exception as e:
                 return Failure(
                     OSError(
-                        "Unable to request file data from MetOffice DataHub at " f"'{url}': {e}",
+                        f"Unable to request file data from MetOffice DataHub at '{url}': {e}",
                     ),
                 )
 
@@ -405,7 +406,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                 ValueError(f"Error processing DataArray for path '{path}'. Error context: {e}"),
             )
 
-        return Success([da])
+        return Success([da.astype(np.float32)])
 
     @staticmethod
     def _convert_ukv(path: pathlib.Path) -> ResultE[list[xr.DataArray]]:
@@ -516,4 +517,4 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                 ),
             )
 
-        return Success([da])
+        return Success([da.astype(np.float32)])
