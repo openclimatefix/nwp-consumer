@@ -92,7 +92,7 @@ class ConsumerService(ports.ConsumeUseCase):
             return Failure(
                 OSError(
                     "Error threshold exceeded: "
-                    f"{len(failures)/len(results)} errors (>6%) occurred during processing.",
+                    f"{len(failures) / len(results)} errors (>6%) occurred during processing.",
                 ),
             )
         else:

@@ -72,6 +72,14 @@ class TestCEDARawRepository(unittest.TestCase):
                     self.assertIsInstance(region_result, Failure, msg=f"{region_result}")
                 else:
                     self.assertIsInstance(region_result, Success, msg=f"{region_result}")
+                    # Test that the data is stored as float32
+                    das = result.unwrap()
+                    for da in das:
+                        self.assertEqual(
+                            da.dtype,
+                            "float32",
+                            msg=f"DataArray should have float32 dtype, got {da.dtype}",
+                        )
 
     @patch.dict(os.environ, {"MODEL": "mo-um-ukv"}, clear=True)
     def test__convert_ukv(self) -> None:
@@ -117,6 +125,14 @@ class TestCEDARawRepository(unittest.TestCase):
                     self.assertIsInstance(region_result, Failure, msg=f"{region_result}")
                 else:
                     self.assertIsInstance(region_result, Success, msg=f"{region_result}")
+                    # Test that the data is stored as float32
+                    das = result.unwrap()
+                    for da in das:
+                        self.assertEqual(
+                            da.dtype,
+                            "float32",
+                            msg=f"DataArray should have float32 dtype, got {da.dtype}",
+                        )
 
 
 if __name__ == "__main__":
