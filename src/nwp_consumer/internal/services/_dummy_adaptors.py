@@ -23,7 +23,6 @@ class DummyRawRepository(ports.RawRepository):
             name="ACME-Test-Models",
             is_archive=False,
             is_order_based=False,
-            delay_minutes=60,
             max_connections=4,
             required_env=[],
             optional_env={},
@@ -49,6 +48,7 @@ class DummyRawRepository(ports.RawRepository):
                 longitude=np.linspace(-180, 179.8, 1440).tolist(),
             ),
             running_hours=[0, 6, 12, 18],
+            delay_minutes=60,
         )
 
     @override

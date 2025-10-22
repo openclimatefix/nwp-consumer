@@ -40,12 +40,6 @@ class RawRepositoryMetadata:
     but rather are defined by pre-selected agreements with the provider.
     """
 
-    delay_minutes: int
-    """The approximate model delay in minutes.
-
-    This delay is the time between the running of the model and the time
-    at which the data is actually available."""
-
     required_env: list[str]
     """Environment variables required for usage."""
 
@@ -65,18 +59,23 @@ class RawRepositoryMetadata:
     available_models: dict[str, ModelMetadata]
     """A dictionary of available models and their metadata."""
 
-    def determine_latest_it_from(self, t: dt.datetime, running_hours: list[int]) -> dt.datetime:
+    def determine_latest_it_from(
+            self, t: dt.datetime,
+            running_hours: list[int],
+            delay_minutes:int) -> dt.datetime:
         """Determine the latest available initialization time from a given time.
 
         Args:
             t: The time from which to determine the latest initialization time.
             running_hours: A list of hours at which the model runs each day.
+            delay_minutes: The delay in minutes after the initialization time
+                before data is available.
 
         Returns:
             The latest available initialization time prior to the given time.
         """
         it = (
-            t.replace(minute=0, second=0, microsecond=0) - dt.timedelta(minutes=self.delay_minutes)
+            t.replace(minute=0, second=0, microsecond=0) - dt.timedelta(minutes=delay_minutes)
         ).replace(minute=0)
         while it.hour not in running_hours:
             it -= dt.timedelta(hours=1)
@@ -97,7 +96,6 @@ class RawRepositoryMetadata:
             (
                 "Model Repository: ",
                 f"\n\t{self.name} ({'archive' if self.is_archive else 'live/rolling'} dataset.)",
-                f"\n\t\t(available after {self.delay_minutes} minute delay)",
                 "\nEnvironment variables:",
                 "\n\tRequired:",
                 "\n".join(f"\t\t{var}" for var in self.required_env),

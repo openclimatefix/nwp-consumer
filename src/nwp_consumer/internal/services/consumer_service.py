@@ -148,6 +148,7 @@ class ConsumerService(ports.ConsumeUseCase):
                     repository_metadata.determine_latest_it_from(
                         t=dt.datetime.now(tz=dt.UTC),
                         running_hours=model_metadata.running_hours,
+                        delay_minutes=model_metadata.delay_minutes,
                     ),
                 ]
             case single_it if isinstance(period, dt.datetime):

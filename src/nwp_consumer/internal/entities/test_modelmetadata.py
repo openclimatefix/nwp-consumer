@@ -27,6 +27,7 @@ class TestModelMetadata(unittest.TestCase):
                 longitude=[float(f"{lon / 10:.2f}") for lon in range(-1800, 1800 + 1, 1)],
             ),
             running_hours=[0, 6, 12, 18],
+            delay_minutes=60,
         )
 
         @dataclasses.dataclass
