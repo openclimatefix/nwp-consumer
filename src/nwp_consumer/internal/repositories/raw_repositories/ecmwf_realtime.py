@@ -39,6 +39,7 @@ from collections.abc import Callable, Iterator
 from typing import override
 
 import cfgrib
+import numpy as np
 import s3fs
 import xarray as xr
 from joblib import delayed
@@ -270,14 +271,17 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
         num_skipped: int = 0
         expected_lons = ECMWFRealTimeS3RawRepository.model().expected_coordinates.longitude
         expected_lats = ECMWFRealTimeS3RawRepository.model().expected_coordinates.latitude
+        expected_steps = ECMWFRealTimeS3RawRepository.model().expected_coordinates.step
 
         for i, ds in enumerate(dss):
             # ECMWF Realtime provides all regions in one set of datasets,
             # so distinguish via their coordinates
+            step = np.timedelta64(ds.coords["step"].values, "h").astype(int)
             is_relevant_dataset_predicate: bool = (
                 (expected_lons is not None and expected_lats is not None)
                 and (expected_lons[0] <= max(ds.coords["longitude"].values) <= expected_lons[-1])
                 and (expected_lats[-1] <= max(ds.coords["latitude"].values) <= expected_lats[0])
+                and (expected_steps[0] <= step <= expected_steps[-1])
             )
             if not is_relevant_dataset_predicate:
                 num_skipped += 1
