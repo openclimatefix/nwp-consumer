@@ -276,7 +276,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
         for i, ds in enumerate(dss):
             # ECMWF Realtime provides all regions in one set of datasets,
             # so distinguish via their coordinates
-            step = np.timedelta64(ds.coords["step"].values, "h").astype(int)
+            step:int = np.timedelta64(ds.coords["step"].values, "h").astype(int)
             is_relevant_dataset_predicate: bool = (
                 (expected_lons is not None and expected_lats is not None)
                 and (expected_lons[0] <= max(ds.coords["longitude"].values) <= expected_lons[-1])
