@@ -46,7 +46,6 @@ from typing import Any
 import dask.array
 import numpy as np
 import pandas as pd
-import pytz
 import xarray as xr
 from returns.result import Failure, ResultE, Success
 
@@ -374,7 +373,7 @@ class NWPDimensionCoordinateMap:
         out_dict: dict[str, pd.Index] = {  # type: ignore
             "init_time": pd.Index(
                 [
-                    np.datetime64(t.astimezone(pytz.utc).replace(tzinfo=None), "ns")
+                    np.datetime64(t.astimezone(dt.UTC).replace(tzinfo=None), "ns")
                     for t in self.init_time
                 ],
             ),
