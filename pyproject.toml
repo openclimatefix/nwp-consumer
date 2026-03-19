@@ -30,7 +30,8 @@ dependencies = [
     "returns == 0.24.0",
     "s3fs == 2024.9.0",
     "xarray == 2025.1.0",
-    "zarr == 2.18.3"
+    "zarr == 2.18.3",
+    "pandas < 3.0"
 ]
 
 [dependency-groups]
