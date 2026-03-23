@@ -415,7 +415,7 @@ class Parameter(StrEnum):
                     "on the Earth's surface. 100 Pa = 1 hPa = 1 mbar.",
                     units="Pa",
                     limits=ParameterLimits(upper=105000, lower=95000),
-                    alternative_shortnames=["mslp", "msl"],
+                    alternative_shortnames=["mslp", "msl", "prmsl"],
                     grib2_code="151",
                 )
             case _:
