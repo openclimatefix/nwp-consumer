@@ -165,7 +165,9 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                 "default": entities.Models.MO_UM_GLOBAL_10KM.with_region("india"),
                 "um-global-10km-india": entities.Models.MO_UM_GLOBAL_10KM.with_region("india"),
                 "um-global-10km-uk": entities.Models.MO_UM_GLOBAL_10KM.with_region("uk"),
-                "um-global-10km-nl": entities.Models.MO_UM_GLOBAL_10KM.with_region("nl"),
+                "um-global-10km-nl": entities.Models.MO_UM_GLOBAL_10KM\
+                    .with_region("nl")\
+                    .with_extra_parameters([entities.Parameter.PRESSURE_MSL]),
                 "um-ukv-2km": entities.Models.MO_UM_UKV_2KM_LAEA,
             },
         )

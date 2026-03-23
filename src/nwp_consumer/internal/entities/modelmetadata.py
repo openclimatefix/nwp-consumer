@@ -211,6 +211,16 @@ class ModelMetadata:
         """Returns metadata for the given model with the given delay minutes."""
         return dataclasses.replace(self, delay_minutes=delay_minutes)
 
+    def with_extra_parameters(self, parameters: list[Parameter]) -> "ModelMetadata":
+        """Returns metadata for the given model with the given extra parameters."""
+        return dataclasses.replace(
+            self,
+            expected_coordinates=dataclasses.replace(
+                self.expected_coordinates,
+                variable=sorted(self.expected_coordinates.variable + parameters),
+            ),
+        )
+
     def with_max_step(self, max_step: int) -> "ModelMetadata":
         """Returns metadata for the given model with the given max step."""
         return dataclasses.replace(
