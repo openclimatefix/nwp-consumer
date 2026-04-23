@@ -18,6 +18,7 @@ from collections.abc import Callable, Iterator
 from typing import override
 
 import cfgrib
+import numpy as np
 import xarray as xr
 from ecmwfapi import ECMWFService
 from joblib import delayed
@@ -385,7 +386,7 @@ class ECMWFMARSRawRepository(ports.RawRepository):
             # * and so may not produce a contiguous subset of the expected coordinates.
             processed_das.extend(
                 [
-                    da.where(cond=da.coords["variable"] == v, drop=True)
+                    da.where(cond=da.coords["variable"] == v, drop=True).astype(np.float32)
                     for v in da.coords["variable"].values
                 ],
             )

@@ -154,7 +154,8 @@ class CEDARawRepository(ports.RawRepository):
 
     @override
     def fetch_init_data(
-        self, it: dt.datetime,
+        self,
+        it: dt.datetime,
     ) -> Iterator[Callable[..., ResultE[list[xr.DataArray]]]]:
         parameter_stubs: list[str] = [
             "Total_Downward_Surface_SW_Flux",
@@ -364,7 +365,7 @@ class CEDARawRepository(ports.RawRepository):
                 # * and so may not produce a contiguous subset of the expected coordinates.
                 processed_das.extend(
                     [
-                        da.where(cond=da.coords["variable"] == v, drop=True)
+                        da.where(cond=da.coords["variable"] == v, drop=True).astype(np.float32)
                         for v in da.coords["variable"].values
                     ],
                 )
@@ -473,7 +474,7 @@ class CEDARawRepository(ports.RawRepository):
                 # * and so may not produce a contiguous subset of the expected coordinates.
                 processed_das.extend(
                     [
-                        da.where(cond=da.coords["variable"] == v, drop=True)
+                        da.where(cond=da.coords["variable"] == v, drop=True).astype(np.float32)
                         for v in da.coords["variable"].values
                     ],
                 )
