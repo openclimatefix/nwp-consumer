@@ -288,7 +288,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             # larger west-europe order.
             ds_lons = ds.coords["longitude"].values
             ds_lats = ds.coords["latitude"].values
-            step = np.timedelta64(ds.coords["step"].values, "h").astype(int) # type: ignore[arg-type]
+            step = np.timedelta64(ds.coords["step"].values, "h").astype(int)  # ty: ignore[invalid-argument-type]
             is_relevant_dataset_predicate: bool = (
                 (expected_lons is not None and expected_lats is not None)
                 and (min(ds_lons) <= expected_lons[-1] and max(ds_lons) >= expected_lons[0])

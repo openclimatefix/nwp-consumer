@@ -108,15 +108,15 @@ repository.
 
 ### Linting and static type checking
  
-This project uses [MyPy](https://mypy.readthedocs.io/en/stable/) for static type checking
+This project uses [ty](https://github.com/astral-sh/ty) for static type checking
 and [Ruff](https://docs.astral.sh/ruff/) for linting.
 Installing the development dependencies makes them available in your virtual environment.
 
 Use them via:
 
 ```bash
-$ python -m mypy .
-$ python -m ruff check .
+$ uv run ty check src
+$ uv run ruff check .
 ```
 
 Be sure to do this periodically while developing to catch any errors early

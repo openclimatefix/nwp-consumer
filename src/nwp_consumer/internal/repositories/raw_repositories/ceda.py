@@ -143,7 +143,7 @@ class CEDARawRepository(ports.RawRepository):
     def model() -> entities.ModelMetadata:
         requested_model: str = os.getenv("MODEL", default="default")
         if requested_model not in CEDARawRepository.repository().available_models:
-            log.warn(
+            log.warning(
                 f"Unknown model '{requested_model}' requested, falling back to default ",
                 "CEDA repository only supports "
                 f"'{list(CEDARawRepository.repository().available_models.keys())}'. "

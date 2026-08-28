@@ -239,7 +239,7 @@ class ECMWFMARSRawRepository(ports.RawRepository):
     def model() -> entities.ModelMetadata:
         requested_model: str = os.getenv("MODEL", default="default")
         if requested_model not in ECMWFMARSRawRepository.repository().available_models:
-            log.warn(
+            log.warning(
                 f"Unknown model '{requested_model}' requested, falling back to default ",
                 "ECMWF-MARS repository only supports "
                 f"'{list(ECMWFMARSRawRepository.repository().available_models.keys())}'. "

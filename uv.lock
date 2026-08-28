@@ -1121,24 +1121,6 @@ wheels = [
 ]
 
 [[package]]
-name = "mypy"
-version = "1.13.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "mypy-extensions" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e8/21/7e9e523537991d145ab8a0a2fd98548d67646dc2aaaf6091c31ad883e7c1/mypy-1.13.0.tar.gz", hash = "sha256:0291a61b6fbf3e6673e3405cfcc0e7650bebc7939659fdca2702958038bd835e", size = 3152532, upload-time = "2024-10-22T21:55:47.458Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/fb/31/c526a7bd2e5c710ae47717c7a5f53f616db6d9097caf48ad650581e81748/mypy-1.13.0-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:5c7051a3461ae84dfb5dd15eff5094640c61c5f22257c8b766794e6dd85e72d5", size = 11077900, upload-time = "2024-10-22T21:55:37.103Z" },
-    { url = "https://files.pythonhosted.org/packages/83/67/b7419c6b503679d10bd26fc67529bc6a1f7a5f220bbb9f292dc10d33352f/mypy-1.13.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:39bb21c69a5d6342f4ce526e4584bc5c197fd20a60d14a8624d8743fffb9472e", size = 10074818, upload-time = "2024-10-22T21:55:11.513Z" },
-    { url = "https://files.pythonhosted.org/packages/ba/07/37d67048786ae84e6612575e173d713c9a05d0ae495dde1e68d972207d98/mypy-1.13.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:164f28cb9d6367439031f4c81e84d3ccaa1e19232d9d05d37cb0bd880d3f93c2", size = 12589275, upload-time = "2024-10-22T21:54:37.694Z" },
-    { url = "https://files.pythonhosted.org/packages/1f/17/b1018c6bb3e9f1ce3956722b3bf91bff86c1cefccca71cec05eae49d6d41/mypy-1.13.0-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:a4c1bfcdbce96ff5d96fc9b08e3831acb30dc44ab02671eca5953eadad07d6d0", size = 13037783, upload-time = "2024-10-22T21:55:42.852Z" },
-    { url = "https://files.pythonhosted.org/packages/cb/32/cd540755579e54a88099aee0287086d996f5a24281a673f78a0e14dba150/mypy-1.13.0-cp312-cp312-win_amd64.whl", hash = "sha256:a0affb3a79a256b4183ba09811e3577c5163ed06685e4d4b46429a271ba174d2", size = 9726197, upload-time = "2024-10-22T21:54:43.68Z" },
-    { url = "https://files.pythonhosted.org/packages/3b/86/72ce7f57431d87a7ff17d442f521146a6585019eb8f4f31b7c02801f78ad/mypy-1.13.0-py3-none-any.whl", hash = "sha256:9c250883f9fd81d212e0952c92dbfcc96fc237f4b7c92f56ac81fd48460b3e5a", size = 2647043, upload-time = "2024-10-22T21:55:16.617Z" },
-]
-
-[[package]]
 name = "mypy-extensions"
 version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1257,10 +1239,8 @@ dev = [
     { name = "pandas-stubs" },
     { name = "pdoc" },
     { name = "pydoctor" },
-    { name = "pylsp-mypy" },
     { name = "python-lsp-ruff" },
     { name = "python-lsp-server" },
-    { name = "returns", extra = ["compatible-mypy"] },
     { name = "ruff" },
     { name = "ty" },
     { name = "types-psutil" },
@@ -1298,10 +1278,8 @@ dev = [
     { name = "pandas-stubs" },
     { name = "pdoc", specifier = ">=15.0.0" },
     { name = "pydoctor", specifier = ">=24.3.0" },
-    { name = "pylsp-mypy" },
     { name = "python-lsp-ruff" },
     { name = "python-lsp-server" },
-    { name = "returns", extras = ["compatible-mypy"] },
     { name = "ruff", specifier = "==0.6.9" },
     { name = "ty", specifier = ">=0.0.75" },
     { name = "types-psutil" },
@@ -1630,19 +1608,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pylsp-mypy"
-version = "0.8.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "mypy" },
-    { name = "python-lsp-server" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c2/d3/25f5fdecdeebee9f896b45011a03657bfd7b85503659ddee20e9a97bec7e/pylsp_mypy-0.8.0.tar.gz", hash = "sha256:00d86eafa4e544ee81a73979eff1a998fbd40d4ae9c1821fe88023326a756dc2", size = 20710, upload-time = "2026-07-17T18:14:20.944Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7a/7d/cf5f10c51ccc1a775fb8ef558650018122a71b317d1ce761015f114c06c3/pylsp_mypy-0.8.0-py3-none-any.whl", hash = "sha256:b404e2e1b49521581c27fab05819e498bd069346fa2c06fba99eb96c7931a71a", size = 16114, upload-time = "2026-07-17T18:14:20.091Z" },
-]
-
-[[package]]
 name = "pyparsing"
 version = "3.3.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1863,11 +1828,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/81/d4/af041bedc0c304592f052b9a4d6dcbd220a46d730a1fc690c3bfd4dc8c76/returns-0.24.0.tar.gz", hash = "sha256:735091cc798cac3f7cf8566b171922119f7796f2e49d6f65939f3e5a9c7c97f7", size = 107005, upload-time = "2024-12-01T17:53:14.982Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c6/41/16c192627016fff4989350d883ad82c39f58ade2810a967a67d942658a2d/returns-0.24.0-py3-none-any.whl", hash = "sha256:de82455a76b9fcd86810a49099fa7645eb20920105bc78b942b2f4923c829624", size = 158037, upload-time = "2024-12-01T17:53:12.39Z" },
-]
-
-[package.optional-dependencies]
-compatible-mypy = [
-    { name = "mypy" },
 ]
 
 [[package]]

@@ -44,7 +44,6 @@ dev = [
     "unittest-xml-reporting == 3.2.0",
     "hypothesis == 6.115.3",
     # Linting
-    "returns[compatible-mypy]",
     "ruff==0.6.9",
     "pandas-stubs",
     "types-psutil",
@@ -55,7 +54,6 @@ dev = [
     "pdoc >= 15.0.0",
     # IDE support
     "python-lsp-server",
-    "pylsp-mypy",
     "python-lsp-ruff",
     "ty>=0.0.75",
 ]
@@ -82,34 +80,6 @@ enabled = true
 include = ["src"]
 exclude = ["**/__pycache__"]
 pythonVersion = "3.12"
-
-# MyPy configuration
-# * See https://mypy.readthedocs.io/en/stable/index.html
-[tool.mypy]
-python_version = "3.12"
-strict = true
-warn_unreachable = true
-warn_return_any = true
-disallow_untyped_defs = true
-plugins = [
-    "returns.contrib.mypy.returns_plugin",
-    "numpy.typing.mypy_plugin",
-]
-
-[[tool.mypy.overrides]]
-# Ignore missing imports for libraries that don't have them.
-# If they are ever made, remove from here!
-module = [
-    "ecmwfapi",
-    "cfgrib",
-    "botocore.session",
-    "botocore.client",
-    "joblib",
-    "ocf_blosc2",
-    "s3fs",
-    "zarr",
-]
-ignore_missing_imports = true
 
 # Ruff configuration
 # * See https://beta.ruff.rs/docs/

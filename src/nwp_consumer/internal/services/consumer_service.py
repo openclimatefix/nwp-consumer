@@ -121,7 +121,7 @@ class ConsumerService(ports.ConsumeUseCase):
 
         log.debug(f"Using {n_jobs} concurrent {prefer}")
 
-        return Parallel(  # type: ignore
+        return Parallel(
             n_jobs=n_jobs,
             prefer=prefer,
             verbose=0,
@@ -143,7 +143,7 @@ class ConsumerService(ports.ConsumeUseCase):
         """
         its: list[dt.datetime] = []
         match period:
-            case _ if period is None:
+            case None:
                 its = [
                     repository_metadata.determine_latest_it_from(
                         t=dt.datetime.now(tz=dt.UTC),
@@ -151,9 +151,9 @@ class ConsumerService(ports.ConsumeUseCase):
                         delay_minutes=model_metadata.delay_minutes,
                     ),
                 ]
-            case single_it if isinstance(period, dt.datetime):
-                its = [single_it]  # type: ignore
-            case multiple_its if isinstance(period, dt.date):
+            case dt.datetime() as single_it:
+                its = [single_it]
+            case dt.date() as multiple_its:
                 its = model_metadata.month_its(
                     year=multiple_its.year,
                     month=multiple_its.month,

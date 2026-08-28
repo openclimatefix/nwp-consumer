@@ -144,7 +144,7 @@ class TensorStore(abc.ABC):
         try:
             if zarrdir.startswith("s3"):
                 store_result = cls._create_zarrstore_s3(zarrdir, filename)
-                store, path = store_result.unwrap()  # Can do this as exceptions are caught
+                store, path = store_result.unwrap()  # ty: ignore[invalid-assignment]
             else:
                 path = pathlib.Path("/".join((zarrdir, filename))).expanduser().as_posix()
                 store = zarr.storage.DirectoryStore(path)
@@ -177,9 +177,9 @@ class TensorStore(abc.ABC):
             )
             log.info("Created blank zarr store at '%s'", path)
             # Ensure the store is readable
-            store_da = xr.open_dataarray(store, engine="zarr")  # type: ignore
+            store_da = xr.open_dataarray(store, engine="zarr")  # ty: ignore[invalid-argument-type]
         except zarr.errors.ContainsGroupError:
-            store_da = xr.open_dataarray(store, engine="zarr")  # type: ignore
+            store_da = xr.open_dataarray(store, engine="zarr")  # ty: ignore[invalid-argument-type]
             if store_da.name != da.name:  # TODO: Also check for equality of coordinates
                 return Failure(
                     OSError(
@@ -543,7 +543,7 @@ class TensorStore(abc.ABC):
         """
         group: zarr.Group = zarr.open_group(self.path)
         group.attrs.update(attrs)
-        zarr.consolidate_metadata(self.path)
+        zarr.consolidate_metadata(self.path)  # ty: ignore[invalid-argument-type]
         return Success(self.path)
 
     def missing_times(self) -> ResultE[list[dt.datetime]]:
@@ -580,7 +580,7 @@ class TensorStore(abc.ABC):
         return Success(missing_times)
 
     @staticmethod
-    def _create_zarrstore_s3(s3_folder: str, filename: str) -> ResultE[tuple[MutableMapping, str]]:  # type: ignore
+    def _create_zarrstore_s3(s3_folder: str, filename: str) -> ResultE[tuple[MutableMapping, str]]:
         """Create a mutable mapping to an S3 store.
 
         Authentication with S3 is done via botocore's credential discovery.
