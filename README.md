@@ -112,11 +112,11 @@ This project uses [ty](https://github.com/astral-sh/ty) for static type checking
 and [Ruff](https://docs.astral.sh/ruff/) for linting.
 Installing the development dependencies makes them available in your virtual environment.
 
-Use them via:
+Use them via the provided Makefile targets:
 
 ```bash
-$ uv run ty check src
-$ uv run ruff check .
+$ make typecheck
+$ make lint
 ```
 
 Be sure to do this periodically while developing to catch any errors early
@@ -128,7 +128,7 @@ but it prevents accidental creation of a whole suite of bugs.
 Run the unittests with:
 
 ```bash
-$ python -m unittest discover -s src/nwp_consumer -p "test_*.py"
+$ make test
 ```
 
 ## Further reading
