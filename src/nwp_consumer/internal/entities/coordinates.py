@@ -370,7 +370,7 @@ class NWPDimensionCoordinateMap:
             `NWPDimensionCoordinateMap.from_pandas` for the reverse operation.
 
         """
-        out_dict: dict[str, pd.Index] = {  # type: ignore
+        out_dict: dict[str, pd.Index] = {
             "init_time": pd.Index(
                 [
                     np.datetime64(t.astimezone(dt.UTC).replace(tzinfo=None), "ns")
@@ -556,7 +556,7 @@ class NWPDimensionCoordinateMap:
         """
         # Create a dask array of zeros with the shape of the dataset
         # * The values of this are ignored, only the shape and chunks are used
-        dummy_values = dask.array.zeros(  # type: ignore
+        dummy_values = dask.array.zeros(
             shape=list(self.shapemap.values()),
             chunks=tuple([chunks[k] for k in self.shapemap]),
         )

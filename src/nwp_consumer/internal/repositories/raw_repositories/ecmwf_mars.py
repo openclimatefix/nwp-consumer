@@ -17,8 +17,8 @@ import pathlib
 from collections.abc import Callable, Iterator
 from typing import override
 
-import cfgrib
 import xarray as xr
+from cfgrib.xarray_store import open_datasets
 from ecmwfapi import ECMWFService
 from joblib import delayed
 from returns.result import Failure, ResultE, Success
@@ -239,7 +239,7 @@ class ECMWFMARSRawRepository(ports.RawRepository):
     def model() -> entities.ModelMetadata:
         requested_model: str = os.getenv("MODEL", default="default")
         if requested_model not in ECMWFMARSRawRepository.repository().available_models:
-            log.warn(
+            log.warning(
                 f"Unknown model '{requested_model}' requested, falling back to default ",
                 "ECMWF-MARS repository only supports "
                 f"'{list(ECMWFMARSRawRepository.repository().available_models.keys())}'. "
@@ -325,7 +325,7 @@ class ECMWFMARSRawRepository(ports.RawRepository):
             path: The path to the file to convert.
         """
         try:
-            dss: list[xr.Dataset] = cfgrib.open_datasets(
+            dss: list[xr.Dataset] = open_datasets(
                 path=path.as_posix(),
                 chunks={"time": 1, "step": -1, "longitude": -1, "latitude": -1},
                 backend_kwargs={"indexpath": ""},

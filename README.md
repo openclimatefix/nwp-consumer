@@ -108,15 +108,15 @@ repository.
 
 ### Linting and static type checking
  
-This project uses [MyPy](https://mypy.readthedocs.io/en/stable/) for static type checking
+This project uses [ty](https://github.com/astral-sh/ty) for static type checking
 and [Ruff](https://docs.astral.sh/ruff/) for linting.
 Installing the development dependencies makes them available in your virtual environment.
 
-Use them via:
+Use them via the provided Makefile targets:
 
 ```bash
-$ python -m mypy .
-$ python -m ruff check .
+$ make typecheck
+$ make lint
 ```
 
 Be sure to do this periodically while developing to catch any errors early
@@ -128,7 +128,7 @@ but it prevents accidental creation of a whole suite of bugs.
 Run the unittests with:
 
 ```bash
-$ python -m unittest discover -s src/nwp_consumer -p "test_*.py"
+$ make test
 ```
 
 ## Further reading

@@ -87,9 +87,9 @@ import urllib.request
 from collections.abc import Callable, Iterator
 from typing import override
 
-import cfgrib
 import numpy as np
 import xarray as xr
+from cfgrib.xarray_store import open_datasets
 from joblib import delayed
 from returns.result import Failure, ResultE, Success
 
@@ -143,7 +143,7 @@ class CEDARawRepository(ports.RawRepository):
     def model() -> entities.ModelMetadata:
         requested_model: str = os.getenv("MODEL", default="default")
         if requested_model not in CEDARawRepository.repository().available_models:
-            log.warn(
+            log.warning(
                 f"Unknown model '{requested_model}' requested, falling back to default ",
                 "CEDA repository only supports "
                 f"'{list(CEDARawRepository.repository().available_models.keys())}'. "
@@ -309,7 +309,7 @@ class CEDARawRepository(ports.RawRepository):
             path: The path to the file to convert.
         """
         try:
-            dss: list[xr.Dataset] = cfgrib.open_datasets(path)
+            dss: list[xr.Dataset] = open_datasets(path)
         except Exception as e:
             return Failure(
                 OSError(
@@ -383,7 +383,7 @@ class CEDARawRepository(ports.RawRepository):
         # * cfgrib loads multiple hypercubes for a single multi-parameter grib file
         # * Can also set backend_kwargs={"indexpath": ""}, to avoid the index file
         try:
-            dss: list[xr.Dataset] = cfgrib.open_datasets(
+            dss: list[xr.Dataset] = open_datasets(
                 path=path.as_posix(),
                 chunks={"time": 1, "step": -1, "variable": -1, "x": "auto", "y": "auto"},
                 backend_kwargs={"indexpath": ""},

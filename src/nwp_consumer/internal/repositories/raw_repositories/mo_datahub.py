@@ -168,6 +168,9 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                 "um-global-10km-nl": entities.Models.MO_UM_GLOBAL_10KM\
                     .with_region("nl")\
                     .with_extra_parameters([entities.Parameter.PRESSURE_MSL]),
+                "um-global-10km-west-europe": entities.Models.MO_UM_GLOBAL_10KM\
+                    .with_region("west-europe")\
+                    .with_extra_parameters([entities.Parameter.PRESSURE_MSL]),
                 "um-ukv-2km": entities.Models.MO_UM_UKV_2KM_LAEA,
             },
         )
@@ -177,7 +180,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
     def model() -> entities.ModelMetadata:
         requested_model: str = os.getenv("MODEL", default="default")
         if requested_model not in MetOfficeDatahubRawRepository.repository().available_models:
-            log.warn(
+            log.warning(
                 f"Unknown model '{requested_model}' requested, falling back to default. "
                 "MetOffice Datahub repository only supports "
                 f"'{list(MetOfficeDatahubRawRepository.repository().available_models.keys())}'. "
@@ -402,6 +405,18 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
 
             da = da.sortby(variables=["step", "variable", "longitude"])
             da = da.sortby(variables="latitude", ascending=False)
+
+            # The order covers the full west-europe extent, so crop to the
+            # requested model region. Round coordinates to the store's 4 d.p.
+            # precision first, else floating-point grid-edge differences drop
+            # boundary points and misalign the write with chunk boundaries.
+            # This is a no-op when the model region matches the order bounds.
+            north, west, south, east = \
+                MetOfficeDatahubRawRepository.model().expected_coordinates.nwse()
+            da = da.assign_coords(
+                latitude=[float(f"{v:.4f}") for v in da["latitude"].values],
+                longitude=[float(f"{v:.4f}") for v in da["longitude"].values],
+            ).sel(latitude=slice(north, south), longitude=slice(west, east))
 
         except Exception as e:
             return Failure(

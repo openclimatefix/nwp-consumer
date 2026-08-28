@@ -66,7 +66,7 @@ class PerformanceMonitor(Thread):
 
     def run(self) -> None:
         """Run the thread."""
-        memory_start, cpu_start = self.get_usage()
+        memory_start, _ = self.get_usage()
         while not self.stop:
             new_memory, new_cpu = self.get_usage()
             # Memory is just a total, so get the delta

@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from returns.result import Failure, ResultE, Success
 
-from ...entities import NWPDimensionCoordinateMap, Parameter
+from ...entities import Models, NWPDimensionCoordinateMap, Parameter
 from .ecmwf_realtime import ECMWFRealTimeS3RawRepository
 
 if TYPE_CHECKING:
@@ -170,3 +170,35 @@ class TestECMWFRealTimeS3RawRepository(unittest.TestCase):
     @patch.dict(os.environ, {"MODEL": "hres-ifs-india"}, clear=True)
     def test_convert_india(self) -> None:
         return self.test__convert()
+
+    def test_convert_crops_to_region(self) -> None:
+        """Test that _convert crops datasets to the requested model region.
+
+        The test grib contains a uk dataset (lon -12..3, lat 48..60); requesting
+        a smaller sub-region should crop the output down to it, mimicking cropping
+        e.g. nl from the larger west-europe order.
+        """
+        cropped_model = dataclasses.replace(
+            Models.ECMWF_HRES_IFS_0P1DEGREE,
+            name="hres-ifs_uk-sub",
+            expected_coordinates=Models.ECMWF_HRES_IFS_0P1DEGREE.expected_coordinates.crop(
+                north=55, west=-8, south=50, east=0,
+            ).unwrap(),
+        )
+
+        with patch.object(
+            ECMWFRealTimeS3RawRepository,
+            "model",
+            staticmethod(lambda: cropped_model),
+        ):
+            result = ECMWFRealTimeS3RawRepository._convert(
+                path=pathlib.Path(__file__).parent.absolute()
+                / "test_gribs"
+                / "test_ECMWFRealtime_HRES-IFS_10u_20241104T00_S60.grib",
+            )
+            self.assertIsInstance(result, Success, msg=f"{result!s}")
+            for da in result.unwrap():
+                self.assertGreaterEqual(float(da.latitude.min()), 50)
+                self.assertLessEqual(float(da.latitude.max()), 55)
+                self.assertGreaterEqual(float(da.longitude.min()), -8)
+                self.assertLessEqual(float(da.longitude.max()), 0)
