@@ -21,9 +21,10 @@ So a file named ``A2D10250000D10260100`` would be for an initialization
 time of 2024-10-25 00:00 and a target time of 2024-10-26 01:00 (step of 25 hours).
 
 The file contents is specific to the order agreed with the data provider.
-For the order that OCF has created, there are four distinct datasets.
-This is because OCF has ordered two separate regions and 17 variables,
-which are split across two datasets.
+OCF orders a single west-europe region alongside a separate india region,
+and the variables are split across multiple datasets within each file.
+Datasets that overlap the requested model region are cropped to it, which
+allows building a sub-region store (e.g. nl) from the larger west-europe order.
 
 Also, some of the data contains larger steps than we are interested in due
 to necessities in the order creation process.
@@ -91,6 +92,9 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                 "hres-ifs-nl": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region(
                     "nl",
                 ).with_max_step(84).with_delay_minutes(60 * 7),
+                "hres-ifs-west-europe": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region(
+                    "west-europe",
+                ).with_delay_minutes(60 * 7),
             },
         )
 
@@ -273,14 +277,22 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
         expected_lats = ECMWFRealTimeS3RawRepository.model().expected_coordinates.latitude
         expected_steps = ECMWFRealTimeS3RawRepository.model().expected_coordinates.step
 
+        north, west, south, east = \
+            ECMWFRealTimeS3RawRepository.model().expected_coordinates.nwse()
+
         for i, ds in enumerate(dss):
-            # ECMWF Realtime provides all regions in one set of datasets,
-            # so distinguish via their coordinates
+            # ECMWF Realtime provides multiple orders in one set of datasets
+            # (e.g. west-europe and india), so distinguish via their coordinates.
+            # Datasets that overlap the requested region are kept and cropped to it,
+            # which allows a sub-region store (e.g. nl) to be built from the
+            # larger west-europe order.
+            ds_lons = ds.coords["longitude"].values
+            ds_lats = ds.coords["latitude"].values
             step = np.timedelta64(ds.coords["step"].values, "h").astype(int) # type: ignore[arg-type]
             is_relevant_dataset_predicate: bool = (
                 (expected_lons is not None and expected_lats is not None)
-                and (expected_lons[0] <= max(ds.coords["longitude"].values) <= expected_lons[-1])
-                and (expected_lats[-1] <= max(ds.coords["latitude"].values) <= expected_lats[0])
+                and (min(ds_lons) <= expected_lons[-1] and max(ds_lons) >= expected_lons[0])
+                and (min(ds_lats) <= expected_lats[0] and max(ds_lats) >= expected_lats[-1])
                 and (expected_steps[0] <= step <= expected_steps[-1])
             )
             if not is_relevant_dataset_predicate:
@@ -311,6 +323,15 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                     .sortby(variables=["step", "variable", "longitude"])
                     .sortby(variables="latitude", ascending=False)
                 )
+                # Crop to the requested model region, since the order may cover
+                # a larger extent (e.g. cropping nl from the west-europe order).
+                # Round coordinates to the store's 4 d.p. precision first, else
+                # floating-point grid-edge differences drop boundary points and
+                # misalign the write with chunk boundaries.
+                da = da.assign_coords(
+                    latitude=[float(f"{v:.4f}") for v in da["latitude"].values],
+                    longitude=[float(f"{v:.4f}") for v in da["longitude"].values],
+                ).sel(latitude=slice(north, south), longitude=slice(west, east))
 
             except Exception as e:
                 return Failure(

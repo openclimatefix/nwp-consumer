@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from returns.result import Failure, ResultE, Success
 
-from ...entities import NWPDimensionCoordinateMap, Parameter
+from ...entities import Models, NWPDimensionCoordinateMap, Parameter
 from .mo_datahub import MetOfficeDatahubRawRepository
 
 
@@ -94,6 +94,47 @@ class TestMetOfficeDatahubRawRepository(unittest.TestCase):
                     self.assertIsInstance(region_result, Success, msg=f"{region_result}")
 
 
+
+    def test_convert_crops_to_region(self) -> None:
+        """Test that _convert_global crops the data to the requested model region.
+
+        The order provides a larger extent (here, the india test grib), which
+        should be cropped down to a smaller requested region.
+        """
+        cropped_model = dataclasses.replace(
+            Models.MO_UM_GLOBAL_10KM,
+            name="um-global_india-sub",
+            expected_coordinates=Models.MO_UM_GLOBAL_10KM.expected_coordinates.crop(
+                north=20, west=70, south=10, east=90,
+            ).unwrap(),
+        )
+
+        with patch.object(
+            MetOfficeDatahubRawRepository,
+            "model",
+            staticmethod(lambda: cropped_model),
+        ):
+            result = MetOfficeDatahubRawRepository._convert_global(
+                path=pathlib.Path(__file__).parent.absolute()
+                / "test_gribs"
+                / "test_MODatahub_UM-Global_t2m_20241120T00_S00.grib",
+            )
+            self.assertIsInstance(result, Success, msg=f"{result!s}")
+            da = result.unwrap()[0]
+            self.assertGreaterEqual(float(da.latitude.min()), 10)
+            self.assertLessEqual(float(da.latitude.max()), 20)
+            self.assertGreaterEqual(float(da.longitude.min()), 70)
+            self.assertLessEqual(float(da.longitude.max()), 90)
+            # Output must be a contiguous subset of the cropped region store
+            region_result = NWPDimensionCoordinateMap.from_xarray(da).bind(
+                dataclasses.replace(
+                    cropped_model.expected_coordinates,
+                    init_time=[dt.datetime(2024, 11, 20, 0, tzinfo=dt.UTC)],
+                    variable=[Parameter.TEMPERATURE_SL],
+                    step=[0],
+                ).determine_region,
+            )
+            self.assertIsInstance(region_result, Success, msg=f"{region_result!s}")
 
     @patch.dict(os.environ, {"MODEL": "um-ukv-2km"}, clear=True)
     def test_convert_ukv(self) -> None:
