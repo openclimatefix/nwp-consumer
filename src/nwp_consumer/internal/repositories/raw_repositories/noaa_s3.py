@@ -34,9 +34,9 @@ import re
 from collections.abc import Callable, Iterator
 from typing import override
 
-import cfgrib
 import s3fs
 import xarray as xr
+from cfgrib.xarray_store import open_dataset
 from joblib import delayed
 from returns.result import Failure, ResultE, Success
 
@@ -242,7 +242,7 @@ class NOAAS3RawRepository(ports.RawRepository):
             ]
             ds: xr.Dataset = xr.merge(
                 [
-                    cfgrib.open_dataset(path.as_posix(), backend_kwargs={"filter_by_keys": f})
+                    open_dataset(path.as_posix(), backend_kwargs={"filter_by_keys": f})
                     for f in filters
                 ],
                 compat="minimal",

@@ -31,7 +31,7 @@ dependencies = [
     "s3fs == 2024.9.0",
     "xarray == 2025.1.0",
     "zarr == 2.18.3",
-    "pandas < 3.0"
+    "pandas < 3.0",
 ]
 
 [dependency-groups]
@@ -45,7 +45,7 @@ dev = [
     "hypothesis == 6.115.3",
     # Linting
     "returns[compatible-mypy]",
-    "ruff == 0.6.9",
+    "ruff==0.6.9",
     "pandas-stubs",
     "types-psutil",
     "types-pytz",
@@ -57,6 +57,7 @@ dev = [
     "python-lsp-server",
     "pylsp-mypy",
     "python-lsp-ruff",
+    "ty>=0.0.75",
 ]
 
 [project.scripts]

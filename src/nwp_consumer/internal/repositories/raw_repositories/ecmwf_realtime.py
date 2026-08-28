@@ -39,10 +39,10 @@ import re
 from collections.abc import Callable, Iterator
 from typing import override
 
-import cfgrib
 import numpy as np
 import s3fs
 import xarray as xr
+from cfgrib.xarray_store import open_datasets
 from joblib import delayed
 from returns.result import Failure, ResultE, Success
 
@@ -256,7 +256,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             path: The path to the grib file.
         """
         try:
-            dss: list[xr.Dataset] = cfgrib.open_datasets(path.as_posix())
+            dss: list[xr.Dataset] = open_datasets(path.as_posix())
         except Exception as e:
             return Failure(
                 OSError(

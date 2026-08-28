@@ -20,9 +20,12 @@ from collections.abc import Mapping, MutableMapping
 from typing import Any
 
 import numpy as np
+import numpy.typing
 import pandas as pd
 import xarray as xr
 import zarr
+import zarr.errors
+import zarr.storage
 from returns.result import Failure, ResultE, Success
 
 from .coordinates import NWPDimensionCoordinateMap
@@ -174,9 +177,9 @@ class TensorStore(abc.ABC):
             )
             log.info("Created blank zarr store at '%s'", path)
             # Ensure the store is readable
-            store_da = xr.open_dataarray(store, engine="zarr")
+            store_da = xr.open_dataarray(store, engine="zarr")  # type: ignore
         except zarr.errors.ContainsGroupError:
-            store_da = xr.open_dataarray(store, engine="zarr")
+            store_da = xr.open_dataarray(store, engine="zarr")  # type: ignore
             if store_da.name != da.name:  # TODO: Also check for equality of coordinates
                 return Failure(
                     OSError(
@@ -590,6 +593,7 @@ class TensorStore(abc.ABC):
           - https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html#configuring-credentials
         """
         import s3fs
+        import s3fs.mapping
 
         if not s3_folder.startswith("s3://"):
             return Failure(
