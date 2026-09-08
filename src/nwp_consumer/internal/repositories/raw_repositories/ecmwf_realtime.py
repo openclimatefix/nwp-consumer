@@ -94,7 +94,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
                 ).with_max_step(84).with_delay_minutes(60 * 7),
                 "hres-ifs-west-europe": entities.Models.ECMWF_HRES_IFS_0P1DEGREE.with_region(
                     "west-europe",
-                ).with_delay_minutes(60 * 7),
+                ).with_delay_minutes(60 * 6),
             },
         )
 
