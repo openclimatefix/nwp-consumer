@@ -6,6 +6,7 @@ This module defines the structure of the notification messages.
 """
 
 import dataclasses
+import datetime as dt
 
 
 @dataclasses.dataclass
@@ -26,8 +27,11 @@ class StoreCreatedNotification:
     filename: str
     """The name of the store created, including extension."""
 
+    init_times: list[dt.datetime]
+    """The init times written to the store."""
+
     size_mb: int
-    """The size of the store in megabytes."""
+    """The size of the data written to the store in megabytes."""
 
     performance: PerformanceMetadata
     """Metadata for the operation."""
@@ -36,7 +40,8 @@ class StoreCreatedNotification:
         """Return a string representation of the notification."""
         return "".join(
             (
-                f"Store created: {self.filename} ({self.size_mb} MB) in ",
+                f"Store created: {self.filename} ({self.size_mb} MB) ",
+                f"with init times {[f'{it:%Y-%m-%dT%H:%M}' for it in self.init_times]} in ",
                 f"{self.performance.duration_seconds} secs ",
                 f"(using {self.performance.memory_mb} MB RAM)",
             ),
@@ -50,8 +55,22 @@ class StoreAppendedNotification:
     filename: str
     """The name of the store appended to, including extension."""
 
+    init_times: list[dt.datetime]
+    """The init times written to the store."""
+
     size_mb: int
-    """The size of the store in megabytes."""
+    """The size of the data written to the store in megabytes."""
 
     performance: PerformanceMetadata
     """Metadata for the operation."""
+
+    def __str__(self) -> str:
+        """Return a string representation of the notification."""
+        return "".join(
+            (
+                f"Store appended: {self.filename} ({self.size_mb} MB) ",
+                f"with init times {[f'{it:%Y-%m-%dT%H:%M}' for it in self.init_times]} in ",
+                f"{self.performance.duration_seconds} secs ",
+                f"(using {self.performance.memory_mb} MB RAM)",
+            ),
+        )

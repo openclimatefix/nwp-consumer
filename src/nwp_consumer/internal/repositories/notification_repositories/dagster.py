@@ -32,6 +32,10 @@ class DagsterPipesNotificationRepository(ports.NotificationRepository):
             pipesctx.report_asset_materialization(
                 metadata={
                     "filename": {"raw_value": message.filename, "type": "text"},
+                    "init_times": {
+                        "raw_value": [it.isoformat() for it in message.init_times],
+                        "type": "json",
+                    },
                     "size_mb": {"raw_value": message.size_mb, "type": "float"},
                     "memory_mb": {"raw_value": message.performance.memory_mb, "type": "float"},
                     "duration_minutes": {

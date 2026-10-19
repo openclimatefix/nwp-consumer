@@ -20,6 +20,10 @@ The following environment variables can be used to configure the application:
     | ZARRDIR                   | The output directory for the app.   | ~/.local/cache/nwp/<REPO>/<MODEL>/data      |
     |                           | Can be a local path or an S3 URI.   |                                             |
     |---------------------------|-------------------------------------|---------------------------------------------|
+    | STORE_BACKEND             | The storage backend to write to.    | zarr                                        |
+    |                           | Either 'zarr' (a store per run) or  |                                             |
+    |                           | 'icechunk' (a store per month).     |                                             |
+    |---------------------------|-------------------------------------|---------------------------------------------|
     | NOTIFICATION_REPOSITORY   | The notification repository to use. | stdout                                      |
     |---------------------------|-------------------------------------|---------------------------------------------|
     | MODEL_REPOSITORY          | The model repository to use.        | ceda-metoffice-global                       |

@@ -67,13 +67,8 @@ Documentation is generated via [pdoc](https://pdoc.dev/docs/pdoc.html).
 To build the documentation, run the following command in the repository root:
 
 ```bash
-$ PDOC_ALLOW_EXEC=1 python -m pdoc -o docs --docformat=google src/nwp_consumer
+$ python -m pdoc -o docs --docformat=google src/nwp_consumer
 ```
-
-> [!Note]
-> The `PDOC_ALLOW_EXEC=1` environment variable is required due to a facet
-> of the `ocf_blosc2` library, which imports itself automatically and hence
-> necessitates execution to be enabled.
 
 ## FAQ
 
@@ -90,6 +85,26 @@ The `ZARRDIR` environment variable can be set to an S3 url
 (ex: `s3://some-bucket-name/some-prefix`). Valid credentials for accessing the bucket
 must be discoverable in the environment as per
 [Botocore's documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html)
+
+### How do I write to Icechunk instead of Zarr?
+
+Set the `STORE_BACKEND` environment variable to `icechunk`. Data is then written to one
+[Icechunk](https://icechunk.io) store per month in `ZARRDIR` (ex: `2026-02.icechunk`),
+which holds every init time of the model in that month. Each run adds its init times
+to the store, committing each one only once it has been written and validated in full,
+so readers never see an incomplete init time. Runs for different init times can safely
+write to the same store concurrently.
+
+Failed and conflicting runs leave behind data that is never committed. Remove it by
+periodically running the `maintain` command for each month's store:
+
+```bash
+$ nwp-consumer maintain --year 2026 --month 2
+```
+
+This only deletes uncommitted data more than a day old, so it is safe to run alongside
+consuming runs. Add `--expire-snapshots-older-than-days N` to also discard the store's
+history older than `N` days, along with any data that only that history references.
 
 ### How do I change what variables are pulled?
 

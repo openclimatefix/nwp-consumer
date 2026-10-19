@@ -18,6 +18,7 @@ class ConsumeUseCase(abc.ABC):
     Defines the business-critical methods for the following use cases:
 
     - 'A user should be able to consume NWP data for a given initialization time.'
+    - 'A user should be able to remove unneeded data from the store for a given month.'
     """
 
     @abc.abstractmethod
@@ -53,5 +54,23 @@ class ConsumeUseCase(abc.ABC):
 
         Returns:
             The path to the produced Zarr store.
+        """
+        pass
+
+    @abc.abstractmethod
+    def maintain(
+        self,
+        period: dt.date,
+        expire_snapshots_older_than: dt.timedelta | None = None,
+    ) -> ResultE[str]:
+        """Delete unneeded objects from the monthly store for the given month.
+
+        Args:
+            period: The month of the store to maintain.
+            expire_snapshots_older_than: If set, also expire the store's history
+                older than this, so that objects only it references are deleted.
+
+        Returns:
+            The path to the maintained store.
         """
         pass
