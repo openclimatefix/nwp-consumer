@@ -145,9 +145,12 @@ else:
         "}",
     ))
 
-_loglevel: int | str = logging.getLevelName(os.getenv("LOGLEVEL", "INFO").upper())
+_loglevel: int = logging.getLevelNamesMapping().get(
+    os.getenv("LOGLEVEL", "INFO").upper(),
+    logging.INFO,
+)
 logging.basicConfig(
-    level=logging.INFO if isinstance(_loglevel, str) else _loglevel,
+    level=_loglevel,
     stream=sys.stdout,
     format=_formatstr,
     datefmt="%Y-%m-%dT%H:%M:%S",

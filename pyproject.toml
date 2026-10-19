@@ -44,7 +44,7 @@ dev = [
     "unittest-xml-reporting == 3.2.0",
     "hypothesis == 6.115.3",
     # Linting
-    "ruff == 0.17.1",
+    "ruff==0.17.1",
     "pandas-stubs",
     "types-psutil",
     "types-pytz",

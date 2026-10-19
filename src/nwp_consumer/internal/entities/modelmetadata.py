@@ -85,13 +85,14 @@ class ModelMetadata:
         pretty: str = "".join(
             (
                 "Model:",
-                "\n\t{self.name} ({self.resolution} resolution)",
-                "\tCoordinates:",
+                f"\n\t{self.name} ({self.resolution} resolution)",
+                "\n\tCoordinates:\n",
                 "\n".join(
                     f"\t\t{dim}: {vals}"
                     if len(vals) < 5
                     else f"\t\t{dim}: {vals[:3]} ... {vals[-3:]}"
-                    for dim, vals in self.expected_coordinates.__dict__.items()
+                    for dim in self.expected_coordinates.dims
+                    if (vals := getattr(self.expected_coordinates, dim)) is not None
                 ),
             ),
         )
