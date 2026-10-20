@@ -311,7 +311,7 @@ class ConsumerService(ports.ConsumeUseCase):
         period: dt.datetime | dt.date | None = None,
         delete_on_failure: bool = True,
     ) -> ResultE[str]:
-        """Consume NWP data to Zarr format for desired time period.
+        """Consume NWP data to the configured store for desired time period.
 
         Where possible the implementation should be as memory-efficient as possible.
         The designs of the repository methods also enable parallel processing within
@@ -326,7 +326,9 @@ class ConsumerService(ports.ConsumeUseCase):
                 fails validation.
 
         Returns:
-            The path to the produced Zarr store.
+            The path to the store written to. Depending on the STORE_BACKEND, this is
+            either a Zarr store holding only the init times of the period, or an
+            Icechunk repository holding the whole month.
 
         See Also:
             - `repositories.RawRepository.fetch_init_data`

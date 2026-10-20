@@ -93,6 +93,9 @@ class TensorStore(abc.ABC):
     encoding: dict[str, Any]
     """The encoding passed to the storage backend whilst writing."""
 
+    chunk_sizes: dict[str, int]
+    """The size of the store's chunks along each dimension, as stored on disk."""
+
     created: bool
     """Whether the store was created by this instance, as opposed to already existing.
 
@@ -226,6 +229,15 @@ class TensorStore(abc.ABC):
         return da.assign_coords({INIT_TIME_COMPLETE: ("init_time", complete)})
 
     @staticmethod
+    def _stored_chunk_sizes(store_da: xr.DataArray) -> dict[str, int]:
+        """Get the size of the chunks of the store's dataarray, as stored on disk.
+
+        Unlike `DataArray.chunksizes`, this doesn't depend on whether, or how,
+        the dataarray was opened with dask.
+        """
+        return dict(store_da.encoding["preferred_chunks"])
+
+    @staticmethod
     def _existing_coordinate_map(
         path: str,
         store_da: xr.DataArray,
@@ -329,11 +341,14 @@ class TensorStore(abc.ABC):
         # integer number of chunks along that dimension.
         # * This is to ensure that the data can safely be written in parallel.
         # * The start and and of each slice should be divisible by the chunk size.
-        chunksizes = self._open_dataarray().chunksizes
+        # * A region ending at the end of the dimension covers its final, partial, chunk.
         for dim, slc in region.items():
-            chunk_size = chunksizes.get(dim, (1,))[0]
+            chunk_size = self.chunk_sizes[dim]
+            ends_on_boundary = (
+                slc.stop % chunk_size == 0 or slc.stop == self.coordinate_map.shapemap[dim]
+            )
             # TODO: Determine if this should return a full failure object
-            if slc.start % chunk_size != 0 or slc.stop % chunk_size != 0:
+            if slc.start % chunk_size != 0 or not ends_on_boundary:
                 log.warning(
                     f"Determined region of raw data to be written for dimension '{dim}'"
                     f"does not align with chunk boundaries of the store. "
@@ -720,6 +735,7 @@ class ZarrTensorStore(TensorStore):
                     coordinate_map=existing_coords_result.unwrap(),
                     size_kb=0,
                     encoding=encoding,
+                    chunk_sizes=cls._stored_chunk_sizes(store_da),
                     created=False,
                 ),
             )
@@ -747,6 +763,7 @@ class ZarrTensorStore(TensorStore):
                 coordinate_map=coordinate_map_result.unwrap(),
                 size_kb=0,
                 encoding=encoding,
+                chunk_sizes=cls._stored_chunk_sizes(store_da),
                 created=True,
             ),
         )
@@ -1060,6 +1077,7 @@ class IcechunkTensorStore(TensorStore):
                 coordinate_map=coordinate_map_result.unwrap(),
                 size_kb=0,
                 encoding=encoding,
+                chunk_sizes=cls._stored_chunk_sizes(store_da),
                 created=True,
                 repo=repo,
             ),
@@ -1284,6 +1302,7 @@ class IcechunkTensorStore(TensorStore):
                 coordinate_map=existing_coords_result.unwrap(),
                 size_kb=0,
                 encoding=encoding,
+                chunk_sizes=cls._stored_chunk_sizes(store_da),
                 created=False,
                 repo=repo,
             ),
@@ -1323,6 +1342,10 @@ class IcechunkTensorStore(TensorStore):
     def _create_icechunk_storage(icdir: str, filename: str) -> tuple[icechunk.Storage, str]:
         """Create Icechunk storage config for the given directory and filename.
 
+        With a custom S3 endpoint (AWS_ENDPOINT_URL), path-style addressing is used,
+        as S3-compatible stores (e.g. MinIO, moto) often don't support the default
+        virtual-hosted style, which requires the bucket as a subdomain of the endpoint.
+
         Returns a tuple of the `icechunk.Storage` and the path to the store.
         """
         path = "/".join((icdir, filename))
@@ -1335,6 +1358,7 @@ class IcechunkTensorStore(TensorStore):
                 region=os.getenv("AWS_REGION", "eu-west-1"),
                 endpoint_url=endpoint,
                 allow_http=bool(endpoint and endpoint.startswith("http://")),
+                force_path_style=endpoint is not None,
                 from_env=True,
             )
             return storage, path

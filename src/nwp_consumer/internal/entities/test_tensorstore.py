@@ -202,6 +202,55 @@ class TestTensorStore(unittest.TestCase):
         ts.mark_complete(init_times=[it]).unwrap()
         ts.commit(message=f"Write {it}").unwrap()
 
+    def test_chunk_sizes(self) -> None:
+        """Test the store's on-disk chunk sizes are recorded, for new and existing stores."""
+        with self.store(year=2023) as ts:
+            expected = ts.coordinate_map.chunking(chunk_count_overrides={})
+            self.assertDictEqual(ts.chunk_sizes, expected)
+            reopened = init_store(self.store_cls, ts.coordinate_map).unwrap()
+            self.assertFalse(reopened.created)
+            self.assertDictEqual(reopened.chunk_sizes, expected)
+
+    def test_write_to_region_does_not_open_store(self) -> None:
+        """Test writing a region doesn't reopen the store to check chunk alignment."""
+        with self.store(year=2023) as ts:
+            it = ts.coordinate_map.init_time[0]
+            ts.begin_transaction().unwrap()
+            with patch.object(
+                self.store_cls,
+                "_open_dataarray",
+                side_effect=AssertionError("Store reopened"),
+            ):
+                write_result = ts.write_to_region(da=init_time_dataarray(ts, it))
+            self.assertIsInstance(write_result, Success, msg=write_result)
+            ts.commit(message="Write init time").unwrap()
+
+    def test_write_to_region_chunk_alignment(self) -> None:
+        """Test writes not aligned with chunk boundaries are warned about."""
+        coords = make_coords(year=2023)
+        # 12 latitudes in chunks of 5, so the final chunk is partial
+        chunks = coords.chunking(chunk_count_overrides={}) | {"latitude": 5}
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            patch.dict(os.environ, {"ZARRDIR": tmpdir}),
+        ):
+            ts = self.store_cls.initialize_empty_store(
+                model="test_da",
+                repository="dummy_repository",
+                coords=coords,
+                chunks=chunks,
+            ).unwrap()
+            da = init_time_dataarray(ts, coords.init_time[0])
+            ts.begin_transaction().unwrap()
+
+            with self.assertLogs("nwp-consumer", level="WARNING"):
+                ts.write_to_region(da=da.isel(latitude=slice(0, 6))).unwrap()
+            with self.assertNoLogs("nwp-consumer", level="WARNING"):
+                ts.write_to_region(da=da.isel(latitude=slice(0, 10))).unwrap()
+                ts.write_to_region(da=da.isel(latitude=slice(10, 12))).unwrap()
+
+            ts.rollback().unwrap()
+
     def test_missing_times_partial(self) -> None:
         """Test partially written init times are missing until marked complete."""
         with self.store(year=2023) as ts:
