@@ -1,21 +1,20 @@
 """Domain entities for post-processing."""
 
 import dataclasses
-from codecs import Codec
 from enum import Enum
 
-import ocf_blosc2
+from zarr.codecs import BloscCodec
 
 
-class CodecOptions(Codec, Enum):
-    """Options for compression codecs."""
+class CodecOptions(Enum):
+    """Options for Zarr v3 compression codecs."""
 
     UNSET = None
-    OCF_BLOSC2 = ocf_blosc2.Blosc2(clevel=5)
-    """Use the OCF Blosc2 codec.
+    BLOSC = BloscCodec(cname="blosclz", clevel=5, shuffle="shuffle")
+    """Use the Blosc codec.
 
     See Also:
-        - https://pypi.org/project/ocf-blosc2/
+        - https://zarr.readthedocs.io/en/stable/api/zarr/codecs/index.html
     """
 
     def __bool__(self) -> bool:
@@ -41,8 +40,7 @@ class PostProcessOptions:
     codec: CodecOptions = CodecOptions.UNSET
     """Whether to compress the data with a non-standard codec.
 
-    By default, Zarr writes chunks compressed using the `Blosc compressor
-    <https://zarr.readthedocs.io/en/stable/tutorial.html#compressors>`_.
+    By default, Zarr v3 writes chunks compressed using the Zstd codec.
     """
 
     plot: bool = False

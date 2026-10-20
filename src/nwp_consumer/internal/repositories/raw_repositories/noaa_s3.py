@@ -242,7 +242,11 @@ class NOAAS3RawRepository(ports.RawRepository):
             ]
             ds: xr.Dataset = xr.merge(
                 [
-                    open_dataset(path.as_posix(), backend_kwargs={"filter_by_keys": f})
+                    open_dataset(
+                        path.as_posix(),
+                        backend_kwargs={"filter_by_keys": f},
+                        decode_timedelta=True,
+                    )
                     for f in filters
                 ],
                 compat="minimal",

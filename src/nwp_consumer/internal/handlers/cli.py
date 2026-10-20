@@ -74,6 +74,32 @@ class CLIHandler:
             action="store_true",
         )
 
+        maintain_command = subparsers.add_parser(
+            "maintain",
+            help="Delete unneeded objects from the icechunk store for a given month",
+        )
+        maintain_command.add_argument(
+            "--year",
+            "-y",
+            help="Year of the store to maintain",
+            type=int,
+            required=True,
+        )
+        maintain_command.add_argument(
+            "--month",
+            "-m",
+            help="Month of the store to maintain",
+            type=int,
+            required=True,
+        )
+        maintain_command.add_argument(
+            "--expire-snapshots-older-than-days",
+            help="Also expire the store's history older than this many days, "
+            "so that data only it references (e.g. overwritten data) is deleted",
+            type=int,
+            required=False,
+        )
+
         info_command = subparsers.add_parser("info", help="Show model repository info")
         info_options = info_command.add_mutually_exclusive_group()
         info_options.add_argument(
@@ -129,6 +155,28 @@ class CLIHandler:
                 )
                 if isinstance(result, Failure):
                     log.error(f"Failed to archive NWP data: {result!s}")
+                    return 1
+
+            case "maintain":
+                service_result = services.ConsumerService.from_adaptors(
+                    model_adaptor=self.model_adaptor,
+                    notification_adaptor=self.notification_adaptor,
+                )
+                expire_snapshots_older_than: dt.timedelta | None = None
+                if args.expire_snapshots_older_than_days is not None:
+                    expire_snapshots_older_than = dt.timedelta(
+                        days=args.expire_snapshots_older_than_days,
+                    )
+                result = service_result.do(
+                    maintain_result
+                    for service in service_result
+                    for maintain_result in service.maintain(
+                        period=dt.date(args.year, args.month, 1),
+                        expire_snapshots_older_than=expire_snapshots_older_than,
+                    )
+                )
+                if isinstance(result, Failure):
+                    log.error(f"Failed to maintain store: {result!s}")
                     return 1
 
             case "info":

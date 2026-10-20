@@ -256,7 +256,7 @@ class ECMWFRealTimeS3RawRepository(ports.RawRepository):
             path: The path to the grib file.
         """
         try:
-            dss: list[xr.Dataset] = open_datasets(path.as_posix())
+            dss: list[xr.Dataset] = open_datasets(path.as_posix(), decode_timedelta=True)
         except Exception as e:
             return Failure(
                 OSError(

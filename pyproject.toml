@@ -22,15 +22,15 @@ dependencies = [
     "ecmwf-api-client == 1.6.3",
     "cfgrib == 0.9.14.1",
     "dagster-pipes == 1.9.3",
+    "icechunk == 2.2.2",
     "joblib == 1.4.2",
     "numcodecs == 0.15.1",
     "numpy == 2.1.0",
-    "ocf-blosc2 == 0.0.11",
     "psutil == 6.0.0",
     "returns == 0.24.0",
     "s3fs == 2024.9.0",
-    "xarray == 2025.1.0",
-    "zarr == 2.18.3",
+    "xarray == 2025.9.1",
+    "zarr == 3.4.0",
     "pandas < 3.0",
 ]
 
@@ -44,7 +44,7 @@ dev = [
     "unittest-xml-reporting == 3.2.0",
     "hypothesis == 6.115.3",
     # Linting
-    "ruff==0.6.9",
+    "ruff==0.17.1",
     "pandas-stubs",
     "types-psutil",
     "types-pytz",

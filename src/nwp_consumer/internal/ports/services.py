@@ -18,6 +18,7 @@ class ConsumeUseCase(abc.ABC):
     Defines the business-critical methods for the following use cases:
 
     - 'A user should be able to consume NWP data for a given initialization time.'
+    - 'A user should be able to remove unneeded data from the store for a given month.'
     """
 
     @abc.abstractmethod
@@ -25,7 +26,7 @@ class ConsumeUseCase(abc.ABC):
         self,
         period: dt.datetime | dt.date | None = None,
     ) -> ResultE[str]:
-        """Consume NWP data to Zarr format for desired time period.
+        """Consume NWP data to the configured store for desired time period.
 
         Where possible the implementation should be as memory-efficient as possible.
         The designs of the repository methods also enable parallel processing within
@@ -35,7 +36,9 @@ class ConsumeUseCase(abc.ABC):
             period: The period for which to gather init time data.
 
         Returns:
-            The path to the produced Zarr store.
+            The path to the store written to. Depending on the STORE_BACKEND, this is
+            either a Zarr store holding only the init times of the period, or an
+            Icechunk repository holding the whole month.
 
         See Also:
             - `repositories.RawRepository.fetch_init_data`
@@ -46,12 +49,32 @@ class ConsumeUseCase(abc.ABC):
 
     @abc.abstractmethod
     def archive(self, period: dt.date) -> ResultE[str]:
-        """Archive NWP data to Zarr format for desired time period.
+        """Archive NWP data to the configured store for desired time period.
 
         Args:
             period: The period for which to gather init time data.
 
         Returns:
-            The path to the produced Zarr store.
+            The path to the store written to. Depending on the STORE_BACKEND, this is
+            either a Zarr store holding only the init times of the period, or an
+            Icechunk repository holding the whole month.
+        """
+        pass
+
+    @abc.abstractmethod
+    def maintain(
+        self,
+        period: dt.date,
+        expire_snapshots_older_than: dt.timedelta | None = None,
+    ) -> ResultE[str]:
+        """Delete unneeded objects from the monthly store for the given month.
+
+        Args:
+            period: The month of the store to maintain.
+            expire_snapshots_older_than: If set, also expire the store's history
+                older than this, so that objects only it references are deleted.
+
+        Returns:
+            The path to the maintained store.
         """
         pass

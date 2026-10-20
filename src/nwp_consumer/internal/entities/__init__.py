@@ -17,7 +17,12 @@ should not contain any logic that is specific to a particular implementation.
 
 from .repometadata import RawRepositoryMetadata
 from .modelmetadata import ModelMetadata, Models
-from .tensorstore import ParameterScanResult, TensorStore
+from .tensorstore import (
+    IcechunkTensorStore,
+    ParameterScanResult,
+    TensorStore,
+    ZarrTensorStore,
+)
 from .postprocess import PostProcessOptions, CodecOptions
 from .notification import PerformanceMetadata, StoreCreatedNotification, StoreAppendedNotification
 from .parameters import Parameter
@@ -28,8 +33,10 @@ __all__ = [
     "RawRepositoryMetadata",
     "ModelMetadata",
     "Models",
+    "IcechunkTensorStore",
     "ParameterScanResult",
     "TensorStore",
+    "ZarrTensorStore",
     "PostProcessOptions",
     "CodecOptions",
     "PerformanceMetadata",

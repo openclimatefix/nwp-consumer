@@ -20,6 +20,10 @@ The following environment variables can be used to configure the application:
     | ZARRDIR                   | The output directory for the app.   | ~/.local/cache/nwp/<REPO>/<MODEL>/data      |
     |                           | Can be a local path or an S3 URI.   |                                             |
     |---------------------------|-------------------------------------|---------------------------------------------|
+    | STORE_BACKEND             | The storage backend to write to.    | zarr                                        |
+    |                           | Either 'zarr' (a store per run) or  |                                             |
+    |                           | 'icechunk' (a store per month).     |                                             |
+    |---------------------------|-------------------------------------|---------------------------------------------|
     | NOTIFICATION_REPOSITORY   | The notification repository to use. | stdout                                      |
     |---------------------------|-------------------------------------|---------------------------------------------|
     | MODEL_REPOSITORY          | The model repository to use.        | ceda-metoffice-global                       |
@@ -141,9 +145,12 @@ else:
         "}",
     ))
 
-_loglevel: int | str = logging.getLevelName(os.getenv("LOGLEVEL", "INFO").upper())
+_loglevel: int = logging.getLevelNamesMapping().get(
+    os.getenv("LOGLEVEL", "INFO").upper(),
+    logging.INFO,
+)
 logging.basicConfig(
-    level=logging.INFO if isinstance(_loglevel, str) else _loglevel,
+    level=_loglevel,
     stream=sys.stdout,
     format=_formatstr,
     datefmt="%Y-%m-%dT%H:%M:%S",

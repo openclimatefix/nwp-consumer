@@ -309,7 +309,7 @@ class CEDARawRepository(ports.RawRepository):
             path: The path to the file to convert.
         """
         try:
-            dss: list[xr.Dataset] = open_datasets(path)
+            dss: list[xr.Dataset] = open_datasets(path, decode_timedelta=True)
         except Exception as e:
             return Failure(
                 OSError(
@@ -387,6 +387,7 @@ class CEDARawRepository(ports.RawRepository):
                 path=path.as_posix(),
                 chunks={"time": 1, "step": -1, "variable": -1, "x": "auto", "y": "auto"},
                 backend_kwargs={"indexpath": ""},
+                decode_timedelta=True,
             )
         except Exception as e:
             return Failure(
