@@ -95,6 +95,11 @@ to the store, committing each one only once it has been written and validated in
 so readers never see an incomplete init time. Runs for different init times can safely
 write to the same store concurrently.
 
+The store's boolean `init_time_complete` coordinate records which init times were
+written in full. Init times committed with a small number of failed writes (within
+the consumer's error tolerance) are left unmarked, and are retried by later runs that
+request them. Readers can use the coordinate to select only complete init times.
+
 Failed and conflicting runs leave behind data that is never committed. Remove it by
 periodically running the `maintain` command for each month's store:
 

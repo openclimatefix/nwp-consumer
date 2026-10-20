@@ -329,6 +329,7 @@ class ECMWFMARSRawRepository(ports.RawRepository):
                 path=path.as_posix(),
                 chunks={"time": 1, "step": -1, "longitude": -1, "latitude": -1},
                 backend_kwargs={"indexpath": ""},
+                decode_timedelta=True,
             )
         except Exception as e:
             return Failure(

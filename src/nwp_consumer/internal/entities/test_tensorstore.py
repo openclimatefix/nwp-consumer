@@ -199,7 +199,49 @@ class TestTensorStore(unittest.TestCase):
         """Write and commit a complete init time of ones to the store."""
         ts.begin_transaction().unwrap()
         ts.write_to_region(da=init_time_dataarray(ts, it)).unwrap()
+        ts.mark_complete(init_times=[it]).unwrap()
         ts.commit(message=f"Write {it}").unwrap()
+
+    def test_missing_times_partial(self) -> None:
+        """Test partially written init times are missing until marked complete."""
+        with self.store(year=2023) as ts:
+            it = ts.coordinate_map.init_time[0]
+            ts.begin_transaction().unwrap()
+            # Write only the first steps, which used to be enough to count as present
+            ts.write_to_region(da=init_time_dataarray(ts, it).isel(step=slice(0, 2))).unwrap()
+            ts.commit(message="Write partial init time").unwrap()
+            self.assertListEqual(ts.missing_times(init_times=[it]).unwrap(), [it])
+
+            ts.begin_transaction().unwrap()
+            ts.mark_complete(init_times=[it]).unwrap()
+            ts.commit(message="Mark init time complete").unwrap()
+            self.assertListEqual(ts.missing_times(init_times=[it]).unwrap(), [])
+
+            unknown_it = dt.datetime(2000, 1, 1, tzinfo=dt.UTC)
+            self.assertIsInstance(ts.mark_complete(init_times=[unknown_it]), Failure)
+
+    def test_existing_store_without_completeness(self) -> None:
+        """Test stores that don't record complete init times are not reused."""
+        coords = make_coords(year=2023)
+
+        def skeleton_without_completeness(
+            model: str,
+            coords: NWPDimensionCoordinateMap,
+            chunks: dict[str, int],
+        ) -> xr.DataArray:
+            return coords.as_zeroed_dataarray(name=model, chunks=chunks)
+
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            patch.dict(os.environ, {"ZARRDIR": tmpdir}),
+        ):
+            with patch.object(
+                self.store_cls,
+                "_skeleton_dataarray",
+                side_effect=skeleton_without_completeness,
+            ):
+                init_store(self.store_cls, coords).unwrap()
+            self.assertIsInstance(init_store(self.store_cls, coords), Failure)
 
     def test_reuse_existing_store(self) -> None:
         """Test reopening an existing store with a subset of its init times."""
@@ -379,6 +421,10 @@ class TestIcechunkTensorStore(TestTensorStore):
         with self.store(year=2023) as ts:
             da = init_time_dataarray(ts, ts.coordinate_map.init_time[0])
             self.assertIsInstance(ts.write_to_region(da=da), Failure)
+            self.assertIsInstance(
+                ts.mark_complete(init_times=[ts.coordinate_map.init_time[0]]),
+                Failure,
+            )
             self.assertIsInstance(ts.commit(message="Nothing"), Failure)
 
             ts.begin_transaction().unwrap()
@@ -417,6 +463,8 @@ class TestIcechunkTensorStore(TestTensorStore):
             other.begin_transaction().unwrap()
             ts.write_to_region(da=init_time_dataarray(ts, its[0])).unwrap()
             other.write_to_region(da=init_time_dataarray(other, its[1])).unwrap()
+            ts.mark_complete(init_times=[its[0]]).unwrap()
+            other.mark_complete(init_times=[its[1]]).unwrap()
 
             self.assertIsInstance(ts.commit(message="Write first"), Success)
             other_commit_result = other.commit(message="Write second")

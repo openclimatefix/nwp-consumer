@@ -3,12 +3,12 @@ import os
 import shutil
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import icechunk
 import xarray as xr
 from returns.pipeline import is_successful
-from returns.result import Failure
+from returns.result import Failure, ResultE, Success
 
 from nwp_consumer.internal import entities
 from nwp_consumer.internal.services.consumer_service import ConsumerService
@@ -119,6 +119,56 @@ class TestIcechunkConsumer(unittest.TestCase):
 
         with patch.dict(os.environ, {"STORE_BACKEND": "zarr"}):
             self.assertFalse(is_successful(self.consumer.maintain(period=dt.date(2021, 1, 1))))
+
+    def test_fold_dataarrays_generator(self) -> None:
+        """Test the number of failed writes is returned, and that no data is a failure."""
+        store = MagicMock(spec=entities.TensorStore)
+        store.write_to_region.side_effect = [Success(1)] * 19 + [Failure(OSError("Write"))]
+        das = [xr.DataArray([1])] * 20
+        self.assertEqual(
+            ConsumerService._fold_dataarrays_generator(iter([Success(das)]), store).unwrap(),
+            1,
+        )
+
+        empty_result = ConsumerService._fold_dataarrays_generator(iter([Success([])]), store)
+        self.assertIsInstance(empty_result, Failure)
+
+    def test_consume_retries_partial_init_time(self) -> None:
+        """Test an init time with failed writes is committed, but retried by later runs."""
+        it = dt.datetime(2021, 1, 1, tzinfo=dt.UTC)
+        write_to_region = entities.IcechunkTensorStore.write_to_region
+        failed_writes: list[bool] = []
+
+        def write_to_region_failing_once(
+            store: entities.TensorStore,
+            da: xr.DataArray,
+        ) -> ResultE[int]:
+            if len(failed_writes) == 0:
+                failed_writes.append(True)
+                return Failure(OSError("Simulated write failure"))
+            return write_to_region(store, da=da)
+
+        with patch.object(
+            entities.IcechunkTensorStore,
+            "write_to_region",
+            autospec=True,
+            side_effect=write_to_region_failing_once,
+        ):
+            result = self.consumer.consume(period=it)
+        self.assertTrue(is_successful(result), msg=result)
+
+        repo = icechunk.Repository.open(icechunk.local_filesystem_storage(result.unwrap()))
+        ds = xr.open_zarr(repo.readonly_session("main").store, consolidated=False)
+        self.assertFalse(ds["init_time_complete"].sel(init_time="2021-01-01T00").values)
+
+        # A later run retries the init time, and marks it complete
+        result = self.consumer.consume(period=it)
+        self.assertTrue(is_successful(result), msg=result)
+        ds = xr.open_zarr(repo.readonly_session("main").store, consolidated=False)
+        self.assertTrue(ds["init_time_complete"].sel(init_time="2021-01-01T00").values)
+
+        messages = self._commit_messages(result.unwrap())
+        self.assertEqual(messages.count("Write init time 2021-01-01T00:00"), 2)
 
     def test_consume_non_running_init_time(self) -> None:
         """Test an init time outside the model's running hours is rejected."""

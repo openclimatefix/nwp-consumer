@@ -68,7 +68,9 @@ class ConsumerService(ports.ConsumeUseCase):
             store: The store to write the data to.
 
         Returns:
-            A ResultE object containing the sum of the write results or a Failure object.
+            A ResultE object containing the number of DataArrays that failed to be
+            processed or written, or a Failure object if the proportion of them is too
+            high or no DataArrays were produced at all.
         """
         results: list[ResultE[int]] = []
         for value in generator:
@@ -78,6 +80,13 @@ class ConsumerService(ports.ConsumeUseCase):
                 continue
             else:
                 results.extend([store.write_to_region(da=da) for da in value.unwrap()])
+        if len(results) == 0:
+            return Failure(
+                ValueError(
+                    "No data was found for the init time in any of the raw files. "
+                    "Ensure the raw files cover the model's expected coordinates.",
+                ),
+            )
         successes, failures = partition(results)
         # TODO: Define the failure threshold for number of write attempts properly
         # ECMWF Realtime for instance needs a bit of tolerance because of some files not containing
@@ -96,7 +105,7 @@ class ConsumerService(ports.ConsumeUseCase):
                 ),
             )
         else:
-            return Success(sum(successes))
+            return Success(len(failures))
 
     @staticmethod
     def _parallelize_generator[T](
@@ -242,6 +251,10 @@ class ConsumerService(ports.ConsumeUseCase):
         The transaction is only committed if the data is written and validated
         successfully, so readers never see an incomplete init time.
 
+        The init time is only marked as complete if none of its data failed to be
+        written. Otherwise the data is committed without being marked, so later runs
+        retry it.
+
         Args:
             store: The store to write the data to.
             it: The init time to consume.
@@ -263,15 +276,28 @@ class ConsumerService(ports.ConsumeUseCase):
             self._rollback_store(store)
             return process_result
 
+        failed_writes: int = process_result.unwrap()
+
         validation_result = store.validate_store(init_times=[it])
         if isinstance(validation_result, Failure):
             if delete_on_failure:
                 self._rollback_store(store)
                 return validation_result
             log.warning(
-                f"Committing data for {it:%Y-%m-%d %H:%M} despite failed validation: "
-                f"{validation_result.failure()}",
+                f"Committing data for {it:%Y-%m-%d %H:%M} despite failed validation, "
+                f"without marking it complete: {validation_result.failure()}",
             )
+        elif failed_writes > 0:
+            log.warning(
+                f"Committing data for {it:%Y-%m-%d %H:%M} without marking it complete, "
+                f"as {failed_writes} DataArrays failed to be written. "
+                "It will be retried by later runs.",
+            )
+        else:
+            mark_result = store.mark_complete(init_times=[it])
+            if isinstance(mark_result, Failure):
+                self._rollback_store(store)
+                return mark_result
 
         commit_result = store.commit(message=f"Write init time {it:%Y-%m-%dT%H:%M}")
         if isinstance(commit_result, Failure):

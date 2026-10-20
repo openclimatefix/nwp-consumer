@@ -353,6 +353,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                 engine="cfgrib",
                 backend_kwargs={"read_keys": ["name", "parameterNumber"], "indexpath": ""},
                 chunks={"time": 1, "step": -1},
+                decode_timedelta=True,
             )
         except Exception as e:
             return Failure(OSError(f"Error opening '{path}' as xarray Dataset: {e}"))
@@ -439,6 +440,7 @@ class MetOfficeDatahubRawRepository(ports.RawRepository):
                 engine="cfgrib",
                 backend_kwargs={"read_keys": ["name", "parameterNumber"], "indexpath": ""},
                 chunks={"time": 1, "step": -1},
+                decode_timedelta=True,
             )
         except Exception as e:
             return Failure(OSError(f"Error opening '{path}' as xarray Dataset: {e}"))

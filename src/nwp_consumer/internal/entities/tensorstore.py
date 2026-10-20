@@ -18,6 +18,7 @@ import pathlib
 import shutil
 from typing import Any, ClassVar
 
+import dask.array
 import icechunk
 import numpy as np
 import numpy.typing
@@ -33,6 +34,14 @@ from .parameters import Parameter
 from .postprocess import PostProcessOptions
 
 log = logging.getLogger("nwp-consumer")
+
+INIT_TIME_COMPLETE = "init_time_complete"
+"""The name of the coordinate recording which init times have been written in full.
+
+An init time is only marked complete once all of its data has been written and
+validated, in the same transaction as the data. Init times that are missing, or
+only partially written, are not marked, so later runs retry them.
+"""
 
 
 @dataclasses.dataclass(slots=True)
@@ -201,6 +210,22 @@ class TensorStore(abc.ABC):
 
     # --- Business logic methods --- #
     @staticmethod
+    def _skeleton_dataarray(
+        model: str,
+        coords: NWPDimensionCoordinateMap,
+        chunks: dict[str, int],
+    ) -> xr.DataArray:
+        """Create the blank dataarray written to initialize a store.
+
+        Alongside the data, it holds the `INIT_TIME_COMPLETE` coordinate. This is
+        chunked like the data along init_time, so that concurrent writers to
+        different init times don't write to the same chunks.
+        """
+        da: xr.DataArray = coords.as_zeroed_dataarray(name=model, chunks=chunks)
+        complete = dask.array.zeros(len(coords.init_time), dtype=bool, chunks=chunks["init_time"])
+        return da.assign_coords({INIT_TIME_COMPLETE: ("init_time", complete)})
+
+    @staticmethod
     def _existing_coordinate_map(
         path: str,
         store_da: xr.DataArray,
@@ -211,6 +236,15 @@ class TensorStore(abc.ABC):
         The store's own coordinates are returned rather than the input coordinates,
         so that regions are determined relative to the full extent of the store.
         """
+        if INIT_TIME_COMPLETE not in store_da.coords:
+            return Failure(
+                OSError(
+                    f"Existing store at '{path}' does not record which init times are "
+                    f"complete (no '{INIT_TIME_COMPLETE}' coordinate), as it was created by "
+                    "an older version of the consumer. Delete the existing store or move it "
+                    "to a new location, or choose a new location for the new store via ZARRDIR.",
+                ),
+            )
         coordinate_map_result = NWPDimensionCoordinateMap.from_xarray(store_da)
         if isinstance(coordinate_map_result, Failure):
             return Failure(
@@ -510,15 +544,49 @@ class TensorStore(abc.ABC):
         else:
             return Success(self.path)
 
+    def mark_complete(self, init_times: list[dt.datetime]) -> ResultE[None]:
+        """Mark the given init times as written in full, in the open transaction.
+
+        See `INIT_TIME_COMPLETE`.
+        """
+        for it in init_times:
+            if it not in self.coordinate_map.init_time:
+                return Failure(
+                    KeyError(
+                        f"Cannot mark init time {it} as complete, as it is not present in "
+                        f"store at '{self.path}'.",
+                    ),
+                )
+            index = self.coordinate_map.init_time.index(it)
+            complete_da = xr.DataArray(
+                [True],
+                dims=["init_time"],
+                name=INIT_TIME_COMPLETE,
+                coords={
+                    "init_time": [np.datetime64(it.astimezone(dt.UTC).replace(tzinfo=None), "ns")],
+                },
+            )
+            try:
+                self._write_region_data(
+                    da=complete_da,
+                    region={"init_time": slice(index, index + 1)},
+                )
+            except Exception as e:
+                return Failure(
+                    OSError(
+                        f"Error marking init time {it} as complete in store at "
+                        f"'{self.path}': {e}",
+                    ),
+                )
+        return Success(None)
+
     def missing_times(
         self,
         init_times: list[dt.datetime] | None = None,
     ) -> ResultE[list[dt.datetime]]:
-        """Find the missing init_time in the store.
+        """Find the init times in the store that are missing, or only partially written.
 
-        A "missing init_time" is determined by the values corresponding
-        to the first two coordinate values of each dimension: if all are
-        NaN or None values then the time is considered missing.
+        These are the init times not marked as complete. See `INIT_TIME_COMPLETE`.
 
         Args:
             init_times: The init times to check. Defaults to all init times in the store.
@@ -537,21 +605,17 @@ class TensorStore(abc.ABC):
             if isinstance(select_result, Failure):
                 return select_result
             store_da = select_result.unwrap()
-        missing_times: list[dt.datetime] = []
-        for it in store_da.coords["init_time"].values:
-            if (
-                store_da.sel(init_time=it)
-                .isel({d: slice(0, 2) for d in self.coordinate_map.dims if d != "init_time"})
-                .isnull()
-                .all()
-                .values
-            ):
-                missing_times.append(pd.Timestamp(it).to_pydatetime().replace(tzinfo=dt.UTC))
-        if len(missing_times) > 0:
-            log.debug(
-                f"NaNs in init times '{missing_times}' suggest they are missing, "
-                f"will redownload",
+        missing_times: list[dt.datetime] = [
+            pd.Timestamp(it).to_pydatetime().replace(tzinfo=dt.UTC)
+            for it, complete in zip(
+                store_da.coords["init_time"].values,
+                store_da.coords[INIT_TIME_COMPLETE].values,
+                strict=True,
             )
+            if not complete
+        ]
+        if len(missing_times) > 0:
+            log.debug(f"Init times '{missing_times}' are not complete, will redownload")
         return Success(missing_times)
 
     @staticmethod
@@ -618,7 +682,7 @@ class ZarrTensorStore(TensorStore):
         # * 'compute=False' enables only saving metadata
         # * 'mode="w-"' fails if it finds an existing store
 
-        da: xr.DataArray = coords.as_zeroed_dataarray(name=model, chunks=chunks)
+        da: xr.DataArray = cls._skeleton_dataarray(model=model, coords=coords, chunks=chunks)
         encoding = {
             "init_time": {"units": "nanoseconds since 1970-01-01"},
             "step": {"units": "hours"},
@@ -916,7 +980,7 @@ class IcechunkTensorStore(TensorStore):
                 ),
             )
 
-        da: xr.DataArray = coords.as_zeroed_dataarray(name=model, chunks=chunks)
+        da: xr.DataArray = cls._skeleton_dataarray(model=model, coords=coords, chunks=chunks)
         encoding = {
             "init_time": {"units": "nanoseconds since 1970-01-01"},
             "step": {"units": "hours"},
